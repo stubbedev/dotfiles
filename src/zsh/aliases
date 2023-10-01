@@ -1,0 +1,9 @@
+#!/bin/bash
+
+alias legacy_ssl_node="export NODE_OPTIONS=--openssl-legacy-provider"
+alias st_config=' /home/stubbe/.stubbe/builds/st/config.h'
+alias st_build='cd /home/stubbe/.stubbe/builds/st && sudo make clean install && cd /home/stubbe && echo reopen terminal!'
+alias screens="screen -ls"
+alias ta="tmux a"
+alias tls="tmux ls"
+alias tn='tmux new -s "${PWD//[\.+]/_}"'

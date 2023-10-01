@@ -1,0 +1,18 @@
+#!/bin/bash
+# EXPAND LIST WITH DESIRED PATHS
+STUBBE_PATHS=(
+	"$HOME/.stubbe/bin"
+	"$HOME/.local/bin"
+	"$HOME/.config/composer/vendor/bin"
+	"$HOME/.nimble/bin"
+	"$HOME/.bun/bin"
+	"$HOME/.deno/bin")
+
+# ASSIGN PATH EXPORTS IN LOOP
+
+for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
+	if [ ! -d $STUBBE_PATH ]; then
+		mkdir -p $STUBBE_PATH
+	fi
+	export PATH="$PATH:$STUBBE_PATH"
+done

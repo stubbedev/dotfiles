@@ -1,0 +1,19 @@
+#!/bin/bash
+export STUBBE_CONFIG_ROOT="$HOME/.stubbe"
+# PATHS
+source "$STUBBE_CONFIG_ROOT/src/zsh/paths"
+# FUNCTIONS
+source "$STUBBE_CONFIG_ROOT/src/zsh/funcs"
+# ALIASES
+source "$STUBBE_CONFIG_ROOT/src/zsh/aliases"
+# CONSTANTS
+source "$STUBBE_CONFIG_ROOT/src/zsh/exports"
+# PLUGINS
+source "$STUBBE_CONFIG_ROOT/src/zsh/plugins"
+# ZSH PARAMS
+source "$STUBBE_CONFIG_ROOT/src/zsh/settings"
+# SECRETS
+if [[ ! -f "$STUBBE_CONFIG_ROOT/src/zsh/secrets" ]]; then
+	touch "$STUBBE_CONFIG_ROOT/src/zsh/secrets"
+fi
+source "$STUBBE_CONFIG_ROOT/src/zsh/secrets"

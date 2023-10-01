@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source "$STUBBE_CONFIG_ROOT/src/zsh/plugins.d/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh"
+source "$STUBBE_CONFIG_ROOT/src/zsh/plugins.d/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh"
+source "$STUBBE_CONFIG_ROOT/src/zsh/plugins.d/zsh-common-aliases/common-aliases.plugin.zsh"
+source "$STUBBE_CONFIG_ROOT/src/zsh/plugins.d/zsh-autopair/zsh-autopair.plugin.zsh"

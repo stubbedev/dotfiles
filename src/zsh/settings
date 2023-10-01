@@ -1,0 +1,10 @@
+#!/bin/bash
+
+HYPHEN_INSENSITIVE=false
+DISABLE_AUTO_TITLE=true
+ENABLE_CORRECTION=true
+VIM_MODE_NO_DEFAULT_BINDINGS=true
+zstyle ':omz:update' mode auto
+zstyle ':omz:update' frequency 1
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+autoload -Uz compinit && compinit

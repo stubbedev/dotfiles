@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if is_binary nvim; then
+  export EDITOR="nvim"
+fi
+
+if [[ -n $SSH_CONNECTION ]]; then
+  export TERM='screen-256color'
+fi
+

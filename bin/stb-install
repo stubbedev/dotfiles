@@ -1,0 +1,54 @@
+#!/bin/bash
+echo "This installs configs for TMUX, ZSH and NEOVIM as well as the SuckLess Terminal"
+echo "Make sure all of these are installed in order for the configs to take effect."
+read -n 1 -p "Continue Installation y/N:" ANSWER
+if ! [[ $ANSWER = "y" ]]; then
+	exit 1
+fi
+
+SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+
+echo "Creating Directory $HOME/.stubbe/"
+mkdir -p "$HOME/.stubbe"
+ln -s "$SCRIPT_DIR/bin" "$HOME/.stubbe/bin"
+ln -s "$SCRIPT_DIR/src" "$HOME/.stubbe/src"
+
+echo "Installing FONTS"
+SOURCE_FONT="$HOME/.stubbe/src/fonts/*.ttf"
+if ! [[ -d "$HOME/.fonts" ]]; then
+	mkdir -p "$HOME/.fonts"
+fi
+ln -s "$SOURCE_FONT" "$HOME/.fonts"
+
+echo "Installing i3 CONFIG"
+SOURCE_I3="$HOME/.stubbe/src/i3/config"
+if ! [[ -d "$HOME/.config/i3" ]]; then
+	mkdir -p "$HOME/.config/i3"
+fi
+ln -s "$SOURCE_I3" "$HOME/.config/i3/config"
+
+echo "Installing ZSH CONFIG"
+SOURCE_ZSH="source $HOME/.stubbe/src/zsh/init"
+if ! [[ -f "$HOME/.zshrc" ]]; then
+	touch $HOME/.zshrc
+fi
+if ! [[ "$(grep -q "$SOURCE_ZSH" "$HOME/.zshrc")" ]]; then
+	echo $SOURCE_ZSH >>$HOME/.zshrc
+fi
+eval " $SOURCE_ZSH"
+
+echo "Installing TMUX CONFIG"
+SOURCE_TMUX="source-file $HOME/.stubbe/src/tmux/tmux.conf"
+if ! [[ -f "$HOME/.tmux.conf" ]]; then
+	touch $HOME/.tmux.conf
+fi
+if ! [[ $(grep -q "$SOURCE_TMUX" "$HOME/.tmux.conf") ]]; then
+	echo $SOURCE_TMUX >>$HOME/.tmux.conf
+fi
+eval "tmux $SOURCE_TMUX"
+
+echo "Installing NEOVIM CONFIG"
+SOURCE_NVIM="$HOME/.stubbe/src/nvim"
+ln -sf $SOURCE_NVIM "$HOME/.config/nvim"
+
+echo "All done!"
