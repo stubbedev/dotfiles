@@ -11,6 +11,9 @@ fi
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"; then
   git clone "https://github.com/hlissner/zsh-autopair.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"
 fi
+if ! is_binary "/usr/local/bin/starship"; then
+  curl -sS https://starship.rs/install.sh | sh
+fi
 
 autoload -Uz compinit
 compinit
