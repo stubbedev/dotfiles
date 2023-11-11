@@ -16,6 +16,14 @@ function is_directory {
 	fi
 }
 
+function is_file {
+	if test -f "$1"; then
+		true
+	else
+		false
+	fi
+}
+
 function has_string {
   if grep -Fxq "$1" "$2"; then
     true
@@ -87,3 +95,13 @@ function handle_ize_files {
 		mv "$upName" "$loName"
 	done
 }
+
+alias legacy_ssl_node="export NODE_OPTIONS=--openssl-legacy-provider"
+alias st_config=' /home/stubbe/.stubbe/builds/st/config.h'
+alias st_build='cd /home/stubbe/.stubbe/builds/st && sudo make clean install && cd /home/stubbe && echo reopen terminal!'
+alias screens="screen -ls"
+alias ta="tmux a"
+alias tls="tmux ls"
+alias tn='tmux new -s "${PWD//[\.+]/_}"'
+
+
