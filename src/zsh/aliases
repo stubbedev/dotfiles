@@ -4,6 +4,7 @@ alias screens="screen -ls"
 alias ta="tmux a"
 alias tls="tmux ls"
 alias tn='tmux new -s "${PWD//[\.+]/_}"'
+alias legacy_ssl_node="export NODE_OPTIONS=--openssl-legacy-provider"
 
 # ls, the common ones I use a lot shortened for rapid fire usage
 alias l='ls -lFh'     #size,show type,human readable
