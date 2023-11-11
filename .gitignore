@@ -1,2 +1,3 @@
-src/zsh/secrets.sh
+src/zsh/secrets
+src/zsh/plugins.d
 
