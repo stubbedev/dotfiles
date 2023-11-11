@@ -11,6 +11,7 @@ SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
 # IMPORT HELPER FUNCS
 source "$SCRIPT_DIR/src/zsh/funcs"
 
+# LINK STUBBE ROOT
 echo "Creating Directory $HOME/.stubbe/"
 mkdir -p "$HOME/.stubbe"
 ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe/bin"
@@ -18,16 +19,19 @@ ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe/src"
 
 STUBBE_SRC="$HOME/.stubbe/src"
 
+# INSTALL FONTS
 echo "Installing FONTS"
 SOURCE_FONT="$STUBBE_SRC/fonts/*.ttf"
 mkdir -p "$HOME/.fonts"
 ln -s "$SOURCE_FONT" "$HOME/.fonts"
 
+# INSTALL I3 CONF
 echo "Installing i3 CONFIG"
 SOURCE_I3="$STUBBE_SRC/i3/config"
 mkdir -p "$HOME/.config/i3"
 ln -s "$SOURCE_I3" "$HOME/.config/i3/config"
 
+# INSTALL ZSH CONF
 echo "Installing ZSH CONFIG"
 SOURCE_ZSH="$STUBBE_SRC/zsh/init"
 touch "$HOME/.zshrc"
@@ -36,6 +40,7 @@ if ! has_string "$SOURCE_ZSH" "$HOME/.zshrc"; then
 fi
 eval "source $SOURCE_ZSH"
 
+# INSTALL TMUX CONF
 echo "Installing TMUX CONFIG"
 SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
 touch "$HOME/.tmux.conf"
@@ -44,9 +49,10 @@ if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
 fi
 eval "tmux source-file $SOURCE_TMUX"
 
+# INSTALL NEOVIM CONF
 echo "Installing NEOVIM CONFIG"
 SOURCE_NVIM="$STUBBE_SRC/nvim"
 mkdir -p "$HOME/.config"
 ln -sf "$SOURCE_NVIM" "$HOME/.config/nvim"
 
-echo "All done!"
+echo "Installation Complete!"
