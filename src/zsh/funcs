@@ -16,6 +16,14 @@ function is_directory {
 	fi
 }
 
+function has_string {
+  if grep -Fxq "$1" "$2"; then
+    true
+  else
+    false
+  fi
+}
+
 if is_binary nala; then
 	function npt {
 		if [ "$1" = "i" ]; then
