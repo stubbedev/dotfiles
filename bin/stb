@@ -1,5 +1,49 @@
 #!/bin/bash
-alias st_config=' /home/stubbe/.stubbe/builds/st/config.h'
-alias st_build='cd /home/stubbe/.stubbe/builds/st && sudo make clean install && cd /home/stubbe && echo reopen terminal!'
 
+function info {
+  echo "Welcome to the STUBBEDEV CLI"
+  echo
+  echo "Please provide an input for the desired option."
+  echo "Options:"
+  echo "1.       Edit User Secrets"
+  echo "2.       Edit User Aliases"
+  echo "3.       Edit User Functions"
+  echo "4.       Edit User Paths"
+  echo "5.       Edit User Settings"
+  echo "6.       Edit ST Config Headers"
+  echo "7.       Recompile ST"
+}
+
+function recompile_st {
+  cd "$HOME/.stubbe/src/st" || exit
+  sudo make clean install
+  cd || exit
+}
+
+case "$1" in
+  1|secrets|secret)
+    $EDITOR "$HOME/.stubbe/src/zsh/secrets"
+    exit;;
+  2|aliases|alias)
+    $EDITOR "$HOME/.stubbe/src/zsh/aliases"
+    exit;;
+  3|functions|func)
+    $EDITOR "$HOME/.stubbe/src/zsh/funcs"
+    exit;;
+  4|paths|path)
+    $EDITOR "$HOME/.stubbe/src/zsh/paths"
+    exit;;
+  5|settings|sett)
+    $EDITOR "$HOME/.stubbe/src/zsh/settings"
+    exit;;
+  6|stconf|st)
+    $EDITOR "$HOME/.stubbe/src/st/config.h"
+    exit;;
+  7|recompile|recomp)
+    recompile_st
+    exit;;
+  *)
+    info
+    exit;;
+esac
 
