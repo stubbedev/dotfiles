@@ -23,11 +23,6 @@ SOURCE_FONT="$STUBBE_SRC/fonts/*.ttf"
 mkdir -p "$HOME/.fonts"
 ln -s "$SOURCE_FONT" "$HOME/.fonts"
 
-# echo "Installing WALLPAPERS"
-# SOURCE_WALLP="$STUBBE_SRC/wallpapers"
-# mkdir -p "$HOME/.wallpapers"
-# tar -xzvf "$SOURCE_WALLP/*.tar.gz" -C "$HOME/.wallpapers"
-
 echo "Installing i3 CONFIG"
 SOURCE_I3="$STUBBE_SRC/i3/config"
 mkdir -p "$HOME/.config/i3"
