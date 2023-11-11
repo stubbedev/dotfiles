@@ -1,0 +1,5 @@
+#!/bin/bash
+alias st_config=' /home/stubbe/.stubbe/builds/st/config.h'
+alias st_build='cd /home/stubbe/.stubbe/builds/st && sudo make clean install && cd /home/stubbe && echo reopen terminal!'
+
+
