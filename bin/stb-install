@@ -1,58 +1,105 @@
 #!/bin/bash
-echo "This installs configs for TMUX, ZSH and NEOVIM as well as the SuckLess Terminal"
-echo "Make sure all of these are installed in order for the configs to take effect."
-read -rn 1 -p "Continue Installation y/N:" ANSWER
-if ! [[ $ANSWER = "y" ]]; then
-	exit 1
-fi
 
-SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+function info {
+  echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
+  echo "Make sure you have the following installed before you run this util:"
+  echo "tmux  :: Terminal Multiplexer"
+  echo "zsh   :: POSIX Shell"
+  echo "nvim  :: NeoVIM Editor"
+  echo
+  echo "Additional configs included for:"
+  echo "fonts :: JetBrainsMono NerdFont"
+  echo "i3    :: i3 Window Manager"
+  echo "st    :: SuckLess Terminal"
+  install
+}
 
-# IMPORT HELPER FUNCS
-source "$SCRIPT_DIR/src/zsh/funcs"
+function install {
+  echo "Please enter your desired option:"
+  read -rn 1 -p "(I)nstall All, Install (M)andatory or (C)ancel?" REPLY
+  case "$REPLY" in
+    i|I|y|Y|install|Install)
+      imports
+      install_links
+      install_fonts
+      install_zsh
+      install_tmux
+      install_nvim
+      install_i3
+      exit;;
+    m|M|mandatory|Mandatory)
+      imports
+      install_links
+      install_fonts
+      install_zsh
+      exit;;
+    c|C|cancel|Cancel)
+      echo "Cancelling!"
+      exit;;
+    *)
+      info
+      exit;;
+  esac
+}
 
-# LINK STUBBE ROOT
-echo "Creating Directory $HOME/.stubbe/"
-mkdir -p "$HOME/.stubbe"
-ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe/bin"
-ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe/src"
+function imports {
+  SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+  source "$SCRIPT_DIR/src/zsh/funcs"
+}
 
-STUBBE_SRC="$HOME/.stubbe/src"
+function install_links {
+  echo "Creating Directory $HOME/.stubbe/"
 
-# INSTALL FONTS
-echo "Installing FONTS"
-SOURCE_FONT="$STUBBE_SRC/fonts/*.ttf"
-mkdir -p "$HOME/.fonts"
-ln -s "$SOURCE_FONT" "$HOME/.fonts"
+  mkdir -p "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
 
-# INSTALL I3 CONF
-echo "Installing i3 CONFIG"
-SOURCE_I3="$STUBBE_SRC/i3/config"
-mkdir -p "$HOME/.config/i3"
-ln -s "$SOURCE_I3" "$HOME/.config/i3/config"
+  STUBBE_SRC="$HOME/.stubbe/src"
+}
 
-# INSTALL ZSH CONF
-echo "Installing ZSH CONFIG"
-SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-touch "$HOME/.zshrc"
-if ! has_string "$SOURCE_ZSH" "$HOME/.zshrc"; then
-	echo "source $SOURCE_ZSH" >> "$HOME/.zshrc"
-fi
-eval "source $SOURCE_ZSH"
 
-# INSTALL TMUX CONF
-echo "Installing TMUX CONFIG"
-SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
-touch "$HOME/.tmux.conf"
-if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
-	echo "source-file $SOURCE_TMUX" >> "$HOME/.tmux.conf"
-fi
-eval "tmux source-file $SOURCE_TMUX"
+function install_i3 {
+  echo "Installing i3 CONFIG"
 
-# INSTALL NEOVIM CONF
-echo "Installing NEOVIM CONFIG"
-SOURCE_NVIM="$STUBBE_SRC/nvim"
-mkdir -p "$HOME/.config"
-ln -sf "$SOURCE_NVIM" "$HOME/.config/nvim"
+  SOURCE_I3="$STUBBE_SRC/i3/config"
+  mkdir -p "$HOME/.config/i3"
+  ln -s "$SOURCE_I3" "$HOME/.config/i3/config"
+}
 
-echo "Installation Complete!"
+function install_zsh {
+  echo "Installing ZSH CONFIG"
+
+  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+  touch "$HOME/.zshrc"
+  if ! has_string "$SOURCE_ZSH" "$HOME/.zshrc"; then
+    echo "source $SOURCE_ZSH" >> "$HOME/.zshrc"
+  fi
+  eval "source $SOURCE_ZSH"
+}
+
+function install_nvim {
+  echo "Installing NEOVIM CONFIG"
+
+  SOURCE_NVIM="$STUBBE_SRC/nvim"
+  mkdir -p "$HOME/.config"
+  ln -sf "$SOURCE_NVIM" "$HOME/.config/nvim"
+}
+
+function install_fonts {
+  echo "Installing FONTS"
+
+  SOURCE_FONT="$STUBBE_SRC/fonts"
+  mkdir -p "$HOME/.fonts"
+  cp -rf "$SOURCE_FONT/*" "$HOME/.fonts/"
+}
+
+function install_tmux {
+  echo "Installing TMUX CONFIG"
+
+  SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
+  touch "$HOME/.tmux.conf"
+  if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
+    echo "source-file $SOURCE_TMUX" >> "$HOME/.tmux.conf"
+  fi
+  eval "tmux source-file $SOURCE_TMUX"
+}
