@@ -21,15 +21,15 @@ if ! is_binary zinit; then
   bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
 fi
 
-
-
-if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
-  zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-fi
-if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
-  zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
-fi
-if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
-  zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
+if is_binary zinit; then
+  if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
+    zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+  fi
+  if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
+    zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  fi
+  if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
+    zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
+  fi
 fi
 
