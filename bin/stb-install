@@ -90,7 +90,7 @@ function install_fonts {
 
   SOURCE_FONT="$STUBBE_SRC/fonts"
   mkdir -p "$HOME/.fonts"
-  cp -rf "$SOURCE_FONT/*" "$HOME/.fonts/"
+  cp -rf "$SOURCE_FONT/*.ttf" "$HOME/.fonts"
 }
 
 function install_tmux {
