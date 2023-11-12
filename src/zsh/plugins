@@ -16,6 +16,12 @@ if ! is_binary "/usr/local/bin/starship"; then
   curl -sS https://starship.rs/install.sh | sh
 fi
 
+if ! is_binary zinit; then
+  bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
+  source "$HOME/.zshrc"
+  zinit self-update
+fi
+
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
