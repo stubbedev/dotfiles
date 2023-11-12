@@ -103,3 +103,5 @@ function install_tmux {
   fi
   eval "tmux source-file $SOURCE_TMUX"
 }
+
+info
