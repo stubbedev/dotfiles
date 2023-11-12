@@ -25,7 +25,7 @@ function is_file {
 }
 
 function has_string {
-  if grep -Fxq "$1" "$2"; then
+  if grep -q "$1" "$2"; then
     true
   else
     false
