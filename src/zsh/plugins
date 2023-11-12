@@ -18,8 +18,6 @@ fi
 
 if ! is_binary zinit; then
   bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
-else
-  zinit self-update
 fi
 
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
