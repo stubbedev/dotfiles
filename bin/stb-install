@@ -63,7 +63,7 @@ function install_i3 {
 
   SOURCE_I3="$STUBBE_SRC/i3/config"
   mkdir -p "$HOME/.config/i3"
-  ln -sf "$SOURCE_I3" "$HOME/.config/i3/config"
+  ln -sf "$SOURCE_I3" "$HOME/.config/i3"
 }
 
 function install_zsh {
@@ -82,7 +82,7 @@ function install_nvim {
 
   SOURCE_NVIM="$STUBBE_SRC/nvim"
   mkdir -p "$HOME/.config"
-  ln -sf "$SOURCE_NVIM" "$HOME/.config/nvim"
+  ln -sf "$SOURCE_NVIM" "$HOME/.config"
 }
 
 function install_fonts {
