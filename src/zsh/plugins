@@ -21,12 +21,12 @@ if ! is_binary zinit; then
 fi
 
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
-  source "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+  zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
-  source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
-  source "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
+  zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
 fi
 
