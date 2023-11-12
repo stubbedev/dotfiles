@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 alias screens="screen -ls"
 alias ta="tmux a"

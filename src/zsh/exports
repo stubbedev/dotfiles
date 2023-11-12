@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 if is_binary nvim; then
   export EDITOR="nvim"

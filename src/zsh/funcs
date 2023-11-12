@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 function is_binary {
 	if [[ $(command -v "$1") ]]; then

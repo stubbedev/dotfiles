@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 HYPHEN_INSENSITIVE=false
 DISABLE_AUTO_TITLE=true

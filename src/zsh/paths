@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # EXPAND LIST WITH DESIRED PATHS
 STUBBE_PATHS=(
 	"$HOME/.stubbe/bin"
