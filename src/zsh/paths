@@ -6,7 +6,9 @@ STUBBE_PATHS=(
 	"$HOME/.config/composer/vendor/bin"
 	"$HOME/.nimble/bin"
 	"$HOME/.bun/bin"
-	"$HOME/.deno/bin")
+	"$HOME/.deno/bin"
+	"$HOME/go/bin"
+)
 
 # ASSIGN PATH EXPORTS IN LOOP
 
