@@ -11,8 +11,7 @@ STUBBE_PATHS=(
 # ASSIGN PATH EXPORTS IN LOOP
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
-	if [ ! -d "$STUBBE_PATH" ]; then
-		mkdir -p "$STUBBE_PATH"
+	if [ -d "$STUBBE_PATH" ] && [[ ! ":$PATH:" == *":$STUBBE_PATH:"* ]]; then
+		export PATH="$PATH:$STUBBE_PATH"
 	fi
-	export PATH="$PATH:$STUBBE_PATH"
 done
