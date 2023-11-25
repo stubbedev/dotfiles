@@ -1,17 +1,25 @@
 #!/bin/bash
-export STUBBE_CONFIG_ROOT="$HOME/.stubbe"
-# PATHS
-source "$STUBBE_CONFIG_ROOT/src/zsh/paths"
-# FUNCTIONS
-source "$STUBBE_CONFIG_ROOT/src/zsh/funcs"
-# ALIASES
-source "$STUBBE_CONFIG_ROOT/src/zsh/aliases"
-# CONSTANTS
-source "$STUBBE_CONFIG_ROOT/src/zsh/exports"
-# PLUGINS
-source "$STUBBE_CONFIG_ROOT/src/zsh/plugins"
-# ZSH PARAMS
-source "$STUBBE_CONFIG_ROOT/src/zsh/settings"
-# SECRETS
-touch "$STUBBE_CONFIG_ROOT/src/zsh/secrets"
-source "$STUBBE_CONFIG_ROOT/src/zsh/secrets"
+if [ -d "$HOME/.stubbe" ]; then
+	STBDIR="$HOME/.stubbe/src/zsh"
+	if [ -f "$STBDIR/paths" ]; then
+		source "$STBDIR/paths"
+	fi
+	if [ -f "$STBDIR/funcs" ]; then
+		source "$STBDIR/funcs"
+	fi
+	if [ -f "$STBDIR/aliases" ]; then
+		source "$STBDIR/aliases"
+	fi
+	if [ -f "$STBDIR/plugins" ]; then
+		source "$STBDIR/plugins"
+	fi
+	if [ -f "$STBDIR/settings" ]; then
+		source "$STBDIR/settings"
+	fi
+	if [ -f "$STBDIR/secrets" ]; then
+		source "$STBDIR/secrets"
+	else
+		echo "Creating secrets file"
+		touch "$STBDIR/secrets" && source "$STBDIR/secrets"
+	fi
+fi
