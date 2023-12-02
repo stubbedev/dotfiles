@@ -6,7 +6,7 @@ if ! is_binary "/usr/local/bin/starship"; then
   curl -sS https://starship.rs/install.sh | sh
 fi
 
-STUBBE_ZSH_PLUGS_DIR="$STUBBE_CONFIG_ROOT/src/zsh/plugins.d"
+STUBBE_ZSH_PLUGS_DIR="$HOME/.stubbe/src/zsh/plugins.d"
 
 # AUTOHIGHLIGHT
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"; then
