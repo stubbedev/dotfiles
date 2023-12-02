@@ -82,9 +82,9 @@ function install_zsh {
 
 function install_nvim {
 	echo "Installing NEOVIM CONFIG"
-
-	curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage --output $HOME/.stubbe/bin/nvim
-	chmod u+x nvim
+	rm -rf $HOME/.stubbe/bin/nvim
+	wget -O $HOME/.stubbe/bin/nvim https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
+	chmod a+x $HOME/.stubbe/bin/nvim
 	SOURCE_NVIM="$STUBBE_SRC/nvim"
 	mkdir -p "$HOME/.config"
 	ln -sf "$SOURCE_NVIM" "$HOME/.config"
