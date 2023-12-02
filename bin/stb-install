@@ -107,7 +107,9 @@ function install_fonts {
 
 function install_tmux {
 	echo "Installing TMUX CONFIG"
-
+	if ! is_directory "$HOME/.tmux/plugins/tpm"; then
+		git clone https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
+	fi
 	SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
 	touch "$HOME/.tmux.conf"
 	if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
