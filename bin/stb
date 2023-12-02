@@ -22,27 +22,27 @@ function recompile_st {
 
 case "$1" in
 1 | secrets | secret)
-	$EDITOR "$HOME/.stubbe/src/zsh/secrets"
+	sudo $EDITOR "$HOME/.stubbe/src/zsh/secrets"
 	exit
 	;;
 2 | aliases | alias)
-	$EDITOR "$HOME/.stubbe/src/zsh/aliases"
+	sudo $EDITOR "$HOME/.stubbe/src/zsh/aliases"
 	exit
 	;;
 3 | functions | func)
-	$EDITOR "$HOME/.stubbe/src/zsh/funcs"
+	sudo $EDITOR "$HOME/.stubbe/src/zsh/funcs"
 	exit
 	;;
 4 | paths | path)
-	$EDITOR "$HOME/.stubbe/src/zsh/paths"
+	sudo $EDITOR "$HOME/.stubbe/src/zsh/paths"
 	exit
 	;;
 5 | settings | sett)
-	$EDITOR "$HOME/.stubbe/src/zsh/settings"
+	sudo $EDITOR "$HOME/.stubbe/src/zsh/settings"
 	exit
 	;;
 6 | stconf | st)
-	$EDITOR "$HOME/.stubbe/src/st/config.h"
+	sudo $EDITOR "$HOME/.stubbe/src/st/config.h"
 	exit
 	;;
 7 | recompile | recomp)
