@@ -1,32 +1,39 @@
 #!/bin/zsh
 
-STUBBE_ZSH_PLUGS_DIR="$STUBBE_CONFIG_ROOT/src/zsh/plugins.d"
+autoload -Uz compinit
+compinit
 
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"; then
-  git clone "https://github.com/zsh-users/zsh-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"
-fi
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
-  git clone "https://github.com/zsh-users/zsh-autosuggestions.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"
-fi
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"; then
-  git clone "https://github.com/hlissner/zsh-autopair.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"
-fi
-
+# SHELL THEME
 if ! is_binary "/usr/local/bin/starship"; then
   curl -sS https://starship.rs/install.sh | sh
 fi
 
-# Needed before sourcing plugins
-autoload -Uz compinit
-compinit
+STUBBE_ZSH_PLUGS_DIR="$STUBBE_CONFIG_ROOT/src/zsh/plugins.d"
 
+# AUTOHIGHLIGHT
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"; then
+  git clone "https://github.com/zsh-users/zsh-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"
+fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+
+# AUTOSUGGESTIONS
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
+  git clone "https://github.com/zsh-users/zsh-autosuggestions.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"
 fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 fi
+
+# AUTOPAIR
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"; then
+  git clone "https://github.com/hlissner/zsh-autopair.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"
+fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
 fi
+
+
+
 
