@@ -17,10 +17,12 @@ function info {
 function install {
 	echo "Please enter your desired option:"
 	read -rn 1 -p "(I)nstall All, Install (M)andatory or (C)ancel?" REPLY
+	printf "\n"
 	case "$REPLY" in
 	i | I | y | Y | install | Install)
 		imports
 		install_links
+		install_st
 		install_fonts
 		install_zsh
 		install_tmux
@@ -59,6 +61,11 @@ function install_links {
 	ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
 
 	export STUBBE_SRC="$HOME/.stubbe/src"
+}
+
+function install_st {
+	echo "Installing ST TERMINAL"
+	ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin/st"
 }
 
 function install_i3 {
