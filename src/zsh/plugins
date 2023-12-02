@@ -16,15 +16,17 @@ if ! is_binary "/usr/local/bin/starship"; then
   curl -sS https://starship.rs/install.sh | sh
 fi
 
-if is_binary zinit; then
-  if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
-    zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-  fi
-  if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
-    zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
-  fi
-  if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
-    zinit snippet "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
-  fi
+# Needed before sourcing plugins
+autoload -Uz compinit
+compinit
+
+if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
+  source "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
+  source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
+  source "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
 fi
 
