@@ -1,3 +1,4 @@
 src/zsh/secrets
 src/zsh/plugins.d
+bin/nvim
 
