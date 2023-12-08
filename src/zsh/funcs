@@ -25,11 +25,11 @@ function is_file {
 }
 
 function has_string {
-  if grep -q "$1" "$2"; then
-    true
-  else
-    false
-  fi
+	if grep -q "$1" "$2"; then
+		true
+	else
+		false
+	fi
 }
 
 if is_binary nala; then
@@ -50,6 +50,22 @@ if is_binary nala; then
 			sudo nala remove "${@:2}"
 		fi
 	}
+fi
+
+if is_binary git; then
+	git config --global alias.d diff
+	git config --global alias.pu pull
+	git config --global alias.f 'fetch -a'
+	git config --global alias.lg "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+	git config --global alias.ap 'add . -p'
+	git config --global alias.p push
+	git config --global alias.co 'checkout'
+	git config --global alias.cob 'checkout -b'
+	git config --global alias.br branch
+	git config --global alias.st 'status -sb'
+	git config --global alias.cm 'commit -m'
+	git config --global alias.unstage 'reset HEAD --'
+	git config --global alias.last 'log -1 HEAD'
 fi
 
 if is_binary grep; then
@@ -95,6 +111,3 @@ function handle_ize_files {
 		mv "$upName" "$loName"
 	done
 }
-
-
-
