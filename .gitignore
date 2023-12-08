@@ -1,4 +1,5 @@
-src/zsh/secrets
+src/zsh/secret*
+*secrets
 src/zsh/plugins.d
 bin/nvim
 bin/st
