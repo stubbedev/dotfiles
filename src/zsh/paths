@@ -7,6 +7,7 @@ STUBBE_PATHS=(
 	"$HOME/.nimble/bin"
 	"$HOME/.bun/bin"
 	"$HOME/.deno/bin"
+	"$HOME/.cargo/bin"
 	"$HOME/go/bin"
 )
 
