@@ -5,10 +5,11 @@ alias ta="tmux a"
 alias tls="tmux ls"
 alias tn='tmux new -s "${PWD//[\.+]/_}"'
 alias legacy_ssl_node="export NODE_OPTIONS=--openssl-legacy-provider"
-alias l='ls -lFh'     #size,show type,human readable
-alias la='ls -lAFh'   #long list,show almost all,show type,human readable
-alias lr='ls -tRFh'   #sorted by date,recursive,show type,human readable
-alias ll='ls -l'      #long list
+alias ls='ls --color'
+alias l='ls -lFh'   #size,show type,human readable
+alias la='ls -lAFh' #long list,show almost all,show type,human readable
+alias lr='ls -tRFh' #sorted by date,recursive,show type,human readable
+alias ll='ls -l'    #long list
 alias ff='find . -type f -name'
 alias h='history'
 alias hgrep="fc -El 0 | grep"
