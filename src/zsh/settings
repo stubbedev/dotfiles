@@ -5,6 +5,14 @@ DISABLE_AUTO_TITLE=true
 ENABLE_CORRECTION=true
 VIM_MODE_NO_DEFAULT_BINDINGS=true
 
+export HISTFILE="$STBDIR/history"
+export HISTTIMEFORMAT="[%F %T] "
+export HISTFILESIZE=1000000000
+export HISTSIZE=1000000000
+setopt INC_APPEND_HISTORY
+setopt EXTENDED_HISTORY
+setopt HIST_IGNORE_ALL_DUPS
+
 if is_binary starship; then
   eval "$(starship init zsh)"
 fi
