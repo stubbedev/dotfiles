@@ -28,6 +28,7 @@ function install {
 		install_tmux
 		install_nvim
 		install_i3
+		install_golang
 		exit
 		;;
 	m | M | mandatory | Mandatory)
@@ -85,6 +86,17 @@ function install_zsh {
 		echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
 	fi
 	eval "source $SOURCE_ZSH"
+}
+
+function install_golang {
+	echo "Installing GOLANG CONFIG"
+	LATEST_GO_VERSION="$(curl --silent https://go.dev/VERSION?m=text | head -n 1)"
+	LATEST_GO_DOWNLOAD_URL="https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz"
+
+	SOURCE_GOLANG="$STUBBE_SRC/.go"
+	mkdir -p "$SOURCE_GOLANG"
+	curl -OJ -L --progress-bar $LATEST_GO_DOWNLOAD_URL
+	tar -xf ${LATEST_GO_VERSION}.linux-amd64.tar.gz -C $SOURCE_GOLANG
 }
 
 function install_nvim {

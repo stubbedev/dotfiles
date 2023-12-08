@@ -8,7 +8,8 @@ STUBBE_PATHS=(
 	"$HOME/.bun/bin"
 	"$HOME/.deno/bin"
 	"$HOME/.cargo/bin"
-	"$HOME/go/bin"
+	"$HOME/.go/bin"
+	"$HOME/.go/packages/bin"
 )
 
 # ASSIGN PATH EXPORTS IN LOOP
