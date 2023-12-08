@@ -90,19 +90,20 @@ function install_zsh {
 
 function install_golang {
 	echo "Installing GOLANG CONFIG"
-	LATEST_GO_VERSION="$(curl --silent https://go.dev/VERSION?m=text | head -n 1)"
+	LATEST_GO_VERSION="$(curl https://go.dev/VERSION?m=text | head -n 1)"
 	LATEST_GO_DOWNLOAD_URL="https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz"
 
-	SOURCE_GOLANG="$STUBBE_SRC/.go"
+	SOURCE_GOLANG="$HOME/.go"
 	mkdir -p "$SOURCE_GOLANG"
-	curl -OJ -L --progress-bar $LATEST_GO_DOWNLOAD_URL
+	wget $LATEST_GO_DOWNLOAD_URL
 	tar -xf ${LATEST_GO_VERSION}.linux-amd64.tar.gz -C $SOURCE_GOLANG
+	rm ${LATEST_GO_VERSION}.linux-amd64.tar.gz
 }
 
 function install_nvim {
 	echo "Installing NEOVIM CONFIG"
 	rm -rf $HOME/.stubbe/bin/nvim
-	wget -O $HOME/.stubbe/bin/nvim https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
+	wget $HOME/.stubbe/bin/nvim https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
 	chmod a+x $HOME/.stubbe/bin/nvim
 	SOURCE_NVIM="$STUBBE_SRC/nvim"
 	mkdir -p "$HOME/.config"
