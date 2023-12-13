@@ -20,3 +20,6 @@ for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
 	fi
 done
 export PATH
+
+# SPECIFIC BINARY EXPORTS
+export GOPATH="$HOME/.stubbe/src/go/packages"
