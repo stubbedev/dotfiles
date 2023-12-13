@@ -101,15 +101,12 @@ function install_golang {
 }
 
 function install_nvim {
-	echo "Installing NEOVIM CONFIG"
+	echo "Installing NEOVIM"
 	rm -rf $HOME/.stubbe/bin/nvim
 	wget https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
 	mv nvim.appimage $HOME/.stubbe/bin/nvim
 	chmod a+x $HOME/.stubbe/bin/nvim
-	SOURCE_NVIM="$STUBBE_SRC/nvim"
-	mkdir -p "$HOME/.config"
-	rm -rf "$HOME/.config/nvim"
-	ln -sf "$SOURCE_NVIM" "$HOME/.config"
+	git clone https://github.com/LazyVim/starter $HOME/.config/nvim
 }
 
 function install_fonts {
