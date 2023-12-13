@@ -93,7 +93,7 @@ function install_golang {
 	LATEST_GO_VERSION="$(curl https://go.dev/VERSION?m=text | head -n 1)"
 	LATEST_GO_DOWNLOAD_URL="https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz"
 
-	SOURCE_GOLANG="$STUBBE_SRC/go"
+	SOURCE_GOLANG="$STUBBE_SRC"
 	mkdir -p "$SOURCE_GOLANG"
 	wget $LATEST_GO_DOWNLOAD_URL
 	tar -xf ${LATEST_GO_VERSION}.linux-amd64.tar.gz -C $SOURCE_GOLANG
