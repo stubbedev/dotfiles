@@ -1,7 +1,10 @@
 return {
   {
     "nvim-tree/nvim-tree.lua",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
+    dependencies = {
+      { "nvim-tree/nvim-web-devicons" },
+      { 'akinsho/bufferline.nvim', version = "*" }
+    },
     opts = {
       disable_netrw = true
     },
