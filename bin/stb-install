@@ -106,7 +106,7 @@ function install_nvim {
 	wget https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
 	mv nvim.appimage $HOME/.stubbe/bin/nvim
 	chmod a+x $HOME/.stubbe/bin/nvim
-	git clone https://github.com/LazyVim/starter $HOME/.config/nvim
+  ln -sf $HOME/.stubbe/src/nvim $HOME/.config/nvim
 }
 
 function install_fonts {
