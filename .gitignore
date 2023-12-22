@@ -3,5 +3,4 @@ bin/st
 src/go
 src/zsh/plugins.d
 src/zsh/history
-src/nvim/lua/.luarc.json
-src/nvim/lazy-lock.json
+*.json
