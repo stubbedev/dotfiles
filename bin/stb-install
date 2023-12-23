@@ -107,6 +107,7 @@ function install_nvim {
 	mv nvim.appimage $HOME/.stubbe/bin/nvim
 	chmod a+x $HOME/.stubbe/bin/nvim
   ln -sf $HOME/.stubbe/src/nvim $HOME/.config/nvim
+  echo "You may need FuseLib2 in order to run NeoVim."
 }
 
 function install_fonts {

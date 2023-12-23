@@ -107,7 +107,7 @@ fi
 if is_binary vim; then
   function init_vim_bind {
     if [ -z "${VIMRUNTIME}" ]; then
-      exec $HOME/.stubbe/bin/nvim "$@"
+      $HOME/.stubbe/bin/nvim
     fi
   }
 fi
