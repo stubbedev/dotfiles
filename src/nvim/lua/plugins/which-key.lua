@@ -4,7 +4,7 @@ return {
     event = "VeryLazy",
     init = function()
       vim.o.timeout = true
-      vim.o.timeoutlen = 300
+      vim.o.timeoutlen = 500
     end,
     opts = {}
   },
@@ -15,7 +15,7 @@ return {
       cyclic = true,
       builtin_marks = { ".", "<", ">", "^", "'" },
       mappings = {
-        toggle = '<leader>mn',
+        set_next = '<leader>mn',
         annotate = '<leader>ma',
         next = '<leader>n',
         prev = '<leader>N',
@@ -37,5 +37,21 @@ return {
         delete_bookmark = '<leader>mD',
       }
     },
+  },
+  {
+    "ggandor/leap.nvim",
+    lazy = false,
+    dependencies = { 
+      "tpope/vim-repeat",
+    },
+    config = function()
+      local leap = require("leap")
+      leap.add_default_mappings()
+      leap.init_highlight(true)
+      leap.add_repeat_mappings(';', ',', {
+        relative_directions = true,
+        modes = { 'n', 'x', 'o' },
+      })
+    end
   }
 }
