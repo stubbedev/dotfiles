@@ -37,21 +37,5 @@ return {
         delete_bookmark = '<leader>mD',
       }
     },
-  },
-  {
-    "ggandor/leap.nvim",
-    lazy = false,
-    dependencies = { 
-      "tpope/vim-repeat",
-    },
-    config = function()
-      local leap = require("leap")
-      leap.add_default_mappings()
-      leap.init_highlight(true)
-      leap.add_repeat_mappings(';', ',', {
-        relative_directions = true,
-        modes = { 'n', 'x', 'o' },
-      })
-    end
   }
 }
