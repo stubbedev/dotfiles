@@ -51,6 +51,8 @@ return {
       { "<leader>fc",       "<cmd>Telescope commands<cr>",                  desc = "Find commands." },
       { "<leader>fm",       "<cmd>Telescope marks<cr>",                     desc = "Find marks." },
       { "<leader>fz",       "<cmd>Telescope colorscheme<cr>",               desc = "Find colorschemes." },
+      { "<leader>fg",       "<cmd>Telescope git_status<cr>",                desc = "Find git status." },
+      { "<leader>fv",       "<cmd>Telescope git_branches<cr>",              desc = "Find git branches." },
     },
     opts = {}
   }
