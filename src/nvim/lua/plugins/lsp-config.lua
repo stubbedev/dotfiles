@@ -96,7 +96,6 @@ return {
           desc = 'Code Action.',
           buffer = bufnr
         })
-
         vim.keymap.set({ 'n', 'x' }, '<leader>cr', vim.lsp.buf.rename, {
           desc = 'Rename.',
           buffer = bufnr
