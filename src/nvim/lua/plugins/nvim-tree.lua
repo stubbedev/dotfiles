@@ -13,7 +13,7 @@ return {
       disable_netrw = true
     },
     keys = {
-      { "<leader>e", "<cmd>NvimTreeToggle<cr>", desc = "Toggle file tree." }
+      { "<leader>E", "<cmd>NvimTreeToggle<cr>", desc = "Toggle file tree." }
     }
   }
 }

@@ -4,8 +4,8 @@ local ensure_installed = {
   "neocmake",
   "cssls",
   "html",
-  "dockerls",
   "gopls",
+  "dockerls",
   "jsonls",
   "tsserver",
   "lua_ls",
@@ -97,37 +97,38 @@ return {
           buffer = bufnr
         })
 
-        vim.keymap.set({'n', 'x'}, '<leader>cr', vim.lsp.buf.rename, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>cr', vim.lsp.buf.rename, {
           desc = 'Rename.',
           buffer = bufnr
         })
-        vim.keymap.set({'n', 'x'}, '<leader>ch', vim.lsp.buf.hover, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>ch', vim.lsp.buf.hover, {
           desc = 'Hover definition.',
           buffer = bufnr
         })
-        vim.keymap.set({'n', 'x'}, '<leader>ci', vim.lsp.buf.implementation, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>ci', vim.lsp.buf.implementation, {
           desc = "Implementation.",
           buffer = bufnr
         })
-        vim.keymap.set({'n', 'x'}, '<leader>ct', vim.lsp.buf.type_definition, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>ct', vim.lsp.buf.type_definition, {
           desc = "Type definition.",
           buffer = bufnr
         })
-        vim.keymap.set({'n', 'x'}, '<leader>cd', vim.lsp.buf.definition, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>cd', vim.lsp.buf.definition, {
           desc = "Definition.",
           buffer = bufnr
         })
-        vim.keymap.set({'n', 'x'}, '<leader>cs', vim.lsp.buf.signature_help, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>cs', vim.lsp.buf.signature_help, {
           desc = "Signature Help.",
           buffer = bufnr
         })
-        vim.keymap.set({'n', 'x'}, '<leader>cf', '<Cmd>LspZeroFormat<CR>', {
-          desc = "Format buffer.",
-          buffer = bufnr
+        vim.keymap.set({ 'n', 'x' }, '<leader>cf', function() vim.lsp.buf.format({ async = true, timeout = 3000 }) end, {
+          desc = "Format buffer LSP.",
+          buffer = bufnr,
+          remap = true
         })
       end)
 
-      vim.keymap.set({'n'}, '<leader>cf', "<Esc>mhgg=G'h", { desc = "Format buffer." })
+      vim.keymap.set({ 'n', 'x' }, '<leader>cf', "<Esc>mhgg=G'h", { desc = "Format buffer." })
 
       lsp_zero.set_sign_icons({
         error = '✘',
@@ -147,9 +148,6 @@ return {
       for _, lsp_name in ipairs(ensure_installed) do
         lspconfig[lsp_name].setup({})
       end
-
     end
   }
 }
-
-
