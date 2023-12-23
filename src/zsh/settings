@@ -16,6 +16,9 @@ setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 
+
+bindkey -s '^[v' 'init_vim_bind^M'
+
 if is_binary starship; then
   eval "$(starship init zsh)"
 fi

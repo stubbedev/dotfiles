@@ -89,12 +89,18 @@ vim.keymap.set("v", "<A-j>", ":m '>+1<cr>gv=gv", { desc = "Move down" })
 vim.keymap.set("v", "<A-k>", ":m '<-2<cr>gv=gv", { desc = "Move up" })
 
 -- buffers
+vim.keymap.set("n", "<leader>bh", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
+vim.keymap.set("n", "<leader>bl", "<cmd>bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "[b", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 vim.keymap.set("n", "]b", "<cmd>bnext<cr>", { desc = "Next buffer" })
 vim.keymap.set("n", "<leader>bb", "<cmd>e #<cr>", { desc = "Switch to Other Buffer" })
+vim.keymap.set("n", "<leader>bd", "<cmd>bd<cr>", { desc = "Delete buffer" })
 vim.keymap.set("n", "<leader>`", "<cmd>e #<cr>", { desc = "Switch to Other Buffer" })
+vim.keymap.set("n", "<leader>be", "<cmd>enew<cr>", { desc = "New window buffer" })
+vim.keymap.set("n", "<leader>bv", "<cmd>vnew<cr>", { desc = "New vertical buffer" })
+vim.keymap.set("n", "<leader>bh", "<cmd>new<cr>", { desc = "New horizontal buffer" })
 
 -- Clear search with <esc>
 vim.keymap.set({ "i", "n" }, "<esc>", "<cmd>noh<cr><esc>", { desc = "Escape and clear hlsearch" })
