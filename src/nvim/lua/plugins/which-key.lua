@@ -7,5 +7,9 @@ return {
       vim.o.timeoutlen = 300
     end,
     opts = {}
+  },
+  {
+    "chentoast/marks.nvim",
+    opts = {}
   }
 }

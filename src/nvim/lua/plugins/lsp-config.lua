@@ -52,11 +52,9 @@ return {
       }
     },
     config = function()
-      -- Here is where you configure the autocompletion settings.
       local lsp_zero = require('lsp-zero')
       lsp_zero.extend_cmp()
 
-      -- And you can configure cmp even more, if you want to.
       local cmp = require('cmp')
       local cmp_action = lsp_zero.cmp_action()
 
@@ -93,16 +91,43 @@ return {
 
       lsp_zero.on_attach(function(client, bufnr)
         lsp_zero.default_keymaps({ buffer = bufnr })
-        local opts = { buffer = bufnr}
 
-        vim.keymap.set({ 'n' }, '<leader>ca', vim.lsp.buf.code_action, {})
-        vim.keymap.set({'n', 'x'}, '<leader>cf', function()
-          vim.lsp.buf.format({
-            async = false,
-            timeout_ms = 10000,
-          })
-        end, opts)
+        vim.keymap.set({ 'n' }, '<leader>ca', vim.lsp.buf.code_action, {
+          desc = 'Code Action.',
+          buffer = bufnr
+        })
+
+        vim.keymap.set({'n', 'x'}, '<leader>cr', vim.lsp.buf.rename, {
+          desc = 'Rename.',
+          buffer = bufnr
+        })
+        vim.keymap.set({'n', 'x'}, '<leader>ch', vim.lsp.buf.hover, {
+          desc = 'Hover definition.',
+          buffer = bufnr
+        })
+        vim.keymap.set({'n', 'x'}, '<leader>ci', vim.lsp.buf.implementation, {
+          desc = "Implementation.",
+          buffer = bufnr
+        })
+        vim.keymap.set({'n', 'x'}, '<leader>ct', vim.lsp.buf.type_definition, {
+          desc = "Type definition.",
+          buffer = bufnr
+        })
+        vim.keymap.set({'n', 'x'}, '<leader>cd', vim.lsp.buf.definition, {
+          desc = "Definition.",
+          buffer = bufnr
+        })
+        vim.keymap.set({'n', 'x'}, '<leader>cs', vim.lsp.buf.signature_help, {
+          desc = "Signature Help.",
+          buffer = bufnr
+        })
+        vim.keymap.set({'n', 'x'}, '<leader>cf', '<Cmd>LspZeroFormat<CR>', {
+          desc = "Format buffer.",
+          buffer = bufnr
+        })
       end)
+
+      vim.keymap.set({'n'}, '<leader>cf', "<Esc>mhgg=G'h", { desc = "Format buffer." })
 
       lsp_zero.set_sign_icons({
         error = '✘',
