@@ -120,7 +120,7 @@ return {
           desc = "Signature Help.",
           buffer = bufnr
         })
-        vim.keymap.set({ 'n', 'x' }, '<leader>cf', function() vim.lsp.buf.format({ async = true, timeout = 3000 }) end, {
+        vim.keymap.set({ 'n', 'x' }, '<leader>cf', function() vim.lsp.buf.format({ async = false, timeout = 3000 }) end, {
           desc = "Format buffer LSP.",
           buffer = bufnr,
           remap = true
@@ -150,3 +150,4 @@ return {
     end
   }
 }
+

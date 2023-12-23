@@ -3,7 +3,9 @@ return {
   dependencies = { "nvim-tree/nvim-web-devicons" },
   lazy = false,
   cmd = "Oil",
-  keys = { { "<leader>e", "<cmd>Oil<cr>", desc = "Oil Editor" } },
+  keys = {
+    { "<leader>e", "<cmd>Oil<cr>", desc = "Oil Editor" },
+  },
   opts = {
     default_file_explorer = true,
     columns = {
