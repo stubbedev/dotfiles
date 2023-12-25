@@ -45,6 +45,7 @@ return {
       { "<leader>/",        "<cmd>Telescope current_buffer_fuzzy_find<cr>", desc = "Find in current buffer." },
       { "<leader>fw",       "<cmd>Telescope live_grep<cr>",                 desc = "Find word." },
       { "<leader>fb",       "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
+      { "<leader>f,",       "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
       { "<leader>fh",       "<cmd>Telescope help_tags<cr>",                 desc = "Find help_tags." },
       { "<leader>fs",       "<cmd>Telescope treesitter<cr>",                desc = "Find symbols." },
       { "<leader>ft",       "<cmd>Telescope keymaps<cr>",                   desc = "Find keymaps." },
@@ -52,6 +53,7 @@ return {
       { "<leader>fm",       "<cmd>Telescope marks<cr>",                     desc = "Find marks." },
       { "<leader>fz",       "<cmd>Telescope colorscheme<cr>",               desc = "Find colorschemes." },
       { "<leader>fg",       "<cmd>Telescope git_status<cr>",                desc = "Find git status." },
+      { "<leader>fv",       "<cmd>Telescope git_branches<cr>",              desc = "Find git branches." },
       { "<leader>fv",       "<cmd>Telescope git_branches<cr>",              desc = "Find git branches." },
     },
     opts = {}
