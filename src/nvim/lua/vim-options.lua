@@ -143,3 +143,8 @@ vim.keymap.set("n", "<leader><tab>]", "<cmd>tabnext<cr>", { desc = "Next Tab" })
 vim.keymap.set("n", "<leader><tab>d", "<cmd>tabclose<cr>", { desc = "Close Tab" })
 vim.keymap.set("n", "<leader><tab>[", "<cmd>tabprevious<cr>", { desc = "Previous Tab" })
 
+vim.keymap.set({"v", "n"}, "c", '"_c', {desc = "Delete without yank"})
+vim.keymap.set({"v", "n"}, "C", '"_C', {desc = "Change without yank"})
+vim.keymap.set({"v", "n"}, "d", '"_d', {desc = "Delete char without yank"})
+vim.keymap.set({"v", "n"}, "D", '"_D', {desc = "Delete line without yank"})
+

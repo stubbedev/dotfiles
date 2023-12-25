@@ -4,7 +4,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     lazy = false,
     opts = {
-      theme = "palenight",
+      theme = "catppuccin",
       extensions = { "nvim-tree", "lazy", "mason" },
     }
   },

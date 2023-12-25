@@ -21,6 +21,14 @@ return {
         'nvim-lua/plenary.nvim',
       },
       {
+        "ecthelionvi/NeoComposer.nvim",
+        dependencies = { "kkharji/sqlite.lua" },
+        opts = {},
+        config = function()
+          require('telescope').load_extension('macros')
+        end
+      },
+      {
         "nvim-telescope/telescope-fzf-native.nvim",
         build = "make",
         config = function()
