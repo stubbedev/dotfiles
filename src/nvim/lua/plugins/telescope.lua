@@ -21,14 +21,6 @@ return {
         'nvim-lua/plenary.nvim',
       },
       {
-        "ecthelionvi/NeoComposer.nvim",
-        dependencies = { "kkharji/sqlite.lua" },
-        opts = {},
-        config = function()
-          require('telescope').load_extension('macros')
-        end
-      },
-      {
         "nvim-telescope/telescope-fzf-native.nvim",
         build = "make",
         config = function()
@@ -63,6 +55,7 @@ return {
       { "<leader>fg",       "<cmd>Telescope git_status<cr>",                desc = "Find git status." },
       { "<leader>fv",       "<cmd>Telescope git_branches<cr>",              desc = "Find git branches." },
       { "<leader>fo",       "<cmd>Telescope oldfiles<cr>",                  desc = "Find oldfiles." },
+      { "<leader>fn",       "<cmd>Telescope notify<cr>",                    desc = "Find notifications." },
     },
     opts = {}
   }
