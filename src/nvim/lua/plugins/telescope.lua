@@ -47,14 +47,14 @@ return {
       { "<leader>fb",       "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
       { "<leader>f,",       "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
       { "<leader>fh",       "<cmd>Telescope help_tags<cr>",                 desc = "Find help_tags." },
-      { "<leader>fs",       "<cmd>Telescope treesitter<cr>",                desc = "Find symbols." },
+      { "<leader>fs",       "<cmd>Telescope lsp_document_symbols<cr>",      desc = "Find symbols." },
       { "<leader>ft",       "<cmd>Telescope keymaps<cr>",                   desc = "Find keymaps." },
       { "<leader>fc",       "<cmd>Telescope commands<cr>",                  desc = "Find commands." },
       { "<leader>fm",       "<cmd>Telescope marks<cr>",                     desc = "Find marks." },
       { "<leader>fz",       "<cmd>Telescope colorscheme<cr>",               desc = "Find colorschemes." },
       { "<leader>fg",       "<cmd>Telescope git_status<cr>",                desc = "Find git status." },
       { "<leader>fv",       "<cmd>Telescope git_branches<cr>",              desc = "Find git branches." },
-      { "<leader>fv",       "<cmd>Telescope git_branches<cr>",              desc = "Find git branches." },
+      { "<leader>fo",       "<cmd>Telescope oldfiles<cr>",                  desc = "Find oldfiles." },
     },
     opts = {}
   }
