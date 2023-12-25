@@ -62,6 +62,9 @@ opt.fillchars = {
   eob = " ",
 }
 
+vim.keymap.set({ "n", "x" }, "c", '"_c', { remap = true })
+vim.keymap.set({ "n", "x" }, "d", '"_d', { remap = true })
+
 vim.cmd.highlight('DiagnosticUnderlineError guisp=red gui=undercurl')
 
 vim.keymap.set({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
