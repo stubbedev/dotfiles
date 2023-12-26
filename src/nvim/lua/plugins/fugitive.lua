@@ -1,3 +1,5 @@
 return {
-  'tpope/vim-fugitive'
+  'tpope/vim-fugitive',
+  keys = {},
+  opts = {}
 }
