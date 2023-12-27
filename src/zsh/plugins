@@ -6,11 +6,11 @@ fi
 STUBBE_ZSH_PLUGS_DIR="$HOME/.stubbe/src/zsh/plugins.d"
 
 # AUTOHIGHLIGHT
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"; then
-  git clone "https://github.com/zsh-users/zsh-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting"
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
+  git clone "https://github.com/zdharma/fast-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"
 fi
-if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
-  source "$STUBBE_ZSH_PLUGS_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+if is_file "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"; then
+  source "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"
 fi
 
 # AUTOSUGGESTIONS
@@ -28,7 +28,6 @@ fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
 fi
-
 
 
 

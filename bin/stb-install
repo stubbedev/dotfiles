@@ -74,7 +74,10 @@ function install_i3 {
 
   SOURCE_I3="$STUBBE_SRC/i3/config"
   mkdir -p "$HOME/.config/i3"
-  ln -sf "$SOURCE_I3" "$HOME/.config/i3"
+  touch "$HOME/.config/i3/config"
+  if ! has_string "$SOURCE_I3" "$HOME/.config/i3/config"; then
+    echo "include $SOURCE_I3" >>"$HOME/.config/i3/config"
+  fi
 }
 
 function install_zsh {
