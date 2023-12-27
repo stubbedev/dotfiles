@@ -16,6 +16,7 @@ setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 
+setxkbmap -option caps:escape
 
 bindkey -s '^[v' 'init_vim_bind^M'
 
