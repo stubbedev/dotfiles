@@ -1,10 +1,5 @@
 #!/bin/bash
 
-alias screens="screen -ls"
-alias ta="tmux a"
-alias tls="tmux ls"
-alias tn='tmux new -s "${PWD//[\.+]/_}"'
-alias legacy_ssl_node="export NODE_OPTIONS=--openssl-legacy-provider"
 alias ls='ls --color'
 alias l='ls -lFh'   #size,show type,human readable
 alias la='ls -lAFh' #long list,show almost all,show type,human readable
@@ -18,7 +13,4 @@ alias sortnr='sort -n -r'
 alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
-alias vim='nvim'
-alias vi='nvim'
-alias nano='nvim'
-alias ed='nvim'
+

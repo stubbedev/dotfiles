@@ -104,20 +104,63 @@ if is_binary curl; then
   }
 fi
 
-if is_binary vim; then
+if is_binary nvim; then
+  alias vim='nvim'
+  alias vi='nvim'
+  alias nano='nvim'
+  alias ed='nvim'
   function init_vim_bind {
     if [ -z "${VIMRUNTIME}" ]; then
-      $HOME/.stubbe/bin/nvim
+      nvim
     fi
   }
 fi
 
-function handleize_files {
-  for f in *\ *; do mv "$f" "${f// /_}"; done
-  ls | while read upName; do
+if is_binary tmux; then
+  function tn {
+    if [ -z "$1" ]; then
+      tmux new -s "${PWD//[\.+]/_}"
+    else
+      tmux new -s "$1"
+    fi
+  }
+
+  function tls {
+    tmux ls
+  }
+
+  function ta {
+    if [ -z "$1"]; then
+      tmux attach
+    else
+      tmux attach -t "$1"
+    fi
+  }
+fi
+
+if is_binary screen; then
+  function sc {
+    screen "$@"
+  }
+
+  function scs {
+    screen -ls
+  }
+fi
+
+if is_binary node; then
+  function legacy_ssl_node {
+    export NODE_OPTIONS=--openssl-legacy-provider
+  }
+fi
+
+if is_binary mv && is_binary tr && is_binary ls && is_binary echo; then
+  function handleize_files {
+    for f in *\ *; do mv "$f" "${f// /_}"; done
+    ls | while read upName; do
     loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
     mv "$upName" "$loName"
   done
 }
-
+fi
 

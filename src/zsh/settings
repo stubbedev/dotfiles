@@ -16,9 +16,13 @@ setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 
-setxkbmap -option caps:escape
+if is_binary setxkbmap; then
+  setxkbmap -option caps:escape
+fi
 
-bindkey -s '^[v' 'init_vim_bind^M'
+if is_binary init_vim_bind; then
+  bindkey -s '^[v' 'init_vim_bind^M'
+fi
 
 if is_binary starship; then
   eval "$(starship init zsh)"
