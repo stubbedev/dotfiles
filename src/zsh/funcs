@@ -146,6 +146,24 @@ if is_binary screen; then
   function scs {
     screen -ls
   }
+
+  function tx {
+    session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
+    case $1 in
+      l | ls)
+        screen ls
+        ;;
+      n | new)
+        screen -S "$session_name"
+        ;;
+      j | join)
+        screen -r "$session_name"
+        ;;
+      *)
+        screen "$@"
+        ;;
+    esac
+  }
 fi
 
 if is_binary node; then
