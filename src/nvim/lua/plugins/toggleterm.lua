@@ -8,6 +8,7 @@ return {
         local opts = { buffer = 0, silent = true }
         vim.keymap.set('t', '<esc>', [[<C-\><C-n>]], opts)
         vim.keymap.set('t', '<esc><esc>', [[<C-\><C-n><Cmd>:ToggleTerm<CR>]], opts)
+        vim.keymap.set('n', 'q', [[<Cmd>:ToggleTerm<CR>]], opts)
         vim.keymap.set({'t','n','x','v','i'}, '<C-_>', [[<C-\><C-n><Cmd>:ToggleTerm name=companion<CR>]], opts)
         vim.keymap.set('t', 'jk', [[<C-\><C-n>]], opts)
         vim.keymap.set('t', '<C-h>', [[<Cmd>wincmd h<CR>]], opts)

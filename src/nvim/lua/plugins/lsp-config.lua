@@ -64,6 +64,7 @@ return {
           { name = 'nvim_lsp' },
           { name = 'buffer' },
           { name = 'codeium' },
+          { name = 'orgmode' },
         },
         mapping = cmp.mapping.preset.insert({
           ['<Tab>'] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
