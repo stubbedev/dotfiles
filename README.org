@@ -9,9 +9,6 @@ This is a collection of personal dotfiles and utilities I use on linux. They are
   This means that all settings should be removed together with the utils from your system, if you delete the repo.
 
   The structure is as follows:
-  #+BEGIN_SRC sh :results output :exports results
-  tree ./
-  #+END_SRC
   #+begin_src ditaa
   $HOME
   |
@@ -19,12 +16,15 @@ This is a collection of personal dotfiles and utilities I use on linux. They are
   |  +--bin
   |  +--src
   |     +--zsh
+  |        +--plugins.d
   |     +--nvim
   |     +--st
   |     +--fonts
   |     +--i3
   |     +--tmux
   |     +--go
+  |        +--packages
+  |           +--bin
   #+end_src
 
   The bin directory contains =stb= and =stb-install= which are the 2 utility binaries. It may also contain other utilities binaries if directly included in the repo.
@@ -48,6 +48,7 @@ This is a collection of personal dotfiles and utilities I use on linux. They are
 
 * INSTALLATION
   In order to install the utils and config, you simply need to run the following command:
+
   =git clone --depth 1 https://github.com/stubbedev/dotfiles.git && cd dotfiles && sudo ./bin/stb-install=
 
   The installer will prompt you with options on what to install.
