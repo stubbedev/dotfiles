@@ -8,8 +8,8 @@ return {
     init = function() vim.g.barbar_auto_setup = false end,
     opts = {
       animation = false,
-      auto_hide = true,
-      clickable = true,
+      auto_hide = false,
+      clickable = false,
     },
   },
 }
