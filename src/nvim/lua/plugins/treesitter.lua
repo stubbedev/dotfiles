@@ -21,7 +21,7 @@ return {
         vim.keymap.set('n', 'zM', require('ufo').closeAllFolds, { desc = "Close all folds." })
         vim.o.foldcolumn = '1'
         vim.o.foldlevel = 99
-        vim.o.foldlevelstart = 0
+        vim.o.foldlevelstart = 99
         vim.o.foldenable = true
       end
     }
@@ -48,3 +48,4 @@ return {
     indent = { enable = true },
   }
 }
+
