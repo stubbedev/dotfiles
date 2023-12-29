@@ -129,6 +129,7 @@ vim.keymap.set("n", "[q", vim.cmd.cprev, { desc = "Previous quickfix" })
 vim.keymap.set("n", "]q", vim.cmd.cnext, { desc = "Next quickfix" })
 -- windows
 vim.keymap.set("n", "<leader>ww", "<C-W>p", { desc = "Other window", remap = true })
+vim.keymap.set("n", "<leader>wq", "<C-w>q", { desc = "Quit window", remap = true })
 vim.keymap.set("n", "<leader>wd", "<C-W>c", { desc = "Delete window", remap = true })
 vim.keymap.set("n", "<leader>w-", "<C-W>s", { desc = "Split window below", remap = true })
 vim.keymap.set("n", "<leader>w|", "<C-W>v", { desc = "Split window right", remap = true })

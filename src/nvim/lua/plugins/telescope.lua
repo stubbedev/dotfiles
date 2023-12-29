@@ -46,6 +46,7 @@ return {
       { "<leader>fw",       "<cmd>Telescope live_grep<cr>",                 desc = "Find word." },
       { "<leader>fb",       "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
       { "<leader>f,",       "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
+      { "<leader>,",        "<cmd>Telescope buffers<cr>",                   desc = "Find buffers." },
       { "<leader>fh",       "<cmd>Telescope help_tags<cr>",                 desc = "Find help_tags." },
       { "<leader>fs",       "<cmd>Telescope lsp_document_symbols<cr>",      desc = "Find symbols." },
       { "<leader>ft",       "<cmd>Telescope keymaps<cr>",                   desc = "Find keymaps." },
