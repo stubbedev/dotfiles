@@ -23,18 +23,23 @@ return {
     lazy = false,
     config = true,
   },
-
+  {
+    "L3MON4D3/LuaSnip",
+    version = "v2.*",
+    build = "make install_jsregexp",
+    opts = {},
+    dependencies = {
+      {
+        "saadparwaiz1/cmp_luasnip",
+      },
+    },
+  },
   -- Autocompletion
   {
     "hrsh7th/nvim-cmp",
     event = "InsertEnter",
     dependencies = {
-      {
-        "L3MON4D3/LuaSnip",
-      },
-      {
-        "saadparwaiz1/cmp_luasnip",
-      },
+
       {
         "hrsh7th/cmp-nvim-lsp",
       },
@@ -61,9 +66,10 @@ return {
         },
         sources = {
           { name = "nvim_lsp" },
-          { name = "buffer" },
           { name = "codeium" },
+          { name = "buffer" },
           { name = "orgmode" },
+          { name = "luasnip" },
         },
         mapping = cmp.mapping.preset.insert({
           ["<Tab>"] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
@@ -77,7 +83,6 @@ return {
       })
     end,
   },
-
   -- LSP
   {
     "neovim/nvim-lspconfig",
