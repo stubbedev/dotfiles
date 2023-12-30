@@ -125,18 +125,18 @@ return {
       vim.keymap.set({ "n", "x" }, "<leader>cf", function()
         vim.lsp.buf.format({ async = false, timeout = 3000 })
       end, {
-        desc = "Format buffer LSP.",
+      desc = "Format buffer LSP.",
+    })
+
+    vim.keymap.set({ "n", "x" }, "<leader>cF", "<Esc>mhgg=G'h", { desc = "Format buffer." })
+
+    local capabilities = require("cmp_nvim_lsp").default_capabilities()
+    local lspconfig = require("lspconfig")
+    for _, lsp_name in ipairs(ensure_installed) do
+      lspconfig[lsp_name].setup({
+        capabilities = capabilities,
       })
-
-      vim.keymap.set({ "n", "x" }, "<leader>cF", "<Esc>mhgg=G'h", { desc = "Format buffer." })
-
-      local capabilities = require("cmp_nvim_lsp").default_capabilities()
-      local lspconfig = require("lspconfig")
-      for _, lsp_name in ipairs(ensure_installed) do
-        lspconfig[lsp_name].setup({
-          capabilities = capabilities,
-        })
-      end
-    end,
-  },
+    end
+  end,
+},
 }
