@@ -74,6 +74,15 @@ function install_i3 {
   fi
 }
 
+function install_i3status {
+  echo "Installing i3status"
+
+  SOURCE_I3STATUS="$STUBBE_SRC/i3status/config"
+  mkdir -p "$HOME/.config/i3status"
+  touch "$HOME/.config/i3status/config"
+  cat "$SOURCE_I3STATUS" >> "$HOME/.config/i3status/config"
+}
+
 function install_zsh {
   echo "Installing ZSH CONFIG"
 
