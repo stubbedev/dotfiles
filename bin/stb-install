@@ -112,7 +112,7 @@ function install_nvim {
   wget -q https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
   mv nvim.appimage $HOME/.stubbe/bin/nvim
   chmod a+x $HOME/.stubbe/bin/nvim
-  ln -sf $HOME/.stubbe/src/nvim $HOME/.config/nvim
+  ln -s $HOME/.stubbe/src/nvim $HOME/.config/nvim
   echo "You may need FuseLib2 in order to run NeoVim."
 }
 
