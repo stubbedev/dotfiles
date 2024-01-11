@@ -60,7 +60,7 @@ function install_links {
 
 function install_st {
   echo "Installing ST TERMINAL"
-  ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin/st"
+  ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin"
 }
 
 function install_i3 {
@@ -81,6 +81,14 @@ function install_i3status {
   mkdir -p "$HOME/.config/i3status"
   touch "$HOME/.config/i3status/config"
   cat "$SOURCE_I3STATUS" >> "$HOME/.config/i3status/config"
+}
+
+function install_picom {
+  echo "Installing picom config"
+
+  SOURCE_PICOM="$STUBBE_SRC/picom/picom.conf"
+  mkdir -p "$HOME/.config/picom"
+  ln -sf "$SOURCE_PICOM" "$HOME/.config/picom"
 }
 
 function install_zsh {
