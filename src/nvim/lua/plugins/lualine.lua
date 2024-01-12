@@ -3,15 +3,15 @@ return {
     "nvim-lualine/lualine.nvim",
     dependencies = {
       {
-        "nvim-tree/nvim-web-devicons"
+        "nvim-tree/nvim-web-devicons",
       },
       {
-        'rcarriga/nvim-notify',
+        "rcarriga/nvim-notify",
         opts = {
-          render = 'compact',
-          stages = 'fade',
-          background_colour = 'transparent',
-        }
+          render = "compact",
+          stages = "fade",
+          background_colour = "transparent",
+        },
       },
       {
         "chrisgrieser/nvim-recorder",
@@ -24,6 +24,7 @@ return {
           { "cq", desc = "⧂ Edit macro" },
           { "dq", desc = "⨂ Delete all macros" },
           { "yq", desc = "⚇ Yank macro" },
+          { "^^", desc = " Insert macro breakpoint" },
         },
         config = function()
           require("recorder").setup({
@@ -35,7 +36,26 @@ return {
               editMacro = "cq",
               deleteAllMacros = "dq",
               yankMacro = "yq",
+              addBreakPoint = "^^",
             },
+            clear = false,
+            logLevel = vim.log.levels.INFO,
+            lessNotifications = true,
+            useNerdfontIcons = true,
+            performanceOpts = {
+              countThreshold = 100,
+              lazyredraw = true,
+              noSystemClipboard = true,
+              autocmdEventsIgnore = {
+                "TextChangedI",
+                "TextChanged",
+                "InsertLeave",
+                "InsertEnter",
+                "InsertCharPre",
+              },
+            },
+            dapSharedKeymaps = false,
+            timeout = 300,
           })
 
           local lualineZ = require("lualine").get_config().sections.lualine_z or {}
@@ -43,23 +63,23 @@ return {
           table.insert(lualineZ, { require("recorder").recordingStatus })
           table.insert(lualineY, { require("recorder").displaySlots })
 
-          require("lualine").setup {
+          require("lualine").setup({
             sections = {
               lualine_y = lualineY,
               lualine_z = lualineZ,
             },
-          }
+          })
         end,
       },
     },
     lazy = false,
     config = function()
-      require('lualine').setup({
+      require("lualine").setup({
         options = {
-          theme = 'catppuccin',
+          theme = "catppuccin",
           extensions = { "nvim-tree", "lazy", "mason" },
-        }
+        },
       })
-    end
+    end,
   },
 }
