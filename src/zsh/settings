@@ -27,9 +27,9 @@ if is_binary init_vim_bind; then
   bindkey -s '^[v' 'init_vim_bind^M'
 fi
 
-if is_binary atuin; then
-  eval "$(atuin init zsh)"
-fi
+# if is_binary atuin; then
+#   eval "$(atuin init zsh)"
+# fi
 
 if is_binary starship; then
   eval "$(starship init zsh)"
