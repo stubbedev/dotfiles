@@ -44,8 +44,8 @@ bindsym $mod+z exec --no-startup-id morc_menu
 
 # exec_always --no-startup-id "$HOME/.stubbe/src/screenlayout/ideapad.sh"
 exec --no-startup-id "$HOME/.stubbe/src/screenlayout/desktop.sh"
-# exec_always --no-startup-id picom --config "$HOME/.stubbe/src/picom/picom.conf" -b
-exec_always --no-startup-id feh --bg-fill "$HOME/.stubbe/src/wallpapers/ballet.jpg"
+exec --no-startup-id picom --config "$HOME/.stubbe/src/picom/picom.conf" -b
+exec_always --no-startup-id feh --bg-fill "$HOME/.stubbe/src/wallpapers/ballet.png"
 exec --no-startup-id volumeicon
 # bindsym $mod+Ctrl+m exec terminal -e 'alsamixer'
 #exec --no-startup-id pulseaudio
