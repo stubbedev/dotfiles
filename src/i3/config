@@ -42,8 +42,8 @@ bindsym $mod+z exec --no-startup-id morc_menu
 ## sound-section - DO NOT EDIT if you wish to automatically upgrade Alsa -> Pulseaudio later! ##
 ################################################################################################
 
-exec_always --no-startup-id "$HOME/.stubbe/src/screenlayout/ideapad.sh"
-exec_always --no-startup-id "$HOME/.stubbe/src/screenlayout/desktop.sh"
+# exec_always --no-startup-id "$HOME/.stubbe/src/screenlayout/ideapad.sh"
+exec --no-startup-id "$HOME/.stubbe/src/screenlayout/desktop.sh"
 # exec_always --no-startup-id picom --config "$HOME/.stubbe/src/picom/picom.conf" -b
 exec_always --no-startup-id feh --bg-fill "$HOME/.stubbe/src/wallpapers/ballet.jpg"
 exec --no-startup-id volumeicon
