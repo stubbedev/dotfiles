@@ -51,7 +51,7 @@ exec --no-startup-id volumeicon
 #exec --no-startup-id pulseaudio
 #exec --no-startup-id pa-applet
 bindsym $mod+Ctrl+m exec pavucontrol
-
+bindsym --release Print exec flameshot gui
 ################################################################################################
 
 # Pulse Audio controls
