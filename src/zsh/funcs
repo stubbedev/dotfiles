@@ -139,14 +139,6 @@ if is_binary tmux; then
 fi
 
 if is_binary screen; then
-	function sc {
-		screen "$@"
-	}
-
-	function scs {
-		screen -ls
-	}
-
 	function tx {
 		session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
 		case $1 in
@@ -211,6 +203,9 @@ function venv {
 		cd "$HOME/git/api-v3/"
 		echo "Switched to: API-V3"
 		;;
+  dot | DOT)
+    cd "$HOME/git/dotfiles/"
+    echo "Switched to: DOTFiles"
 	*)
 		echo "Please provide a valid first argument"
 		;;
