@@ -19,6 +19,10 @@ setopt HIST_IGNORE_ALL_DUPS
 # FOR CLIPBOARD STUFF
 export DISPLAY=:0
 
+if is_binary docker; then
+  export DOCKER_HOST=unix:///run/user/1000/docker.sock
+fi
+
 if is_binary setxkbmap; then
   setxkbmap -option caps:escape
 fi

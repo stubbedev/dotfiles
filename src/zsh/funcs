@@ -195,3 +195,24 @@ if is_binary service; then
 		fi
 	}
 fi
+
+function venv {
+	case $1 in
+	tsd | TSD)
+		cd "$HOME/git/thesocialdigits/"
+		source "$HOME/git/thesocialdigits/venv/bin/activate"
+		echo "Switched to: TheSocialDigits"
+		;;
+	dt | DT)
+		cd "$HOME/git/dev-tools/"
+		echo "Switched to: DevTools"
+		;;
+	av3 | AV3)
+		cd "$HOME/git/api-v3/"
+		echo "Switched to: API-V3"
+		;;
+	*)
+		echo "Please provide a valid first argument"
+		;;
+	esac
+}
