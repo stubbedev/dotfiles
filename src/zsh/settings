@@ -28,6 +28,7 @@ if is_binary setxkbmap; then
 fi
 
 if is_binary starship; then
+  export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
   eval "$(starship init zsh)"
 fi
 
