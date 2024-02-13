@@ -32,6 +32,14 @@ function has_string {
 	fi
 }
 
+function is_clerk_dev {
+	if [[ $(hostname) = *'clerk.network'* ]]; then
+		true
+	else
+		false
+	fi
+}
+
 if is_binary nala; then
 	function npt {
 		if [ "$1" = "i" ]; then
@@ -56,7 +64,11 @@ if is_binary git; then
 	git config --global alias.d diff
 	git config --global alias.pu pull
 	git config --global alias.f 'fetch -a'
-	git config --global alias.lg "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+	git config --global alias.lg "l	if [[ $(hostname) = *'clerk.network'* ]]; then
+		true
+	else
+		false
+	fiog --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
 	git config --global alias.ap 'add . -p'
 	git config --global alias.p push
 	git config --global alias.co 'checkout'
@@ -188,27 +200,55 @@ if is_binary service; then
 	}
 fi
 
-function venv {
-	case $1 in
-	tsd | TSD)
-		cd "$HOME/git/thesocialdigits/"
-		source "$HOME/git/thesocialdigits/venv/bin/activate"
-		echo "Switched to: TheSocialDigits"
-		;;
-	dt | DT)
-		cd "$HOME/git/dev-tools/"
-		echo "Switched to: DevTools"
-		;;
-	av3 | AV3)
-		cd "$HOME/git/api-v3/"
-		echo "Switched to: API-V3"
-		;;
-	dot | DOT)
-		cd "$HOME/git/dotfiles/"
-		echo "Switched to: DOTFiles"
-		;;
-	*)
-		echo "Please provide a valid first argument"
-		;;
-	esac
-}
+if is_clerk_dev; then
+	function venv {
+		case $1 in
+		tsd | TSD)
+			cd "$HOME/git/thesocialdigits/"
+			source "$HOME/git/thesocialdigits/venv/bin/activate"
+			echo "Switched to: TheSocialDigits"
+			;;
+		dt | DT)
+			cd "$HOME/git/dev-tools/"
+			echo "Switched to: DevTools"
+			;;
+		av3 | AV3)
+			cd "$HOME/git/api-v3/"
+			echo "Switched to: API-V3"
+			;;
+		dot | DOT)
+			cd "$HOME/git/dotfiles/"
+			echo "Switched to: DOTFiles"
+			;;
+		*)
+			echo "Please provide a valid first argument"
+			;;
+		esac
+	}
+
+	function run {
+		if ! [ $# -eq 2 ]; then
+			echo "Please provide one of the following options:"
+			echo "imp[orter] STORE_ID"
+			echo "exp[orter] EXPORTER_ID"
+			return 0
+		fi
+		case $1 in
+		exp | exporter)
+			venv tsd
+			echo "Running Exporter: $1"
+			python "$PWD/batch/audience_export.py" $2
+			;;
+		imp | importer)
+			venv tsd
+			echo "Running Importer: $1"
+			python "$PWD/batch/download_data.py" $2
+			;;
+		*)
+			echo "Please provide one of the following options:"
+			echo "imp[orter] STORE_ID"
+			echo "exp[orter] EXPORTER_ID"
+			;;
+		esac
+	}
+fi
