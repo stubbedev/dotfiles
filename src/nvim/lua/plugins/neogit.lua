@@ -10,7 +10,7 @@ return {
     },
     config = true,
     keys = {
-      { '<leader>g', '<cmd>lua require("neogit").open({ kind = "auto" })<cr>', desc = 'Neogit' }
-    }
-  }
+      { "<C-g>", '<cmd>lua require("neogit").open({ kind = "auto" })<cr>', desc = "Neogit" },
+    },
+  },
 }
