@@ -58,3 +58,7 @@ This is a collection of personal dotfiles and utilities I use on linux. They are
   If you provide no option the wizard will list the available options.
 
 
+#+CAPTION: This is the caption for the next figure link (or table)
+#+NAME:   fig:SED-HR4049
+[[./src/wallpapers/traffic.png]]
+
