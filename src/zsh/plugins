@@ -4,6 +4,13 @@ if ! is_binary "/usr/local/bin/starship"; then
 fi
 
 STUBBE_ZSH_PLUGS_DIR="$HOME/.stubbe/src/zsh/plugins.d"
+# AUTOSUGGESTIONS
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
+git clone "https://github.com/zsh-users/zsh-autosuggestions.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"
+fi
+if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
+source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
 
 # AUTOHIGHLIGHT
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
@@ -11,14 +18,6 @@ if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
 fi
 if is_file "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"
-fi
-
-# AUTOSUGGESTIONS
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
-  git clone "https://github.com/zsh-users/zsh-autosuggestions.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"
-fi
-if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
-  source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 fi
 
 # AUTOPAIR
@@ -29,5 +28,10 @@ if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"; then
   source "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.zsh"
 fi
 
-
-
+# VIM-MODE
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"; then
+  git clone "https://github.com/softmoth/zsh-vim-mode.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"
+fi
+if is_file "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode/zsh-vim-mode.plugin.zsh"; then
+  source "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode/zsh-vim-mode.plugin.zsh"
+fi
