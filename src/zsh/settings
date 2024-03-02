@@ -20,7 +20,8 @@ setopt HIST_IGNORE_ALL_DUPS
 export DISPLAY=:0
 
 if is_binary docker; then
-  export DOCKER_HOST=unix:///run/user/1000/docker.sock
+  # export DOCKER_HOST=unix:///run/user/1000/docker.sock
+  export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 fi
 
 if is_binary zoxide; then
