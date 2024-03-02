@@ -50,7 +50,6 @@ exec_always --no-startup-id feh --bg-fill "$HOME/.stubbe/src/wallpapers/ballet.p
 exec_always --no-startup-id flameshot
 exec --no-startup-id volumeicon
 # bindsym $mod+Ctrl+m exec terminal -e 'alsamixer'
-exec --no-startup-id pulseaudio
 exec --no-startup-id pa-applet
 bindsym $mod+Ctrl+m exec pavucontrol
 bindsym $mod+Ctrl+t exec atgl
