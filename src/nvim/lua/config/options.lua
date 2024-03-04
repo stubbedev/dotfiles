@@ -3,7 +3,7 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
 -- Enable LazyVim auto format
-vim.g.autoformat = true
+vim.g.autoformat = false
 
 -- LazyVim root dir detection
 -- Each entry can be:
