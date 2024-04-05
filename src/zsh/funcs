@@ -190,16 +190,16 @@ if is_binary mv && is_binary tr && is_binary ls && is_binary echo; then
 	}
 fi
 
-if is_binary service; then
+if is_binary systemctl; then
 	function kill_native_servers {
 		if is_binary mysql; then
-			sudo service mysql stop
+			sudo systemctl stop mysql
 		fi
 		if is_binary nginx; then
-			sudo service nginx stop
+			sudo systemctl stop nginx
 		fi
 		if is_binary apache2; then
-			sudo service apache2 stop
+			sudo systemctl stop apache2
 		fi
 	}
 fi
