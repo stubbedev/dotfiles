@@ -240,12 +240,12 @@ if is_clerk_dev; then
 		case $1 in
 		exp | exporter)
 			venv tsd
-			echo "Running Exporter: $1"
+			echo "Running Exporter: $2"
 			python "$PWD/batch/audience_export.py" $2
 			;;
 		imp | importer)
 			venv tsd
-			echo "Running Importer: $1"
+			echo "Running Importer: $2"
 			python "$PWD/batch/download_data.py" $2
 			;;
 		*)
