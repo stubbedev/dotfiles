@@ -20,6 +20,7 @@ setopt HIST_IGNORE_ALL_DUPS
 export DISPLAY=:0
 
 if is_binary docker; then
+  export XDG_RUNTIME_DIR=/home/stb/.docker/run
   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 fi
 
