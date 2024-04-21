@@ -155,7 +155,7 @@ if is_binary screen; then
 		session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
 		case $1 in
 		l | ls)
-			screen ls
+			screen -ls
 			;;
 		n | new)
 			screen -S "$session_name"
