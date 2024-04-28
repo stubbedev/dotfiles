@@ -17,6 +17,7 @@ function install {
 		imports
 		install_links
 		install_st
+		install_wezterm
 		install_fonts
 		install_zsh
 		install_tmux
@@ -61,6 +62,16 @@ function install_links {
 function install_st {
 	echo "Installing ST TERMINAL"
 	ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin"
+}
+
+function install_wezterm {
+	curl https://sh.rustup.rs -sSf | sh -s
+	curl -LO https://github.com/wez/wezterm/releases/download/20240203-110809-5046fc22/wezterm-20240203-110809-5046fc22-src.tar.gz
+	tar -xzf wezterm-20240203-110809-5046fc22-src.tar.gz
+	cd wezterm-20240203-110809-5046fc22
+	./get-deps
+	cargo build --release
+	cargo run --release --bin wezterm -- start
 }
 
 function install_i3 {

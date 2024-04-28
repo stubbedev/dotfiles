@@ -27,7 +27,7 @@ font xft:JetBrainsMono NFM 12
 floating_modifier $mod
 
 # start a terminal
-bindsym $mod+Return exec $HOME/.stubbe/bin/st
+bindsym $mod+Return exec wezterm
 # kill focused window
 bindsym $mod+Shift+q kill
 
