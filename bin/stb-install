@@ -73,7 +73,7 @@ function install_wezterm {
 	cargo build --release
   SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
   mkdir -p "$HOME/.config/wezterm"
-  ln -sf "$SOURCE_WEZTERM" "$HOME/.config/wezterm"
+  ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
 
 function install_i3 {
