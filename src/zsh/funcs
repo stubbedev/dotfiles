@@ -131,7 +131,7 @@ fi
 if is_binary tmux; then
 	function tn {
 		if [ -z "$1" ]; then
-			tmux new -s "${PWD//[\.+]/_}"
+      tmux new -s "$(hostname) => $(basename "$PWD")"
 		else
 			tmux new -s "$1"
 		fi
@@ -142,7 +142,7 @@ if is_binary tmux; then
 	}
 
 	function ta {
-		if [ -z "$1"]; then
+		if [ -z "$1" ]; then
 			tmux attach
 		else
 			tmux attach -t "$1"
@@ -208,20 +208,20 @@ if is_clerk_dev; then
 	function venv {
 		case $1 in
 		tsd | TSD)
-			cd "$HOME/git/thesocialdigits/"
+			cd "$HOME/git/thesocialdigits/" || exit
 			source "$HOME/git/thesocialdigits/venv/bin/activate"
 			echo "Switched to: TheSocialDigits"
 			;;
 		dt | DT)
-			cd "$HOME/git/dev-tools/"
+			cd "$HOME/git/dev-tools/" || exit
 			echo "Switched to: DevTools"
 			;;
 		av3 | AV3)
-			cd "$HOME/git/api-v3/"
+			cd "$HOME/git/api-v3/" || exit
 			echo "Switched to: API-V3"
 			;;
 		dot | DOT)
-			cd "$HOME/git/dotfiles/"
+			cd "$HOME/git/dotfiles/" || exit
 			echo "Switched to: DOTFiles"
 			;;
 		*)
