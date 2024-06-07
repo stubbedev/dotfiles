@@ -78,6 +78,7 @@ if is_binary git; then
 	git config --global alias.cm 'commit -m'
 	git config --global alias.unstage 'reset HEAD --'
 	git config --global alias.last 'log -1 HEAD'
+	git config --global core.excludesfile ~/.gitignore
 fi
 
 if is_binary grep; then
