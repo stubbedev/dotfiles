@@ -132,7 +132,7 @@ fi
 if is_binary tmux; then
 	function tn {
 		if [ -z "$1" ]; then
-      tmux new -s "$(hostname) => $(basename "$PWD")"
+      tmux new -s "$(whoami) => $(basename "$PWD")"
 		else
 			tmux new -s "$1"
 		fi
