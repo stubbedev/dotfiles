@@ -103,6 +103,21 @@ if is_binary docker; then
 	function docker_killall {
 		docker kill "$(docker ps -q)"
 	}
+
+  function lzd! {
+    sudo docker run -it -v \
+    /var/run/docker.sock:/var/run/docker.sock \
+    -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
+    lazyteam/lazydocker
+  }
+
+  function lzd {
+    docker run -it -v \
+    /var/run/docker.sock:/var/run/docker.sock \
+    -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
+    lazyteam/lazydocker
+  }
+
 fi
 
 if is_binary ss; then
