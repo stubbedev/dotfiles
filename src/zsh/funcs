@@ -105,14 +105,14 @@ if is_binary docker; then
 	}
 
   function lzd! {
-    sudo docker run -it -v \
+    sudo docker run --rm -it -v \
     /var/run/docker.sock:/var/run/docker.sock \
     -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
     lazyteam/lazydocker
   }
 
   function lzd {
-    docker run -it -v \
+    docker run --rm -it -v \
     /var/run/docker.sock:/var/run/docker.sock \
     -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
     lazyteam/lazydocker
