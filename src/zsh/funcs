@@ -146,6 +146,9 @@ fi
 
 if is_binary tmux; then
 	function tn {
+    TMPDIR=$(mktemp -d)
+    cp -r ./* "$TMPDIR"
+    cd "$TMPDIR" || exit
 		if [ -z "$1" ]; then
       tmux new -s "$(whoami) => $(basename "$PWD")"
 		else
