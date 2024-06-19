@@ -145,12 +145,22 @@ if is_binary nvim; then
 fi
 
 if is_binary tmux; then
-	function tn {
+	function tnc {
+    TMUXDIRNAME=$(basename "$PWD")
     TMPDIR=$(mktemp -d)
-    cp -r ./* "$TMPDIR"
+    cp -rT ./ "$TMPDIR"
     cd "$TMPDIR" || exit
 		if [ -z "$1" ]; then
-      tmux new -s "$(whoami) => $(basename "$PWD")"
+      tmux new -s "$(whoami) => $TMUXDIRNAME => $TMPDIR"
+		else
+			tmux new -s "$1"
+		fi
+	}
+
+	function tn {
+    TMUXDIRNAME=$(basename "$PWD")
+		if [ -z "$1" ]; then
+      tmux new -s "$(whoami) => $TMUXDIRNAME"
 		else
 			tmux new -s "$1"
 		fi
