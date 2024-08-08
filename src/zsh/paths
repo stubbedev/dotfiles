@@ -10,6 +10,7 @@ STUBBE_PATHS=(
 	"$HOME/.bun/bin"
 	"$HOME/.cargo/bin"
 	"$HOME/.deno/bin"
+  "/usr/local/go/bin"
 )
 
 # ASSIGN PATH EXPORTS IN LOOP
@@ -22,4 +23,4 @@ done
 export PATH
 
 # SPECIFIC BINARY EXPORTS
-export GOPATH="$HOME/.stubbe/src/go/packages"
+# export GOPATH="$HOME/.stubbe/src/go/packages"

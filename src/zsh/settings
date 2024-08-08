@@ -18,7 +18,7 @@ setopt HIST_IGNORE_ALL_DUPS
 
 # FOR CLIPBOARD STUFF
 export DISPLAY=:0
-unset GOROOT
+# unset GOROOT
 
 if is_binary docker; then
   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
