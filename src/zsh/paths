@@ -14,8 +14,6 @@ STUBBE_PATHS=(
   "/usr/local/go/bin"
 )
 
-# ASSIGN PATH EXPORTS IN LOOP
-
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
 	if [ -d "$STUBBE_PATH" ] && [[ ! ":$PATH:" == *":$STUBBE_PATH:"* ]]; then
 		PATH="$PATH:$STUBBE_PATH"
