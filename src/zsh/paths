@@ -10,6 +10,7 @@ STUBBE_PATHS=(
 	"$HOME/.bun/bin"
 	"$HOME/.cargo/bin"
 	"$HOME/.deno/bin"
+  "$HOME/go/bin"
   "/usr/local/go/bin"
 )
 
