@@ -40,6 +40,10 @@ function is_clerk_dev {
 	fi
 }
 
+function S {
+  sudo $(which "$@")
+}
+
 if is_binary nala; then
 	function npt {
 		if [ "$1" = "i" ]; then
