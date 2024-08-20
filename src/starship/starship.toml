@@ -2,5 +2,3 @@
 
 command_timeout = 1000
 
-[php]
-disabled = true
