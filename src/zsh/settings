@@ -22,11 +22,11 @@ export DISPLAY=:1
 # unset GOROOT
 
 if is_binary docker; then
-  export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+    export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 fi
 
 if is_binary zoxide; then
-  eval "$(zoxide init zsh)"
+    eval "$(zoxide init zsh)"
 fi
 
 # if is_binary setxkbmap; then
@@ -34,7 +34,7 @@ fi
 # fi
 
 if is_binary starship; then
-  export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
-  eval "$(starship init zsh)"
+    export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
+    eval "$(starship init zsh)"
 fi
 

@@ -1,292 +1,292 @@
 #!/bin/bash
 
 function is_binary {
-	if [[ $(command -v "$1") ]]; then
-		true
-	else
-		false
-	fi
+    if [[ $(command -v "$1") ]]; then
+        true
+    else
+        false
+    fi
 }
 
 function is_directory {
-	if test -d "$1"; then
-		true
-	else
-		false
-	fi
+    if test -d "$1"; then
+        true
+    else
+        false
+    fi
 }
 
 function is_file {
-	if test -f "$1"; then
-		true
-	else
-		false
-	fi
+    if test -f "$1"; then
+        true
+    else
+        false
+    fi
 }
 
 function has_string {
-	if grep -q "$1" "$2"; then
-		true
-	else
-		false
-	fi
+    if grep -q "$1" "$2"; then
+        true
+    else
+        false
+    fi
 }
 
 function is_clerk_dev {
-	if [[ $(hostname) = *'clerk.network'* ]]; then
-		true
-	else
-		false
-	fi
+    if [[ $(hostname) = *'clerk.network'* ]]; then
+        true
+    else
+        false
+    fi
 }
 
 function S {
-  sudo $(which "$1") "${@:2}"
+    sudo $(which "$1") "${@:2}"
 }
 
 if is_binary nala; then
-	function npt {
-		if [ "$1" = "i" ]; then
-			sudo nala install "${@:2}"
-		elif [ "$1" = "u" ]; then
-			sudo nala update "${@:2}"
-		elif [ "$1" = "ug" ]; then
-			sudo nala upgrade "${@:2}"
-		elif [ "$1" = "s" ]; then
-			sudo nala search "${@:2}"
-		elif [ "$1" = "r" ]; then
-			sudo nala remove "${@:2}"
-		elif [ "$1" = "l" ]; then
-			sudo nala list --installed
-    else
-      sudo nala "${@}"
-    fi
-	}
+    function npt {
+        if [ "$1" = "i" ]; then
+            sudo nala install "${@:2}"
+        elif [ "$1" = "u" ]; then
+            sudo nala update "${@:2}"
+        elif [ "$1" = "ug" ]; then
+            sudo nala upgrade "${@:2}"
+        elif [ "$1" = "s" ]; then
+            sudo nala search "${@:2}"
+        elif [ "$1" = "r" ]; then
+            sudo nala remove "${@:2}"
+        elif [ "$1" = "l" ]; then
+            sudo nala list --installed
+        else
+            sudo nala "${@}"
+        fi
+    }
 fi
 
 if is_binary git; then
-	git config --global alias.d diff
-	git config --global alias.pu pull
-	git config --global alias.f 'fetch -a'
-	git config --global alias.lg "l	if [[ $(hostname) = *'clerk.network'* ]]; then
+    git config --global alias.d diff
+    git config --global alias.pu pull
+    git config --global alias.f 'fetch -a'
+    git config --global alias.lg "l	if [[ $(hostname) = *'clerk.network'* ]]; then
 		true
 	else
 		false
-	fiog --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
-	git config --global alias.ap 'add . -p'
-	git config --global alias.p push
-	git config --global alias.co 'checkout'
-	git config --global alias.cob 'checkout -b'
-	git config --global alias.br branch
-	git config --global alias.st 'status -sb'
-	git config --global alias.cm 'commit -m'
-	git config --global alias.unstage 'reset HEAD --'
-	git config --global alias.last 'log -1 HEAD'
-	git config --global core.excludesfile ~/.gitignore
+    fiog --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+    git config --global alias.ap 'add . -p'
+    git config --global alias.p push
+    git config --global alias.co 'checkout'
+    git config --global alias.cob 'checkout -b'
+    git config --global alias.br branch
+    git config --global alias.st 'status -sb'
+    git config --global alias.cm 'commit -m'
+    git config --global alias.unstage 'reset HEAD --'
+    git config --global alias.last 'log -1 HEAD'
+    git config --global core.excludesfile ~/.gitignore
 fi
 
 if is_binary grep; then
-	function fa {
-		grep -H -r "$1" ./* | less
-	}
+    function fa {
+        grep -H -r "$1" ./* | less
+    }
 fi
 
 if is_binary phpcs; then
-	function php_lint {
-		phpcs --standard="$1" "$2"
-	}
+    function php_lint {
+        phpcs --standard="$1" "$2"
+    }
 fi
 
 if is_binary phpcbf; then
-	function php_fix {
-		phpcbf --standard="$1" "$2"
-	}
+    function php_fix {
+        phpcbf --standard="$1" "$2"
+    }
 fi
 
 if is_binary docker; then
-	function docker_killall {
-		docker kill "$(docker ps -q)"
-	}
+    function docker_killall {
+        docker kill "$(docker ps -q)"
+    }
 
-  function lzd! {
-    sudo docker run --rm -it -v \
-    /var/run/docker.sock:/var/run/docker.sock \
-    -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
-    lazyteam/lazydocker
-  }
+    function lzd! {
+        sudo docker run --rm -it -v \
+            /var/run/docker.sock:/var/run/docker.sock \
+            -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
+            lazyteam/lazydocker
+    }
 
-  function lzd {
-    docker run --rm -it -v \
-    /var/run/docker.sock:/var/run/docker.sock \
-    -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
-    lazyteam/lazydocker
-  }
+    function lzd {
+        docker run --rm -it -v \
+            /var/run/docker.sock:/var/run/docker.sock \
+            -v $HOME/git/lazydocker:/.config/jesseduffield/lazydocker \
+            lazyteam/lazydocker
+    }
 
 fi
 
 if is_binary ss; then
-	function pid_on_port {
-		ss -lptn " sport = :$1"
-	}
+    function pid_on_port {
+        ss -lptn " sport = :$1"
+    }
 fi
 
 if is_binary curl; then
-	function color_swatches {
-		curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
-	}
+    function color_swatches {
+        curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
+    }
 fi
 
 if is_binary nvim; then
-	alias vim='nvim'
-	alias vi='nvim'
-	alias nano='nvim'
-	alias ed='nvim'
-	alias svim='nvim -u NONE'
-	function init_vim_bind {
-		if [ -z "${VIMRUNTIME}" ]; then
-			nvim
-		fi
-	}
+    alias vim='nvim'
+    alias vi='nvim'
+    alias nano='nvim'
+    alias ed='nvim'
+    alias svim='nvim -u NONE'
+    function init_vim_bind {
+        if [ -z "${VIMRUNTIME}" ]; then
+            nvim
+        fi
+    }
 fi
 
 if is_binary tmux; then
-	function tnc {
-    TMUXDIRNAME=$(basename "$PWD")
-    TMPDIR=$(mktemp -d)
-    cp -rT ./ "$TMPDIR"
-    cd "$TMPDIR" || exit
-		if [ -z "$1" ]; then
-      tmux new -s "$(whoami) => $TMUXDIRNAME => $TMPDIR"
-		else
-			tmux new -s "$1"
-		fi
-	}
+    function tnc {
+        TMUXDIRNAME=$(basename "$PWD")
+        TMPDIR=$(mktemp -d)
+        cp -rT ./ "$TMPDIR"
+        cd "$TMPDIR" || exit
+        if [ -z "$1" ]; then
+            tmux new -s "$(whoami) => $TMUXDIRNAME => $TMPDIR"
+        else
+            tmux new -s "$1"
+        fi
+    }
 
-	function tn {
-    TMUXDIRNAME=$(basename "$PWD")
-		if [ -z "$1" ]; then
-      tmux new -s "$(whoami) => $TMUXDIRNAME"
-		else
-			tmux new -s "$1"
-		fi
-	}
+    function tn {
+        TMUXDIRNAME=$(basename "$PWD")
+        if [ -z "$1" ]; then
+            tmux new -s "$(whoami) => $TMUXDIRNAME"
+        else
+            tmux new -s "$1"
+        fi
+    }
 
-	function tls {
-		tmux ls
-	}
+    function tls {
+        tmux ls
+    }
 
-	function ta {
-		if [ -z "$1" ]; then
-			tmux attach
-		else
-			tmux attach -t "$1"
-		fi
-	}
+    function ta {
+        if [ -z "$1" ]; then
+            tmux attach
+        else
+            tmux attach -t "$1"
+        fi
+    }
 fi
 
 if is_binary screen; then
-	function tx {
-		session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
-		case $1 in
-		l | ls)
-			screen -ls
-			;;
-		n | new)
-			screen -S "$session_name"
-			;;
-		j | join)
-			screen -r "$session_name"
-			;;
-		*)
-			screen "$@"
-			;;
-		esac
-	}
+    function tx {
+        session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
+        case $1 in
+            l | ls)
+                screen -ls
+                ;;
+            n | new)
+                screen -S "$session_name"
+                ;;
+            j | join)
+                screen -r "$session_name"
+                ;;
+            *)
+                screen "$@"
+                ;;
+        esac
+    }
 fi
 
 if is_binary zoxide; then
-	alias cd="z"
+    alias cd="z"
 fi
 
 if is_binary node; then
-	function legacy_ssl_node {
-		export NODE_OPTIONS=--openssl-legacy-provider
-	}
+    function legacy_ssl_node {
+        export NODE_OPTIONS=--openssl-legacy-provider
+    }
 fi
 
 if is_binary mv && is_binary tr && is_binary ls && is_binary echo; then
-	function handleize_files {
-		for f in *\ *; do mv "$f" "${f// /_}"; done
-		ls | while read upName; do
-			loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
-			mv "$upName" "$loName"
-		done
-	}
+    function handleize_files {
+        for f in *\ *; do mv "$f" "${f// /_}"; done
+        ls | while read upName; do
+            loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
+            mv "$upName" "$loName"
+        done
+    }
 fi
 
 if is_binary systemctl; then
-	function kill_native_servers {
-		if is_binary mysql; then
-			sudo systemctl stop mysql
-		fi
-		if is_binary nginx; then
-			sudo systemctl stop nginx
-		fi
-		if is_binary apache2; then
-			sudo systemctl stop apache2
-		fi
-	}
+    function kill_native_servers {
+        if is_binary mysql; then
+            sudo systemctl stop mysql
+        fi
+        if is_binary nginx; then
+            sudo systemctl stop nginx
+        fi
+        if is_binary apache2; then
+            sudo systemctl stop apache2
+        fi
+    }
 fi
 
 if is_clerk_dev; then
-	function venv {
-		case $1 in
-		tsd | TSD)
-			cd "$HOME/git/thesocialdigits/" || exit
-			source "$HOME/git/thesocialdigits/venv/bin/activate"
-			echo "Switched to: TheSocialDigits"
-			;;
-		dt | DT)
-			cd "$HOME/git/dev-tools/" || exit
-			echo "Switched to: DevTools"
-			;;
-		av3 | AV3)
-			cd "$HOME/git/api-v3/" || exit
-			echo "Switched to: API-V3"
-			;;
-		dot | DOT)
-			cd "$HOME/git/dotfiles/" || exit
-			echo "Switched to: DOTFiles"
-			;;
-		*)
-			echo "Please provide a valid first argument"
-			;;
-		esac
-	}
+    function venv {
+        case $1 in
+            tsd | TSD)
+                cd "$HOME/git/thesocialdigits/" || exit
+                source "$HOME/git/thesocialdigits/venv/bin/activate"
+                echo "Switched to: TheSocialDigits"
+                ;;
+            dt | DT)
+                cd "$HOME/git/dev-tools/" || exit
+                echo "Switched to: DevTools"
+                ;;
+            av3 | AV3)
+                cd "$HOME/git/api-v3/" || exit
+                echo "Switched to: API-V3"
+                ;;
+            dot | DOT)
+                cd "$HOME/git/dotfiles/" || exit
+                echo "Switched to: DOTFiles"
+                ;;
+            *)
+                echo "Please provide a valid first argument"
+                ;;
+        esac
+    }
 
-	function run {
-		if ! [ $# -eq 2 ]; then
-			echo "Please provide one of the following options:"
-			echo "imp[orter] STORE_ID"
-			echo "exp[orter] EXPORTER_ID"
-			return 0
-		fi
-		case $1 in
-		exp | exporter)
-			venv tsd
-			echo "Running Exporter: $2"
-			python "$PWD/batch/audience_export.py" $2
-			;;
-		imp | importer)
-			venv tsd
-			echo "Running Importer: $2"
-			python "$PWD/batch/download_data.py" $2
-			;;
-		*)
-			echo "Please provide one of the following options:"
-			echo "imp[orter] STORE_ID"
-			echo "exp[orter] EXPORTER_ID"
-			;;
-		esac
-	}
+    function run {
+        if ! [ $# -eq 2 ]; then
+            echo "Please provide one of the following options:"
+            echo "imp[orter] STORE_ID"
+            echo "exp[orter] EXPORTER_ID"
+            return 0
+        fi
+        case $1 in
+            exp | exporter)
+                venv tsd
+                echo "Running Exporter: $2"
+                python "$PWD/batch/audience_export.py" $2
+                ;;
+            imp | importer)
+                venv tsd
+                echo "Running Importer: $2"
+                python "$PWD/batch/download_data.py" $2
+                ;;
+            *)
+                echo "Please provide one of the following options:"
+                echo "imp[orter] STORE_ID"
+                echo "exp[orter] EXPORTER_ID"
+                ;;
+        esac
+    }
 fi

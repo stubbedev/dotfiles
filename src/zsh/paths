@@ -1,24 +1,24 @@
 #!/bin/bash
 # EXPAND LIST WITH DESIRED PATHS
 STUBBE_PATHS=(
-	"$HOME/.stubbe/bin"
-	"$HOME/.stubbe/src/go/bin"
-	"$HOME/.stubbe/src/go/packages/bin"
-	"$HOME/.local/bin"
-	"$HOME/.config/composer/vendor/bin"
-	"$HOME/.nimble/bin"
-	"$HOME/.bun/bin"
-	"$HOME/.cargo/bin"
-	"$HOME/.deno/bin"
-  "$HOME/go/bin"
-  "$HOME/bin"
-  "/usr/local/go/bin"
+    "$HOME/.stubbe/bin"
+    "$HOME/.stubbe/src/go/bin"
+    "$HOME/.stubbe/src/go/packages/bin"
+    "$HOME/.local/bin"
+    "$HOME/.config/composer/vendor/bin"
+    "$HOME/.nimble/bin"
+    "$HOME/.bun/bin"
+    "$HOME/.cargo/bin"
+    "$HOME/.deno/bin"
+    "$HOME/go/bin"
+    "$HOME/bin"
+    "/usr/local/go/bin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
-	if [ -d "$STUBBE_PATH" ] && [[ ! ":$PATH:" == *":$STUBBE_PATH:"* ]]; then
-		PATH="$PATH:$STUBBE_PATH"
-	fi
+    if [ -d "$STUBBE_PATH" ] && [[ ! ":$PATH:" == *":$STUBBE_PATH:"* ]]; then
+        PATH="$PATH:$STUBBE_PATH"
+    fi
 done
 export PATH
 
