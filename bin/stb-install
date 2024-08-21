@@ -1,169 +1,170 @@
 #!/bin/bash
 
 function info {
-	echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
-	echo "Make sure you have the following installed before you run this util:"
-	echo "tmux  :: Terminal Multiplexer"
-	echo "zsh   :: POSIX Shell"
-	install
+  echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
+  echo "Make sure you have the following installed before you run this util:"
+  echo "tmux  :: Terminal Multiplexer"
+  echo "zsh   :: POSIX Shell"
+  install
 }
 
 function install {
-	echo "Please enter your desired option:"
-	read -rn 1 -p "(I)nstall All, Install (M)andatory or (C)ancel?" REPLY
-	printf "\n"
-	case "$REPLY" in
-	i | I | y | Y | install | Install)
-		imports
-		install_links
-		install_st
-		install_wezterm
-		install_fonts
-		install_zsh
-		install_tmux
-		install_nvim
-		install_i3
-		install_golang
-		exit
-		;;
-	m | M | mandatory | Mandatory)
-		imports
-		install_links
-		install_fonts
-		install_zsh
-		exit
-		;;
-	c | C | cancel | Cancel)
-		echo "Cancelling!"
-		exit
-		;;
-	*)
-		info
-		exit
-		;;
-	esac
+  echo "Please enter your desired option:"
+  read -rn 1 -p "(I)nstall All, Install (M)andatory or (C)ancel?" REPLY
+  printf "\n"
+  case "$REPLY" in
+  i | I | y | Y | install | Install)
+    imports
+    install_links
+    install_st
+    install_wezterm
+    install_fonts
+    install_zsh
+    install_tmux
+    install_nvim
+    install_i3
+    install_golang
+    exit
+    ;;
+  m | M | mandatory | Mandatory)
+    imports
+    install_links
+    install_fonts
+    install_zsh
+    exit
+    ;;
+  c | C | cancel | Cancel)
+    echo "Cancelling!"
+    exit
+    ;;
+  *)
+    info
+    exit
+    ;;
+  esac
 }
 
 function imports {
-	SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
-	source "$SCRIPT_DIR/src/zsh/funcs"
+  SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+  source "$SCRIPT_DIR/src/zsh/funcs"
 }
 
 function install_links {
-	echo "Creating Directory $HOME/.stubbe/"
+  echo "Creating Directory $HOME/.stubbe/"
 
-	mkdir -p "$HOME/.stubbe"
-	ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
-	ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
+  mkdir -p "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
 
-	export STUBBE_SRC="$HOME/.stubbe/src"
+  export STUBBE_SRC="$HOME/.stubbe/src"
 }
 
 function install_st {
-	echo "Installing ST TERMINAL"
-	ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin"
+  echo "Installing ST TERMINAL"
+  ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin"
 }
 
 function install_wezterm {
-	curl https://sh.rustup.rs -sSf | sh -s
-	curl -LO https://github.com/wez/wezterm/releases/download/20240203-110809-5046fc22/wezterm-20240203-110809-5046fc22-src.tar.gz
-	tar -xzf wezterm-20240203-110809-5046fc22-src.tar.gz
-	cd wezterm-20240203-110809-5046fc22
-	./get-deps
-	cargo build --release
+  curl https://sh.rustup.rs -sSf | sh -s
+  curl -LO https://github.com/wez/wezterm/releases/download/20240203-110809-5046fc22/wezterm-20240203-110809-5046fc22-src.tar.gz
+  tar -xzf wezterm-20240203-110809-5046fc22-src.tar.gz
+  cd wezterm-20240203-110809-5046fc22
+  ./get-deps
+  cargo build --release
   SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
   mkdir -p "$HOME/.config/wezterm"
   ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
 
 function install_i3 {
-	echo "Installing i3 CONFIG"
+  echo "Installing i3 CONFIG"
 
-	SOURCE_I3="$STUBBE_SRC/i3/config"
-	mkdir -p "$HOME/.config/i3"
-	touch "$HOME/.config/i3/config"
-	if ! has_string "$SOURCE_I3" "$HOME/.config/i3/config"; then
-		echo "include $SOURCE_I3" >>"$HOME/.config/i3/config"
-	fi
+  SOURCE_I3="$STUBBE_SRC/i3/config"
+  mkdir -p "$HOME/.config/i3"
+  touch "$HOME/.config/i3/config"
+  if ! has_string "$SOURCE_I3" "$HOME/.config/i3/config"; then
+    echo "include $SOURCE_I3" >>"$HOME/.config/i3/config"
+  fi
 }
 
 function install_i3status {
-	echo "Installing i3status"
+  echo "Installing i3status"
 
-	SOURCE_I3STATUS="$STUBBE_SRC/i3status/config"
-	mkdir -p "$HOME/.config/i3status"
-	touch "$HOME/.config/i3status/config"
-	cat "$SOURCE_I3STATUS" >>"$HOME/.config/i3status/config"
+  SOURCE_I3STATUS="$STUBBE_SRC/i3status/config"
+  mkdir -p "$HOME/.config/i3status"
+  touch "$HOME/.config/i3status/config"
+  cat "$SOURCE_I3STATUS" >>"$HOME/.config/i3status/config"
 }
 
 function install_picom {
-	echo "Installing picom config"
+  echo "Installing picom config"
 
-	SOURCE_PICOM="$STUBBE_SRC/picom/picom.conf"
-	mkdir -p "$HOME/.config/picom"
-	ln -sf "$SOURCE_PICOM" "$HOME/.config/picom"
+  SOURCE_PICOM="$STUBBE_SRC/picom/picom.conf"
+  mkdir -p "$HOME/.config/picom"
+  ln -sf "$SOURCE_PICOM" "$HOME/.config/picom"
 }
 
 function install_zsh {
-	echo "Installing ZSH CONFIG"
+  echo "Installing ZSH CONFIG"
 
-	SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-	touch "$HOME/.zshrc"
-	if ! has_string "$SOURCE_ZSH" "$HOME/.zshrc"; then
-		echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
-	fi
-	eval "source $SOURCE_ZSH"
+  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+  touch "$HOME/.zshrc"
+  if ! has_string "$SOURCE_ZSH" "$HOME/.zshrc"; then
+    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
+  fi
+  eval "source $SOURCE_ZSH"
 }
 
 function install_golang {
-	echo "Installing GOLANG CONFIG"
-	LATEST_GO_VERSION="$(curl https://go.dev/VERSION?m=text | head -n 1)"
-	LATEST_GO_DOWNLOAD_URL="https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz"
+  echo "Installing GOLANG CONFIG"
+  LATEST_GO_VERSION="$(curl https://go.dev/VERSION?m=text | head -n 1)"
+  LATEST_GO_DOWNLOAD_URL="https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz"
 
-	SOURCE_GOLANG="$STUBBE_SRC"
-	mkdir -p "$SOURCE_GOLANG"
-	wget -q $LATEST_GO_DOWNLOAD_URL
-	tar -xf ${LATEST_GO_VERSION}.linux-amd64.tar.gz -C $SOURCE_GOLANG
-	rm -rf ${LATEST_GO_VERSION}.linux-amd64.tar.gz
-	source "$HOME/.zshrc"
-	install_go_apps
-	source "$HOME/.zshrc"
+  SOURCE_GOLANG="$STUBBE_SRC"
+  mkdir -p "$SOURCE_GOLANG"
+  wget -q $LATEST_GO_DOWNLOAD_URL
+  tar -xf ${LATEST_GO_VERSION}.linux-amd64.tar.gz -C $SOURCE_GOLANG
+  rm -rf ${LATEST_GO_VERSION}.linux-amd64.tar.gz
+  source "$HOME/.zshrc"
+  install_go_apps
+  source "$HOME/.zshrc"
 }
 
 function install_go_apps {
-	go install github.com/jesseduffield/lazydocker@latest
-	go install github.com/xxxserxxx/gotop@latest
+  go install github.com/jesseduffield/lazygit@latest
+  go install github.com/jesseduffield/lazydocker@latest
+  go install github.com/xxxserxxx/gotop@latest
 }
 
 function install_nvim {
-	echo "Installing NEOVIM"
-	rm -rf $HOME/.stubbe/bin/nvim
-	wget -q https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
-	mv nvim.appimage $HOME/.stubbe/bin/nvim
-	chmod a+x $HOME/.stubbe/bin/nvim
-	ln -s $HOME/.stubbe/src/nvim $HOME/.config/nvim
-	echo "You may need FuseLib2 in order to run NeoVim."
+  echo "Installing NEOVIM"
+  rm -rf $HOME/.stubbe/bin/nvim
+  wget -q https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
+  mv nvim.appimage $HOME/.stubbe/bin/nvim
+  chmod a+x $HOME/.stubbe/bin/nvim
+  ln -s $HOME/.stubbe/src/nvim $HOME/.config/nvim
+  echo "You may need FuseLib2 in order to run NeoVim."
 }
 
 function install_fonts {
-	echo "Installing FONTS"
+  echo "Installing FONTS"
 
-	SOURCE_FONT="$STUBBE_SRC/fonts"
-	mkdir -p "$HOME/.fonts"
-	cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
+  SOURCE_FONT="$STUBBE_SRC/fonts"
+  mkdir -p "$HOME/.fonts"
+  cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
 }
 
 function install_tmux {
-	echo "Installing TMUX CONFIG"
-	if ! is_directory "$HOME/.tmux/plugins/tpm"; then
-		git clone --quiet https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
-	fi
-	SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
-	touch "$HOME/.tmux.conf"
-	if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
-		echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
-	fi
-	eval "tmux source-file $SOURCE_TMUX"
+  echo "Installing TMUX CONFIG"
+  if ! is_directory "$HOME/.tmux/plugins/tpm"; then
+    git clone --quiet https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
+  fi
+  SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
+  touch "$HOME/.tmux.conf"
+  if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
+    echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
+  fi
+  eval "tmux source-file $SOURCE_TMUX"
 }
 
 info
