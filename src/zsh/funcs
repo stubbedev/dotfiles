@@ -64,6 +64,10 @@ if is_binary nala; then
     }
 fi
 
+if is_binary pacstall; then
+  alias pt="pacstall"
+fi
+
 if is_binary git; then
     git config --global alias.d diff
     git config --global alias.pu pull
