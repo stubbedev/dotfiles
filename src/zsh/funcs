@@ -242,6 +242,17 @@ if is_binary systemctl; then
     }
 fi
 
+if is_binary python3; then
+    function pyenv {
+        if is_file "$PWD/venv/bin/activate"; then
+            source "$PWD/venv/bin/activate"
+        else
+            python3 -m venv ./venv
+            source "$PWD/venv/bin/activate"
+        fi
+    }
+fi
+
 if is_clerk_dev; then
     function venv {
         case $1 in
