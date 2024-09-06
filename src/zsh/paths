@@ -12,6 +12,7 @@ STUBBE_PATHS=(
     "$HOME/.deno/bin"
     "$HOME/go/bin"
     "$HOME/bin"
+    "$HOME/.volta/bin"
     "/usr/local/go/bin"
 )
 
