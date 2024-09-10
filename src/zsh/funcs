@@ -167,7 +167,7 @@ if is_binary tmux; then
     }
 
     function tn {
-        TMUXDIRNAME=$(basename "$PWD")
+        TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
         if [ -z "$1" ]; then
             tmux new -s "$(whoami) => $TMUXDIRNAME"
         else
