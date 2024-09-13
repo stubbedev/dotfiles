@@ -258,7 +258,7 @@ if is_clerk_dev; then
         case $1 in
             tsd | TSD)
                 cd "$HOME/git/thesocialdigits/" || exit
-                source "$HOME/git/thesocialdigits/venv311/bin/activate"
+                source "$HOME/git/thesocialdigits/venv/bin/activate"
                 echo "Switched to: TheSocialDigits"
                 ;;
             dt | DT)
