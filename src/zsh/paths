@@ -6,6 +6,7 @@ STUBBE_PATHS=(
     "$HOME/.stubbe/src/go/packages/bin"
     "$HOME/.local/bin"
     "$HOME/.config/composer/vendor/bin"
+    "$HOME/.config/emacs/bin"
     "$HOME/.nimble/bin"
     "$HOME/.bun/bin"
     "$HOME/.cargo/bin"
