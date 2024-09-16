@@ -87,6 +87,7 @@ if is_binary git; then
     git config --global alias.unstage 'reset HEAD --'
     git config --global alias.last 'log -1 HEAD'
     git config --global core.excludesfile ~/.gitignore
+    alias git_wipe="git stash && git stash clear"
 fi
 
 if is_binary grep; then
