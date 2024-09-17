@@ -45,7 +45,7 @@ function S {
 }
 
 if is_binary php; then
-    alias ar="php artisan"
+    alias art="php artisan"
 fi
 
 if is_binary nala; then
