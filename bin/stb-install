@@ -24,6 +24,7 @@ function install {
     install_nvim
     install_i3
     install_golang
+    install_intelephense_license
     exit
     ;;
   m | M | mandatory | Mandatory)
@@ -31,6 +32,7 @@ function install {
     install_links
     install_fonts
     install_zsh
+    install_intelephense_license
     exit
     ;;
   c | C | cancel | Cancel)
@@ -165,6 +167,16 @@ function install_tmux {
     echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
   fi
   eval "tmux source-file $SOURCE_TMUX"
+}
+
+function install_intelephense_license {
+  TMPDIR=$(mktemp -d)
+  git clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
+  mkdir -p "$HOME/intelephense"
+  if ! is_file "$HOME/intelephense/license.txt"; then
+    cat "$TMPDIR"/intelephense_license > "$HOME/intelephense/license.txt"
+  fi
+  rm -rf "$TMPDIR"
 }
 
 info
