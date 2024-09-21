@@ -174,7 +174,7 @@ function install_intelephense_license {
   git clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
   mkdir -p "$HOME/intelephense"
   if ! is_file "$HOME/intelephense/license.txt"; then
-    cat "$TMPDIR"/intelephense_license > "$HOME/intelephense/license.txt"
+    cat "$TMPDIR/intelephense_license" > "$HOME/intelephense/license.txt"
   fi
   rm -rf "$TMPDIR"
 }
