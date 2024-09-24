@@ -160,8 +160,8 @@ fi
 
 if is_binary tmux; then
     function tnc {
-        TMUXDIRNAME=$(basename "$PWD")
-        TMPDIR=$(mktemp -d)
+        TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+        TMPDIR=$(mktemp -d | tr '.' '_')
         cp -rT ./ "$TMPDIR"
         cd "$TMPDIR" || exit
         if [ -z "$1" ]; then
