@@ -32,7 +32,7 @@ function install {
     install_links
     install_fonts
     install_zsh
-    install_intelephense_license
+    install_tmux
     exit
     ;;
   c | C | cancel | Cancel)
