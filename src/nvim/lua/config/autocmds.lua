@@ -7,7 +7,6 @@ local function augroup(name)
 end
 
 vim.api.nvim_create_autocmd("FileType", {
-  group = augroup("wrap_spell"),
   pattern = { "coffee" },
   callback = function()
     vim.opt_local.shiftwidth = 4
