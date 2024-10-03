@@ -9,4 +9,4 @@ $all"""
 [custom.vpn]
 when = "test -f $HOME/.vpn_active"
 style = "green"
-format = "[\\[vpn\\]]($style)"
+format = "[\\[vpn\\] ]($style)"

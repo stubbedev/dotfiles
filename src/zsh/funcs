@@ -310,3 +310,20 @@ if is_clerk_dev; then
         esac
     }
 fi
+
+if is_binary openvpn3; then
+  function cvpn {
+    ACTIVE_SESSIONS=$(openvpn3 sessions-list | grep -i 'path' | awk '{p=index($0, ":");print $2}')
+    if ((${#ACTIVE_SESSIONS[@]})); then
+      rm -f "$HOME/.vpn_active"
+      echo "Disconnecting from VPN..."
+      for instance in $ACTIVE_SESSIONS; do
+        openvpn3 session-manage --disconnect --session-path ${instance}
+      done
+    else
+      echo "Connecting to VPN..."
+      touch "$HOME/.vpn_active"
+      openvpn3 session-start --config ~/.ssh/client.ovpn
+    fi
+  }
+fi
