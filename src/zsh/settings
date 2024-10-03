@@ -21,14 +21,13 @@ setopt HIST_IGNORE_ALL_DUPS
 export DISPLAY=:1
 unset GOROOT
 
-if is_binary docker; then
-    export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
-fi
-
-if is_binary zoxide; then
-    eval "$(zoxide init zsh)"
-fi
-
+# if is_binary docker; then
+#     export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+# fi
+#
+# if is_binary zoxide; then
+#     eval "$(zoxide init zsh)"
+# fi
 # if is_binary setxkbmap; then
 #   setxkbmap -option caps:escape
 # fi
