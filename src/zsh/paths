@@ -15,6 +15,7 @@ STUBBE_PATHS=(
     "$HOME/bin"
     "$HOME/.volta/bin"
     "/usr/local/go/bin"
+    "/sbin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
