@@ -161,11 +161,12 @@ fi
 if is_binary tmux; then
     function tnc {
         TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-        TMPDIR=$(mktemp -d | tr '.' '_')
-        cp -rT ./ "$TMPDIR"
-        cd "$TMPDIR" || exit
+        TMPDIR=$(mktemp -d)
+        TMPDIRNAME=$(echo $TMPDIR | cut -d "." -f 2)
+        cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
+        cd "$TMPDIR/$TMUXDIRNAME" || exit
         if [ -z "$1" ]; then
-            TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIR]"
+            TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
         else
             TMUXCLIENTNAME="$1"
         fi
