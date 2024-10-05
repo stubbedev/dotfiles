@@ -165,19 +165,21 @@ if is_binary tmux; then
         cp -rT ./ "$TMPDIR"
         cd "$TMPDIR" || exit
         if [ -z "$1" ]; then
-            tmux new -s "$(whoami) => $TMUXDIRNAME => $TMPDIR"
+            TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIR]"
         else
-            tmux new -s "$1"
+            TMUXCLIENTNAME="$1"
         fi
+        tmux new -As $TMUXCLIENTNAME
     }
 
     function tn {
         TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
         if [ -z "$1" ]; then
-            tmux new -s "$(whoami) => $TMUXDIRNAME"
+            TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
         else
-            tmux new -s "$1"
+            TMUXCLIENTNAME="$1"
         fi
+        tmux new -As $TMUXCLIENTNAME
     }
 
     function tls {
