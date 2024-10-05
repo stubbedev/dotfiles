@@ -76,11 +76,8 @@ if is_binary git; then
     git config --global alias.d diff
     git config --global alias.pu pull
     git config --global alias.f 'fetch -a'
-    git config --global alias.lg "l	if [[ $(hostname) = *'clerk.network'* ]]; then
-		true
-	else
-		false
-    fiog --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+    git config --global alias.lg "l	if [[ $(hostname) = *'clerk.network'* ]]; then true else false fi
+    og --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
     git config --global alias.ap 'add . -p'
     git config --global alias.p push
     git config --global alias.co 'checkout'
