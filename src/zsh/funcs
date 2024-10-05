@@ -164,7 +164,7 @@ if is_binary tmux; then
         TMPDIR=$(mktemp -d)
         TMPDIRNAME=$(echo $TMPDIR | cut -d "." -f 2)
         cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
-        cd "$TMPDIR/$TMUXDIRNAME" || exit
+        cd "$TMPDIR/$TMUXDIRNAME"
         if [ -z "$1" ]; then
             TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
         else
