@@ -1,7 +1,11 @@
 #!/bin/zsh
 
-autoload -U compinit
+autoload -Uz compinit
 compinit
+
+bindkey "^Xa" _expand_alias
+zstyle ':completion:*' completer _expand_alias _complete _ignored
+zstyle ':completion:*' regular true
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # disable sort when completing `git checkout`
 zstyle ':completion:*:git-checkout:*' sort false
@@ -19,6 +23,7 @@ zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
 # switch group using `<` and `>`
 zstyle ':fzf-tab:*' switch-group '<' '>'
+
 
 HYPHEN_INSENSITIVE=false
 DISABLE_AUTO_TITLE=true
