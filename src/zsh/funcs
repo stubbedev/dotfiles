@@ -95,12 +95,6 @@ if is_binary git; then
     alias git_wipe="git stash && git stash clear"
 fi
 
-if is_binary grep; then
-    function fa {
-        grep -H -r "$1" ./* | less
-    }
-fi
-
 if is_binary phpcs; then
     function php_lint {
         phpcs --standard="$1" "$2"
