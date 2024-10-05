@@ -7,11 +7,6 @@ config.enable_tab_bar = false
 config.use_resize_increments = true
 config.disable_default_key_bindings = true
 config.keys = {
-	{
-		key = "P",
-		mods = "CTRL",
-		action = wezterm.action.ActivateCommandPalette,
-	},
 	{ key = "V", mods = "CTRL | SHIFT", action = act.PasteFrom("Clipboard") },
 	{ key = "V", mods = "CTRL | SHIFT", action = act.PasteFrom("PrimarySelection") },
 }
