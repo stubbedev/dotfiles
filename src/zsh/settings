@@ -44,6 +44,7 @@ unset GOROOT
 
 if is_binary starship; then
     export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
+    export STARSHIP_LOG="error"
     eval "$(starship init zsh)"
 fi
 
