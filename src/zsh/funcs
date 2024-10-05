@@ -68,6 +68,10 @@ if is_binary nala; then
     }
 fi
 
+if is_binary apt-fast; then
+    alias apt="apt-fast"
+fi
+
 if is_binary pacstall; then
   alias pt="pacstall"
 fi
