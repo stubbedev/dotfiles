@@ -10,32 +10,19 @@ function info {
 
 function install {
   echo "Please enter your desired option:"
-  read -rn 1 -p "(I)nstall All, Install (M)andatory or (C)ancel?" REPLY
+  read -rn 1 -p "Install (A)ll, (I)nstall Mandatory or (C)ancel?" REPLY
   printf "\n"
   case "$REPLY" in
-  i | I | y | Y | install | Install)
-    imports
-    install_links
-    install_st
-    install_wezterm
-    install_fonts
-    install_zsh
-    install_tmux
-    install_nvim
-    install_i3
-    install_golang
-    install_intelephense_license
+  a | A )
+    install_mandatory
+    install_optional
     exit
     ;;
-  m | M | mandatory | Mandatory)
-    imports
-    install_links
-    install_fonts
-    install_zsh
-    install_tmux
+  m | M | i | I )
+    install_mandatory
     exit
     ;;
-  c | C | cancel | Cancel)
+  c | C )
     echo "Cancelling!"
     exit
     ;;
@@ -44,6 +31,23 @@ function install {
     exit
     ;;
   esac
+}
+
+function install_mandatory {
+  imports
+  install_links
+  install_fonts
+  install_zsh
+  install_tmux
+  install_intelephense_license
+}
+
+function install_optional {
+  install_st
+  install_wezterm
+  install_nvim
+  install_i3
+  install_golang
 }
 
 function imports {
@@ -67,12 +71,6 @@ function install_st {
 }
 
 function install_wezterm {
-  curl https://sh.rustup.rs -sSf | sh -s
-  curl -LO https://github.com/wez/wezterm/releases/download/20240203-110809-5046fc22/wezterm-20240203-110809-5046fc22-src.tar.gz
-  tar -xzf wezterm-20240203-110809-5046fc22-src.tar.gz
-  cd wezterm-20240203-110809-5046fc22
-  ./get-deps
-  cargo build --release
   SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
   mkdir -p "$HOME/.config/wezterm"
   ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
@@ -150,7 +148,6 @@ function install_nvim {
 
 function install_fonts {
   echo "Installing FONTS"
-
   SOURCE_FONT="$STUBBE_SRC/fonts"
   mkdir -p "$HOME/.fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
