@@ -40,6 +40,7 @@ function install_mandatory {
   install_zsh
   install_tmux
   install_intelephense_license
+  install_clerk_credentials
 }
 
 function install_optional {
@@ -174,6 +175,13 @@ function install_intelephense_license {
     cat "$TMPDIR/intelephense_license" > "$HOME/intelephense/license.txt"
   fi
   rm -rf "$TMPDIR"
+}
+
+function install_clerk_credentials {
+  CLERKCREDSTMPDIR=$(mktemp -d)
+  git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
+  $CLERKCREDSTMPDIR/clerk-auth/.install.sh
+  rm -rf $CLERKCREDSTMPDIR
 }
 
 info
