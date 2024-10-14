@@ -184,4 +184,8 @@ function install_clerk_credentials {
   rm -rf $CLERKCREDSTMPDIR
 }
 
+function install_regolith_Xresources {
+  ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
+}
+
 info
