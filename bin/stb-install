@@ -189,4 +189,9 @@ function install_regolith_Xresources {
   ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
 }
 
+function install_picom {
+  mkdir -p "$HOME/.config/picom"
+  ln -s "$STUBBE_SRC/picom/picom.conf" "$HOME/.config/picom/picom.conf"
+}
+
 info
