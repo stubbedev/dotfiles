@@ -41,6 +41,7 @@ function install_mandatory {
   install_tmux
   install_intelephense_license
   install_clerk_credentials
+  install_regolith_Xresources
 }
 
 function install_optional {
