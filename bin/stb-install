@@ -42,6 +42,7 @@ function install_mandatory {
   install_intelephense_license
   install_clerk_credentials
   install_regolith_Xresources
+  install_picom
 }
 
 function install_optional {
@@ -186,12 +187,13 @@ function install_clerk_credentials {
 }
 
 function install_regolith_Xresources {
+  mkdir -p "$HOME/.config/regolith3"
   ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
 }
 
 function install_picom {
-  mkdir -p "$HOME/.config/picom"
-  ln -s "$STUBBE_SRC/picom/picom.conf" "$HOME/.config/picom/picom.conf"
+  mkdir -p "$HOME/.config/regolith3/picom"
+  ln -s "$STUBBE_SRC/picom/picom.conf" "$HOME/.config/regolith3/picom/config"
 }
 
 info
