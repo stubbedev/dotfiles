@@ -196,4 +196,13 @@ function install_picom {
   ln -s "$STUBBE_SRC/picom/picom.conf" "$HOME/.config/regolith3/picom/config"
 }
 
+function install_fzf {
+    FZFTMPDIR=$(mktemp -d)
+    repo="junegunn/fzf"
+    release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
+    url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
+    wget $url -O $FZFTMPDIR/fzf.tar.gz
+    sudo tar -xvzf $FZFTMPDIR/fzf.tar.gz -C /bin
+}
+
 info

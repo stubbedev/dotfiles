@@ -45,6 +45,9 @@ unset GOROOT
 #     export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 # fi
 
+if is_binary fzf; then
+    source <(fzf --zsh)
+fi
 
 if is_binary starship; then
     export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
