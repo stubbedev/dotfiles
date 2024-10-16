@@ -7,9 +7,15 @@ STUBBE_ZSH_PLUGS_DIR="$HOME/.stubbe/src/zsh/plugins.d"
 
 # FZF-TAB
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"; then
-  git clone "https://github.com/Aloxaf/fzf-tab" "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"
+  git clone "https://github.com/Aloxaf/fzf-tab.git" "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"
 fi
 source "$STUBBE_ZSH_PLUGS_DIR/fzf-tab/fzf-tab.plugin.zsh"
+
+# FZF-HISTORY
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"; then
+  git clone "https://github.com/joshskidmore/zsh-fzf-history-search.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"
+fi
+source "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh"
 
 # AUTOSUGGESTIONS
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
