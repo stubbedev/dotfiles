@@ -1,10 +1,10 @@
 #!/bin/bash
 
 alias ls='ls --color'
-alias l='ls -lFh'   #size,show type,human readable
-alias la='ls -lAFh' #long list,show almost all,show type,human readable
-alias lr='ls -tRFh' #sorted by date,recursive,show type,human readable
-alias ll='ls -l'    #long list
+alias l='ls -lFh --color'   #size,show type,human readable
+alias la='ls -lAFh --color' #long list,show almost all,show type,human readable
+alias lr='ls -tRFh --color' #sorted by date,recursive,show type,human readable
+alias ll='ls -l --color'    #long list
 alias ff='find . -type f -name'
 alias h='history'
 alias hgrep="fc -El 0 | grep"
@@ -13,4 +13,5 @@ alias sortnr='sort -n -r'
 alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
-
+alias pbcopy='xclip -selection clipboard'
+alias pbpaste='xclip -selection clipboard -o'

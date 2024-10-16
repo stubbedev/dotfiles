@@ -12,10 +12,10 @@ fi
 source "$STUBBE_ZSH_PLUGS_DIR/fzf-tab/fzf-tab.plugin.zsh"
 
 # FZF-HISTORY
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"; then
-  git clone "https://github.com/joshskidmore/zsh-fzf-history-search.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh"
+# if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"; then
+#   git clone "https://github.com/joshskidmore/zsh-fzf-history-search.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"
+# fi
+# source "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh"
 
 # AUTOSUGGESTIONS
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then

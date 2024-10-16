@@ -15,8 +15,10 @@ zstyle ':completion:*:descriptions' format '[%d]'
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 # force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
 zstyle ':completion:*' menu no
-# preview directory's content with eza when completing cd
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+if is_binary eza; then
+    # preview directory's content with eza when completing cd
+    zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+fi
 # custom fzf flags
 zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
 # switch group using `<` and `>`
@@ -41,12 +43,19 @@ setopt HIST_IGNORE_ALL_DUPS
 export DISPLAY=:1
 unset GOROOT
 
-# if is_binary docker; then
-#     export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
-# fi
-
 if is_binary fzf; then
     source <(fzf --zsh)
+    export FZF_CTRL_T_OPTS="
+      --walker-skip .git,node_modules,target
+      --preview 'bat -n --color=always {}'
+      --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+    export FZF_CTRL_R_OPTS="
+      --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+      --color header:italic
+      --header 'Press CTRL-Y to copy command into clipboard'"
+    export FZF_ALT_C_OPTS="
+      --walker-skip .git,node_modules,target
+      --preview 'tree -C {}'"
 fi
 
 if is_binary starship; then

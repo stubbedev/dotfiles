@@ -36,6 +36,8 @@ function install {
 function install_mandatory {
   imports
   install_links
+  install_rust
+  install_eza
   install_fzf
   install_fonts
   install_zsh
@@ -204,6 +206,14 @@ function install_fzf {
     url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
     wget $url -O $FZFTMPDIR/fzf.tar.gz
     sudo tar -xvzf $FZFTMPDIR/fzf.tar.gz -C /bin
+}
+
+function install_rust {
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+}
+
+function install_eza {
+    $HOME/.cargo/bin/cargo install eza
 }
 
 info

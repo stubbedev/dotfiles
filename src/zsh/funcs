@@ -105,6 +105,10 @@ if is_binary docker; then
     }
 fi
 
+if is_binary eza; then
+    alias ls='eza'
+fi
+
 if is_binary ss; then
     function pid_on_port {
         ss -lptn " sport = :$1"
