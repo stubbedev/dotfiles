@@ -77,20 +77,8 @@ if is_binary pacstall; then
 fi
 
 if is_binary git; then
-    git config --global alias.d diff
-    git config --global alias.pu pull
-    git config --global alias.f 'fetch -a'
-    git config --global alias.lg "l	if [[ $(hostname) = *'clerk.network'* ]]; then true else false fi
-    og --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
-    git config --global alias.ap 'add . -p'
-    git config --global alias.p push
-    git config --global alias.co 'checkout'
-    git config --global alias.cob 'checkout -b'
-    git config --global alias.br branch
-    git config --global alias.st 'status -sb'
-    git config --global alias.cm 'commit -m'
-    git config --global alias.unstage 'reset HEAD --'
-    git config --global alias.last 'log -1 HEAD'
+    git config --global user.name "Alexander Stage"
+    git config --global user.email "abs@stubbe.dev"
     git config --global core.excludesfile ~/.gitignore
     alias git_wipe="git stash && git stash clear"
 fi
