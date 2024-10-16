@@ -36,6 +36,7 @@ function install {
 function install_mandatory {
   imports
   install_links
+  install_fzf
   install_fonts
   install_zsh
   install_tmux
