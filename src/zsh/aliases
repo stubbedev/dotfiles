@@ -1,10 +1,10 @@
 #!/bin/bash
 
-alias ls='ls --color'
-alias l='ls -lFh --color'   #size,show type,human readable
-alias la='ls -lAFh --color' #long list,show almost all,show type,human readable
-alias lr='ls -tRFh --color' #sorted by date,recursive,show type,human readable
-alias ll='ls -l --color'    #long list
+
+alias l='ls -lF'   #size,show type,human readable
+alias la='ls -lAF' #long list,show almost all,show type,human readable
+alias lr='ls -tRF' #sorted by date,recursive,show type,human readable
+alias ll='ls -l'    #long list
 alias ff='find . -type f -name'
 alias h='history'
 alias hgrep="fc -El 0 | grep"

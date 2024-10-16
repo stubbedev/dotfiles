@@ -107,6 +107,8 @@ fi
 
 if is_binary eza; then
     alias ls='eza'
+else
+    alias ls='ls --color'
 fi
 
 if is_binary ss; then
