@@ -52,7 +52,7 @@ function stb_choices {
     exit
     ;;
   0 | source | src)
-    recompile_st
+    source "$HOME/.stubbe/bin/install-funcs"
     exit
     ;;
   *)
