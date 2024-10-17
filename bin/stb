@@ -51,7 +51,9 @@ case "$1" in
   exit
   ;;
 0 | source | src)
-  source "$HOME/.stubbe/bin/install-funcs"
+  THISDIR=$(dirname "${BASH_SOURCE[0]}")
+  cat "$THISDIR/install-funcs"
+  source "$THISDIR/install-funcs"
   exit
   ;;
 *)
