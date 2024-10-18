@@ -105,7 +105,17 @@ if is_binary docker; then
     }
 
     function Lazydocker {
-      sudo $(which lazydocker)
+      sudo "$(which lazydocker)"
+    }
+fi
+
+if is_binary bat; then
+    function view_git_file {
+      curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
+    }
+else
+    function view_git_file {
+      curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
     }
 fi
 
