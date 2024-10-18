@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export STUBBE_SRC="$HOME/.stubbe/src"
+
 function install {
   echo "Please enter your desired option:"
   read -rn 1 -p "Install (A)ll, (I)nstall Mandatory or (C)ancel?" REPLY
@@ -56,12 +58,9 @@ function imports {
 
 function install_links {
   echo "Creating Directory $HOME/.stubbe/"
-
   mkdir -p "$HOME/.stubbe"
   ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
   ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
-
-  export STUBBE_SRC="$HOME/.stubbe/src"
 }
 
 function install_st {
