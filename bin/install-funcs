@@ -28,6 +28,7 @@ function install {
 function install_mandatory {
   imports
   install_links
+  install_volta
   install_rust
   install_eza
   install_fzf
@@ -206,5 +207,9 @@ function install_rust {
 
 function install_eza {
     $HOME/.cargo/bin/cargo install eza
+}
+
+function install_volta {
+    curl https://get.volta.sh | bash
 }
 
