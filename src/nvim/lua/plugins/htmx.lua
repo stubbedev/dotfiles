@@ -1,3 +1,9 @@
 return {
-  {"ThePrimeagen/htmx-lsp", config = function() require('lspconfig').htmx.setup{} end}
+  {
+    "ThePrimeagen/htmx-lsp",
+    event = "VeryLazy",
+    config = function()
+      require("lspconfig").htmx.setup({})
+    end,
+  },
 }

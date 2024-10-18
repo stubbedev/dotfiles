@@ -1,4 +1,7 @@
 return {
-  "fabridamicelli/cronex.nvim",
-  opts = {},
+  {
+    "fabridamicelli/cronex.nvim",
+    event = "VeryLazy",
+    opts = {},
+  },
 }

@@ -1,3 +1,7 @@
 return {
-  { "nelsyeung/twig.vim", config = function() end }
+  {
+    "nelsyeung/twig.vim",
+    event = "VeryLazy",
+    config = function() end,
+  },
 }

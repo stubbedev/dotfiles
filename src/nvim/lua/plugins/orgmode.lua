@@ -1,6 +1,7 @@
 return {
   {
     "nvim-orgmode/orgmode",
+    event = "VeryLazy",
     lazy = false,
     config = function()
       require("nvim-treesitter.configs").setup({
@@ -8,7 +9,11 @@ return {
           enable = true,
           additional_vim_regex_highlighting = { "org" },
         },
-        ensure_installed = { "org" }, -- Or run :TSUpdate org
+        ensure_installed = { "org" },
+        modules = {},
+        sync_install = true,
+        ignore_install = {},
+        auto_install = true
       })
       require("orgmode").setup({
         org_agenda_files = { "~/git/org-files/**/*" },
