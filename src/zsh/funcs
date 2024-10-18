@@ -198,16 +198,6 @@ if is_binary screen; then
     }
 fi
 
-if is_binary zoxide; then
-    alias cd="z"
-fi
-
-if is_binary node; then
-    function legacy_ssl_node {
-        export NODE_OPTIONS=--openssl-legacy-provider
-    }
-fi
-
 if is_binary mv && is_binary tr && is_binary ls && is_binary echo; then
     function handleize_files {
         for f in *\ *; do mv "$f" "${f// /_}"; done
