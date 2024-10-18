@@ -115,7 +115,7 @@ function install_zsh {
 }
 
 function install_golang {
-  wget -q -O - https://git.io/vQhTU | bash
+  bash <(curl -sL https://git.io/go-installer)
   source "$HOME/.zshrc"
 }
 
