@@ -12,7 +12,6 @@ function info {
 	echo "5.       Edit User Settings"
 	echo "6.       Edit ST Config Headers"
 	echo "7.       Recompile ST"
-	echo "0.       Source Installers"
 }
 
 function recompile_st {
@@ -48,12 +47,6 @@ case "$1" in
   ;;
 7 | recompile | recomp)
   recompile_st
-  exit
-  ;;
-0 | source | src)
-  THISDIR=$(dirname "${BASH_SOURCE[0]}")
-  cat "$THISDIR/install-funcs"
-  source "$THISDIR/install-funcs"
   exit
   ;;
 *)

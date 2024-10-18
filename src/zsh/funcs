@@ -40,6 +40,10 @@ function is_clerk_dev {
     fi
 }
 
+function source-stb-installers {
+    source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
+}
+
 function S {
     sudo $(which "$1") "${@:2}"
 }
