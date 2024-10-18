@@ -49,6 +49,7 @@ function install_optional {
   install_nvim
   install_i3
   install_golang
+  install_go_apps
 }
 
 function imports {
@@ -114,17 +115,7 @@ function install_zsh {
 }
 
 function install_golang {
-  echo "Installing GOLANG CONFIG"
-  LATEST_GO_VERSION="$(curl https://go.dev/VERSION?m=text | head -n 1)"
-  LATEST_GO_DOWNLOAD_URL="https://go.dev/dl/${LATEST_GO_VERSION}.linux-amd64.tar.gz"
-
-  SOURCE_GOLANG="$STUBBE_SRC"
-  mkdir -p "$SOURCE_GOLANG"
-  wget -q $LATEST_GO_DOWNLOAD_URL
-  tar -xf ${LATEST_GO_VERSION}.linux-amd64.tar.gz -C $SOURCE_GOLANG
-  rm -rf ${LATEST_GO_VERSION}.linux-amd64.tar.gz
-  source "$HOME/.zshrc"
-  install_go_apps
+  wget -q -O - https://git.io/vQhTU | bash
   source "$HOME/.zshrc"
 }
 
