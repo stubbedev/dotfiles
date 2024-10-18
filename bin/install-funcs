@@ -122,7 +122,6 @@ function install_golang {
 function install_go_apps {
   go install github.com/jesseduffield/lazygit@latest
   go install github.com/jesseduffield/lazydocker@latest
-  go install github.com/xxxserxxx/gotop@latest
   go install github.com/air-verse/air@latest
 }
 
