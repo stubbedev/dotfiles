@@ -11,12 +11,6 @@ if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"; then
 fi
 source "$STUBBE_ZSH_PLUGS_DIR/fzf-tab/fzf-tab.plugin.zsh"
 
-# FZF-HISTORY
-# if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"; then
-#   git clone "https://github.com/joshskidmore/zsh-fzf-history-search.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search"
-# fi
-# source "$STUBBE_ZSH_PLUGS_DIR/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh"
-
 # AUTOSUGGESTIONS
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
   git clone "https://github.com/zsh-users/zsh-autosuggestions.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"
@@ -28,12 +22,6 @@ if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
   git clone "https://github.com/zdharma/fast-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"
 fi
 source "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"
-
-# AUTOPAIR
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"; then
-  git clone "https://github.com/hlissner/zsh-autopair.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair"
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/zsh-autopair/zsh-autopair.plugin.zsh"
 
 # VIM-MODE
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"; then
