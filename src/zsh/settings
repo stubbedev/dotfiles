@@ -4,6 +4,7 @@ autoload -Uz compinit
 compinit
 
 bindkey "^Xa" _expand_alias
+bindkey -s "^[r" "source ~/.zshrc^M"
 zstyle ':completion:*' completer _expand_alias _complete _ignored
 zstyle ':completion:*' regular true
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
@@ -60,6 +61,9 @@ fi
 if is_binary starship; then
     export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
     export STARSHIP_LOG="error"
-    eval "$(starship init zsh)"
+    type starship_zle-keymap-select >/dev/null || \
+      {
+        eval "$(starship init zsh)"
+      }
 fi
 
