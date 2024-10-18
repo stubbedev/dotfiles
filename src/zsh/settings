@@ -41,7 +41,6 @@ setopt HIST_IGNORE_ALL_DUPS
 
 # FOR CLIPBOARD STUFF
 export DISPLAY=:1
-unset GOROOT
 
 if is_binary fzf; then
     source <(fzf --zsh)
