@@ -9,9 +9,6 @@ STBZSHSOURCES=(
 )
 if [ -d "$HOME/.stubbe" ]; then
     STBDIR="$HOME/.stubbe/src/zsh"
-    if [ ! -f "$STBDIR/history" ]; then
-        touch "$STBDIR/history"
-    fi
     for SZP in "${STBZSHSOURCES[@]}"; do
         if [ -f "$STBDIR/$SZP" ]; then
             source "$STBDIR/$SZP"
