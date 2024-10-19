@@ -53,7 +53,8 @@ function install_optional {
 }
 
 function imports {
-  export SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+  SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+  export SCRIPT_DIR
   source "$SCRIPT_DIR/src/zsh/funcs"
 }
 
