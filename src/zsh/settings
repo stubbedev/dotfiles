@@ -4,7 +4,7 @@ autoload -Uz compinit
 compinit
 
 bindkey "^Xa" _expand_alias
-bindkey -s "^[r" "source ~/.zshrc^M"
+bindkey -s "^[r" "source ~/.zshrc && clear^M"
 zstyle ':completion:*' completer _expand_alias _complete _ignored
 zstyle ':completion:*' regular true
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
