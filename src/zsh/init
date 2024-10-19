@@ -1,28 +1,20 @@
 #!/bin/bash
+STBZSHSOURCES=(
+  "paths"
+  "funcs"
+  "aliases"
+  "plugins"
+  "settings"
+  "secrets"
+)
 if [ -d "$HOME/.stubbe" ]; then
     STBDIR="$HOME/.stubbe/src/zsh"
     if [ ! -f "$STBDIR/history" ]; then
         touch "$STBDIR/history"
     fi
-    if [ -f "$STBDIR/paths" ]; then
-        source "$STBDIR/paths"
-    fi
-    if [ -f "$STBDIR/funcs" ]; then
-        source "$STBDIR/funcs"
-    fi
-    if [ -f "$STBDIR/aliases" ]; then
-        source "$STBDIR/aliases"
-    fi
-    if [ -f "$STBDIR/plugins" ]; then
-        source "$STBDIR/plugins"
-    fi
-    if [ -f "$STBDIR/settings" ]; then
-        source "$STBDIR/settings"
-    fi
-    if [ -f "$STBDIR/secrets" ]; then
-        source "$STBDIR/secrets"
-    else
-        echo "Creating secrets file"
-        touch "$STBDIR/secrets" && source "$STBDIR/secrets"
-    fi
+    for SZP in "${STBZSHSOURCES[@]}"; do
+        if [ -f "$STBDIR/$SZP" ]; then
+            source "$STBDIR/$SZP"
+        fi
+    done
 fi
