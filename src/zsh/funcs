@@ -1,314 +1,314 @@
 #!/bin/bash
 
 function is_binary {
-    if [[ $(command -v "$1") ]]; then
-        true
-    else
-        false
-    fi
+	if [[ $(command -v "$1") ]]; then
+		true
+	else
+		false
+	fi
 }
 
 function is_directory {
-    if test -d "$1"; then
-        true
-    else
-        false
-    fi
+	if test -d "$1"; then
+		true
+	else
+		false
+	fi
 }
 
 function is_file {
-    if test -f "$1"; then
-        true
-    else
-        false
-    fi
+	if test -f "$1"; then
+		true
+	else
+		false
+	fi
 }
 
 function has_string {
-    if grep -q "$1" "$2"; then
-        true
-    else
-        false
-    fi
+	if grep -q "$1" "$2"; then
+		true
+	else
+		false
+	fi
 }
 
 function is_clerk_dev {
-    if [[ $(hostname) = *'clerk.network'* ]]; then
-        true
-    else
-        false
-    fi
+	if [[ $(hostname) = *'clerk.network'* ]]; then
+		true
+	else
+		false
+	fi
 }
 
 function source-stb-installers {
-    source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
+	source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
 }
 
 function S {
-    sudo $(which "$1") "${@:2}"
+	sudo $(which "$1") "${@:2}"
 }
 
 if is_binary php; then
-    alias art="php artisan"
+	alias art="php artisan"
 fi
 
 if is_binary nala; then
-    function npt {
-        if [ "$1" = "i" ]; then
-            sudo nala install "${@:2}"
-        elif [ "$1" = "u" ]; then
-            sudo nala update "${@:2}"
-        elif [ "$1" = "ug" ]; then
-            sudo nala upgrade "${@:2}"
-        elif [ "$1" = "s" ]; then
-            sudo nala search "${@:2}"
-        elif [ "$1" = "r" ]; then
-            sudo nala remove "${@:2}"
-        elif [ "$1" = "l" ]; then
-            sudo nala list --installed
-        else
-            sudo nala "${@}"
-        fi
-    }
+	function npt {
+		if [ "$1" = "i" ]; then
+			sudo nala install "${@:2}"
+		elif [ "$1" = "u" ]; then
+			sudo nala update "${@:2}"
+		elif [ "$1" = "ug" ]; then
+			sudo nala upgrade "${@:2}"
+		elif [ "$1" = "s" ]; then
+			sudo nala search "${@:2}"
+		elif [ "$1" = "r" ]; then
+			sudo nala remove "${@:2}"
+		elif [ "$1" = "l" ]; then
+			sudo nala list --installed
+		else
+			sudo nala "${@}"
+		fi
+	}
 fi
 
 if is_binary apt-fast; then
-    alias apt="apt-fast"
+	alias apt="apt-fast"
 fi
 
 if is_binary pacstall; then
-  alias pt="pacstall"
+	alias pt="pacstall"
 fi
 
 if is_binary git; then
-    git config --global user.name "Alexander Stage"
-    git config --global user.email "abs@stubbe.dev"
-    git config --global core.excludesfile ~/.gitignore
-    alias git_wipe="git stash && git stash clear"
+	git config --global user.name "Alexander Stage"
+	git config --global user.email "abs@stubbe.dev"
+	git config --global core.excludesfile ~/.gitignore
+	alias git_wipe="git stash && git stash clear"
 fi
 
 if is_binary phpcs; then
-    function php_lint {
-        phpcs --standard="$1" "$2"
-    }
+	function php_lint {
+		phpcs --standard="$1" "$2"
+	}
 fi
 
 if is_binary phpcbf; then
-    function php_fix {
-        phpcbf --standard="$1" "$2"
-    }
+	function php_fix {
+		phpcbf --standard="$1" "$2"
+	}
 fi
 
 if is_binary docker; then
-    function docker_killall {
-        docker kill "$(docker ps -q)"
-    }
+	function docker_killall {
+		docker kill "$(docker ps -q)"
+	}
 
-    function Lazydocker {
-      sudo "$(which lazydocker)"
-    }
+	function Lazydocker {
+		sudo "$(which lazydocker)"
+	}
 fi
 
 if is_binary bat; then
-    function view_git_file {
-      curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
-    }
+	function view_git_file {
+		curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
+	}
 else
-    function view_git_file {
-      curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
-    }
+	function view_git_file {
+		curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
+	}
 fi
 
 if is_binary eza; then
-    alias ls='eza'
+	alias ls='eza'
 else
-    alias ls='ls --color'
+	alias ls='ls --color'
 fi
 
 if is_binary ss; then
-    function pid_on_port {
-        ss -lptn " sport = :$1"
-    }
+	function pid_on_port {
+		ss -lptn " sport = :$1"
+	}
 fi
 
 if is_binary curl; then
-    function color_swatches {
-        curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
-    }
+	function color_swatches {
+		curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
+	}
 fi
 
 if is_binary nvim; then
-    alias vim='nvim'
-    alias vi='nvim'
-    alias nano='nvim'
-    alias ed='nvim'
-    alias svim='nvim -u NONE'
-    function init_vim_bind {
-        if [ -z "${VIMRUNTIME}" ]; then
-            nvim
-        fi
-    }
+	alias vim='nvim'
+	alias vi='nvim'
+	alias nano='nvim'
+	alias ed='nvim'
+	alias svim='nvim -u NONE'
+	function init_vim_bind {
+		if [ -z "${VIMRUNTIME}" ]; then
+			nvim
+		fi
+	}
 fi
 
 if is_binary tmux; then
-    function tnc {
-        TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-        TMPDIR=$(mktemp -d)
-        TMPDIRNAME=$(echo $TMPDIR | cut -d "." -f 2)
-        cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
-        cd "$TMPDIR/$TMUXDIRNAME"
-        if [ -z "$1" ]; then
-            TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
-        else
-            TMUXCLIENTNAME="$1"
-        fi
-        tmux new -As $TMUXCLIENTNAME
-    }
+	function tnc {
+		TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+		TMPDIR=$(mktemp -d)
+		TMPDIRNAME=$(echo "$TMPDIR" | cut -d "." -f 2)
+		cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
+		cd "$TMPDIR/$TMUXDIRNAME" || exit
+		if [ -z "$1" ]; then
+			TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
+		else
+			TMUXCLIENTNAME="$1"
+		fi
+		tmux new -As "$TMUXCLIENTNAME"
+	}
 
-    function tn {
-        TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-        if [ -z "$1" ]; then
-            TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
-        else
-            TMUXCLIENTNAME="$1"
-        fi
-        tmux new -As $TMUXCLIENTNAME
-    }
+	function tn {
+		TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+		if [ -z "$1" ]; then
+			TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
+		else
+			TMUXCLIENTNAME="$1"
+		fi
+		tmux new -As "$TMUXCLIENTNAME"
+	}
 
-    function tls {
-        tmux ls
-    }
+	function tls {
+		tmux ls
+	}
 
-    function ta {
-        if [ -z "$1" ]; then
-            tmux attach
-        else
-            tmux attach -t "$1"
-        fi
-    }
+	function ta {
+		if [ -z "$1" ]; then
+			tmux attach
+		else
+			tmux attach -t "$1"
+		fi
+	}
 fi
 
 if is_binary screen; then
-    function tx {
-        session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
-        case $1 in
-            l | ls)
-                screen -ls
-                ;;
-            n | new)
-                screen -S "$session_name"
-                ;;
-            j | join)
-                screen -r "$session_name"
-                ;;
-            *)
-                screen "$@"
-                ;;
-        esac
-    }
+	function tx {
+		session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
+		case $1 in
+		l | ls)
+			screen -ls
+			;;
+		n | new)
+			screen -S "$session_name"
+			;;
+		j | join)
+			screen -r "$session_name"
+			;;
+		*)
+			screen "$@"
+			;;
+		esac
+	}
 fi
 
 if is_binary mv && is_binary tr && is_binary ls && is_binary echo; then
-    function handleize_files {
-        for f in *\ *; do mv "$f" "${f// /_}"; done
-        ls | while read upName; do
-            loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
-            mv "$upName" "$loName"
-        done
-    }
+	function handleize_files {
+		for f in *\ *; do mv "$f" "${f// /_}"; done
+		ls | while read upName; do
+			loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
+			mv "$upName" "$loName"
+		done
+	}
 fi
 
 if is_binary systemctl; then
-    function kill_native_servers {
-        if is_binary mysql; then
-            sudo systemctl stop mysql
-        fi
-        if is_binary nginx; then
-            sudo systemctl stop nginx
-        fi
-        if is_binary apache2; then
-            sudo systemctl stop apache2
-        fi
-    }
+	function kill_native_servers {
+		if is_binary mysql; then
+			sudo systemctl stop mysql
+		fi
+		if is_binary nginx; then
+			sudo systemctl stop nginx
+		fi
+		if is_binary apache2; then
+			sudo systemctl stop apache2
+		fi
+	}
 fi
 
 if is_binary python3; then
-    function cpyenv {
-        if is_file "$PWD/venv/bin/activate"; then
-            source "$PWD/venv/bin/activate"
-        else
-            python3 -m venv ./venv
-            source "$PWD/venv/bin/activate"
-        fi
-    }
+	function cpyenv {
+		if is_file "$PWD/venv/bin/activate"; then
+			source "$PWD/venv/bin/activate"
+		else
+			python3 -m venv ./venv
+			source "$PWD/venv/bin/activate"
+		fi
+	}
 fi
 
 if is_clerk_dev; then
-    function venv {
-        case $1 in
-            tsd | TSD)
-                cd "$HOME/git/thesocialdigits/" || exit
-                source "$HOME/git/thesocialdigits/venv/bin/activate"
-                echo "Switched to: TheSocialDigits"
-                ;;
-            dt | DT)
-                cd "$HOME/git/dev-tools/" || exit
-                echo "Switched to: DevTools"
-                ;;
-            av3 | AV3)
-                cd "$HOME/git/api-v3/" || exit
-                echo "Switched to: API-V3"
-                ;;
-            dot | DOT)
-                cd "$HOME/git/dotfiles/" || exit
-                echo "Switched to: DOTFiles"
-                ;;
-            *)
-                echo "Please provide a valid first argument"
-                ;;
-        esac
-    }
+	function venv {
+		case $1 in
+		tsd | TSD)
+			cd "$HOME/git/thesocialdigits/" || exit
+			source "$HOME/git/thesocialdigits/venv/bin/activate"
+			echo "Switched to: TheSocialDigits"
+			;;
+		dt | DT)
+			cd "$HOME/git/dev-tools/" || exit
+			echo "Switched to: DevTools"
+			;;
+		av3 | AV3)
+			cd "$HOME/git/api-v3/" || exit
+			echo "Switched to: API-V3"
+			;;
+		dot | DOT)
+			cd "$HOME/git/dotfiles/" || exit
+			echo "Switched to: DOTFiles"
+			;;
+		*)
+			echo "Please provide a valid first argument"
+			;;
+		esac
+	}
 
-    function run {
-        if ! [ $# -eq 2 ]; then
-            echo "Please provide one of the following options:"
-            echo "imp[orter] STORE_ID"
-            echo "exp[orter] EXPORTER_ID"
-            return 0
-        fi
-        case $1 in
-            exp | exporter)
-                venv tsd
-                echo "Running Exporter: $2"
-                python "$PWD/batch/audience_export.py" $2
-                ;;
-            imp | importer)
-                venv tsd
-                echo "Running Importer: $2"
-                python "$PWD/batch/download_data.py" $2
-                ;;
-            *)
-                echo "Please provide one of the following options:"
-                echo "imp[orter] STORE_ID"
-                echo "exp[orter] EXPORTER_ID"
-                ;;
-        esac
-    }
+	function run {
+		if ! [ $# -eq 2 ]; then
+			echo "Please provide one of the following options:"
+			echo "imp[orter] STORE_ID"
+			echo "exp[orter] EXPORTER_ID"
+			return 0
+		fi
+		case $1 in
+		exp | exporter)
+			venv tsd
+			echo "Running Exporter: $2"
+			python "$PWD/batch/audience_export.py" $2
+			;;
+		imp | importer)
+			venv tsd
+			echo "Running Importer: $2"
+			python "$PWD/batch/download_data.py" $2
+			;;
+		*)
+			echo "Please provide one of the following options:"
+			echo "imp[orter] STORE_ID"
+			echo "exp[orter] EXPORTER_ID"
+			;;
+		esac
+	}
 fi
 
 if is_binary openvpn3; then
-  function cvpn {
-    ACTIVE_SESSIONS=$(openvpn3 sessions-list | grep -i 'path' | awk '{p=index($0, ":");print $2}')
-    if ((${#ACTIVE_SESSIONS[@]})); then
-      rm -f "$HOME/.vpn_active"
-      echo "Disconnecting from VPN..."
-      for instance in $ACTIVE_SESSIONS; do
-        openvpn3 session-manage --disconnect --session-path ${instance}
-      done
-    else
-      echo "Connecting to VPN..."
-      touch "$HOME/.vpn_active"
-      openvpn3 session-start --config ~/.ssh/client.ovpn
-    fi
-  }
+	function cvpn {
+		ACTIVE_SESSIONS=$(openvpn3 sessions-list | grep -i 'path' | awk '{p=index($0, ":");print $2}')
+		if ((${#ACTIVE_SESSIONS[@]})); then
+			rm -f "$HOME/.vpn_active"
+			echo "Disconnecting from VPN..."
+			for instance in $ACTIVE_SESSIONS; do
+				openvpn3 session-manage --disconnect --session-path ${instance}
+			done
+		else
+			echo "Connecting to VPN..."
+			touch "$HOME/.vpn_active"
+			openvpn3 session-start --config ~/.ssh/client.ovpn
+		fi
+	}
 fi
