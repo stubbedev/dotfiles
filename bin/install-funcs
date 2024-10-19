@@ -127,11 +127,11 @@ function install_go_apps {
 
 function install_nvim {
   echo "Installing NEOVIM"
-  rm -rf $HOME/.stubbe/bin/nvim
+  rm -rf "$HOME"/.stubbe/bin/nvim
   wget -q https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
-  mv nvim.appimage $HOME/.stubbe/bin/nvim
-  chmod a+x $HOME/.stubbe/bin/nvim
-  ln -s $HOME/.stubbe/src/nvim $HOME/.config/nvim
+  mv nvim.appimage "$HOME"/.stubbe/bin/nvim
+  chmod a+x "$HOME"/.stubbe/bin/nvim
+  ln -s "$HOME"/.stubbe/src/nvim "$HOME"/.config/nvim
   echo "You may need FuseLib2 in order to run NeoVim."
 }
 
@@ -145,7 +145,7 @@ function install_fonts {
 function install_tmux {
   echo "Installing TMUX CONFIG"
   if ! is_directory "$HOME/.tmux/plugins/tpm"; then
-    git clone --quiet https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
+    git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
   fi
   SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
   touch "$HOME/.tmux.conf"
@@ -165,11 +165,18 @@ function install_intelephense_license {
   rm -rf "$TMPDIR"
 }
 
+function install_openai_license {
+  TMPDIR=$(mktemp -d)
+  git clone --depth=1 git@git.stubbe.dev:snippets/3.git "$TMPDIR" --quiet
+  cat "$TMPDIR/openai-license.txt" >> "$HOME/.zshrc"
+  rm -rf "$TMPDIR"
+}
+
 function install_clerk_credentials {
   CLERKCREDSTMPDIR=$(mktemp -d)
   git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
-  $CLERKCREDSTMPDIR/clerk-auth/.install.sh
-  rm -rf $CLERKCREDSTMPDIR
+  "$CLERKCREDSTMPDIR"/clerk-auth/.install.sh
+  rm -rf "$CLERKCREDSTMPDIR"
 }
 
 function install_regolith_Xresources {
@@ -187,8 +194,8 @@ function install_fzf {
     repo="junegunn/fzf"
     release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
     url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
-    wget $url -O $FZFTMPDIR/fzf.tar.gz
-    sudo tar -xvzf $FZFTMPDIR/fzf.tar.gz -C /bin
+    wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
+    sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
 }
 
 function install_rust {
@@ -196,7 +203,7 @@ function install_rust {
 }
 
 function install_eza {
-    $HOME/.cargo/bin/cargo install eza
+    "$HOME"/.cargo/bin/cargo install eza
 }
 
 function install_volta {
