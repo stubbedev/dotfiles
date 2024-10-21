@@ -128,12 +128,9 @@ function install_go_apps {
 
 function install_nvim {
   echo "Installing NEOVIM"
-  rm -rf "$HOME"/.stubbe/bin/nvim
-  wget -q https://github.com/neovim/neovim/releases/download/nightly/nvim.appimage
-  mv nvim.appimage "$HOME"/.stubbe/bin/nvim
-  chmod a+x "$HOME"/.stubbe/bin/nvim
-  ln -s "$HOME"/.stubbe/src/nvim "$HOME"/.config/nvim
-  echo "You may need FuseLib2 in order to run NeoVim."
+  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+  sudo rm -rf /opt/nvim
+  sudo tar -C /opt -xzf nvim-linux64.tar.gz
 }
 
 function install_fonts {
