@@ -17,6 +17,7 @@ STUBBE_PATHS=(
     "$HOME/.volta/bin"
     "/usr/local/go/bin"
     "/sbin"
+    "/opt/nvim-linux64/bin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
