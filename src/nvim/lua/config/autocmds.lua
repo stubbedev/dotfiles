@@ -18,7 +18,7 @@ vim.api.nvim_create_autocmd({"FileWritePost", "BufWritePost"}, {
     local repo_name = vim.fn.system("basename `git rev-parse --show-toplevel 2>/dev/null` 2>/dev/null"):gsub("%s+", "")
     if repo_name == 'clerk.js' then
       vim.loop.spawn("bash", {
-        args = {"-c", "source venv/bin/activate && ./build.sh --debug && cp clerk.js ../live.clerk.io/live.clerk.io"},
+        args = {"-c", "source venv/bin/activate && ./build.sh --debug && cp -f clerk.js ../live.clerk.io/live.clerk.io"},
         detached = true,
       })
     end
