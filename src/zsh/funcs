@@ -40,12 +40,18 @@ function is_clerk_dev {
 	fi
 }
 
-function source-stb-installers {
+function src-stb-installers {
 	source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
 }
 
+function rm-nvim-cache {
+  rm -rf ~/.local/share/nvim{,.bak}
+  rm -rf ~/.local/state/nvim{,.bak}
+  rm -rf ~/.cache/nvim{,.bak}
+}
+
 function S {
-	sudo $(which "$1") "${@:2}"
+	sudo "$(which "$1")" "${@:2}"
 }
 
 if is_binary php; then
