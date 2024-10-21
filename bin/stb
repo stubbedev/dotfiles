@@ -49,6 +49,12 @@ case "$1" in
   recompile_st
   exit
   ;;
+8 | cc)
+  rm -rf ~/.local/share/nvim{,.bak}
+  rm -rf ~/.local/state/nvim{,.bak}
+  rm -rf ~/.cache/nvim{,.bak}
+  exit
+  ;;
 *)
   info
   exit
