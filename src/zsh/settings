@@ -49,7 +49,7 @@ setopt HIST_IGNORE_ALL_DUPS
 export DISPLAY=:1
 
 if is_binary fzf; then
-    bindkey -s "^F" "ts^M"
+    bindkey -s "^[f" "ts^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target
