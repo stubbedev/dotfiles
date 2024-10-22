@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
   SELECTED=$1
 else
-  SELECTED=$(find ~/git ~/git/work ~/git/private -mindepth 1 -maxdepth 1 -type d | fzf)
+  SELECTED=$(find ~/git ~/git/work ~/git/private -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
 fi
 
 if [[ -z $SELECTED ]]; then
