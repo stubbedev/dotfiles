@@ -35,6 +35,7 @@ function install_mandatory {
   install_eza
   install_fzf
   install_tree_sitter_cli
+  install_php
   install_fonts
   install_zsh
   install_tmux
@@ -212,5 +213,9 @@ function install_tree_sitter_cli {
 
 function install_volta {
     curl https://get.volta.sh | bash
+}
+
+function install_php {
+    bash -c "$(curl -fsSL https://php.new/install/linux)"
 }
 
