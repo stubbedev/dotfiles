@@ -205,6 +205,10 @@ function install_eza {
     "$HOME"/.cargo/bin/cargo install eza
 }
 
+function install_tree_sitter_cli {
+    cargo install tree-sitter-cli
+}
+
 function install_volta {
     curl https://get.volta.sh | bash
 }
