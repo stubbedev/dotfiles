@@ -34,6 +34,7 @@ function install_mandatory {
   install_rust
   install_eza
   install_fzf
+  install_tree_sitter_cli
   install_fonts
   install_zsh
   install_tmux
