@@ -1,43 +1,23 @@
 #!/bin/bash
 
 function is_binary {
-	if [[ $(command -v "$1") ]]; then
-		true
-	else
-		false
-	fi
+	command -v "$1" &>/dev/null
 }
 
 function is_directory {
-	if test -d "$1"; then
-		true
-	else
-		false
-	fi
+	[[ -d "$1" ]]
 }
 
 function is_file {
-	if test -f "$1"; then
-		true
-	else
-		false
-	fi
+	[[ -f "$1" ]]
 }
 
 function has_string {
-	if grep -q "$1" "$2"; then
-		true
-	else
-		false
-	fi
+	grep -q "$2" "$1"
 }
 
 function is_clerk_dev {
-	if [[ $(hostname) = *'clerk.network'* ]]; then
-		true
-	else
-		false
-	fi
+	[[ $(hostname) == *'clerk.network'* ]]
 }
 
 function src-stb-installers {
@@ -47,10 +27,6 @@ function src-stb-installers {
 function S {
 	sudo "$(which "$1")" "${@:2}"
 }
-
-if is_binary php; then
-	alias art="php artisan"
-fi
 
 if is_binary nala; then
 	function npt {
@@ -103,10 +79,10 @@ if is_binary docker; then
 	function docker_killall {
 		docker kill "$(docker ps -q)"
 	}
+fi
 
-	function Lazydocker {
-		sudo "$(which lazydocker)"
-	}
+if is_binary docker && is_binary lazydocker && is_binary podman; then
+	alias lazypodman='DOCKER_HOST=unix:///run/user/1000/podman/podman.sock lazydocker'
 fi
 
 if is_binary bat; then
@@ -143,11 +119,6 @@ if is_binary nvim; then
 	alias nano='nvim'
 	alias ed='nvim'
 	alias svim='nvim -u NONE'
-	function init_vim_bind {
-		if [ -z "${VIMRUNTIME}" ]; then
-			nvim
-		fi
-	}
 fi
 
 if is_binary tmux; then
@@ -176,7 +147,7 @@ if is_binary tmux; then
 	}
 
 	function tls {
-		tmux ls
+		bash -c "tmux ls"
 	}
 
 	function ta {
@@ -208,15 +179,13 @@ if is_binary screen; then
 	}
 fi
 
-if is_binary mv && is_binary tr && is_binary ls && is_binary echo; then
-	function handleize_files {
-		for f in *\ *; do mv "$f" "${f// /_}"; done
-		ls | while read upName; do
-			loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
-			mv "$upName" "$loName"
-		done
-	}
-fi
+function handleize_files {
+  for f in *\ *; do mv "$f" "${f// /_}"; done
+  find . -maxdepth 1 -type f | while read -r upName; do
+    loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
+    mv "$upName" "$loName"
+  done
+}
 
 if is_binary systemctl; then
 	function kill_native_servers {

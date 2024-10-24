@@ -1,222 +1,205 @@
 #!/bin/bash
 
-export STUBBE_SRC="$HOME/.stubbe/src"
+# INFO: REQUIRED ENV VARS
+STUBBE_SRC="$HOME/.stubbe/src"
+export STUBBE_SRC
 
+# INFO: INSTALL FUNCTION
 function install {
-  echo "Please enter your desired option:"
-  read -rn 1 -p "Install (A)ll, (I)nstall Mandatory or (C)ancel?" REPLY
-  printf "\n"
-  case "$REPLY" in
-  a | A )
-    install_mandatory
-    install_optional
-    exit
-    ;;
-  m | M | i | I )
-    install_mandatory
-    exit
-    ;;
-  c | C )
-    echo "Cancelling!"
-    exit
-    ;;
-  *)
-    info
-    exit
-    ;;
-  esac
+  if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
+    echo "Need to set SSH key before being able to install."
+    echo "Goodbye!"
+    exit 0
+  fi
+	echo "Please enter your desired option:"
+	read -rn 1 -p "(I)nstall Mandatory or (C)ancel?" REPLY
+	printf "\n"
+	case "$REPLY" in
+	i | I)
+		install_stubbe_all
+		exit
+		;;
+	c | C)
+		echo "Cancelling!"
+		exit
+		;;
+	*)
+		info
+		exit
+		;;
+	esac
 }
 
-function install_mandatory {
-  imports
-  install_links
-  install_volta
+function install_stubbe_all {
+  # INFO: Install generic symlinks
+	install_symlinks
+  source "$HOME/.zshrc"
+
+  # INFO: Install toolchains
+  install_build_essential
+	install_go
   install_rust
-  install_eza
-  install_fzf
-  install_tree_sitter_cli
   install_php
-  install_fonts
-  install_zsh
-  install_tmux
-  install_intelephense_license
-  install_clerk_credentials
-  install_regolith_Xresources
-  install_picom
-}
+  install_volta
 
-function install_optional {
-  install_st
-  install_wezterm
+  source "$HOME/.zshrc"
+  # INFO: Install toolchain apps
+  rust_deps
+  go_deps
+  volta_deps
+
+  source "$HOME/.zshrc"
+  # INFO: Install non-toolchain apps
   install_nvim
-  install_i3
-  install_golang
-  install_go_apps
-}
+  install_fzf
 
-function imports {
-  SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
-  export SCRIPT_DIR
-  source "$SCRIPT_DIR/src/zsh/funcs"
-}
+  # INFO: Install configs
+  conf_zsh
+  conf_nvim
+  conf_tmux
+  conf_fonts
+  conf_wezterm
+  conf_regolith_xresources
 
-function install_links {
-  echo "Creating Directory $HOME/.stubbe/"
-  mkdir -p "$HOME/.stubbe"
-  ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
-  ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
-}
-
-function install_st {
-  echo "Installing ST TERMINAL"
-  ln -sf "$SCRIPT_DIR/src/st/st" "$SCRIPT_DIR/bin"
-}
-
-function install_wezterm {
-  SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
-  mkdir -p "$HOME/.config/wezterm"
-  ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
-}
-
-function install_i3 {
-  echo "Installing i3 CONFIG"
-
-  SOURCE_I3="$STUBBE_SRC/i3/config"
-  mkdir -p "$HOME/.config/i3"
-  touch "$HOME/.config/i3/config"
-  if ! has_string "$SOURCE_I3" "$HOME/.config/i3/config"; then
-    echo "include $SOURCE_I3" >>"$HOME/.config/i3/config"
-  fi
-}
-
-function install_i3status {
-  echo "Installing i3status"
-
-  SOURCE_I3STATUS="$STUBBE_SRC/i3status/config"
-  mkdir -p "$HOME/.config/i3status"
-  touch "$HOME/.config/i3status/config"
-  cat "$SOURCE_I3STATUS" >>"$HOME/.config/i3status/config"
-}
-
-function install_picom {
-  echo "Installing picom config"
-
-  SOURCE_PICOM="$STUBBE_SRC/picom/picom.conf"
-  mkdir -p "$HOME/.config/picom"
-  ln -sf "$SOURCE_PICOM" "$HOME/.config/picom"
-}
-
-function install_zsh {
-  echo "Installing ZSH CONFIG"
-
-  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-  touch "$HOME/.zshrc"
-  if ! has_string "$SOURCE_ZSH" "$HOME/.zshrc"; then
-    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
-  fi
-  eval "source $SOURCE_ZSH"
-}
-
-function install_golang {
-  bash <(curl -sL https://git.io/go-installer)
+  # INFO: Install private licenses
+  license_openai
+  license_intelephense
+  license_clerk
   source "$HOME/.zshrc"
 }
 
-function install_go_apps {
-  go install github.com/jesseduffield/lazygit@latest
-  go install github.com/jesseduffield/lazydocker@latest
-  go install github.com/air-verse/air@latest
+
+# INFO: Generic symlinks
+function install_symlinks {
+	mkdir -p "$HOME/.stubbe"
+	ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
+	ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
+  touch "$HOME/.zshrc"
 }
 
+
+# INFO: Toolchains
+function install_build_essential {
+  if is_binary apt; then
+    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman"
+  fi
+  if is_binary pacman; then
+    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman"
+  fi
+  if is_binary dnf; then
+    bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
+    bash -c "sudo dnf -y install curl wget git grep tmux podman"
+  fi
+}
+function install_go {
+	bash <(curl -sL https://git.io/go-installer)
+}
+function install_rust {
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+}
+function install_php {
+	bash -c "$(curl -fsSL https://php.new/install/linux)"
+}
+function install_volta {
+	curl https://get.volta.sh | bash
+}
+
+
+
+# INFO: Toolchain dependent apps
+function rust_deps {
+	cargo install tree-sitter-cli
+  cargo install eza
+  cargo install bat
+  cargo install ripgrep
+}
+function go_deps {
+  go install github.com/xxxserxxx/gotop@latest
+  go install github.com/TomWright/dasel@latest
+	go install github.com/jesseduffield/lazygit@latest
+	go install github.com/jesseduffield/lazydocker@latest
+	go install github.com/air-verse/air@latest
+}
+function volta_deps {
+  volta install node npm
+  volta install yarn deno bun
+}
+
+
+# INFO: Non-Toolchain dependent
 function install_nvim {
-  echo "Installing NEOVIM"
   curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
   sudo rm -rf /opt/nvim
   sudo tar -C /opt -xzf nvim-linux64.tar.gz
   rm -rf nvim-linux64.tar.gz
-  ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/"
 }
-
-function install_fonts {
-  echo "Installing FONTS"
-  SOURCE_FONT="$STUBBE_SRC/fonts"
-  mkdir -p "$HOME/.fonts"
-  cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
-}
-
-function install_tmux {
-  echo "Installing TMUX CONFIG"
-  if ! is_directory "$HOME/.tmux/plugins/tpm"; then
-    git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
-  fi
-  SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
-  touch "$HOME/.tmux.conf"
-  if ! has_string "$SOURCE_TMUX" "$HOME/.tmux.conf"; then
-    echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
-  fi
-  eval "tmux source-file $SOURCE_TMUX"
-}
-
-function install_intelephense_license {
-  TMPDIR=$(mktemp -d)
-  git clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
-  mkdir -p "$HOME/intelephense"
-  if ! is_file "$HOME/intelephense/license.txt"; then
-    cat "$TMPDIR/intelephense_license" > "$HOME/intelephense/license.txt"
-  fi
-  rm -rf "$TMPDIR"
-}
-
-function install_openai_license {
-  TMPDIR=$(mktemp -d)
-  git clone --depth=1 git@git.stubbe.dev:snippets/3.git "$TMPDIR" --quiet
-  cat "$TMPDIR/openai-license.txt" >> "$HOME/.zshrc"
-  rm -rf "$TMPDIR"
-}
-
-function install_clerk_credentials {
-  CLERKCREDSTMPDIR=$(mktemp -d)
-  git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
-  "$CLERKCREDSTMPDIR"/clerk-auth/.install.sh
-  rm -rf "$CLERKCREDSTMPDIR"
-}
-
-function install_regolith_Xresources {
-  mkdir -p "$HOME/.config/regolith3"
-  ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
-}
-
-function install_picom {
-  mkdir -p "$HOME/.config/regolith3/picom"
-  ln -s "$STUBBE_SRC/picom/picom.conf" "$HOME/.config/regolith3/picom/config"
-}
-
 function install_fzf {
-    FZFTMPDIR=$(mktemp -d)
-    repo="junegunn/fzf"
-    release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
-    url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
-    wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
-    sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
+	FZFTMPDIR=$(mktemp -d)
+	repo="junegunn/fzf"
+	release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
+	url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
+	wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
+	sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
 }
 
-function install_rust {
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# INFO: Configs
+function conf_fonts {
+	SOURCE_FONT="$STUBBE_SRC/fonts"
+	mkdir -p "$HOME/.fonts"
+	cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
+}
+function conf_nvim {
+  ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
+}
+function conf_tmux {
+	if ! is_directory "$HOME/.tmux/plugins/tpm"; then
+		git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
+	fi
+	SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
+	touch "$HOME/.tmux.conf"
+	if ! has_string "$HOME/.tmux.conf" "$SOURCE_TMUX"; then
+		echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
+	fi
+}
+function conf_regolith_xresources {
+	mkdir -p "$HOME/.config/regolith3"
+	ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
+}
+function conf_wezterm {
+  SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
+  mkdir -p "$HOME/.config/wezterm"
+  ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
+}
+function conf_zsh {
+  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+  touch "$HOME/.zshrc"
+  if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
+    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
+  fi
 }
 
-function install_eza {
-    "$HOME"/.cargo/bin/cargo install eza
+# INFO: Private licenses
+function license_intelephense {
+	TMPDIR=$(mktemp -d)
+	git clone --depth=1 git@git.stubbe.dev:snippets/2.git "$TMPDIR" --quiet
+	mkdir -p "$HOME/intelephense"
+	if ! is_file "$HOME/intelephense/license.txt"; then
+		cat "$TMPDIR/intelephense_license" >"$HOME/intelephense/license.txt"
+	fi
+	rm -rf "$TMPDIR"
 }
-
-function install_tree_sitter_cli {
-    cargo install tree-sitter-cli
+function license_openai {
+	TMPDIR=$(mktemp -d)
+	git clone --depth=1 git@git.stubbe.dev:snippets/3.git "$TMPDIR" --quiet
+	cat "$TMPDIR/openai-license.txt" >>"$HOME/.zshrc"
+	rm -rf "$TMPDIR"
 }
-
-function install_volta {
-    curl https://get.volta.sh | bash
-}
-
-function install_php {
-    bash -c "$(curl -fsSL https://php.new/install/linux)"
+function license_clerk {
+	CLERKCREDSTMPDIR=$(mktemp -d)
+	git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
+	"$CLERKCREDSTMPDIR"/clerk-auth/install.sh
+	rm -rf "$CLERKCREDSTMPDIR"
+  echo "Need to install openvpn3 for this to function."
 }
 

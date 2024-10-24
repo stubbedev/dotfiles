@@ -6,7 +6,10 @@ function info {
   echo "tmux  :: Terminal Multiplexer"
   echo "zsh   :: POSIX Shell"
   SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+  export SCRIPT_DIR
   source "$SCRIPT_DIR/bin/install-funcs"
+  source "$SCRIPT_DIR/src/zsh/funcs"
+  mkdir -p "$HOME/.ssh/"
   install
 }
 
