@@ -5,7 +5,7 @@ STUBBE_SRC="$HOME/.stubbe/src"
 export STUBBE_SRC
 
 # INFO: INSTALL FUNCTION
-function install {
+function installer_prompt {
   if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
     echo "Need to set SSH key before being able to install."
     echo "Goodbye!"
@@ -109,17 +109,13 @@ function install_volta {
 
 # INFO: Toolchain dependent apps
 function rust_deps {
-	cargo install tree-sitter-cli
-  cargo install eza
-  cargo install bat
-  cargo install ripgrep
+	cargo install tree-sitter-cli eza bat ripgrep spotify-tui
 }
 function go_deps {
-  go install github.com/xxxserxxx/gotop@latest
-  go install github.com/TomWright/dasel@latest
 	go install github.com/jesseduffield/lazygit@latest
 	go install github.com/jesseduffield/lazydocker@latest
 	go install github.com/air-verse/air@latest
+  go install github.com/gopasspw/gopass@latest
 }
 function volta_deps {
   volta install node npm

@@ -10,7 +10,7 @@ function info {
   source "$SCRIPT_DIR/bin/install-funcs"
   source "$SCRIPT_DIR/src/zsh/funcs"
   mkdir -p "$HOME/.ssh/"
-  install
+  installer_prompt
 }
 
 info
