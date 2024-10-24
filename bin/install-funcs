@@ -81,15 +81,16 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman"
+    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh"
   fi
   if is_binary pacman; then
-    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman"
+    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh"
   fi
   if is_binary dnf; then
     bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
-    bash -c "sudo dnf -y install curl wget git grep tmux podman"
+    bash -c "sudo dnf -y install curl wget git grep tmux podman zsh"
   fi
+  sudo chsh -s "$(which "zsh")" "$USER"
 }
 function install_go {
 	bash <(curl -sL https://git.io/go-installer)
@@ -149,6 +150,13 @@ function conf_fonts {
 	mkdir -p "$HOME/.fonts"
 	cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
 }
+function conf_zsh {
+  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+  touch "$HOME/.zshrc"
+  if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
+    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
+  fi
+}
 function conf_nvim {
   ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
 }
@@ -171,13 +179,7 @@ function conf_wezterm {
   mkdir -p "$HOME/.config/wezterm"
   ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
-function conf_zsh {
-  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-  touch "$HOME/.zshrc"
-  if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
-    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
-  fi
-}
+
 
 # INFO: Private licenses
 function license_intelephense {
