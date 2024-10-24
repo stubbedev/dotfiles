@@ -158,6 +158,7 @@ function conf_zsh {
   fi
 }
 function conf_nvim {
+  rm -rf "$HOME/.config/nvim"
   ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
 }
 function conf_tmux {
