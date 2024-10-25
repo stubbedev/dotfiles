@@ -8,8 +8,8 @@ function toggle_lazygit {
       else
         LAZYGIT_ALIVE=$(lazygit);
         local LAZYGIT_ALIVE
-        if [[ -z "$LAZYGIT_ALIVE" ]]; then
-          exit 0
+        if [[ -z "${LAZYGIT_ALIVE}" ]]; then
+          tmux kill-pane || exit 0
         fi
       fi
     elif command -v bit &> /dev/null; then
@@ -18,8 +18,8 @@ function toggle_lazygit {
       else
         LAZYGIT_ALIVE=$(bit);
         local LAZYGIT_ALIVE
-        if [[ -z "$LAZYGIT_ALIVE" ]]; then
-          exit 0
+        if [[ -z "${LAZYGIT_ALIVE}" ]]; then
+          tmux kill-pane || exit 0
         fi
       fi
     else
