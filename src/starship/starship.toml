@@ -7,6 +7,6 @@ ${custom.vpn}\
 $all"""
 
 [custom.vpn]
-when = "test -f $HOME/.vpn_active"
+when = 'ls -A $HOME | grep -q ".vpn_active-*"'
 style = "green"
 format = "[\\[vpn\\] ]($style)"
