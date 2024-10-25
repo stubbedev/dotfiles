@@ -109,7 +109,7 @@ function install_volta {
 
 # INFO: Toolchain dependent apps
 function rust_deps {
-	cargo install tree-sitter-cli eza bat ripgrep spotify-tui
+	cargo install tree-sitter-cli eza bat ripgrep spotify-tui jless
 }
 function go_deps {
 	go install github.com/jesseduffield/lazygit@latest
