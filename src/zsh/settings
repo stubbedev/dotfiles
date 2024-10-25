@@ -51,9 +51,9 @@ setopt HIST_IGNORE_ALL_DUPS
 export DISPLAY=:1
 
 if is_binary fzf; then
-    zle -N zle_ts; bindkey "^[f" zle_ts
-    zle -N zle_tstls; bindkey "^[d" zle_tstls
-    zle -N zle_tslg; bindkey "^[g" zle_tslg
+    bindkey -s "^[f" "ts^M"
+    bindkey -s "^[d" "tstls^M"
+    bindkey -s "^[g" "tslg^M"
     bindkey -s "^[a" "htop_wrapper^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
