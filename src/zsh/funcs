@@ -20,6 +20,22 @@ function is_clerk_dev {
 	[[ $(hostname) == *'clerk.network'* ]]
 }
 
+function zle_eval {
+  echo -en "\e[2K\r"
+  eval "$@"
+  zle redisplay
+}
+function zle_ts {
+  zle_eval ts
+}
+function zle_tstls {
+  zle_eval tstls
+}
+function zle_tslg {
+  zle_eval tslg
+}
+
+
 function src-stb-installers {
 	source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
 }
