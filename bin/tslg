@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [[ -d .git ]] || git rev-parse --git-dir > /dev/null 2>&1; then
+  if command -v lazygit &> /dev/null; then
+    if ! [[ -n "$TMUX" ]]; then
+      lazygit
+    fi
+  elif command -v bit &> /dev/null; then
+    if ! [[ -n "$TMUX" ]]; then
+      bit
+    fi
+  else
+    if ! [[ -n "$TMUX" ]]; then
+      git status && git diff
+    fi
+  fi
+else
+  clear && exit 0
+fi

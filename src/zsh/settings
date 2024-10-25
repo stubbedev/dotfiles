@@ -53,6 +53,7 @@ export DISPLAY=:1
 if is_binary fzf; then
     bindkey -s "^[f" "ts^M"
     bindkey -s "^[d" "tstls^M"
+    bindkey -s "^[g" "tslg^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target
