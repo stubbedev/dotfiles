@@ -15,12 +15,13 @@ TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 TMUX_RUNNING=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $TMUX_RUNNING ]]; then
-  tmux new-session -s "$TMUXCLIENTNAME" -c "$SELECTED"
-  exit 0
+  tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+  tmux send-keys -t "$TMUXCLIENTNAME":1 "nvim" C-m
 fi
 
 if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
   tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+  tmux send-keys -t "$TMUXCLIENTNAME":1 "nvim" C-m
 fi
 
 
