@@ -7,3 +7,4 @@ wm.gaps.outer.size: 0
 wm.gaps.focus_follows_mouse: true
 regolith.wallpaper.file: /home/stubbe/git/dotfiles/src/wallpapers/ballet.png
 regolith.sway.unsupported_gpu: true
+wm.program.1: rm -rf /home/stubbe/.vpn_active
