@@ -41,20 +41,19 @@ function install_stubbe_all {
   install_rust
   install_php
   install_volta
-  install_python
+  install_astral
 
   source "$HOME/.zshrc"
   # INFO: Install toolchain apps
   rust_deps
   go_deps
   volta_deps
-  python_deps
+  astral_deps
 
   source "$HOME/.zshrc"
   # INFO: Install non-toolchain apps
   install_nvim
   install_fzf
-  install_posting
 
   # INFO: Install configs
   conf_zsh
@@ -107,7 +106,7 @@ function install_php {
 function install_volta {
 	curl https://get.volta.sh | bash
 }
-function install_python {
+function install_astral {
   curl -LsSf https://astral.sh/uv/install.sh | sh
 }
 
@@ -126,7 +125,7 @@ function volta_deps {
   volta install node npm
   volta install yarn deno bun
 }
-function python_deps {
+function astral_deps {
   uv tool install --python 3.12 posting
 }
 
