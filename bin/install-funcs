@@ -81,14 +81,14 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop"
+    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1"
   fi
   if is_binary pacman; then
-    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop"
+    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
   fi
   if is_binary dnf; then
     bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
-    bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop"
+    bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop lua5.1"
   fi
   sudo chsh -s "$(which "zsh")" "$USER"
 }

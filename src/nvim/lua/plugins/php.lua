@@ -34,7 +34,8 @@ return {
         "blade",
         "php_only",
         "php",
-        "bash"
+        "bash",
+        "http"
       })
     end,
     config = function(_, opts)
