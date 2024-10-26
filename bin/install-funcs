@@ -41,12 +41,14 @@ function install_stubbe_all {
   install_rust
   install_php
   install_volta
+  install_python
 
   source "$HOME/.zshrc"
   # INFO: Install toolchain apps
   rust_deps
   go_deps
   volta_deps
+  python_deps
 
   source "$HOME/.zshrc"
   # INFO: Install non-toolchain apps
@@ -105,7 +107,9 @@ function install_php {
 function install_volta {
 	curl https://get.volta.sh | bash
 }
-
+function install_python {
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+}
 
 
 # INFO: Toolchain dependent apps
@@ -121,6 +125,9 @@ function go_deps {
 function volta_deps {
   volta install node npm
   volta install yarn deno bun
+}
+function python_deps {
+  uv tool install --python 3.12 posting
 }
 
 
@@ -139,9 +146,7 @@ function install_fzf {
 	wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
 	sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
 }
-function install_posting {
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-}
+
 
 
 # INFO: Configs
