@@ -52,6 +52,7 @@ function install_stubbe_all {
   # INFO: Install non-toolchain apps
   install_nvim
   install_fzf
+  install_posting
 
   # INFO: Install configs
   conf_zsh
@@ -137,6 +138,9 @@ function install_fzf {
 	url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
 	wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
 	sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
+}
+function install_posting {
+  curl -LsSf https://astral.sh/uv/install.sh | sh
 }
 
 
