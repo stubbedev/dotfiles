@@ -6,11 +6,11 @@ export STUBBE_SRC
 
 # INFO: INSTALL FUNCTION
 function installer_prompt {
-  if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
-    echo "Need to set SSH key before being able to install."
-    echo "Goodbye!"
-    exit 0
-  fi
+	if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
+		echo "Need to set SSH key before being able to install."
+		echo "Goodbye!"
+		exit 0
+	fi
 	echo "Please enter your desired option:"
 	read -rn 1 -p "(I)nstall Mandatory or (C)ancel?" REPLY
 	printf "\n"
@@ -31,68 +31,76 @@ function installer_prompt {
 }
 
 function install_stubbe_all {
-  # INFO: Install generic symlinks
+	# INFO: Install generic symlinks
 	install_symlinks
-  source "$HOME/.zshrc"
+	source "$HOME/.zshrc"
 
-  # INFO: Install toolchains
-  install_build_essential
+	# INFO: Install toolchains
+	install_build_essential
 	install_go
-  install_rust
-  install_php
-  install_volta
-  install_astral
+	install_rust
+	install_php
+	install_volta
+	install_astral
 
-  source "$HOME/.zshrc"
-  # INFO: Install toolchain apps
-  rust_deps
-  go_deps
-  volta_deps
-  astral_deps
+	source "$HOME/.zshrc"
+	# INFO: Install toolchain apps
+	rust_deps
+	go_deps
+	volta_deps
+	astral_deps
 
-  source "$HOME/.zshrc"
-  # INFO: Install non-toolchain apps
-  install_nvim
-  install_fzf
+	source "$HOME/.zshrc"
+	# INFO: Install non-toolchain apps
+	install_nvim
+	install_fzf
 
-  # INFO: Install configs
-  conf_zsh
-  conf_nvim
-  conf_tmux
-  conf_fonts
-  conf_wezterm
-  conf_regolith_xresources
+	# INFO: Install configs
+	conf_zsh
+	conf_nvim
+	conf_tmux
+	conf_fonts
+	conf_wezterm
+	conf_regolith_xresources
 
-  # INFO: Install private licenses
-  license_openai
-  license_intelephense
-  license_clerk
-  source "$HOME/.zshrc"
+	# INFO: Install private licenses
+	echo "Install private licenses:"
+	read -rn 1 -p "(Y)es or [N]o?" REPLY
+	printf "\n"
+	case "$REPLY" in
+	y | Y)
+		license_openai
+		license_intelephense
+		license_clerk
+		;;
+	*)
+		echo "Skipping private installs"
+		;;
+	esac
+	source "$HOME/.zshrc"
 }
-
 
 # INFO: Generic symlinks
 function install_symlinks {
 	mkdir -p "$HOME/.stubbe"
 	ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
 	ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
-  touch "$HOME/.zshrc"
+	touch "$HOME/.zshrc"
 }
-
 
 # INFO: Toolchains
 function install_build_essential {
-  if is_binary apt; then
-    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1"
-  fi
-  if is_binary pacman; then
-    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
-  fi
-  if is_binary dnf; then
-    bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
-    bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop lua5.1"
-  fi
-  sudo chsh -s "$(which "zsh")" "$USER"
+	if is_binary apt; then
+		bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1"
+	fi
+	if is_binary pacman; then
+		bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
+	fi
+	if is_binary dnf; then
+		bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
+		bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop lua5.1"
+	fi
+	sudo chsh -s "$(which "zsh")" "$USER"
 }
 function install_go {
 	bash <(curl -sL https://git.io/go-installer)
@@ -107,9 +115,8 @@ function install_volta {
 	curl https://get.volta.sh | bash
 }
 function install_astral {
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+	curl -LsSf https://astral.sh/uv/install.sh | sh
 }
-
 
 # INFO: Toolchain dependent apps
 function rust_deps {
@@ -119,23 +126,22 @@ function go_deps {
 	go install github.com/jesseduffield/lazygit@latest
 	go install github.com/jesseduffield/lazydocker@latest
 	go install github.com/air-verse/air@latest
-  go install github.com/gopasspw/gopass@latest
+	go install github.com/gopasspw/gopass@latest
 }
 function volta_deps {
-  volta install node npm
-  volta install yarn deno bun
+	volta install node npm
+	volta install yarn deno bun
 }
 function astral_deps {
-  uv tool install --python 3.12 posting
+	uv tool install --python 3.12 posting
 }
-
 
 # INFO: Non-Toolchain dependent
 function install_nvim {
-  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-  sudo rm -rf /opt/nvim
-  sudo tar -C /opt -xzf nvim-linux64.tar.gz
-  rm -rf nvim-linux64.tar.gz
+	curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+	sudo rm -rf /opt/nvim
+	sudo tar -C /opt -xzf nvim-linux64.tar.gz
+	rm -rf nvim-linux64.tar.gz
 }
 function install_fzf {
 	FZFTMPDIR=$(mktemp -d)
@@ -146,8 +152,6 @@ function install_fzf {
 	sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
 }
 
-
-
 # INFO: Configs
 function conf_fonts {
 	SOURCE_FONT="$STUBBE_SRC/fonts"
@@ -155,15 +159,15 @@ function conf_fonts {
 	cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
 }
 function conf_zsh {
-  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-  touch "$HOME/.zshrc"
-  if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
-    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
-  fi
+	SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+	touch "$HOME/.zshrc"
+	if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
+		echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
+	fi
 }
 function conf_nvim {
-  rm -rf "$HOME/.config/nvim"
-  ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
+	rm -rf "$HOME/.config/nvim"
+	ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
 }
 function conf_tmux {
 	if ! is_directory "$HOME/.tmux/plugins/tpm"; then
@@ -180,11 +184,10 @@ function conf_regolith_xresources {
 	ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
 }
 function conf_wezterm {
-  SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
-  mkdir -p "$HOME/.config/wezterm"
-  ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
+	SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
+	mkdir -p "$HOME/.config/wezterm"
+	ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
-
 
 # INFO: Private licenses
 function license_intelephense {
@@ -207,6 +210,5 @@ function license_clerk {
 	git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
 	"$CLERKCREDSTMPDIR"/clerk-auth/install.sh
 	rm -rf "$CLERKCREDSTMPDIR"
-  echo "Need to install openvpn3 for this to function."
+	echo "Need to install openvpn3 for this to function."
 }
-
