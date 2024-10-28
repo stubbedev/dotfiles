@@ -217,10 +217,10 @@ if is_binary systemctl; then
 	}
 fi
 
-if is_binary python3; then
+if is_binary uv; then
 	function pysrc {
 		if ! is_file "$PWD/venv/bin/activate"; then
-			python3 -m venv ./venv || exit
+			uv venv ./venv
 		fi
 		source "$PWD/venv/bin/activate"
 	}
