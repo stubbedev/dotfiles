@@ -1,0 +1,19 @@
+#!/bin/bash
+
+function toggle_lazydocker {
+  if command -v lazydocker &> /dev/null; then
+    if [[ -z "$TMUX" ]]; then
+      sudo $(which lazydocker)
+    else
+      LAZYDOCKER_ALIVE=$(sudo $(which lazydocker));
+      local LAZYDOCKER_ALIVE
+      if [[ -z "${LAZYDOCKER_ALIVE}" ]]; then
+        tmux kill-pane || exit 0
+      fi
+    fi
+  else
+    exit 0
+  fi
+}
+
+toggle_lazydocker
