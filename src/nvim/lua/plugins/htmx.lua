@@ -3,7 +3,7 @@ return {
     "ThePrimeagen/htmx-lsp",
     event = "VeryLazy",
     config = function()
-      require("lspconfig").htmx.setup({})
+      require("nvim-lspconfig").htmx.setup({})
     end,
   },
 }

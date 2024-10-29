@@ -204,11 +204,11 @@ function handleize_files {
 }
 
 function remove_suffix_files {
-  for file in "$1"*; do mv "$file" "${file/1/""}";done;
+  for file in *"$1"; do mv "$file" "${file/1/""}";done;
 }
 
 function remove_prefix_files {
-  for file in *"$1"; do mv "$file" "${file/1/""}";done;
+  for file in "$1"*; do mv "$file" "${file/1/""}";done;
 }
 
 function remove_middle_files {
