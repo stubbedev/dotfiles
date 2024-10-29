@@ -95,6 +95,7 @@ if is_binary docker; then
 	function docker_killall {
 		docker kill "$(docker ps -q)"
 	}
+  alias ldocker='sudo $(which lazydocker)'
 fi
 
 if is_binary docker && is_binary lazydocker && is_binary podman; then
