@@ -203,6 +203,18 @@ function handleize_files {
 	done
 }
 
+function remove_suffix_files {
+  for file in "$1"*; do mv "$file" "${file/1/""}";done;
+}
+
+function remove_prefix_files {
+  for file in *"$1"; do mv "$file" "${file/1/""}";done;
+}
+
+function remove_middle_files {
+  for file in *"$1"*; do mv "$file" "${file/1/""}";done;
+}
+
 if is_binary systemctl; then
 	function kill_native_servers {
 		if is_binary mysql; then
