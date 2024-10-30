@@ -301,7 +301,12 @@ if is_binary openvpn3; then
 			for instance in $ACTIVE_SESSIONS; do
 				openvpn3 session-manage --disconnect --session-path ${instance}
 			done
-      sudo systemctl stop openvpn
+      local OPENVPN_SERVICES=$(sudo systemctl list-unit-files | grep enabled | grep openvpn | grep -v "@." | awk '{print $1}')
+      if ((${#OPENVPN_SERVICES[@]})); then
+        for service in $OPENVPN_SERVICES; do
+          sudo systemctl stop ${service}
+        done
+      fi
 		else
 			echo "Connecting to VPN..."
       mktemp "$HOME/.vpn_active-XXXXX" 2>/dev/null
