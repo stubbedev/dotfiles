@@ -5,3 +5,4 @@ src/zsh/plugins.d
 src/zsh/history
 *.json
 src/nvim/lazy-lock.json
+src/lazygit/state.yml

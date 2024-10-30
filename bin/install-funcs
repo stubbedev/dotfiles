@@ -62,7 +62,7 @@ function install_stubbe_all {
 	conf_fonts
 	conf_wezterm
 	conf_regolith_xresources
-  conf_lazygit
+	conf_lazygit
 
 	# INFO: Install private licenses
 	echo "Install private licenses:"
