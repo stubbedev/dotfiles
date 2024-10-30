@@ -52,12 +52,14 @@ export DISPLAY=:1
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 
+bindkey -s "^[A" "tsld^M"
+bindkey -s "^[t" "tn^M"
+bindkey -s "^[g" "tslg^M"
+bindkey -s "^[a" "htop_wrapper^M"
+
 if is_binary fzf; then
     bindkey -s "^[f" "ts^M"
     bindkey -s "^[d" "tstls^M"
-    bindkey -s "^[g" "tslg^M"
-    bindkey -s "^[A" "tsld^M"
-    bindkey -s "^[a" "htop_wrapper^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target
