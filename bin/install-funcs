@@ -193,7 +193,10 @@ function conf_lazygit {
 	SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
 	mkdir -p "$HOME/.config/lazygit"
 	ln -sf "$SOURCE_LAZYGIT/config.yml" "$HOME/.config/lazygit"
-	ln -sf "$SOURCE_LAZYGIT/state.yml" "$HOME/.config/lazygit"
+	touch "$HOME/.config/lazygit/state.yml"
+	if ! has_string "$HOME/.config/lazygit/state.yml" "startuppopupversion"; then
+		echo "startuppopupversion: 5" >>"$HOME/.config/lazygit/state.yml"
+	fi
 }
 
 # INFO: Private licenses
