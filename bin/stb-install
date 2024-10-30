@@ -2,9 +2,6 @@
 
 function info {
   echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
-  echo "Make sure you have the following installed before you run this util:"
-  echo "tmux  :: Terminal Multiplexer"
-  echo "zsh   :: POSIX Shell"
   SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
   export SCRIPT_DIR
   source "$SCRIPT_DIR/bin/install-funcs"
