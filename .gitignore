@@ -6,3 +6,4 @@ src/zsh/history
 *.json
 src/nvim/lazy-lock.json
 src/lazygit/state.yml
+src/st/*.o
