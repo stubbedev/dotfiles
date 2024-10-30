@@ -188,6 +188,12 @@ function conf_wezterm {
 	mkdir -p "$HOME/.config/wezterm"
 	ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
+function conf_lazygit {
+	SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
+	mkdir -p "$HOME/.config/lazygit"
+	ln -sf "$SOURCE_LAZYGIT/config.yml" "$HOME/.config/lazygit"
+	ln -sf "$SOURCE_LAZYGIT/state.yml" "$HOME/.config/lazygit"
+}
 
 # INFO: Private licenses
 function license_intelephense {
