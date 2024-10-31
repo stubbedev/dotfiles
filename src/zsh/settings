@@ -1,5 +1,10 @@
 #!/bin/zsh
 
+fpath=(
+  $HOME/.stubbe/src/zsh/fpaths
+  $fpath
+)
+
 autoload -Uz compinit
 compinit
 
