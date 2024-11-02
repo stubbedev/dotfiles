@@ -21,20 +21,19 @@ function is_clerk_dev {
 }
 
 function zle_eval {
-  echo -en "\e[2K\r"
-  eval "$@"
-  zle redisplay
+	echo -en "\e[2K\r"
+	eval "$@"
+	zle redisplay
 }
 function zle_ts {
-  zle_eval ts
+	zle_eval ts
 }
 function zle_tstls {
-  zle_eval tstls
+	zle_eval tstls
 }
 function zle_tslg {
-  zle_eval tslg
+	zle_eval tslg
 }
-
 
 function src-stb-installers {
 	source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
@@ -95,7 +94,7 @@ if is_binary docker; then
 	function docker_killall {
 		docker kill "$(docker ps -q)"
 	}
-  alias ldocker='sudo $(which lazydocker)'
+	alias ldocker='sudo $(which lazydocker)'
 fi
 
 if is_binary docker && is_binary lazydocker && is_binary podman; then
@@ -205,15 +204,15 @@ function handleize_files {
 }
 
 function remove_suffix_files {
-  for file in *"$1"; do mv "$file" "${file/1/""}";done;
+	for file in *"$1"; do mv "$file" "${file/1/""}"; done
 }
 
 function remove_prefix_files {
-  for file in "$1"*; do mv "$file" "${file/1/""}";done;
+	for file in "$1"*; do mv "$file" "${file/1/""}"; done
 }
 
 function remove_middle_files {
-  for file in *"$1"*; do mv "$file" "${file/1/""}";done;
+	for file in *"$1"*; do mv "$file" "${file/1/""}"; done
 }
 
 if is_binary systemctl; then
@@ -301,15 +300,15 @@ if is_binary openvpn3; then
 			for instance in $ACTIVE_SESSIONS; do
 				openvpn3 session-manage --disconnect --session-path ${instance}
 			done
-      local OPENVPN_SERVICES=$(sudo systemctl list-unit-files | grep enabled | grep openvpn | grep -v "@." | awk '{print $1}')
-      if ((${#OPENVPN_SERVICES[@]})); then
-        for service in $OPENVPN_SERVICES; do
-          sudo systemctl stop ${service}
-        done
-      fi
+			local OPENVPN_SERVICES=$(sudo systemctl list-unit-files | grep enabled | grep openvpn | grep -v "@." | awk '{print $1}')
+			if ((${#OPENVPN_SERVICES[@]})); then
+				for service in $OPENVPN_SERVICES; do
+					sudo systemctl stop ${service}
+				done
+			fi
 		else
 			echo "Connecting to VPN..."
-      mktemp "$HOME/.vpn_active-XXXXX" 2>/dev/null
+			mktemp "$HOME/.vpn_active-XXXXX" 2>/dev/null
 			openvpn3 session-start --config ~/.ssh/client.ovpn
 		fi
 	}
