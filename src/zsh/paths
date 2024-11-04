@@ -15,6 +15,7 @@ STUBBE_PATHS=(
     "$HOME/.go/bin"
     "$HOME/bin"
     "$HOME/.volta/bin"
+    "/home/linuxbrew/.linuxbrew/bin"
     "/usr/local/go/bin"
     "/sbin"
     "/opt/nvim-linux64/bin"
