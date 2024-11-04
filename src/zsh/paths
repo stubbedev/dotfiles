@@ -1,5 +1,6 @@
 #!/bin/bash
 # EXPAND LIST WITH DESIRED PATHS
+
 STUBBE_PATHS=(
     "$HOME/.stubbe/bin"
     "$HOME/.stubbe/src/go/bin"
