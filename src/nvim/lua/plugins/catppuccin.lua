@@ -3,6 +3,7 @@ return {
     "catppuccin/nvim",
     lazy = true,
     name = "catppuccin",
+    priority = 1000,
     opts = {
       integrations = {
         aerial = true,
@@ -11,6 +12,7 @@ return {
         dashboard = true,
         flash = false,
         grug_far = true,
+        overseer = true,
         gitsigns = true,
         headlines = true,
         illuminate = true,

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 # INFO: REQUIRED ENV VARS
 STUBBE_SRC="$HOME/.stubbe/src"
