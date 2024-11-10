@@ -129,6 +129,7 @@ function go_deps {
 	go install github.com/jesseduffield/lazydocker@latest
 	go install github.com/air-verse/air@latest
 	go install github.com/gopasspw/gopass@latest
+	go install golang.org/x/tools/cmd/godoc@latest
 }
 function volta_deps {
 	volta install node npm
@@ -155,7 +156,7 @@ function install_fzf {
 }
 function install_st {
 	cd "$HOME/.stubbe/src/st" || exit
-  local RESET_PWD=$PWD
+	local RESET_PWD=$PWD
 	sudo make clean install
 	if is_binary "$HOME/.stubbe/src/st/st"; then
 		sudo mv "$HOME/.stubbe/src/st/st" "/usr/local/bin"
@@ -164,7 +165,7 @@ function install_st {
 		sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/local/bin/st 50
 		sudo update-alternatives --set x-terminal-emulator /usr/local/bin/st
 	fi
-  cd "$RESET_PWD" || exit
+	cd "$RESET_PWD" || exit
 }
 
 # INFO: Configs
