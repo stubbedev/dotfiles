@@ -64,6 +64,7 @@ function install_stubbe_all {
 	conf_wezterm
 	conf_regolith_xresources
 	conf_lazygit
+	conf_ideavim
 
 	# INFO: Install private licenses
 	echo "Install private licenses:"
@@ -212,6 +213,10 @@ function conf_lazygit {
 	if ! has_string "$HOME/.config/lazygit/state.yml" "startuppopupversion"; then
 		echo "startuppopupversion: 5" >>"$HOME/.config/lazygit/state.yml"
 	fi
+}
+function conf_ideavim {
+	SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
+	ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
 }
 
 # INFO: Private licenses
