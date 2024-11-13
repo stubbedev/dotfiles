@@ -76,10 +76,6 @@ end
 vim.opt.foldlevel = 99
 vim.opt.foldtext = "v:lua.require'lazyvim.util'.ui.foldtext()"
 
-if vim.fn.has("nvim-0.9.0") == 1 then
-  vim.opt.statuscolumn = [[%!v:lua.require'lazyvim.util'.ui.statuscolumn()]]
-end
-
 -- HACK: causes freezes on <= 0.9, so only enable on >= 0.10 for now
 if vim.fn.has("nvim-0.10") == 1 then
   vim.opt.foldmethod = "expr"
