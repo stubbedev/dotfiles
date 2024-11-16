@@ -55,6 +55,7 @@ function install_stubbe_all {
 	install_nvim
 	install_fzf
 	install_st
+	install_docker
 
 	# INFO: Install configs
 	conf_zsh
@@ -167,6 +168,14 @@ function install_st {
 		sudo update-alternatives --set x-terminal-emulator /usr/local/bin/st
 	fi
 	cd "$RESET_PWD" || exit
+}
+function install_docker {
+	DOCKERTMPDIR=$(mktemp -d)
+	curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
+	sudo sh "$DOCKERTMPDIR/get-docker.sh"
+	sudo groupadd docker
+	sudo usermod -aG docker "$USER"
+  rm -rf "$DOCKERTMPDIR"
 }
 
 # INFO: Configs
