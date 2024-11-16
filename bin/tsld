@@ -5,7 +5,8 @@ function toggle_lazydocker {
 		if [[ -z "$TMUX" ]]; then
 			lazydocker
 		else
-			LAZYDOCKER_ALIVE=$(lazydocker)
+			lazydocker
+			LAZYDOCKER_ALIVE=""
 			local LAZYDOCKER_ALIVE
 			if [[ -z "${LAZYDOCKER_ALIVE}" ]]; then
 				tmux kill-pane || exit 0
