@@ -159,8 +159,8 @@ function install_fzf {
 	sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
 }
 function install_st {
-	cd "$HOME/.stubbe/src/st" || exit
 	local RESET_PWD=$PWD
+  cd "$HOME/.stubbe/src/st" || exit
 	sudo make clean install
 	if is_binary "$HOME/.stubbe/src/st/st"; then
 		sudo mv "$HOME/.stubbe/src/st/st" "/usr/local/bin"
