@@ -160,7 +160,7 @@ function install_fzf {
 }
 function install_st {
 	local RESET_PWD=$PWD
-  cd "$HOME/.stubbe/src/st" || exit
+	cd "$HOME/.stubbe/src/st" || exit
 	sudo make clean install
 	if is_binary "$HOME/.stubbe/src/st/st"; then
 		sudo mv "$HOME/.stubbe/src/st/st" "/usr/local/bin"
