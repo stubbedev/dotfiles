@@ -12,13 +12,17 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
-vim.api.nvim_create_autocmd({"FileWritePost", "BufWritePost"}, {
+vim.api.nvim_create_autocmd({ "FileWritePost", "BufWritePost" }, {
   pattern = { "*.coffee" },
+  command = "CoffeeLint | cwindow",
   callback = function()
     local repo_name = vim.fn.system("basename `git rev-parse --show-toplevel 2>/dev/null` 2>/dev/null"):gsub("%s+", "")
-    if repo_name == 'clerk.js' then
+    if repo_name == "clerk.js" then
       vim.loop.spawn("bash", {
-        args = {"-c", "source venv/bin/activate && ./build.sh --debug && \\cp -rf clerk.js ../live.clerk.io/live.clerk.io"},
+        args = {
+          "-c",
+          "source venv/bin/activate && ./build.sh --debug && \\cp -rf clerk.js ../live.clerk.io/live.clerk.io",
+        },
         detached = true,
       })
     end
