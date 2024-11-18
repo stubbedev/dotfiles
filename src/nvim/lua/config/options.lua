@@ -12,6 +12,7 @@ vim.g.autoformat = false
 -- * a function with signature `function(buf) -> string|string[]`
 vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
 vim.treesitter.language.register("html", {"html", "vue", "tmpl"})
+vim.treesitter.language.register("coffeescript", {"coffee"})
 
 local opt = vim.opt
 
