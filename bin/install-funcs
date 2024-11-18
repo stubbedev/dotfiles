@@ -136,6 +136,7 @@ function go_deps {
 function volta_deps {
 	volta install node npm
 	volta install yarn deno bun
+	volta install @coffeelint/cli coffeescript
 }
 function astral_deps {
 	uv tool install --python 3.12 posting
