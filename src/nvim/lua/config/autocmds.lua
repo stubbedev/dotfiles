@@ -4,7 +4,7 @@
 -- wrap and check for spell in text filetypes
 
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "coffee" },
+  pattern = { "*.coffee" },
   callback = function()
     vim.opt_local.shiftwidth = 4
     vim.opt_local.softtabstop = 4
