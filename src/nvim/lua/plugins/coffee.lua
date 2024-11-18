@@ -7,6 +7,9 @@ return {
   {
     "phil294/coffeesense",
     config = function()
+      require("mason-lspconfig").setup({
+        ensure_installed = { "coffeesense-language-server" },
+      })
       require("lspconfig").coffeesense.setup({
         cmd = { "coffeesense-language-server", "--stdio" }, -- Command to start the language server
         filetypes = { "coffee" }, -- Filetypes to attach the server to
