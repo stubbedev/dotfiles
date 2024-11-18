@@ -228,6 +228,11 @@ function conf_ideavim {
 	SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
 	ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
 }
+function conf_coffeescript {
+	COFFELINT_LIB="$HOME/.volta/tools/shared/@coffeelint/cli/lib"
+	sed -i 's/value: 2,/value: 4,/' "$COFFELINT_LIB/coffeelint.js"
+	sed -i 's/value: 80,/value: 160,/' "$COFFELINT_LIB/coffeelint.js"
+}
 
 # INFO: Private licenses
 function license_intelephense {
