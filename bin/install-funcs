@@ -125,7 +125,7 @@ function install_astral {
 
 # INFO: Toolchain dependent apps
 function rust_deps {
-	cargo install tree-sitter-cli eza bat ripgrep spotify-tui jless atac rainfrog
+	cargo install tree-sitter-cli eza bat ripgrep spotify-tui jless rainfrog atac
 }
 function go_deps {
 	go install github.com/jesseduffield/lazygit@latest
