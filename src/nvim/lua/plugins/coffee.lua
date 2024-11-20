@@ -1,12 +1,12 @@
 return {
   {
     "kchmck/vim-coffee-script",
-    event = "VeryLazy",
+    event = "BufRead *.coffee",
     config = function() end,
   },
   {
     "phil294/coffeesense",
-    event = "VeryLazy",
+    event = "BufRead *.coffee",
     config = function()
       require("mason-lspconfig").setup({
         ensure_installed = { "coffeesense-language-server" },
