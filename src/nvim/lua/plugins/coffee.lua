@@ -6,6 +6,7 @@ return {
   },
   {
     "phil294/coffeesense",
+    event = "VeryLazy",
     config = function()
       require("mason-lspconfig").setup({
         ensure_installed = { "coffeesense-language-server" },
