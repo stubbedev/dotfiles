@@ -57,6 +57,7 @@ function install_stubbe_all {
 	install_st
 	install_docker
 	install_jetbrains_toolbox
+	install_zed
 
 	# INFO: Install configs
 	conf_zsh
@@ -190,6 +191,9 @@ function install_jetbrains_toolbox {
 	sudo mv "$JBTMPDIR/jetbrains" /opt
 	sudo ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
 	sudo /usr/bin/jetbrains-toolbox
+}
+function install_zed {
+	curl -f https://zed.dev/install.sh | sh
 }
 
 # INFO: Configs
