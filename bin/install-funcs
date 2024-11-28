@@ -186,6 +186,7 @@ function install_jetbrains_toolbox {
 	tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C $JBTMPDIR
 	rm -rf "$JBTMPDIR/jetbrains-toolbox.tar.gz"
 	mv "$JBTMPDIR/jetbrains-toolbox-"* "$JBTMPDIR/jetbrains"
+	sudo rm -rf /opt/jetbrains
 	sudo mv "$JBTMPDIR/jetbrains" /opt
 	sudo ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
 }
