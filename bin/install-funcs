@@ -56,6 +56,7 @@ function install_stubbe_all {
 	install_fzf
 	install_st
 	install_docker
+	install_jetbrains_toolbox
 
 	# INFO: Install configs
 	conf_zsh
@@ -178,6 +179,14 @@ function install_docker {
 	sudo groupadd docker
 	sudo usermod -aG docker "$USER"
 	rm -rf "$DOCKERTMPDIR"
+}
+function install_jetbrains_toolbox {
+	JBTMPDIR=$(mktemp -d)
+	curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$JBTMPDIR/jetbrains-toolbox.tar.gz"
+	tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C $JBTMPDIR
+	mv "$JBTMPDIR/jetbrains-toolbox-*" "$JBTMPDIR/jetbrains"
+	sudo mv "$JBTMPDIR/jetbrains" /opt
+	rm -rf $JBTMPDIR
 }
 
 # INFO: Configs
