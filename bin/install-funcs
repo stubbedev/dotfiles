@@ -184,9 +184,10 @@ function install_jetbrains_toolbox {
 	JBTMPDIR=$(mktemp -d)
 	curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$JBTMPDIR/jetbrains-toolbox.tar.gz"
 	tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C $JBTMPDIR
-	mv "$JBTMPDIR/jetbrains-toolbox-*" "$JBTMPDIR/jetbrains"
+	rm -rf "$JBTMPDIR/jetbrains-toolbox.tar.gz"
+	mv "$JBTMPDIR/jetbrains-toolbox-"* "$JBTMPDIR/jetbrains"
 	sudo mv "$JBTMPDIR/jetbrains" /opt
-	rm -rf $JBTMPDIR
+	ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
 }
 
 # INFO: Configs
