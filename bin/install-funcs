@@ -42,6 +42,7 @@ function install_stubbe_all {
 	install_php
 	install_volta
 	install_astral
+	install_nim
 
 	source "$HOME/.zshrc"
 	# INFO: Install toolchain apps
@@ -117,6 +118,9 @@ function install_rust {
 }
 function install_php {
 	bash -c "$(curl -fsSL https://php.new/install/linux)"
+}
+function install_nim {
+	curl https://nim-lang.org/choosenim/init.sh -sSf | sh
 }
 function install_volta {
 	curl https://get.volta.sh | bash
