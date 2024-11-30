@@ -1,14 +1,10 @@
 return {
-  -- Smooth cursor movement.
   {
     "sphamba/smear-cursor.nvim",
-    opts = {},
-  },
-  -- Smooth scrolling.
-  {
-    "karb94/neoscroll.nvim",
-    config = function()
-      require("neoscroll").setup({})
-    end,
+    opts = {
+      cursor_color = "none",
+      smear_between_buffers = false,
+      legacy_computing_symbols_support = true,
+    },
   },
 }
