@@ -11,8 +11,9 @@ vim.g.autoformat = false
 -- * a pattern or array of patterns like `.git` or `lua`.
 -- * a function with signature `function(buf) -> string|string[]`
 vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
-vim.treesitter.language.register("html", {"html", "vue", "tmpl"})
-vim.treesitter.language.register("coffeescript", {"coffee"})
+vim.treesitter.language.register("html", { "html", "vue", "tmpl" })
+vim.treesitter.language.register("templ", { "templ", "tmpl" })
+vim.treesitter.language.register("coffeescript", { "coffee" })
 
 local opt = vim.opt
 
