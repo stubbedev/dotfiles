@@ -1,5 +1,10 @@
 #!/usr/bin/bash
 
+if [[ -z $(pgrep tmux -u "$USER") ]]; then
+  clear
+  exit 0
+fi
+
 # List all tmux sessions
 SESSIONS=$(tmux list-sessions -F "#{session_name}")
 
