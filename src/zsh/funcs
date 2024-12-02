@@ -75,7 +75,7 @@ if is_binary git; then
 	git config --global user.name "Alexander Stage"
 	git config --global user.email "abs@stubbe.dev"
 	git config --global core.excludesfile ~/.gitignore
-	alias git_wipe="git stash && git stash clear"
+	alias gw="git stash && git stash clear"
 fi
 
 if is_binary phpcs; then
