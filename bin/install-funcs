@@ -279,6 +279,7 @@ function conf_xmodmap {
 	ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
 	touch "$HOME/.profile"
 	if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
+		echo "" >>"$HOME/.profile"
 		echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode" >>"$HOME/.profile"
 		echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd" >>"$HOME/.profile"
 		echo "xmodmap ~/.Xmodmap" >>"$HOME/.profile"
