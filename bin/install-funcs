@@ -71,7 +71,8 @@ function install_stubbe_all {
 	conf_lazygit
 	conf_ideavim
 	conf_coffeescript
-  conf_keyd
+	conf_keyd
+	conf_xmodmap
 
 	# INFO: Install private licenses
 	echo "Install private licenses:"
@@ -190,7 +191,7 @@ function install_docker {
 function install_jetbrains_toolbox {
 	JBTMPDIR=$(mktemp -d)
 	curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$JBTMPDIR/jetbrains-toolbox.tar.gz"
-	tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C $JBTMPDIR
+	tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C "$JBTMPDIR"
 	rm -rf "$JBTMPDIR/jetbrains-toolbox.tar.gz"
 	mv "$JBTMPDIR/jetbrains-toolbox-"* "$JBTMPDIR/jetbrains"
 	sudo rm -rf /opt/jetbrains
@@ -272,6 +273,16 @@ function conf_keyd {
 	SOURCE_KEYD="$STUBBE_SRC/keyd"
 	sudo ln -sf "$SOURCE_KEYD/default.conf" "/etc/keyd"
 	sudo keyd reload
+}
+function conf_xmodmap {
+	XMODMAPDIR="$STUBBE_SRC/xmodmap"
+	ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
+	touch "$HOME/.profile"
+	if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
+		echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode" >>"$HOME/.profile"
+		echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd" >>"$HOME/.profile"
+		echo "xmodmap ~/.Xmodmap" >>"$HOME/.profile"
+	fi
 }
 
 # INFO: Private licenses

@@ -1,0 +1,7 @@
+clear mod1
+clear mod4
+keycode 64 = Super_L
+keycode 133 = Alt_L
+add mod1 = Alt_L
+add mod4 = Super_L
+
