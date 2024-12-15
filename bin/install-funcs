@@ -72,7 +72,6 @@ function install_stubbe_all {
 	conf_ideavim
 	conf_coffeescript
 	conf_keyd
-	conf_xmodmap
 
 	# INFO: Install private licenses
 	echo "Install private licenses:"
