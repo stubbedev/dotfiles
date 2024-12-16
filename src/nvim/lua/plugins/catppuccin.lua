@@ -6,9 +6,11 @@ return {
     priority = 1000,
     opts = {
       integrations = {
+        snacks = true,
         aerial = true,
         alpha = true,
         cmp = true,
+        blink_cmp = true,
         dashboard = true,
         flash = false,
         grug_far = true,
@@ -19,6 +21,8 @@ return {
         indent_blankline = { enabled = true },
         leap = true,
         lsp_trouble = true,
+        dap = true,
+        harpoon = true,
         mason = true,
         markdown = true,
         mini = true,
@@ -38,6 +42,7 @@ return {
         notify = true,
         semantic_tokens = true,
         telescope = true,
+        fzf = true,
         treesitter = true,
         treesitter_context = true,
         which_key = true,
