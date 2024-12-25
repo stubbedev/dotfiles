@@ -70,7 +70,7 @@ function install_stubbe_all {
 	conf_regolith_xresources
 	conf_lazygit
 	conf_ideavim
-	# conf_coffeescript
+	conf_coffeescript
 	conf_keyd
 
 	# INFO: Install private licenses
