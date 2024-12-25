@@ -42,7 +42,7 @@ function install_stubbe_all {
 	install_php
 	install_volta
 	install_astral
-	install_nim
+	# install_nim
 
 	source "$HOME/.zshrc"
 	# INFO: Install toolchain apps
@@ -58,7 +58,7 @@ function install_stubbe_all {
 	install_st
 	install_docker
 	install_jetbrains_toolbox
-	install_zed
+	# install_zed
 	install_keyd
 
 	# INFO: Install configs
@@ -70,7 +70,7 @@ function install_stubbe_all {
 	conf_regolith_xresources
 	conf_lazygit
 	conf_ideavim
-	conf_coffeescript
+	# conf_coffeescript
 	conf_keyd
 
 	# INFO: Install private licenses
@@ -119,7 +119,7 @@ function install_rust {
 	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 }
 function install_php {
-	bash -c "$(curl -fsSL https://php.new/install/linux)"
+	bash -c "$(curl -fsSL https://php.new/install/linux/8.2)"
 }
 function install_nim {
 	curl https://nim-lang.org/choosenim/init.sh -sSf | sh
