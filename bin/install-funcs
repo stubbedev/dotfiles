@@ -242,8 +242,10 @@ function conf_tmux {
 	fi
 }
 function conf_regolith_xresources {
+	sudo mkdir -p /usr/share/backgrounds
+	sudo cp -rf "$STUBBE_SRC/wallpapers/"* /usr/share/backgrounds
 	mkdir -p "$HOME/.config/regolith3"
-	ln -s "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
+	ln -sf "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
 }
 function conf_wezterm {
 	SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
