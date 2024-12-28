@@ -3,9 +3,9 @@ STBZSHSOURCES=(
   "paths"
   "funcs"
   "aliases"
-  "settings"
   "secrets"
   "plugins"
+  "settings"
 )
 if [ -d "$HOME/.stubbe" ]; then
     STBDIR="$HOME/.stubbe/src/zsh"
