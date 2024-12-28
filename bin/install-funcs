@@ -290,9 +290,12 @@ function conf_xmodmap {
 function conf_dark_mode {
 	mkdir -p "$HOME/.config"
 	mkdir -p "$HOME/.config/xdg-desktop-portal"
-	echo "[preferred]" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-	echo "default=gtk;wlr" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-	echo "" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+	touch "$HOME/.config/xdg-desktop-portal/portals.conf"
+	if ! grep -Fxq "default=gtk;wlr" "$HOME/.config/xdg-desktop-portal/portals.conf"; then
+		echo "[preferred]" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+		echo "default=gtk;wlr" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+		echo "" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+	fi
 }
 
 # INFO: Private licenses
