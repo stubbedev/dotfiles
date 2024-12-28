@@ -72,6 +72,7 @@ function install_stubbe_all {
 	conf_ideavim
 	conf_coffeescript
 	conf_keyd
+	conf_dark_mode
 
 	# INFO: Install private licenses
 	echo "Install private licenses:"
@@ -285,6 +286,13 @@ function conf_xmodmap {
 		echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd" >>"$HOME/.profile"
 		echo "xmodmap ~/.Xmodmap" >>"$HOME/.profile"
 	fi
+}
+function conf_dark_mode {
+	mkdir -p "$HOME/.config"
+	mkdir -p "$HOME/.config/xdg-desktop-portal"
+	echo "[preferred]" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+	echo "default=gtk;wlr" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+	echo "" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
 }
 
 # INFO: Private licenses
