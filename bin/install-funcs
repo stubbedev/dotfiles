@@ -101,7 +101,7 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
 	if is_binary apt; then
-		bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2"
+		bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
 	fi
 	if is_binary pacman; then
 		bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
