@@ -21,7 +21,6 @@ source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
   git clone "https://github.com/zdharma/fast-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"
 fi
-source "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"
 
 # VIM-MODE
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"; then

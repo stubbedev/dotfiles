@@ -80,6 +80,8 @@ if is_binary fzf; then
     export FZF_ALT_C_COMMAND=""
 fi
 
+source "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"
+
 if is_binary starship; then
     export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
     export STARSHIP_LOG="error"
