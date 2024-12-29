@@ -1,14 +1,26 @@
 #!/bin/bash
-
 function toggle_htop {
-  if [[ -z "$TMUX" ]]; then
-    htop
+  if command -v btop &>/dev/null; then
+    if [[ -z "$TMUX" ]]; then
+      btop
+    else
+      btop
+      TOP_ALIVE=""
+      local TOP_ALIVE
+      if [[ -z "${TOP_ALIVE}" ]]; then
+        tmux kill-pane || exit 0
+      fi
+    fi
   else
-    htop
-    HTOP_ALIVE=""
-    local HTOP_ALIVE
-    if [[ -z "${HTOP_ALIVE}" ]]; then
-      tmux kill-pane || exit 0
+    if [[ -z "$TMUX" ]]; then
+      htop
+    else
+      htop
+      TOP_ALIVE=""
+      local TOP_ALIVE
+      if [[ -z "${TOP_ALIVE}" ]]; then
+        tmux kill-pane || exit 0
+      fi
     fi
   fi
 }
