@@ -6,6 +6,11 @@ export STUBBE_SRC
 
 # INFO: INSTALL FUNCTION
 function installer_prompt {
+  if [[ "$SHELL" != */zsh ]];then
+    install_build_essential
+    exit
+  fi
+  touch "$HOME"/.zshrc
   if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
     echo "Need to set SSH key before being able to install."
     echo "Goodbye!"
