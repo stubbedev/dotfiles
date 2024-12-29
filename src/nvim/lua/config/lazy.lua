@@ -62,7 +62,7 @@ require("lazy").setup({
         "tohtml",
         -- "tutor",
         "matchparen",
-        "matchit"
+        "matchit",
       },
     },
   },
