@@ -56,6 +56,7 @@ function install_stubbe_all {
   install_nvim
   install_fzf
   install_st
+  install_btop
   install_docker
   install_jetbrains_toolbox
   install_keyd
