@@ -49,7 +49,7 @@ This is a collection of personal dotfiles and utilities I use on linux. They are
 * INSTALLATION
   In order to install the utils and config, you simply need to run the following command:
 
-  =git clone --depth 1 git@git.stubbe.dev:stubbe/dotfiles.git && cd dotfiles && sudo ./bin/stb-install=
+  =git clone --depth 1 git@git.stubbe.dev:stubbe/dotfiles.git && cd dotfiles && ./bin/stb-install=
 
   The installer will prompt you with options on what to install.
 
