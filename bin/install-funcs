@@ -273,6 +273,7 @@ function conf_regolith_xresources {
   sudo cp -rf "$STUBBE_SRC/wallpapers/"* /usr/share/backgrounds
   mkdir -p "$HOME/.config/regolith3"
   ln -sf "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
+  ln -sf "$STUBBE_SRC/picom" "$HOME/.config/regolith3/picom"
 }
 function conf_wezterm {
   SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
