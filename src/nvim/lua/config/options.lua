@@ -4,6 +4,7 @@ vim.g.maplocalleader = "\\"
 
 -- Enable LazyVim auto format
 vim.g.autoformat = false
+vim.opt.mouse = ""
 
 -- LazyVim root dir detection
 -- Each entry can be:
