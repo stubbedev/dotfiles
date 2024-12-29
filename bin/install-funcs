@@ -6,324 +6,342 @@ export STUBBE_SRC
 
 # INFO: INSTALL FUNCTION
 function installer_prompt {
-	if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
-		echo "Need to set SSH key before being able to install."
-		echo "Goodbye!"
-		exit 0
-	fi
-	echo "Please enter your desired option:"
-	read -rn 1 -p "(I)nstall Mandatory or (C)ancel?" REPLY
-	printf "\n"
-	case "$REPLY" in
-	i | I)
-		install_stubbe_all
-		exit
-		;;
-	c | C)
-		echo "Cancelling!"
-		exit
-		;;
-	*)
-		info
-		exit
-		;;
-	esac
+  if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
+    echo "Need to set SSH key before being able to install."
+    echo "Goodbye!"
+    exit 0
+  fi
+  echo "Please enter your desired option:"
+  read -rn 1 -p "(I)nstall Mandatory or (C)ancel?" REPLY
+  printf "\n"
+  case "$REPLY" in
+  i | I)
+    install_stubbe_all
+    exit
+    ;;
+  c | C)
+    echo "Cancelling!"
+    exit
+    ;;
+  *)
+    info
+    exit
+    ;;
+  esac
 }
 
 function install_stubbe_all {
-	# INFO: Install generic symlinks
-	install_symlinks
-	source "$HOME/.zshrc"
+  # INFO: Install generic symlinks
+  install_symlinks
+  source "$HOME/.zshrc"
 
-	# INFO: Install toolchains
-	install_build_essential
-	install_go
-	install_rust
-	install_php
-	install_volta
-	install_astral
-	# install_nim
+  # INFO: Install toolchains
+  install_build_essential
+  install_go
+  install_rust
+  install_php
+  install_volta
+  install_astral
+  # install_nim
 
-	source "$HOME/.zshrc"
-	# INFO: Install toolchain apps
-	rust_deps
-	go_deps
-	volta_deps
-	astral_deps
+  source "$HOME/.zshrc"
+  # INFO: Install toolchain apps
+  rust_deps
+  go_deps
+  volta_deps
+  astral_deps
 
-	source "$HOME/.zshrc"
-	# INFO: Install non-toolchain apps
-	install_nvim
-	install_fzf
-	install_st
-	install_docker
-	install_jetbrains_toolbox
-	# install_zed
-	install_keyd
+  source "$HOME/.zshrc"
+  # INFO: Install non-toolchain apps
+  install_nvim
+  install_fzf
+  install_st
+  install_docker
+  install_jetbrains_toolbox
+  install_keyd
+  install_zed
 
-	# INFO: Install configs
-	conf_zsh
-	conf_nvim
-	conf_tmux
-	conf_fonts
-	conf_wezterm
-	conf_regolith_xresources
-	conf_lazygit
-	conf_ideavim
-	conf_coffeescript
-	conf_keyd
-	conf_dark_mode
+  # INFO: Install configs
+  conf_zsh
+  conf_nvim
+  conf_tmux
+  conf_fonts
+  conf_wezterm
+  conf_regolith_xresources
+  conf_lazygit
+  conf_ideavim
+  conf_coffeescript
+  conf_keyd
+  conf_dark_mode
+  conf_btop
 
-	# INFO: Install private licenses
-	echo "Install private licenses:"
-	read -rn 1 -p "(Y)es or [N]o?" REPLY
-	printf "\n"
-	case "$REPLY" in
-	y | Y)
-		license_openai
-		license_intelephense
-		license_clerk
-		;;
-	*)
-		echo "Skipping private installs"
-		;;
-	esac
-	source "$HOME/.zshrc"
+  # INFO: Install private licenses
+  echo "Install private licenses:"
+  read -rn 1 -p "(Y)es or [N]o?" REPLY
+  printf "\n"
+  case "$REPLY" in
+  y | Y)
+    license_openai
+    license_intelephense
+    license_clerk
+    ;;
+  *)
+    echo "Skipping private installs"
+    ;;
+  esac
+  source "$HOME/.zshrc"
 }
 
 # INFO: Generic symlinks
 function install_symlinks {
-	mkdir -p "$HOME/.stubbe"
-	ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
-	ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
-	touch "$HOME/.zshrc"
+  mkdir -p "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
+  touch "$HOME/.zshrc"
 }
 
 # INFO: Toolchains
 function install_build_essential {
-	if is_binary apt; then
-		bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
-	fi
-	if is_binary pacman; then
-		bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
-	fi
-	if is_binary dnf; then
-		bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
-		bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop lua5.1"
-	fi
-	sudo chsh -s "$(which "zsh")" "$USER"
+  if is_binary apt; then
+    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
+  fi
+  if is_binary pacman; then
+    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
+  fi
+  if is_binary dnf; then
+    bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
+    bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop lua5.1"
+  fi
+  sudo chsh -s "$(which "zsh")" "$USER"
 }
 function install_go {
-	bash <(curl -sL https://git.io/go-installer)
+  bash <(curl -sL https://git.io/go-installer)
 }
 function install_rust {
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 }
 function install_php {
-	bash -c "$(curl -fsSL https://php.new/install/linux/8.2)"
+  bash -c "$(curl -fsSL https://php.new/install/linux/8.2)"
 }
 function install_nim {
-	curl https://nim-lang.org/choosenim/init.sh -sSf | sh
+  curl https://nim-lang.org/choosenim/init.sh -sSf | sh
 }
 function install_volta {
-	curl https://get.volta.sh | bash
+  curl https://get.volta.sh | bash
 }
 function install_astral {
-	curl -LsSf https://astral.sh/uv/install.sh | sh
+  curl -LsSf https://astral.sh/uv/install.sh | sh
 }
 
 # INFO: Toolchain dependent apps
 function rust_deps {
-	cargo install tree-sitter-cli eza bat ripgrep jless
+  cargo install tree-sitter-cli eza bat ripgrep jless
 }
 function go_deps {
-	go install github.com/jesseduffield/lazygit@latest
-	go install github.com/jesseduffield/lazydocker@latest
-	go install github.com/air-verse/air@latest
-	go install github.com/gopasspw/gopass@latest
-	go install golang.org/x/tools/cmd/godoc@latest
+  go install github.com/jesseduffield/lazygit@latest
+  go install github.com/jesseduffield/lazydocker@latest
+  go install github.com/air-verse/air@latest
+  go install github.com/gopasspw/gopass@latest
+  go install golang.org/x/tools/cmd/godoc@latest
 }
 function volta_deps {
-	volta install node npm
-	volta install yarn deno bun
-	volta install @coffeelint/cli coffeescript
+  volta install node npm
+  volta install yarn deno bun
+  volta install @coffeelint/cli coffeescript
 }
 function astral_deps {
-	uv tool install --python 3.12 posting
+  uv tool install --python 3.12 posting
 }
 
 # INFO: Non-Toolchain dependent
 function install_nvim {
-	curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-	sudo rm -rf /opt/nvim
-	sudo tar -C /opt -xzf nvim-linux64.tar.gz
-	rm -rf nvim-linux64.tar.gz
+  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+  sudo rm -rf /opt/nvim
+  sudo tar -C /opt -xzf nvim-linux64.tar.gz
+  rm -rf nvim-linux64.tar.gz
 }
 function install_nvim_nightly {
-	curl -LO https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz
-	sudo rm -rf /opt/nvim
-	sudo tar -C /opt -xzf nvim-linux64.tar.gz
-	rm -rf nvim-linux64.tar.gz
+  curl -LO https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz
+  sudo rm -rf /opt/nvim
+  sudo tar -C /opt -xzf nvim-linux64.tar.gz
+  rm -rf nvim-linux64.tar.gz
 }
 function install_fzf {
-	FZFTMPDIR=$(mktemp -d)
-	repo="junegunn/fzf"
-	release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
-	url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
-	wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
-	sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
+  FZFTMPDIR=$(mktemp -d)
+  repo="junegunn/fzf"
+  release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
+  url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
+  wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
+  sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
+}
+function install_btop {
+  local RESET_PWD=$PWD
+  BTOPTMPDIR=$(mktemp -d)
+  repo="aristocratos/btop"
+  release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
+  url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'x86_64' | grep 'linux')
+  wget "$url" -O "$BTOPTMPDIR"/btop.tbz
+  tar -xjf "$BTOPTMPDIR"/btop.tbz -C "$BTOPTMPDIR"
+  cd "$BTOPTMPDIR"/btop || exit
+  sudo make install
+  cd "$RESET_PWD" || exit
+  rm -rf "$BTOPTMPDIR"
 }
 function install_st {
-	local RESET_PWD=$PWD
-	cd "$HOME/.stubbe/src/st" || exit
-	sudo make clean install
-	if is_binary "$HOME/.stubbe/src/st/st"; then
-		sudo mv "$HOME/.stubbe/src/st/st" "/usr/local/bin"
-	fi
-	if is_binary "/usr/local/bin/st" && is_binary update-alternatives; then
-		sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/local/bin/st 50
-		sudo update-alternatives --set x-terminal-emulator /usr/local/bin/st
-	fi
-	cd "$RESET_PWD" || exit
+  local RESET_PWD=$PWD
+  cd "$HOME/.stubbe/src/st" || exit
+  sudo make clean install
+  if is_binary "$HOME/.stubbe/src/st/st"; then
+    sudo mv "$HOME/.stubbe/src/st/st" "/usr/local/bin"
+  fi
+  if is_binary "/usr/local/bin/st" && is_binary update-alternatives; then
+    sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/local/bin/st 50
+    sudo update-alternatives --set x-terminal-emulator /usr/local/bin/st
+  fi
+  cd "$RESET_PWD" || exit
 }
 function install_docker {
-	DOCKERTMPDIR=$(mktemp -d)
-	curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
-	sudo sh "$DOCKERTMPDIR/get-docker.sh"
-	sudo groupadd docker
-	sudo usermod -aG docker "$USER"
-	rm -rf "$DOCKERTMPDIR"
+  DOCKERTMPDIR=$(mktemp -d)
+  curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
+  sudo sh "$DOCKERTMPDIR/get-docker.sh"
+  sudo groupadd docker
+  sudo usermod -aG docker "$USER"
+  rm -rf "$DOCKERTMPDIR"
 }
 function install_jetbrains_toolbox {
-	JBTMPDIR=$(mktemp -d)
-	curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$JBTMPDIR/jetbrains-toolbox.tar.gz"
-	tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C "$JBTMPDIR"
-	rm -rf "$JBTMPDIR/jetbrains-toolbox.tar.gz"
-	mv "$JBTMPDIR/jetbrains-toolbox-"* "$JBTMPDIR/jetbrains"
-	sudo rm -rf /opt/jetbrains
-	sudo mv "$JBTMPDIR/jetbrains" /opt
-	sudo ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
-	sudo /usr/bin/jetbrains-toolbox
+  JBTMPDIR=$(mktemp -d)
+  curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$JBTMPDIR/jetbrains-toolbox.tar.gz"
+  tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C "$JBTMPDIR"
+  rm -rf "$JBTMPDIR/jetbrains-toolbox.tar.gz"
+  mv "$JBTMPDIR/jetbrains-toolbox-"* "$JBTMPDIR/jetbrains"
+  sudo rm -rf /opt/jetbrains
+  sudo mv "$JBTMPDIR/jetbrains" /opt
+  sudo ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
+  sudo /usr/bin/jetbrains-toolbox
 }
 function install_zed {
-	curl -f https://zed.dev/install.sh | sh
+  curl -f https://zed.dev/install.sh | sh
 }
 function install_keyd {
-	CURRENTDIR=$PWD
-	KEYDDIR=$(mktemp -d)
-	git clone https://github.com/rvaiya/keyd "$KEYDDIR/keyd"
-	cd "$KEYDDIR/keyd" || exit
-	make
-	sudo make install
-	sudo systemctl enable keyd
-	sudo systemctl start keyd
-	cd "$CURRENTDIR" || exit
-	rm -rf "$KEYDDIR"
+  CURRENTDIR=$PWD
+  KEYDDIR=$(mktemp -d)
+  git clone https://github.com/rvaiya/keyd "$KEYDDIR/keyd"
+  cd "$KEYDDIR/keyd" || exit
+  make
+  sudo make install
+  sudo systemctl enable keyd
+  sudo systemctl start keyd
+  cd "$CURRENTDIR" || exit
+  rm -rf "$KEYDDIR"
 }
 
 # INFO: Configs
 function conf_fonts {
-	SOURCE_FONT="$STUBBE_SRC/fonts"
-	mkdir -p "$HOME/.fonts"
-	cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
+  SOURCE_FONT="$STUBBE_SRC/fonts"
+  mkdir -p "$HOME/.fonts"
+  cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
 }
 function conf_zsh {
-	SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-	touch "$HOME/.zshrc"
-	if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
-		echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
-	fi
+  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+  touch "$HOME/.zshrc"
+  if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
+    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
+  fi
 }
 function conf_nvim {
-	rm -rf "$HOME/.config/nvim"
-	ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
+  rm -rf "$HOME/.config/nvim"
+  ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
 }
 function conf_tmux {
-	if ! is_directory "$HOME/.tmux/plugins/tpm"; then
-		git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
-	fi
-	SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
-	touch "$HOME/.tmux.conf"
-	if ! has_string "$HOME/.tmux.conf" "$SOURCE_TMUX"; then
-		echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
-	fi
+  if ! is_directory "$HOME/.tmux/plugins/tpm"; then
+    git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
+  fi
+  SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
+  touch "$HOME/.tmux.conf"
+  if ! has_string "$HOME/.tmux.conf" "$SOURCE_TMUX"; then
+    echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
+  fi
 }
 function conf_regolith_xresources {
-	sudo mkdir -p /usr/share/backgrounds
-	sudo cp -rf "$STUBBE_SRC/wallpapers/"* /usr/share/backgrounds
-	mkdir -p "$HOME/.config/regolith3"
-	ln -sf "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
+  sudo mkdir -p /usr/share/backgrounds
+  sudo cp -rf "$STUBBE_SRC/wallpapers/"* /usr/share/backgrounds
+  mkdir -p "$HOME/.config/regolith3"
+  ln -sf "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
 }
 function conf_wezterm {
-	SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
-	mkdir -p "$HOME/.config/wezterm"
-	ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
+  SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
+  mkdir -p "$HOME/.config/wezterm"
+  ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
 function conf_lazygit {
-	SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
-	mkdir -p "$HOME/.config/lazygit"
-	ln -sf "$SOURCE_LAZYGIT/config.yml" "$HOME/.config/lazygit"
-	touch "$HOME/.config/lazygit/state.yml"
-	if ! has_string "$HOME/.config/lazygit/state.yml" "startuppopupversion"; then
-		echo "startuppopupversion: 5" >>"$HOME/.config/lazygit/state.yml"
-	fi
+  SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
+  mkdir -p "$HOME/.config/lazygit"
+  ln -sf "$SOURCE_LAZYGIT/config.yml" "$HOME/.config/lazygit"
+  touch "$HOME/.config/lazygit/state.yml"
+  if ! has_string "$HOME/.config/lazygit/state.yml" "startuppopupversion"; then
+    echo "startuppopupversion: 5" >>"$HOME/.config/lazygit/state.yml"
+  fi
 }
 function conf_ideavim {
-	SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
-	ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
+  SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
+  ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
 }
 function conf_coffeescript {
-	COFFELINT_LIB="$HOME/.volta/tools/shared/@coffeelint/cli/lib"
-	sed -i 's/value: 2,/value: 4,/' "$COFFELINT_LIB/coffeelint.js"
-	sed -i 's/value: 80,/value: 500,/' "$COFFELINT_LIB/coffeelint.js"
+  COFFELINT_LIB="$HOME/.volta/tools/shared/@coffeelint/cli/lib"
+  sed -i 's/value: 2,/value: 4,/' "$COFFELINT_LIB/coffeelint.js"
+  sed -i 's/value: 80,/value: 500,/' "$COFFELINT_LIB/coffeelint.js"
 }
 function conf_keyd {
-	SOURCE_KEYD="$STUBBE_SRC/keyd"
-	sudo ln -sf "$SOURCE_KEYD/default.conf" "/etc/keyd"
-	sudo keyd reload
+  SOURCE_KEYD="$STUBBE_SRC/keyd"
+  sudo ln -sf "$SOURCE_KEYD/default.conf" "/etc/keyd"
+  sudo keyd reload
 }
 function conf_xmodmap {
-	XMODMAPDIR="$STUBBE_SRC/xmodmap"
-	ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
-	touch "$HOME/.profile"
-	if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
-		echo "" >>"$HOME/.profile"
-		echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode" >>"$HOME/.profile"
-		echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd" >>"$HOME/.profile"
-		echo "xmodmap ~/.Xmodmap" >>"$HOME/.profile"
-	fi
+  XMODMAPDIR="$STUBBE_SRC/xmodmap"
+  ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
+  touch "$HOME/.profile"
+  if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
+    echo "" >>"$HOME/.profile"
+    echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode" >>"$HOME/.profile"
+    echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd" >>"$HOME/.profile"
+    echo "xmodmap ~/.Xmodmap" >>"$HOME/.profile"
+  fi
 }
 function conf_dark_mode {
-	mkdir -p "$HOME/.config"
-	mkdir -p "$HOME/.config/xdg-desktop-portal"
-	touch "$HOME/.config/xdg-desktop-portal/portals.conf"
-	if ! grep -Fxq "default=gtk;wlr" "$HOME/.config/xdg-desktop-portal/portals.conf"; then
-		echo "[preferred]" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-		echo "default=gtk;wlr" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-		echo "" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-	fi
+  mkdir -p "$HOME/.config"
+  mkdir -p "$HOME/.config/xdg-desktop-portal"
+  touch "$HOME/.config/xdg-desktop-portal/portals.conf"
+  if ! grep -Fxq "default=gtk;wlr" "$HOME/.config/xdg-desktop-portal/portals.conf"; then
+    echo "[preferred]" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+    echo "default=gtk;wlr" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+    echo "" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+  fi
+}
+function conf_btop {
+  mkdir -p "$HOME/.config"
+  ln -sf "$STUBBE_SRC/btop" "$HOME/.config/btop"
 }
 
 # INFO: Private licenses
 function license_intelephense {
-	TMPDIR=$(mktemp -d)
-	git clone --depth=1 git@git.stubbe.dev:snippets/2.git "$TMPDIR" --quiet
-	mkdir -p "$HOME/intelephense"
-	if ! is_file "$HOME/intelephense/license.txt"; then
-		cat "$TMPDIR/intelephense_license" >"$HOME/intelephense/license.txt"
-	fi
-	rm -rf "$TMPDIR"
+  TMPDIR=$(mktemp -d)
+  git clone --depth=1 git@git.stubbe.dev:snippets/2.git "$TMPDIR" --quiet
+  mkdir -p "$HOME/intelephense"
+  if ! is_file "$HOME/intelephense/license.txt"; then
+    cat "$TMPDIR/intelephense_license" >"$HOME/intelephense/license.txt"
+  fi
+  rm -rf "$TMPDIR"
 }
 function license_openai {
-	TMPDIR=$(mktemp -d)
-	git clone --depth=1 git@git.stubbe.dev:snippets/3.git "$TMPDIR" --quiet
-	cat "$TMPDIR/openai-license.txt" >>"$HOME/.zshrc"
-	rm -rf "$TMPDIR"
+  TMPDIR=$(mktemp -d)
+  git clone --depth=1 git@git.stubbe.dev:snippets/3.git "$TMPDIR" --quiet
+  cat "$TMPDIR/openai-license.txt" >>"$HOME/.zshrc"
+  rm -rf "$TMPDIR"
 }
 function license_clerk {
-	CLERKCREDSTMPDIR=$(mktemp -d)
-	git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
-	"$CLERKCREDSTMPDIR"/clerk-auth/install.sh
-	rm -rf "$CLERKCREDSTMPDIR"
-	echo "Need to install openvpn3 for this to function."
+  CLERKCREDSTMPDIR=$(mktemp -d)
+  git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
+  "$CLERKCREDSTMPDIR"/clerk-auth/install.sh
+  rm -rf "$CLERKCREDSTMPDIR"
+  echo "Need to install openvpn3 for this to function."
 }
