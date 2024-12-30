@@ -330,7 +330,7 @@ function conf_btop {
 }
 function conf_alacritty {
   mkdir -p "$HOME/.config"
-  ln -sf "$STUBBE_SRC/alacritty" "$HOME/.config/alacritty"
+  ln -sf "$STUBBE_SRC/alacritty" "$HOME/.config"
   if is_binary "alacritty" && is_binary update-alternatives; then
     local alacritty_path="$(which alacritty)"
     sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$alacritty_path" 50
