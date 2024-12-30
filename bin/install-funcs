@@ -6,7 +6,7 @@ export STUBBE_SRC
 
 # INFO: INSTALL FUNCTION
 function installer_prompt {
-  if [[ "$SHELL" != */zsh ]];then
+  if [[ "$SHELL" != */zsh ]]; then
     install_build_essential
     exit
   fi
@@ -141,7 +141,7 @@ function install_astral {
 
 # INFO: Toolchain dependent apps
 function rust_deps {
-  cargo install tree-sitter-cli eza bat ripgrep jless
+  cargo install tree-sitter-cli eza bat ripgrep jless alacritty
 }
 function go_deps {
   go install github.com/jesseduffield/lazygit@latest
@@ -327,6 +327,15 @@ function conf_dark_mode {
 function conf_btop {
   mkdir -p "$HOME/.config"
   ln -sf "$STUBBE_SRC/btop" "$HOME/.config/btop"
+}
+function conf_alacritty {
+  mkdir -p "$HOME/.config"
+  ln -sf "$STUBBE_SRC/alacritty" "$HOME/.config/alacritty"
+  if is_binary "alacritty" && is_binary update-alternatives; then
+    local alacritty_path="$(which alacritty)"
+    sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$alacritty_path" 50
+    sudo update-alternatives --set x-terminal-emulator "$alacritty_path"
+  fi
 }
 
 # INFO: Private licenses
