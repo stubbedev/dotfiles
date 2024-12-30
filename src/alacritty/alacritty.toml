@@ -44,7 +44,7 @@ y = 0
 
 [bell]
 animation = "EaseOutExpo"
-duration = 75
+duration = 0
 
 [mouse]
 hide_when_typing = true
