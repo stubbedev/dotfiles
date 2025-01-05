@@ -78,7 +78,7 @@ fade-out-step = 0.10;
 #
 # Range: 0.1 - 1.0
 # Default: 1.0 (disabled)
-frame-opacity = 0.7;
+frame-opacity = 1;
 
 # Use fixed inactive dim value, instead of adjusting according to window opacity.
 #
@@ -168,13 +168,13 @@ vsync = true;
 # Has nothing to do with `corner-radius`.
 #
 # Default: false
-detect-rounded-corners = true;
+detect-rounded-corners = false;
 
 # Detect '_NET_WM_WINDOW_OPACITY' on client windows, useful for window managers
 # not passing '_NET_WM_WINDOW_OPACITY' of client windows to frame windows.
 #
 # Default: false
-detect-client-opacity = true;
+detect-client-opacity = false;
 
 # Use EWMH '_NET_ACTIVE_WINDOW' to determine currently focused window,
 # rather than listening to 'FocusIn'/'FocusOut' event. May be more accurate,
