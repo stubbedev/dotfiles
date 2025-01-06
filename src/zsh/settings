@@ -70,7 +70,7 @@ bindkey -s "^[a" "tsht^M"
 
 if is_binary fzf; then
     bindkey -s "^[f" "ts^M"
-    bindkey -s "^[F" "tscd^M"
+    bindkey -s "^[F" "sd^M"
     bindkey -s "^[d" "tstls^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
