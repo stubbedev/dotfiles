@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+
+if [[ $# -eq 1 ]]; then
+	SELECTED=$1
+else
+	SELECTED=$(find ~/git -maxdepth 3 -mindepth 1 -type d -exec test -d '{}/.git' \; -print 2>/dev/null | fzf)
+fi
+
+if [[ -z $SELECTED ]]; then
+	exit 0
+fi
+
+cd "$SELECTED" || exit
