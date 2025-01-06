@@ -44,7 +44,7 @@ function install_stubbe_all {
   install_build_essential
   install_go
   install_rust
-  install_php
+  # install_php
   install_volta
   install_astral
   # install_nim
