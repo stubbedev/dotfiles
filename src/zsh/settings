@@ -43,6 +43,7 @@ HYPHEN_INSENSITIVE=false
 DISABLE_AUTO_TITLE=true
 ENABLE_CORRECTION=true
 VIM_MODE_NO_DEFAULT_BINDINGS=true
+ARTISAN_OPEN_ON_MAKE_EDITOR=vim
 
 if ! is_file "$HOME/.zsh_history"; then
     touch "$HOME/.zsh_history"

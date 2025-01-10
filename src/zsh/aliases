@@ -13,3 +13,4 @@ alias mv='mv -i'
 alias pbcopy='xclip -selection clipboard'
 alias pbpaste='xclip -selection clipboard -o'
 alias sd="clear && cd \$(find ~/git -maxdepth 3 -mindepth 1 -type d -exec test -d '{}/.git' \; -print 2>/dev/null | fzf)"
+alias gzcat="gzip -dc"
