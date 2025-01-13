@@ -16,10 +16,6 @@ function has_string {
 	grep -q "$2" "$1"
 }
 
-function is_clerk_dev {
-	[[ $(hostname) == *'clerk.network'* ]]
-}
-
 function zle_eval {
 	echo -en "\e[2K\r"
 	eval "$@"
@@ -238,78 +234,3 @@ if is_binary uv; then
 	}
 fi
 
-if is_clerk_dev; then
-	function venv {
-		case $1 in
-		tsd | TSD)
-			cd "$HOME/git/thesocialdigits/" || exit
-			source "$HOME/git/thesocialdigits/venv/bin/activate"
-			echo "Switched to: TheSocialDigits"
-			;;
-		dt | DT)
-			cd "$HOME/git/dev-tools/" || exit
-			echo "Switched to: DevTools"
-			;;
-		av3 | AV3)
-			cd "$HOME/git/api-v3/" || exit
-			echo "Switched to: API-V3"
-			;;
-		dot | DOT)
-			cd "$HOME/git/dotfiles/" || exit
-			echo "Switched to: DOTFiles"
-			;;
-		*)
-			echo "Please provide a valid first argument"
-			;;
-		esac
-	}
-
-	function run {
-		if ! [ $# -eq 2 ]; then
-			echo "Please provide one of the following options:"
-			echo "imp[orter] STORE_ID"
-			echo "exp[orter] EXPORTER_ID"
-			return 0
-		fi
-		case $1 in
-		exp | exporter)
-			venv tsd
-			echo "Running Exporter: $2"
-			python "$PWD/batch/audience_export.py" $2
-			;;
-		imp | importer)
-			venv tsd
-			echo "Running Importer: $2"
-			python "$PWD/batch/download_data.py" $2
-			;;
-		*)
-			echo "Please provide one of the following options:"
-			echo "imp[orter] STORE_ID"
-			echo "exp[orter] EXPORTER_ID"
-			;;
-		esac
-	}
-fi
-
-if is_binary openvpn3; then
-	function cvpn {
-		ACTIVE_SESSIONS=$(openvpn3 sessions-list | grep -i 'path' | awk '{p=index($0, ":");print $2}')
-		if ((${#ACTIVE_SESSIONS[@]})); then
-			rm -rf "$HOME"/.vpn_active-*
-			echo "Disconnecting from VPN..."
-			for instance in $ACTIVE_SESSIONS; do
-				openvpn3 session-manage --disconnect --session-path ${instance}
-			done
-			local OPENVPN_SERVICES=$(sudo systemctl list-unit-files | grep enabled | grep openvpn | grep -v "@." | awk '{print $1}')
-			if ((${#OPENVPN_SERVICES[@]})); then
-				for service in $OPENVPN_SERVICES; do
-					sudo systemctl stop ${service}
-				done
-			fi
-		else
-			echo "Connecting to VPN..."
-			mktemp "$HOME/.vpn_active-XXXXX" 2>/dev/null
-			openvpn3 session-start --config ~/.ssh/client.ovpn
-		fi
-	}
-fi
