@@ -16,55 +16,70 @@ function has_string {
 	grep -q "$2" "$1"
 }
 
-function zle_eval {
-	echo -en "\e[2K\r"
-	eval "$@"
-	zle redisplay
-}
-function zle_ts {
-	zle_eval ts
-}
-function zle_tstls {
-	zle_eval tstls
-}
-function zle_tslg {
-	zle_eval tslg
-}
-
 function src-stb-installers {
 	source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
 }
 
-function S {
-	sudo "$(which "$1")" "${@:2}"
-}
-
 if is_binary nala; then
 	function npt {
-		if [ "$1" = "i" ]; then
+		case "$1" in
+		[iI] | [iI]nstall)
 			sudo nala install "${@:2}"
-		elif [ "$1" = "u" ]; then
+			;;
+		[uU] | [uU]pdate)
 			sudo nala update "${@:2}"
-		elif [ "$1" = "ug" ]; then
+			;;
+		[uU]g | [uU]pgrade)
 			sudo nala upgrade "${@:2}"
-		elif [ "$1" = "s" ]; then
+			;;
+		[sS] | [sS]earch)
 			sudo nala search "${@:2}"
-		elif [ "$1" = "r" ]; then
+			;;
+		[rR] | [rR]emove)
 			sudo nala remove "${@:2}"
-		elif [ "$1" = "l" ]; then
+			;;
+		l | ls | list)
 			sudo nala list --installed
-		else
+			;;
+		[hH] | [hH]elp)
+			nala --help
+			;;
+		*)
 			sudo nala "${@}"
-		fi
+			;;
+		esac
 	}
 fi
 
-if is_binary apt-fast; then
-	alias apt="apt-fast"
-fi
-
 if is_binary pacstall; then
-	alias pt="pacstall"
+	function pt {
+		case "$1" in
+		[iI] | [iI]nstall)
+			sudo pacstall -I "${@:2}"
+			;;
+		[uU] | [uU]pdate)
+			sudo pacstall -U "${@:2}"
+			;;
+		[uU]g | [uU]pgrade)
+			sudo pacstall -Up "${@:2}"
+			;;
+		[sS] | [sS]earch)
+			sudo pacstall -S "${@:2}"
+			;;
+		[rR] | [rR]emove)
+			sudo pacstall -R "${@:2}"
+			;;
+		l | ls | list)
+			sudo pacstall -L
+			;;
+		[hH] | [hH]help)
+			pacstall -h
+			;;
+		*)
+			sudo pacstall "${@}"
+			;;
+		esac
+	}
 fi
 
 if is_binary git; then
@@ -233,4 +248,3 @@ if is_binary uv; then
 		source "$PWD/venv/bin/activate"
 	}
 fi
-
