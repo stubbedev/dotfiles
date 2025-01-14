@@ -14,7 +14,6 @@ vim.opt.mouse = ""
 vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
 vim.treesitter.language.register("html", { "html", "vue", "tmpl" })
 vim.treesitter.language.register("templ", { "templ", "tmpl" })
-vim.treesitter.language.register("coffeescript", { "coffee" })
 
 -- Folding
 vim.opt.foldlevel = 99
