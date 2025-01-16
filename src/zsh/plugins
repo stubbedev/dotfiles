@@ -23,10 +23,12 @@ if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
 fi
 
 # LARAVEL
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"; then
-  git clone "https://github.com/jessarcher/zsh-artisan.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan/artisan.plugin.zsh"
+# if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"; then
+#   git clone "https://github.com/jessarcher/zsh-artisan.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"
+# fi
+# if ! is_binary compdef; then
+#   source "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan/artisan.plugin.zsh"
+# fi
 
 # VIM-MODE
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"; then
