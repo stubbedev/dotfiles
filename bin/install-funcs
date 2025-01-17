@@ -74,6 +74,7 @@ function install_stubbe_all {
   conf_fonts
   conf_wezterm
   conf_regolith_xresources
+  conf_regolith_i3
   conf_lazygit
   conf_ideavim
   conf_coffeescript
@@ -274,6 +275,11 @@ function conf_regolith_xresources {
   mkdir -p "$HOME/.config/regolith3"
   ln -sf "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
   ln -sf "$STUBBE_SRC/picom" "$HOME/.config/regolith3/picom"
+}
+function conf_regolith_i3 {
+  mkdir -p "$HOME/.config/regolith3"
+  rm -rf "$HOME/.config/regolith3/i3"
+  ln -sf "$STUBBE_SRC/regolith/i3" "$HOME/.config/regolith3/i3"
 }
 function conf_wezterm {
   SOURCE_WEZTERM="$STUBBE_SRC/wezterm"

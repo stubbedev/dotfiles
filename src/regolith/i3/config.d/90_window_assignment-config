@@ -1,0 +1,3 @@
+assign [class="Spotify"] workspace $ws10
+assign [class="Slack"] workspace $ws10
+
