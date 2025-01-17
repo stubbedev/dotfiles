@@ -17,7 +17,14 @@ function has_string {
 }
 
 function src-stb-installers {
-	source $(readlink -f "$HOME/.stubbe/bin/install-funcs")
+	source "$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+}
+
+function kcm {
+	commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
+	echo "COMMIT MESSAGE $commit_prefix"
+	read -r commit_message
+	git commit -m "$commit_prefix$commit_message"
 }
 
 if is_binary nala; then
