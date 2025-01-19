@@ -61,11 +61,10 @@ return {
     -- from Neovim.
     "adalessa/laravel.nvim",
     dependencies = {
-      "nvim-telescope/telescope.nvim",
       "tpope/vim-dotenv",
+      "nvim-telescope/telescope.nvim",
       "MunifTanjim/nui.nvim",
       "kevinhwang91/promise-async",
-      "nvimtools/none-ls.nvim",
     },
     cmd = { "Sail", "Artisan", "Composer", "Npm", "Yarn", "Laravel" },
     keys = {
