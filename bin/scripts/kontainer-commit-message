@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Get the current branch name
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+COMMIT_PREFIX="$(echo $BRANCH_NAME | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
+# Extract the dynamic part from the branch name
+if [[ "$COMMIT_PREFIX" != ": " ]]; then
+    echo "$COMMIT_PREFIX"
+else
+    echo ""
+fi
