@@ -19,11 +19,10 @@ return {
     },
   },
   {
-    -- Add neotest-pest plugin for running PHP tests.
     -- A package is also available for PHPUnit if needed.
     "nvim-neotest/neotest",
-    dependencies = { "V13Axel/neotest-pest", "olimorris/neotest-phpunit" },
-    opts = { adapters = { "neotest-pest", "neotest-phpunit" } },
+    dependencies = { "olimorris/neotest-phpunit" },
+    opts = { adapters = { "neotest-phpunit" } },
   },
   {
     -- Add a Treesitter parser for Laravel Blade to provide Blade syntax highlighting.
