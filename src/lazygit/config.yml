@@ -1,2 +1,13 @@
 disableStartupPopups: false
+customCommands:
+  - key: "<c-c>"
+    context: "files"
+    prompts:
+      - type: "input"
+        title: "Add Commit Message"
+        key: "Message"
 
+    command: git commit -m "$(git branch --contains | awk -v m="{{.Form.Message}}" ' /\*/{split($2, n, /-/); print (n[1] "-" n[2] ":" m)}')"
+    subprocess: true
+
+    description: "Custom commit message"
