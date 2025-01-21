@@ -7,3 +7,5 @@ src/zsh/history
 src/nvim/lazy-lock.json
 src/lazygit/state.yml
 src/st/*.o
+src/btop/btop.log
+
