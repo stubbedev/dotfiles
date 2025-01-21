@@ -21,3 +21,18 @@ vim.opt.foldtext = "v:lua.require'lazyvim.util'.ui.foldtext()"
 
 -- Fix PHP default lsp
 vim.g.lazyvim_php_lsp = "intelephense"
+
+vim.lsp.handlers["textDocument/hover"] = function(_, result, ctx, config)
+  config = config or {}
+  config.focus_id = ctx.method
+  if not (result and result.contents) then
+    return
+  end
+  local markdown_lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
+  local markdown_lines_string = table.concat(markdown_lines, "\n")
+  markdown_lines = vim.split(markdown_lines_string, "\r\n|\r|\n", { trimempty = true })
+  if vim.tbl_isempty(markdown_lines) then
+    return
+  end
+  return vim.lsp.util.open_floating_preview(markdown_lines, "markdown", config)
+end
