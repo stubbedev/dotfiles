@@ -1,257 +1,265 @@
 #!/bin/bash
 
 function is_binary {
-	command -v "$1" &>/dev/null
+  command -v "$1" &>/dev/null
 }
 
 function is_directory {
-	[[ -d "$1" ]]
+  [[ -d "$1" ]]
 }
 
 function is_file {
-	[[ -f "$1" ]]
+  [[ -f "$1" ]]
 }
 
 function has_string {
-	grep -q "$2" "$1"
+  grep -q "$2" "$1"
+}
+
+function is_elevated_shell {
+  [[ "$EUID" -eq 0 ]]
 }
 
 function src-stb-installers {
-	source "$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+  source "$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+}
+
+function src_zsh {
+  source "$HOME/.zshrc"
 }
 
 function kcm {
-	commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
-	echo "COMMIT MESSAGE $commit_prefix"
-	read -r commit_message
-	git commit -m "$commit_prefix$commit_message"
+  commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
+  echo "COMMIT MESSAGE $commit_prefix"
+  read -r commit_message
+  git commit -m "$commit_prefix$commit_message"
 }
 
 if is_binary nala; then
-	function npt {
-		case "$1" in
-		[iI] | [iI]nstall)
-			sudo nala install "${@:2}"
-			;;
-		[uU] | [uU]pdate)
-			sudo nala update "${@:2}"
-			;;
-		[uU]g | [uU]pgrade)
-			sudo nala upgrade "${@:2}"
-			;;
-		[sS] | [sS]earch)
-			sudo nala search "${@:2}"
-			;;
-		[rR] | [rR]emove)
-			sudo nala remove "${@:2}"
-			;;
-		l | ls | list)
-			sudo nala list --installed
-			;;
-		[hH] | [hH]elp)
-			nala --help
-			;;
-		*)
-			sudo nala "${@}"
-			;;
-		esac
-	}
+  function npt {
+    case "$1" in
+    [iI] | [iI]nstall)
+      sudo nala install "${@:2}"
+      ;;
+    [uU] | [uU]pdate)
+      sudo nala update "${@:2}"
+      ;;
+    [uU]g | [uU]pgrade)
+      sudo nala upgrade "${@:2}"
+      ;;
+    [sS] | [sS]earch)
+      sudo nala search "${@:2}"
+      ;;
+    [rR] | [rR]emove)
+      sudo nala remove "${@:2}"
+      ;;
+    l | ls | list)
+      sudo nala list --installed
+      ;;
+    [hH] | [hH]elp)
+      nala --help
+      ;;
+    *)
+      sudo nala "${@}"
+      ;;
+    esac
+  }
 fi
 
 if is_binary pacstall; then
-	function pt {
-		case "$1" in
-		[iI] | [iI]nstall)
-			sudo pacstall -I "${@:2}"
-			;;
-		[uU] | [uU]pdate)
-			sudo pacstall -U "${@:2}"
-			;;
-		[uU]g | [uU]pgrade)
-			sudo pacstall -Up "${@:2}"
-			;;
-		[sS] | [sS]earch)
-			sudo pacstall -S "${@:2}"
-			;;
-		[rR] | [rR]emove)
-			sudo pacstall -R "${@:2}"
-			;;
-		l | ls | list)
-			sudo pacstall -L
-			;;
-		[hH] | [hH]help)
-			pacstall -h
-			;;
-		*)
-			sudo pacstall "${@}"
-			;;
-		esac
-	}
+  function pt {
+    case "$1" in
+    [iI] | [iI]nstall)
+      sudo pacstall -I "${@:2}"
+      ;;
+    [uU] | [uU]pdate)
+      sudo pacstall -U "${@:2}"
+      ;;
+    [uU]g | [uU]pgrade)
+      sudo pacstall -Up "${@:2}"
+      ;;
+    [sS] | [sS]earch)
+      sudo pacstall -S "${@:2}"
+      ;;
+    [rR] | [rR]emove)
+      sudo pacstall -R "${@:2}"
+      ;;
+    l | ls | list)
+      sudo pacstall -L
+      ;;
+    [hH] | [hH]help)
+      pacstall -h
+      ;;
+    *)
+      sudo pacstall "${@}"
+      ;;
+    esac
+  }
 fi
 
 if is_binary git; then
-	git config --global user.name "Alexander Stage"
-	git config --global user.email "abs@stubbe.dev"
-	git config --global core.excludesfile ~/.gitignore
-	alias gw="git stash && git stash clear"
+  git config --global user.name "Alexander Stage"
+  git config --global user.email "abs@stubbe.dev"
+  git config --global core.excludesfile ~/.gitignore
+  alias gw="git stash && git stash clear"
 fi
 
 if is_binary phpcs; then
-	function php_lint {
-		phpcs --standard="$1" "$2"
-	}
+  function php_lint {
+    phpcs --standard="$1" "$2"
+  }
 fi
 
 if is_binary phpcbf; then
-	function php_fix {
-		phpcbf --standard="$1" "$2"
-	}
+  function php_fix {
+    phpcbf --standard="$1" "$2"
+  }
 fi
 
 if is_binary docker; then
-	function docker_killall {
-		docker kill "$(docker ps -q)"
-	}
-	alias ldocker='sudo $(which lazydocker)'
+  function docker_killall {
+    docker kill "$(docker ps -q)"
+  }
+  alias ldocker='sudo $(which lazydocker)'
 fi
 
 if is_binary docker && is_binary lazydocker && is_binary podman; then
-	alias lazypodman='DOCKER_HOST=unix:///run/user/1000/podman/podman.sock lazydocker'
+  alias lazypodman='DOCKER_HOST=unix:///run/user/1000/podman/podman.sock lazydocker'
 fi
 
 if is_binary bat; then
-	function view_git_file {
-		curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
-	}
+  function view_git_file {
+    curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
+  }
 else
-	function view_git_file {
-		curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
-	}
+  function view_git_file {
+    curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
+  }
 fi
 
 if is_binary eza; then
-	alias ls='eza'
+  alias ls='eza'
 else
-	alias ls='ls --color'
+  alias ls='ls --color'
 fi
 
 if is_binary ss; then
-	function pid_on_port {
-		ss -lptn " sport = :$1"
-	}
+  function pid_on_port {
+    ss -lptn " sport = :$1"
+  }
 fi
 
 if is_binary curl; then
-	function color_swatches {
-		curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
-	}
+  function color_swatches {
+    curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
+  }
 fi
 
 if is_binary nvim; then
-	alias vim='nvim'
-	alias vi='nvim'
-	alias nano='nvim'
-	alias ed='nvim'
-	alias svim='nvim -u NONE'
+  alias vim='nvim'
+  alias vi='nvim'
+  alias nano='nvim'
+  alias ed='nvim'
+  alias svim='nvim -u NONE'
 fi
 
 if is_binary tmux; then
-	function tnc {
-		TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-		TMPDIR=$(mktemp -d)
-		TMPDIRNAME=$(echo "$TMPDIR" | cut -d "." -f 2)
-		cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
-		cd "$TMPDIR/$TMUXDIRNAME" || exit
-		if [ -z "$1" ]; then
-			TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
-		else
-			TMUXCLIENTNAME="$1"
-		fi
-		tmux new -As "$TMUXCLIENTNAME"
-	}
+  function tnc {
+    TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+    TMPDIR=$(mktemp -d)
+    TMPDIRNAME=$(echo "$TMPDIR" | cut -d "." -f 2)
+    cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
+    cd "$TMPDIR/$TMUXDIRNAME" || exit
+    if [ -z "$1" ]; then
+      TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
+    else
+      TMUXCLIENTNAME="$1"
+    fi
+    tmux new -As "$TMUXCLIENTNAME"
+  }
 
-	function tn {
-		TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-		if [ -z "$1" ]; then
-			TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
-		else
-			TMUXCLIENTNAME="$1"
-		fi
-		tmux new -As "$TMUXCLIENTNAME"
-	}
+  function tn {
+    TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+    if [ -z "$1" ]; then
+      TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
+    else
+      TMUXCLIENTNAME="$1"
+    fi
+    tmux new -As "$TMUXCLIENTNAME"
+  }
 
-	function tls {
-		bash -c "tmux ls"
-	}
+  function tls {
+    bash -c "tmux ls"
+  }
 
-	function ta {
-		if [ -z "$1" ]; then
-			tmux attach
-		else
-			tmux attach -t "$1"
-		fi
-	}
+  function ta {
+    if [ -z "$1" ]; then
+      tmux attach
+    else
+      tmux attach -t "$1"
+    fi
+  }
 fi
 
 if is_binary screen; then
-	function tx {
-		session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
-		case $1 in
-		l | ls)
-			screen -ls
-			;;
-		n | new)
-			screen -S "$session_name"
-			;;
-		j | join)
-			screen -r "$session_name"
-			;;
-		*)
-			screen "$@"
-			;;
-		esac
-	}
+  function tx {
+    session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
+    case $1 in
+    l | ls)
+      screen -ls
+      ;;
+    n | new)
+      screen -S "$session_name"
+      ;;
+    j | join)
+      screen -r "$session_name"
+      ;;
+    *)
+      screen "$@"
+      ;;
+    esac
+  }
 fi
 
 function handleize_files {
-	for f in *\ *; do mv "$f" "${f// /_}"; done
-	find . -maxdepth 1 -type f | while read -r upName; do
-		loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
-		mv "$upName" "$loName"
-	done
+  for f in *\ *; do mv "$f" "${f// /_}"; done
+  find . -maxdepth 1 -type f | while read -r upName; do
+    loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
+    mv "$upName" "$loName"
+  done
 }
 
 function remove_suffix_files {
-	for file in *"$1"; do mv "$file" "${file/1/""}"; done
+  for file in *"$1"; do mv "$file" "${file/1/""}"; done
 }
 
 function remove_prefix_files {
-	for file in "$1"*; do mv "$file" "${file/1/""}"; done
+  for file in "$1"*; do mv "$file" "${file/1/""}"; done
 }
 
 function remove_middle_files {
-	for file in *"$1"*; do mv "$file" "${file/1/""}"; done
+  for file in *"$1"*; do mv "$file" "${file/1/""}"; done
 }
 
 if is_binary systemctl; then
-	function kill_native_servers {
-		if is_binary mysql; then
-			sudo systemctl stop mysql
-		fi
-		if is_binary nginx; then
-			sudo systemctl stop nginx
-		fi
-		if is_binary apache2; then
-			sudo systemctl stop apache2
-		fi
-	}
+  function kill_native_servers {
+    if is_binary mysql; then
+      sudo systemctl stop mysql
+    fi
+    if is_binary nginx; then
+      sudo systemctl stop nginx
+    fi
+    if is_binary apache2; then
+      sudo systemctl stop apache2
+    fi
+  }
 fi
 
 if is_binary uv; then
-	function pysrc {
-		if ! is_file "$PWD/venv/bin/activate"; then
-			uv venv ./venv
-		fi
-		source "$PWD/venv/bin/activate"
-	}
+  function pysrc {
+    if ! is_file "$PWD/venv/bin/activate"; then
+      uv venv ./venv
+    fi
+    source "$PWD/venv/bin/activate"
+  }
 fi

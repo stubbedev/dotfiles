@@ -10,6 +10,11 @@ function installer_prompt {
     install_build_essential
     exit
   fi
+  if is_elevated_shell; then
+    echo "Please do not run this script with sudo."
+    echo "Execute it normally and any functions which need sudo will prompt for it."
+    exit 0
+  fi
   touch "$HOME"/.zshrc
   if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
     echo "Need to set SSH key before being able to install."
@@ -38,49 +43,18 @@ function installer_prompt {
 function install_stubbe_all {
   # INFO: Install generic symlinks
   install_symlinks
-  source "$HOME/.zshrc"
 
   # INFO: Install toolchains
-  install_build_essential
-  install_go
-  install_rust
-  # install_php
-  install_volta
-  install_astral
-  # install_nim
+  install_toolchain_binaries
 
-  source "$HOME/.zshrc"
   # INFO: Install toolchain apps
-  rust_deps
-  go_deps
-  volta_deps
-  astral_deps
+  install_toolchain_reliant_binaries
 
-  source "$HOME/.zshrc"
   # INFO: Install non-toolchain apps
-  install_nvim
-  install_fzf
-  install_st
-  install_btop
-  install_docker
-  install_jetbrains_toolbox
-  install_keyd
-  install_zed
+  install_non_toolchain_binaries
 
   # INFO: Install configs
-  conf_zsh
-  conf_nvim
-  conf_tmux
-  conf_fonts
-  conf_wezterm
-  conf_regolith_xresources
-  conf_regolith_i3
-  conf_lazygit
-  conf_ideavim
-  conf_coffeescript
-  conf_keyd
-  conf_dark_mode
-  conf_btop
+  install_confs
 
   # INFO: Install private licenses
   echo "Install private licenses:"
@@ -96,7 +70,53 @@ function install_stubbe_all {
     echo "Skipping private installs"
     ;;
   esac
-  source "$HOME/.zshrc"
+  src_zsh
+}
+
+function install_toolchain_binaries {
+  install_build_essential
+  install_go
+  install_rust
+  install_volta
+  install_astral
+  src_zsh
+}
+
+function install_toolchain_reliant_binaries {
+  rust_deps
+  go_deps
+  volta_deps
+  astral_deps
+  src_zsh
+}
+
+function install_non_toolchain_binaries {
+  install_nvim
+  install_fzf
+  install_st
+  install_btop
+  install_docker
+  install_jetbrains_toolbox
+  install_keyd
+  install_zed
+  src_zsh
+}
+
+function install_confs {
+  conf_zsh
+  conf_nvim
+  conf_tmux
+  conf_fonts
+  conf_wezterm
+  conf_regolith_xresources
+  conf_regolith_i3
+  conf_lazygit
+  conf_ideavim
+  conf_coffeescript
+  conf_keyd
+  conf_dark_mode
+  conf_btop
+  src_zsh
 }
 
 # INFO: Generic symlinks
@@ -105,6 +125,7 @@ function install_symlinks {
   ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
   ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
   touch "$HOME/.zshrc"
+  src_zsh
 }
 
 # INFO: Toolchains
