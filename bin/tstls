@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env zsh
 
 if [[ -z $(pgrep tmux -u "$USER") ]]; then
   clear
@@ -22,4 +22,3 @@ if [[ -n $SELECTED_SESSION ]]; then
 else
   exit 0
 fi
-

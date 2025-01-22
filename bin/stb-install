@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 function info {
   echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"

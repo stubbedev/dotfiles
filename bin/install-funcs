@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env zsh
 
 # INFO: REQUIRED ENV VARS
 STUBBE_SRC="$HOME/.stubbe/src"

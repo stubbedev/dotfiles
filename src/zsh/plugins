@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+
 # SHELL THEME
 if ! is_binary "/usr/local/bin/starship"; then
   curl -sS https://starship.rs/install.sh | sh

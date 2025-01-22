@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 function is_binary {
   command -v "$1" &>/dev/null
@@ -110,9 +110,9 @@ if is_binary git; then
   function gcm {
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
     if [[ "$commit_prefix" = "" ]]; then
-      read -rp "Message: " commit_message
+      read -p "Message: " commit_message
     else
-      read -rp "Message for $commit_prefix" commit_message
+      read -p "Message for $commit_prefix" commit_message
     fi
     git commit -m "$commit_prefix$commit_message"
   }

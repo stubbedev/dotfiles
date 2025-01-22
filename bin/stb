@@ -1,23 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 function info {
-	echo "Welcome to the STUBBEDEV CLI"
-	echo
-	echo "Please provide an input for the desired option."
-	echo "Options:"
-	echo "1.       Edit User Secrets"
-	echo "2.       Edit User Aliases"
-	echo "3.       Edit User Functions"
-	echo "4.       Edit User Paths"
-	echo "5.       Edit User Settings"
-	echo "6.       Edit ST Config Headers"
-	echo "7.       Recompile ST"
+  echo "Welcome to the STUBBEDEV CLI"
+  echo
+  echo "Please provide an input for the desired option."
+  echo "Options:"
+  echo "1.       Edit User Secrets"
+  echo "2.       Edit User Aliases"
+  echo "3.       Edit User Functions"
+  echo "4.       Edit User Paths"
+  echo "5.       Edit User Settings"
+  echo "6.       Edit ST Config Headers"
+  echo "7.       Recompile ST"
 }
 
 function recompile_st {
-	cd "$HOME/.stubbe/src/st" || exit
-	sudo make clean install
-	cd || exit
+  cd "$HOME/.stubbe/src/st" || exit
+  sudo make clean install
+  cd || exit
 }
 
 case "$1" in
@@ -60,4 +60,3 @@ case "$1" in
   exit
   ;;
 esac
-

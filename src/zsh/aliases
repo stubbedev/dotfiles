@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/usr/bin/env zsh
 
 alias la='ls -laF'
 alias ff='find . -type f -name'

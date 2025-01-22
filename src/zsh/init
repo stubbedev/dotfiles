@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env zsh
+
 STBZSHSOURCES=(
   "paths"
   "funcs"
@@ -7,11 +8,12 @@ STBZSHSOURCES=(
   "plugins"
   "settings"
 )
+
 if [ -d "$HOME/.stubbe" ]; then
-    STBDIR="$HOME/.stubbe/src/zsh"
-    for SZP in "${STBZSHSOURCES[@]}"; do
-        if [ -f "$STBDIR/$SZP" ]; then
-            source "$STBDIR/$SZP"
-        fi
-    done
+  STBDIR="$HOME/.stubbe/src/zsh"
+  for SZP in "${STBZSHSOURCES[@]}"; do
+    if [ -f "$STBDIR/$SZP" ]; then
+      source "$STBDIR/$SZP"
+    fi
+  done
 fi
