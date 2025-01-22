@@ -40,13 +40,6 @@ if is_binary php; then
   }
 fi
 
-function kcm {
-  commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
-  echo "COMMIT MESSAGE $commit_prefix"
-  read -r commit_message
-  git commit -m "$commit_prefix$commit_message"
-}
-
 if is_binary nala; then
   function npt {
     case "$1" in
@@ -114,6 +107,12 @@ if is_binary git; then
   git config --global user.email "abs@stubbe.dev"
   git config --global core.excludesfile ~/.gitignore
   alias gw="git stash && git stash clear"
+  function gcm {
+    commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
+    echo "COMMIT MESSAGE $commit_prefix"
+    read -r commit_message
+    git commit -m "$commit_prefix$commit_message"
+  }
 fi
 
 if is_binary phpcs; then
