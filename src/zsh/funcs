@@ -28,6 +28,18 @@ function src_zsh {
   source "$HOME/.zshrc"
 }
 
+if is_binary php; then
+  if is_file "./artisan"; then
+    function art {
+      php artisan "${@:1}"
+    }
+  elif is_binary artisan; then
+    function art {
+      artisan "${@:1}"
+    }
+  fi
+fi
+
 function kcm {
   commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
   echo "COMMIT MESSAGE $commit_prefix"
