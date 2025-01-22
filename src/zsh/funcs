@@ -110,9 +110,9 @@ if is_binary git; then
   function gcm {
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
     if [[ "$commit_prefix" = "" ]]; then
-      read -p "Message: " commit_message
+      read commit_message\?"Message: "
     else
-      read -p "Message for $commit_prefix" commit_message
+      read commit_message\?"Message for $commit_prefix"
     fi
     git commit -m "$commit_prefix$commit_message"
   }
