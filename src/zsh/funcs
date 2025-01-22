@@ -29,15 +29,15 @@ function src_zsh {
 }
 
 if is_binary php; then
-  if is_file "./artisan"; then
-    function art {
+  function art {
+    if is_file "$PWD/artisan"; then
       php artisan "${@:1}"
-    }
-  elif is_binary artisan; then
-    function art {
+    elif is_binary artisan; then
       artisan "${@:1}"
-    }
-  fi
+    else
+      echo "No artisan on current PATH"
+    fi
+  }
 fi
 
 function kcm {
