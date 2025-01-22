@@ -109,8 +109,11 @@ if is_binary git; then
   alias gw="git stash && git stash clear"
   function gcm {
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
-    echo "COMMIT MESSAGE $commit_prefix"
-    read -r commit_message
+    if [[ "$commit_prefix" = "" ]]; then
+      read -rp "Message: " commit_message
+    else
+      read -rp "Message for $commit_prefix" commit_message
+    fi
     git commit -m "$commit_prefix$commit_message"
   }
 fi
