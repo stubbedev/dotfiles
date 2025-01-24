@@ -51,7 +51,7 @@ regolith.lockscreen.wallpaper.color.shading.type:
 ! -- Theme elements
 ! --------------------------------------------
 
-gtk.theme_name: Catppuccin
+gtk.theme_name: Dracula
 gtk.icon_theme_name: Catppuccin
 
 ! --------------------------------------------

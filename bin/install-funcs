@@ -265,8 +265,10 @@ function install_keyd {
 }
 function install_regolith_look {
   sudo mkdir -p "/usr/share/regolith-look"
-  sudo ln -sf "$STUBBE_SRC/regolith-look/catppuccin" "/usr/share/regolith-look/catppuccin"
-  sudo ln -sf "$STUBBE_SRC/icons/Catppuccin" "/usr/share/icons/Catppuccin"
+  sudo rm -rf "/usr/share/regolith-look/catppuccin"
+  sudo cp -r "$STUBBE_SRC/regolith-look/catppuccin" "/usr/share/regolith-look"
+  sudo rm -rf "/usr/share/icons/Catppuccin"
+  sudo cp -r "$STUBBE_SRC/icons/Catppuccin" "/usr/share/icons"
 }
 
 # INFO: Configs
