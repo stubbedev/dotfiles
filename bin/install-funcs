@@ -116,6 +116,7 @@ function install_confs {
   conf_keyd
   conf_dark_mode
   conf_btop
+  conf_dunst
   conf_git
   src_zsh
 }
@@ -132,7 +133,7 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
+    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev dunst"
   fi
   if is_binary pacman; then
     bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
@@ -378,6 +379,10 @@ function conf_git {
     git config --global user.email "abs@stubbe.dev"
     git config --global core.excludesfile ~/.gitignore
   fi
+}
+function conf_dunst {
+  mkdir -p "$HOME/.config"
+  ln -sf "$STUBBE_SRC/dunst" "$HOME/.config/dunst"
 }
 
 # INFO: Private licenses
