@@ -116,6 +116,7 @@ function install_confs {
   conf_keyd
   conf_dark_mode
   conf_btop
+  conf_git
   src_zsh
 }
 
@@ -362,6 +363,13 @@ function conf_alacritty {
     local alacritty_path="$(which alacritty)"
     sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$alacritty_path" 50
     sudo update-alternatives --set x-terminal-emulator "$alacritty_path"
+  fi
+}
+function conf_git {
+  if is_binary git; then
+    git config --global user.name "Alexander Stage"
+    git config --global user.email "abs@stubbe.dev"
+    git config --global core.excludesfile ~/.gitignore
   fi
 }
 

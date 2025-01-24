@@ -103,10 +103,11 @@ if is_binary pacstall; then
 fi
 
 if is_binary git; then
+
   git config --global user.name "Alexander Stage"
   git config --global user.email "abs@stubbe.dev"
   git config --global core.excludesfile ~/.gitignore
-  alias gw="git stash && git stash clear"
+
   function gcm {
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
     if [[ "$commit_prefix" = "" ]]; then
@@ -115,6 +116,31 @@ if is_binary git; then
       read commit_message\?"Message for $commit_prefix"
     fi
     git commit -m "$commit_prefix$commit_message"
+  }
+  function gp {
+    banned_branches=("develop" "staging" "production")
+    branch_name="$(git rev-parse --abbrev-ref HEAD)"
+    if [[ ! " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
+      git push origin "$branch_name"
+    else
+      echo "ON [$branch_name]: PUSH DENIED"
+    fi
+  }
+  function ghr {
+    git reset --hard HEAD~
+  }
+  function ghrn {
+    git reset --hard HEAD~"$1"
+  }
+  function gr {
+    git reset --soft HEAD~
+  }
+  function grn {
+    git reset --soft HEAD~"$1"
+  }
+  function gw {
+    git stash
+    git stash clear
   }
 fi
 
