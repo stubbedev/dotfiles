@@ -60,7 +60,7 @@ setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 
 # FOR CLIPBOARD STUFF
-export DISPLAY=:1
+export DISPLAY=:0
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 
