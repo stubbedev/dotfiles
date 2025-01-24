@@ -103,11 +103,6 @@ if is_binary pacstall; then
 fi
 
 if is_binary git; then
-
-  git config --global user.name "Alexander Stage"
-  git config --global user.email "abs@stubbe.dev"
-  git config --global core.excludesfile ~/.gitignore
-
   function gcm {
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
     if [[ "$commit_prefix" = "" ]]; then
