@@ -263,6 +263,11 @@ function install_keyd {
   cd "$CURRENTDIR" || exit
   rm -rf "$KEYDDIR"
 }
+function install_regolith_look {
+  sudo mkdir -p "/usr/share/regolith-look"
+  sudo ln -sf "$STUBBE_SRC/regolith-look/catppuccin" "/usr/share/regolith-look/catppuccin"
+  sudo ln -sf "$STUBBE_SRC/icons/Catppuccin" "/usr/share/icons/Catppuccin"
+}
 
 # INFO: Configs
 function conf_fonts {
