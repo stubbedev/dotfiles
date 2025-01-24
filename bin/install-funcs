@@ -344,10 +344,12 @@ function conf_xmodmap {
   ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
   touch "$HOME/.profile"
   if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
-    echo "" >>"$HOME/.profile"
-    echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode" >>"$HOME/.profile"
-    echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd" >>"$HOME/.profile"
-    echo "xmodmap ~/.Xmodmap" >>"$HOME/.profile"
+    {
+      echo ""
+      echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode"
+      echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd"
+      echo "xmodmap ~/.Xmodmap"
+    } >>"$HOME/.profile"
   fi
 }
 function conf_dark_mode {
@@ -355,9 +357,11 @@ function conf_dark_mode {
   mkdir -p "$HOME/.config/xdg-desktop-portal"
   touch "$HOME/.config/xdg-desktop-portal/portals.conf"
   if ! grep -Fxq "default=gtk;wlr" "$HOME/.config/xdg-desktop-portal/portals.conf"; then
-    echo "[preferred]" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-    echo "default=gtk;wlr" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-    echo "" >>"$HOME/.config/xdg-desktop-portal/portals.conf"
+    {
+      echo "[preferred]"
+      echo "default=gtk;wlr"
+      echo ""
+    } >>"$HOME/.config/xdg-desktop-portal/portals.conf"
   fi
 }
 function conf_btop {
@@ -368,7 +372,8 @@ function conf_alacritty {
   mkdir -p "$HOME/.config"
   ln -sf "$STUBBE_SRC/alacritty" "$HOME/.config"
   if is_binary "alacritty" && is_binary update-alternatives; then
-    local alacritty_path="$(which alacritty)"
+    local alacritty_path
+    alacritty_path="$(which alacritty)"
     sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$alacritty_path" 50
     sudo update-alternatives --set x-terminal-emulator "$alacritty_path"
   fi
