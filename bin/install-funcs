@@ -64,7 +64,6 @@ function install_stubbe_all {
   [Yy][Ee][Ss]|[Yy])
     license_openai
     license_intelephense
-    license_clerk
     ;;
   *)
     echo "Skipping private installs"
@@ -135,13 +134,6 @@ function install_build_essential {
   if is_binary apt; then
     bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev dunst"
   fi
-  if is_binary pacman; then
-    bash -c "sudo pacman -Sy base-devel curl wget git grep tmux podman zsh htop lua5.1"
-  fi
-  if is_binary dnf; then
-    bash -c "sudo dnf -y group install \"C Development Tools and Libraries\""
-    bash -c "sudo dnf -y install curl wget git grep tmux podman zsh htop lua5.1"
-  fi
   sudo chsh -s "$(which "zsh")" "$USER"
 }
 function install_go {
@@ -177,7 +169,6 @@ function go_deps {
 function volta_deps {
   volta install node npm
   volta install yarn deno bun
-  volta install @coffeelint/cli coffeescript
 }
 function astral_deps {
   uv tool install --python 3.12 posting
@@ -405,11 +396,4 @@ function license_openai {
   git clone --depth=1 git@git.stubbe.dev:snippets/3.git "$TMPDIR" --quiet
   cat "$TMPDIR/openai-license.txt" >>"$HOME/.zshrc"
   rm -rf "$TMPDIR"
-}
-function license_clerk {
-  CLERKCREDSTMPDIR=$(mktemp -d)
-  git clone --depth 1 git@git.stubbe.dev:stubbe/clerk-auth.git "$CLERKCREDSTMPDIR" --quiet
-  "$CLERKCREDSTMPDIR"/clerk-auth/install.sh
-  rm -rf "$CLERKCREDSTMPDIR"
-  echo "Need to install openvpn3 for this to function."
 }
