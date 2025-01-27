@@ -298,3 +298,8 @@ if is_binary uv; then
     source "$PWD/venv/bin/activate"
   }
 fi
+
+function dunst_test {
+  killall dunst
+  notify-send foo
+}

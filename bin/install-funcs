@@ -61,7 +61,7 @@ function install_stubbe_all {
   read REPLY\?"(Y)es or [N]o?"
   printf "\n"
   case "$REPLY" in
-  [Yy][Ee][Ss]|[Yy])
+  [Yy][Ee][Ss] | [Yy])
     license_openai
     license_intelephense
     ;;
