@@ -52,7 +52,7 @@ shadow-offset-y = -7;
 # unless no-fading-openclose is used. Can be set per-window using rules.
 #
 # Default: false
-fading = false;
+fading = true;
 
 # Opacity change between steps while fading in. (0.01 - 1.0, defaults to 0.028)
 fade-in-step = 0.10;
@@ -316,4 +316,12 @@ rules: ({
 #
 # @include "extra.conf"
 
+animations = true;
+animation-stiffness = 150;
+
+[animation-window-matches]
+conditions = [
+  "class_g = 'Dunst'"
+];
+focus = "slide_down";
 
