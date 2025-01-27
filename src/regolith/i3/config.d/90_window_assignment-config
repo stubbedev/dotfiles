@@ -1,4 +1,6 @@
 assign [class="Spotify"] workspace $ws10
 assign [class="Slack"] workspace $ws10
 assign [class="Mailspring"] workspace $ws9
+assign [class="PhpStorm"] workspace $ws1
+assign [class="Zen Browser"] workspace $ws2
 

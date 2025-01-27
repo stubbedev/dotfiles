@@ -374,6 +374,7 @@ function conf_git {
     git config --global user.name "Alexander Stage"
     git config --global user.email "abs@stubbe.dev"
     git config --global core.excludesfile ~/.gitignore
+    git config --global push.autoSetupRemote true
   fi
 }
 function conf_dunst {
