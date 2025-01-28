@@ -8,3 +8,6 @@ wm.gaps.focus_follows_mouse: true
 regolith.wallpaper.file: /usr/share/backgrounds/ballet.png
 regolith.lockscreen.wallpaper.file: /usr/share/backgrounds/ballet.png
 regolith.sway.unsupported_gpu: true
+gtk.theme_name: Catppuccin-Mocha
+gnome.wm.theme: Catppuccin-Mocha
+
