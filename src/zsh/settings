@@ -5,9 +5,6 @@ fpath=(
   $fpath
 )
 
-autoload -Uz compinit
-compinit
-
 bindkey "^Xa" _expand_alias
 bindkey -s "^[r" "source ~/.zshrc && clear^M"
 bindkey -s "^[o" "nvim^M"

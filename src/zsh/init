@@ -1,5 +1,8 @@
 #!/usr/bin/env zsh
 
+autoload -Uz compinit
+compinit
+
 STBZSHSOURCES=(
   "paths"
   "funcs"
