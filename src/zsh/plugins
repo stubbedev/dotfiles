@@ -26,7 +26,7 @@ fi
 
 # LARAVEL
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"; then
-  git clone "https://github.com/jessarcher/zsh-artisan.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"
+  git clone "https://github.com/stubbedev/zsh-fzf-artisan.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"
 fi
 source "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan/artisan.plugin.zsh"
 
