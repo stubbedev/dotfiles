@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+
+TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+if [ -z "$1" ]; then
+  TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
+else
+  TMUXCLIENTNAME="$1"
+fi
+tmux new -As "$TMUXCLIENTNAME"

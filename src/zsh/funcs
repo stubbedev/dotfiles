@@ -199,30 +199,6 @@ if is_binary nvim; then
 fi
 
 if is_binary tmux; then
-  function tnc {
-    TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-    TMPDIR=$(mktemp -d)
-    TMPDIRNAME=$(echo "$TMPDIR" | cut -d "." -f 2)
-    cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
-    cd "$TMPDIR/$TMUXDIRNAME" || exit
-    if [ -z "$1" ]; then
-      TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
-    else
-      TMUXCLIENTNAME="$1"
-    fi
-    tmux new -As "$TMUXCLIENTNAME"
-  }
-
-  function tn {
-    TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
-    if [ -z "$1" ]; then
-      TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
-    else
-      TMUXCLIENTNAME="$1"
-    fi
-    tmux new -As "$TMUXCLIENTNAME"
-  }
-
   function tls {
     bash -c "tmux ls"
   }

@@ -61,15 +61,15 @@ export DISPLAY=:1
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 
-bindkey -s "^[A" "tsld^M"
-bindkey -s "^[t" "tn^M"
-bindkey -s "^[g" "tslg^M"
-bindkey -s "^[a" "tsht^M"
+bindkey -s "^[A" "tmux-lazy-docker^M"
+bindkey -s "^[t" "tmux-new-sessionM"
+bindkey -s "^[g" "tmux-lazy-git^M"
+bindkey -s "^[a" "tmux-system-monitor^M"
 
 if is_binary fzf; then
-    bindkey -s "^[f" "ts^M"
-    bindkey -s "^[F" "sd^M"
-    bindkey -s "^[d" "tstls^M"
+    bindkey -s "^[f" "fzf-tmux-project-picker^M"
+    bindkey -s "^[F" "fzf-project-picker^M"
+    bindkey -s "^[d" "fzf-tmux-session-picker^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target

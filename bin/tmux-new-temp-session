@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+
+TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
+TMPDIR=$(mktemp -d)
+TMPDIRNAME=$(echo "$TMPDIR" | cut -d "." -f 2)
+cp -rT "./../$TMUXDIRNAME" "$TMPDIR/$TMUXDIRNAME"
+cd "$TMPDIR/$TMUXDIRNAME" || exit
+if [ -z "$1" ]; then
+  TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)[$TMPDIRNAME]"
+else
+  TMUXCLIENTNAME="$1"
+fi
+tmux new -As "$TMUXCLIENTNAME"

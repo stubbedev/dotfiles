@@ -4,6 +4,7 @@
 STUBBE_PATHS=(
   "$HOME/.stubbe/bin"
   "$HOME/.stubbe/bin/scripts"
+  "$HOME/.stubbe/bin/utils"
   "$HOME/.stubbe/src/go/bin"
   "$HOME/.stubbe/src/go/packages/bin"
   "$HOME/.local/bin"
