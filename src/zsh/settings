@@ -62,7 +62,7 @@ export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 
 bindkey -s "^[A" "tmux-lazy-docker^M"
-bindkey -s "^[t" "tmux-new-sessionM"
+bindkey -s "^[t" "tmux-new-session^M"
 bindkey -s "^[g" "tmux-lazy-git^M"
 bindkey -s "^[a" "tmux-system-monitor^M"
 
