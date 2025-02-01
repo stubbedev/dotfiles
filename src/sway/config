@@ -30,6 +30,9 @@ set $rofi_cmd rofi \
 set $menu $rofi_cmd -show combi -combi-modes drun#run -modes combi
 
 default_border pixel 1
+default_floating_border pixel 1
+
+smart_borders on
 
 ### Output configuration
 #
