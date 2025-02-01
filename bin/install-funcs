@@ -116,6 +116,7 @@ function install_confs {
   conf_dark_mode
   conf_btop
   conf_dunst
+  conf_sway
   conf_git
   src_zsh
 }
@@ -380,6 +381,16 @@ function conf_git {
 function conf_dunst {
   mkdir -p "$HOME/.config"
   ln -sf "$STUBBE_SRC/dunst" "$HOME/.config/dunst"
+}
+function conf_sway {
+  mkdir -p "$HOME/.config"
+  rm -rf "$HOME/.config/sway"
+  ln -sf "$STUBBE_SRC/sway" "$HOME/.config/sway"
+}
+function conf_waybar {
+  mkdir -p "$HOME/.config"
+  rm -rf "$HOME/.config/waybar"
+  ln -sf "$STUBBE_SRC/waybar" "$HOME/.config/waybar"
 }
 
 # INFO: Private licenses
