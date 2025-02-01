@@ -22,6 +22,7 @@ STUBBE_PATHS=(
   "/usr/local/go/bin"
   "/sbin"
   "/opt/nvim-linux64/bin"
+  "/opt/nvim-linux-x86_64/bin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
