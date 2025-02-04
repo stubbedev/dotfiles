@@ -6,6 +6,11 @@ return {
         bashls = {
           filetypes = { "sh", "zsh" },
         },
+        tsserver = {
+          lint = {
+            project = true,
+          },
+        },
       },
     },
   },
