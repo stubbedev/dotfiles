@@ -39,6 +39,8 @@ smart_borders on
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
 # Requires: desktop-backgrounds-compat, swaybg
 output * bg /usr/share/backgrounds/ballet.png fill
+
+output eDP-1 mode 2880x1800@120Hz pos 0 0
 #
 # Example configuration:
 #
