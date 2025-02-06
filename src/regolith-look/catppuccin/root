@@ -93,7 +93,7 @@ gtk.monospace_font_name: gtk_monospace_font_name
 #define color_pink2    #f2cdcd
 #define color_green2   #94e2d5
 #define color_yellow2  #f5e0dc
-#define color_pruple2  #cba6f7
+#define color_purple2  #cba6f7
 #define color_red2     #eba0ac
 #define color_cyan2    #74c7ec
 
