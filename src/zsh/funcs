@@ -121,6 +121,18 @@ if is_binary git; then
       echo "ON [$branch_name]: PUSH DENIED"
     fi
   }
+  function gd {
+    git diff
+  }
+  function gst {
+    git status
+  }
+  function gP {
+    git pull
+  }
+  function gf {
+    git fetch --all
+  }
   function ghr {
     git reset --hard HEAD~
   }
