@@ -121,6 +121,25 @@ if is_binary git; then
       echo "ON [$branch_name]: PUSH DENIED"
     fi
   }
+  function gcb {
+    read branch_substring\?"Ticket Number: "
+    local branch_name
+    branch_name=$(git branch --all | grep "$branch_substring" | sed -E 's/^[ *]*//' | head -n 1)
+    if [[ -n "$branch_name" ]]; then
+      git checkout "$branch_name"
+    else
+      local branch_prefix=$(pick feature bugfix hotfix)
+      local new_branch_name
+      read branch_suffix\?"Branch Suffix: "
+      if [[ -n "$branch_suffix" ]]; then
+        branch_suffix=$(echo $branch_suffix | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+        new_branch_name="$branch_prefix/$branch_substring-$branch_suffix"
+      else
+        new_branch_name="$branch_prefix/$branch_substring"
+      fi
+      git checkout -b "$new_branch_name"
+    fi
+  }
   function gd {
     git diff
   }
