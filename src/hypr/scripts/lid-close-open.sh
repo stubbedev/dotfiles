@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 
 # Get the action (lid-close or lid-open) passed as an argument
-action=$1
+function get_action {
+  if [ ! -f /tmp/lid_closed ]; then
+    touch /tmp/lid_closed
+    echo "close"
+  else
+    rm -f /tmp/lid_closed
+    echo "open"
+  fi
+}
+action=$(get_action)
 
 # Find the built-in monitor dynamically (usually eDP or LVDS)
 builtin_monitor=$(hyprctl monitors | grep -i "eDP" | awk '{print $2}')
@@ -22,14 +31,10 @@ if [ ${#monitors[@]} -gt 1 ]; then
     for ws in "${wspaces[@]}"; do
       hyprctl dispatch moveworkspacetomonitor "$ws" "$next_monitor"
     done
-    systemctl stop fprintd
-    systemctl mask fprintd
     hyprctl dispatch dpms off "$builtin_monitor"
   fi
 fi
 
 if [ "$action" == "open" ]; then
-  systemctl unmask fprintd
-  systemctl start fprintd
   hyprctl dispatch dpms on "$builtin_monitor"
 fi
