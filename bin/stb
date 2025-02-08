@@ -10,14 +10,6 @@ function info {
   echo "3.       Edit User Functions"
   echo "4.       Edit User Paths"
   echo "5.       Edit User Settings"
-  echo "6.       Edit ST Config Headers"
-  echo "7.       Recompile ST"
-}
-
-function recompile_st {
-  cd "$HOME/.stubbe/src/st" || exit
-  sudo make clean install
-  cd || exit
 }
 
 case "$1" in
@@ -39,14 +31,6 @@ case "$1" in
   ;;
 5 | settings | sett)
   vim "$HOME/.stubbe/src/zsh/settings"
-  exit
-  ;;
-6 | stconf | st)
-  vim "$HOME/.stubbe/src/st/config.h"
-  exit
-  ;;
-7 | recompile | recomp)
-  recompile_st
   exit
   ;;
 8 | cc)

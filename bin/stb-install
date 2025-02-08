@@ -2,7 +2,7 @@
 
 function info {
   echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
-  SCRIPT_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+  SCRIPT_DIR="$PWD"
   export SCRIPT_DIR
   source "$SCRIPT_DIR/bin/install-funcs"
   source "$SCRIPT_DIR/src/zsh/funcs"

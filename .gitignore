@@ -1,11 +1,9 @@
 bin/nvim
-bin/st
 src/go
 src/zsh/plugins.d
 src/zsh/history
 *.json
 src/nvim/lazy-lock.json
 src/lazygit/state.yml
-src/st/*.o
 src/btop/btop.log
 

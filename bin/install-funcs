@@ -92,7 +92,6 @@ function install_toolchain_reliant_binaries {
 function install_non_toolchain_binaries {
   install_nvim
   install_fzf
-  install_st
   install_btop
   install_docker
   install_jetbrains_toolbox
@@ -214,19 +213,6 @@ function install_btop {
   sudo make install
   cd "$RESET_PWD" || exit
   rm -rf "$BTOPTMPDIR"
-}
-function install_st {
-  local RESET_PWD=$PWD
-  cd "$HOME/.stubbe/src/st" || exit
-  sudo make clean install
-  if is_binary "$HOME/.stubbe/src/st/st"; then
-    sudo mv "$HOME/.stubbe/src/st/st" "/usr/local/bin"
-  fi
-  if is_binary "/usr/local/bin/st" && is_binary update-alternatives; then
-    sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/local/bin/st 50
-    sudo update-alternatives --set x-terminal-emulator /usr/local/bin/st
-  fi
-  cd "$RESET_PWD" || exit
 }
 function install_docker {
   DOCKERTMPDIR=$(mktemp -d)
