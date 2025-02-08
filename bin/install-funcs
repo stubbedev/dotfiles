@@ -173,6 +173,7 @@ function go_deps {
   go install github.com/air-verse/air@latest
   go install github.com/gopasspw/gopass@latest
   go install golang.org/x/tools/cmd/godoc@latest
+  go install github.com/abenz1267/walker
 }
 function volta_deps {
   volta install node npm
