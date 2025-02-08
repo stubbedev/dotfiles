@@ -24,6 +24,9 @@ monitors=($monitors)
 
 wspaces=$(hyprctl workspaces | grep "$builtin_monitor" | awk '{print $3}')
 wspaces=($wspaces)
+wspace_indices=("${!wspaces[@]}")
+last_ws_index=${wspace_indices[-1]}
+last_ws=${wspaces[$last_ws_index]}
 
 if [ ${#monitors[@]} -gt 1 ]; then
   next_monitor=${monitors[1]}
@@ -37,4 +40,5 @@ fi
 
 if [ "$action" == "open" ]; then
   hyprctl dispatch dpms on "$builtin_monitor"
+  hyprctl dispatch moveworkspacetomonitor "${last_ws}" "$builtin_monitor"
 fi
