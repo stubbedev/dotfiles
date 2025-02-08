@@ -117,6 +117,7 @@ function install_confs {
   conf_dunst
   conf_sway
   conf_hyprland
+  conf_alacritty
   conf_git
   src_zsh
 }
