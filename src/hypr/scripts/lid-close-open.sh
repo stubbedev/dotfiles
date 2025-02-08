@@ -11,8 +11,10 @@ fi
 
 # Get the list of all active monitors
 monitors=$(hyprctl monitors | grep "Monitor " | awk '{print $2}')
+monitors=($monitors)
 
 wspaces=$(hyprctl workspaces | grep "$builtin_monitor" | awk '{print $3}')
+wspaces=($wspaces)
 
 if [ ${#monitors[@]} -gt 1 ]; then
   next_monitor=${monitors[1]}
@@ -26,5 +28,4 @@ fi
 
 if [ "$action" == "open" ]; then
   hyprctl dispatch dpms on "$builtin_monitor"
-  hyprctl dispatch moveworkspacetomonitor "${wspaces[0]}" "$builtin_monitor"
 fi
