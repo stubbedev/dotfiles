@@ -22,10 +22,14 @@ if [ ${#monitors[@]} -gt 1 ]; then
     for ws in "${wspaces[@]}"; do
       hyprctl dispatch moveworkspacetomonitor "$ws" "$next_monitor"
     done
+    systemctl stop fprintd
+    systemctl mask fprintd
     hyprctl dispatch dpms off "$builtin_monitor"
   fi
 fi
 
 if [ "$action" == "open" ]; then
+  systemctl unmask fprintd
+  systemctl start fprintd
   hyprctl dispatch dpms on "$builtin_monitor"
 fi
