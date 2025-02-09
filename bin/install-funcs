@@ -386,6 +386,7 @@ function conf_hyprland {
   mkdir -p "$HOME/.config"
   rm -rf "$HOME/.config/hypr"
   ln -sf "$STUBBE_SRC/hypr" "$HOME/.config/hypr"
+  conf_waybar
 }
 function conf_waybar {
   mkdir -p "$HOME/.config"
