@@ -1,46 +1,138 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
-function info {
+options=("Edit Secrets" "Edit Aliases" "Edit Functions" "Edit Paths" "Edit Settings" "Clear Nvim Cache")
+chosen_option=""
+selected=0
+
+trap 'sigint_command' SIGINT
+
+info() {
   echo "Welcome to the STUBBEDEV CLI"
   echo
   echo "Please provide an input for the desired option."
-  echo "Options:"
-  echo "1.       Edit User Secrets"
-  echo "2.       Edit User Aliases"
-  echo "3.       Edit User Functions"
-  echo "4.       Edit User Paths"
-  echo "5.       Edit User Settings"
 }
 
-case "$1" in
-1 | secrets | secret)
-  vim "$HOME/.stubbe/src/zsh/secrets"
-  exit
-  ;;
-2 | aliases | alias)
-  vim "$HOME/.stubbe/src/zsh/aliases"
-  exit
-  ;;
-3 | functions | func)
-  vim "$HOME/.stubbe/src/zsh/funcs"
-  exit
-  ;;
-4 | paths | path)
-  vim "$HOME/.stubbe/src/zsh/paths"
-  exit
-  ;;
-5 | settings | sett)
-  vim "$HOME/.stubbe/src/zsh/settings"
-  exit
-  ;;
-8 | cc)
-  rm -rf ~/.local/share/nvim{,.bak}
-  rm -rf ~/.local/state/nvim{,.bak}
-  rm -rf ~/.cache/nvim{,.bak}
-  exit
-  ;;
-*)
-  info
-  exit
-  ;;
-esac
+run_option() {
+  # Erase info prompt
+  erase_previous_line
+  erase_previous_line
+  erase_previous_line
+  echo "Running: $chosen_option"
+  case "$chosen_option" in
+  "Edit Secrets")
+    nvim "$HOME/.stubbe/src/zsh/secrets"
+    exit
+    ;;
+  "Edit Aliases")
+    nvim "$HOME/.stubbe/src/zsh/aliases"
+    exit
+    ;;
+  "Edit Functions")
+    nvim "$HOME/.stubbe/src/zsh/funcs"
+    exit
+    ;;
+  "Edit Paths")
+    nvim "$HOME/.stubbe/src/zsh/paths"
+    exit
+    ;;
+  "Edit settings")
+    nvim "$HOME/.stubbe/src/zsh/settings"
+    exit
+    ;;
+  "Clear Nvim Cache")
+    rm -rf "$HOME"/.local/share/nvim{,.bak}
+    rm -rf "$HOME"/.local/state/nvim{,.bak}
+    rm -rf "$HOME"/.cache/nvim{,.bak}
+    exit
+    ;;
+  *)
+    exit
+    ;;
+  esac
+}
+
+display_options() {
+  for i in "${!options[@]}"; do
+    if [ "$i" -eq $selected ]; then
+      printf "\033[32m• %s\033[0m\n" "${options[$i]}"
+    else
+      printf "◦ %s\n" "${options[$i]}"
+    fi
+  done
+}
+
+sigint_command() {
+  erase_rendered_lines
+  show_cursor
+  exit 0
+}
+
+hide_cursor() {
+  printf "\033[?25l"
+}
+
+show_cursor() {
+  printf "\033[?25h"
+}
+
+erase_previous_line() {
+  printf "\033[A\033[0J"
+}
+
+erase_rendered_lines() {
+  for ((i = 0; i < ${#options[@]}; i++)); do
+    erase_previous_line
+  done
+  erase_previous_line
+}
+
+display_header() {
+  echo "UP/DOWN to navigate, ENTER to confirm:"
+  hide_cursor
+}
+
+# Initial display
+render() {
+  while true; do
+    # Read 3 bytes to capture arrow keys
+    read -r -sn1 key
+    if [ "$key" = $'\x1b' ]; then
+      read -r -sn2 rest
+      key+="$rest"
+    fi
+
+    case "$key" in
+    $'\x1b[A') # Up arrow
+      if [ $selected -gt 0 ]; then
+        ((selected--))
+      fi
+      ;;
+    $'\x1b[B') # Down arrow
+      if [ $selected -lt $((${#options[@]} - 1)) ]; then
+        ((selected++))
+      fi
+      ;;
+    "") # Enter key
+      printf "\033[%sA\033[0J" "${#options[@]}"
+      erase_previous_line
+      break
+      ;;
+    esac
+
+    # Move cursor up to overwrite options
+    printf "\033[%sA" "${#options[@]}"
+
+    # Redisplay options
+    display_options
+  done
+  show_cursor
+  chosen_option="${options[$selected]}"
+  run_option
+}
+
+exec </dev/tty
+
+info
+display_header
+display_options
+render
