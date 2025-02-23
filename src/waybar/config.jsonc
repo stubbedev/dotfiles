@@ -37,9 +37,24 @@
     "format": "{name}"
   },
   "hyprland/workspaces": {
-    "format": "{name}",
+    "format": "{name} {icon}",
     "on-scroll-up": "hyprctl dispatch workspace e+1",
-    "on-scroll-down": "hyprctl dispatch workspace e-1"
+    "on-scroll-down": "hyprctl dispatch workspace e-1",
+    "format-icons": {
+      "1": "<span foreground='#F4DBD6'> </span>",
+      "2": "<span foreground='#F0C6C6'> </span>",
+      "3": "<span foreground='#DDB6F2'> </span>",
+      "4": "<span foreground='#F5BDE6'> </span>",
+      "5": "<span foreground='#F28D8C'> </span>",
+      "6": "<span foreground='#E8A2A1'> </span>",
+      "7": "<span foreground='#F8BD96'> </span>",
+      "8": "<span foreground='#FAE3B0'> </span>",
+      "9": "<span foreground='#A6D189'> </span>",
+      "10": "<span foreground='#81C8BE'> </span>",
+      "default": "<span> </span>",
+      "focused": "<span> </span>",
+      "urgent": "<span> </span>"
+    }
   },
   "hyprland/language": {
     "format": "{}",
