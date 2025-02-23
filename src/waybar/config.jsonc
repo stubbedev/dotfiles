@@ -13,24 +13,21 @@
     "sway/mode",
     "sway/scratchpad"
   ],
-  "modules-center": [
-    "sway/window",
-    "hyprland/window"
-  ],
+  "modules-center": [],
   "modules-right": [
-    "idle_inhibitor",
+    "hyprland/language",
+    "sway/language",
     "pulseaudio",
     "network",
-    "power-profiles-daemon",
     "cpu",
     "memory",
     "temperature",
     "backlight",
-    "sway/language",
-    "hyprland/language",
     "battery",
     "clock",
-    "tray"
+    "idle_inhibitor",
+    "tray",
+    "power-profiles-daemon"
   ],
   // Modules configuration
   "sway/workspaces": {
@@ -43,6 +40,11 @@
     "format": "{name}",
     "on-scroll-up": "hyprctl dispatch workspace e+1",
     "on-scroll-down": "hyprctl dispatch workspace e-1"
+  },
+  "hyprland/language": {
+    "format": "{}",
+    "format-en": " ⌨ EN",
+    "format-da": " ⌨ DA"
   },
   // Modules configuration
   // "sway/workspaces": {
