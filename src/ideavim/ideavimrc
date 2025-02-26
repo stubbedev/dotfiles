@@ -250,9 +250,9 @@ nmap ]] <Action>(GotoNextError)
 " Prev Reference
 nmap [[ <Action>(GotoPreviousError)
 " Next Method
-nmap ]m <Action>(NextMethod)
+nmap ]m <Action>(MethodDown)
 " Previous Method
-nmap [m <Action>(PreviousMethod)
+nmap [m <Action>(MethodUp)
 " Next Reference (alternative)
 nmap <a-n> <Action>(GotoNextError)
 " Prev Reference (alternative)
