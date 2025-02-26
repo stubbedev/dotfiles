@@ -96,6 +96,8 @@ nnoremap <leader>` <C-^>
 nmap <leader>bd <Action>(CloseContent)
 " Delete Buffer and Window
 nmap <leader>bD <Action>(CloseContent)
+" Toggle Pin on Current Tab
+map <leader>bp <Action>(PinActiveEditorTab)
 " Escape and Clear hlsearch
 nmap <esc> :nohlsearch<CR>
 nmap <leader>ur :nohlsearch<CR>
@@ -247,6 +249,10 @@ nmap <leader>cA <Action>(ShowIntentionActions)
 nmap ]] <Action>(GotoNextError)
 " Prev Reference
 nmap [[ <Action>(GotoPreviousError)
+" Next Method
+nmap ]m <Action>(NextMethod)
+" Previous Method
+nmap [m <Action>(PreviousMethod)
 " Next Reference (alternative)
 nmap <a-n> <Action>(GotoNextError)
 " Prev Reference (alternative)
