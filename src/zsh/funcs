@@ -104,13 +104,13 @@ fi
 
 if is_binary git; then
   function gcm {
-    commit_prefix="$(git rev-parse --abbrev-ref HEAD | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
+    commit_prefix="$(git rev-parse --abbrev-ref HEAD | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
     if [[ "$commit_prefix" = "" ]]; then
       read commit_message\?"Message: "
     else
-      read commit_message\?"Message for $commit_prefix"
+      read commit_message\?"Message for $commit_prefix:"
     fi
-    git commit -m "$commit_prefix$commit_message"
+    git commit -m "$commit_prefix: $commit_message"
   }
   function gp {
     banned_branches=("develop" "staging" "production")
@@ -128,7 +128,7 @@ if is_binary git; then
     if [[ -n "$branch_name" ]]; then
       git checkout "$branch_name"
     else
-      local branch_prefix=$(pick feature bugfix hotfix)
+      local branch_prefix=$(pick "feature" "bugfix" "hotfix")
       local new_branch_name
       read branch_suffix\?"Branch Suffix: "
       if [[ -n "$branch_suffix" ]]; then
