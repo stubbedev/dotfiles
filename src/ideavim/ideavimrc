@@ -41,6 +41,11 @@ set shortmess=filnxtToOF
 " https://github.com/JetBrains/ideavim/wiki/IdeaVim-Plugins
 " https://www.lazyvim.org/plugins
 
+Plug 'kana/vim-textobj-entire'
+Plug 'dbakker/vim-paragraph-motion'
+Plug 'michaeljsmith/vim-indent-object'
+Plug 'machakann/vim-highlightedyank'
+Plug 'vim-scripts/argtextobj.vim'
 " gcc and gc<action> mappings.
 Plug 'tpope/vim-commentary'
 " s action, such as cs"' (replace " with '), ds" (unquote)
@@ -51,6 +56,7 @@ Plug 'justinmk/vim-sneak'
 set which-key
 " Extended matching.  A Neovim default plugin.
 set matchit
+set functiontextobj
 
 " Key maps
 
@@ -94,10 +100,12 @@ nnoremap <leader>bb <C-^>
 nnoremap <leader>` <C-^>
 " Delete Buffer
 nmap <leader>bd <Action>(CloseContent)
-" Delete Buffer and Window
-nmap <leader>bD <Action>(CloseContent)
+" Delete All Buffers Except Active
+nmap <leader>bD <Action>(CloseAllEditorsButActive)
 " Toggle Pin on Current Tab
-map <leader>bp <Action>(PinActiveEditorTab)
+nmap <leader>bp <Action>(PinActiveEditorTab)
+" Close All Unpinned Buffers
+nmap <leader>bP <Action>(CloseAllUnpinnedEditors)
 " Escape and Clear hlsearch
 nmap <esc> :nohlsearch<CR>
 nmap <leader>ur :nohlsearch<CR>
