@@ -176,7 +176,8 @@ nmap <leader>gb <Action>(Annotate)
 " Git Browse
 nmap <leader>gB <Action>(Vcs.Show.Log)
 " Lazygit Current File History
-nmap <leader>gf <Action>(Vcs.Show.Log)
+" nmap <leader>gf <Action>(Vcs.Show.Log)
+nmap <leader>gf <Action>(com.mituuz.fuzzier.FuzzierVCS)
 " Lazygit Log
 nmap <leader>gl <Action>(Vcs.Show.Log)
 " Lazygit Log (cwd)
@@ -283,6 +284,9 @@ nmap <leader>ge <Action>(ActivateVersionControlToolWindow)
 
 " Telescope Keymaps
 
+nmap <leader>pf <Action>(com.mituuz.fuzzier.Fuzzier)
+nmap <leader>mf <Action>(com.mituuz.fuzzier.FuzzyMover)
+
 " Find Files (Root Dir)
 nmap <leader><space> <Action>(GotoFile)
 " Switch Buffer
@@ -296,7 +300,8 @@ nmap <leader>fb <Action>(Switcher)
 " Find Config File
 nmap <leader>fc <Action>(GotoFile)
 " Find Files (Root Dir) (alternative)
-nmap <leader>ff <Action>(GotoFile)
+" nmap <leader>ff <Action>(GotoFile)
+nmap <leader>ff <Action>(com.mituuz.fuzzier.FuzzyGrep)
 " Find Files (cwd)
 nmap <leader>fF <Action>(GotoFile)
 " Find Files (git-files)
