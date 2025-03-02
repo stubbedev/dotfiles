@@ -41,7 +41,7 @@
     "on-scroll-up": "hyprctl dispatch workspace e+1",
     "on-scroll-down": "hyprctl dispatch workspace e-1",
     "format-icons": {
-      "1": "<span foreground='#F4DBD6'> </span>",
+      "1": "<span foreground='#89B4FA'> </span>",
       "2": "<span foreground='#F0C6C6'> </span>",
       "3": "<span foreground='#DDB6F2'> </span>",
       "4": "<span foreground='#F5BDE6'> </span>",
@@ -58,8 +58,8 @@
   },
   "hyprland/language": {
     "format": "{}",
-    "format-en": " ⌨ EN",
-    "format-da": " ⌨ DA"
+    "format-en": " EN",
+    "format-da": " DA"
   },
   // Modules configuration
   // "sway/workspaces": {
