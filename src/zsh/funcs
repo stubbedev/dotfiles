@@ -1,5 +1,9 @@
 #!/usr/bin/env zsh
 
+function src-stb-installers {
+  source "$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+}
+
 function is_binary {
   command -v "$1" &>/dev/null
 }
@@ -18,10 +22,6 @@ function has_string {
 
 function is_elevated_shell {
   [[ "$EUID" -eq 0 ]]
-}
-
-function src-stb-installers {
-  source "$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
 }
 
 function src_zsh {
@@ -108,10 +108,11 @@ if is_binary git; then
     if [[ "$commit_prefix" = "" ]]; then
       read commit_message\?"Message: "
     else
-      read commit_message\?"Message for $commit_prefix:"
+      read commit_message\?"Message for $commit_prefix: "
     fi
     git commit -m "$commit_prefix: $commit_message"
   }
+
   function gp {
     banned_branches=("develop" "staging" "production")
     branch_name="$(git rev-parse --abbrev-ref HEAD)"
@@ -121,6 +122,7 @@ if is_binary git; then
       echo "ON [$branch_name]: PUSH DENIED"
     fi
   }
+
   function gcb {
     read branch_substring\?"Ticket Number: "
     local branch_name
@@ -140,6 +142,7 @@ if is_binary git; then
       git checkout -b "$new_branch_name"
     fi
   }
+
   function gd {
     git diff
   }
@@ -168,29 +171,6 @@ if is_binary git; then
     git stash
     git stash clear
   }
-fi
-
-if is_binary phpcs; then
-  function php_lint {
-    phpcs --standard="$1" "$2"
-  }
-fi
-
-if is_binary phpcbf; then
-  function php_fix {
-    phpcbf --standard="$1" "$2"
-  }
-fi
-
-if is_binary docker; then
-  function docker_killall {
-    docker kill "$(docker ps -q)"
-  }
-  alias ldocker='sudo $(which lazydocker)'
-fi
-
-if is_binary docker && is_binary lazydocker && is_binary podman; then
-  alias lazypodman='DOCKER_HOST=unix:///run/user/1000/podman/podman.sock lazydocker'
 fi
 
 if is_binary bat; then
@@ -263,40 +243,6 @@ if is_binary screen; then
   }
 fi
 
-function handleize_files {
-  for f in *\ *; do mv "$f" "${f// /_}"; done
-  find . -maxdepth 1 -type f | while read -r upName; do
-    loName=$(echo "${upName}" | tr '[:upper:]' '[:lower:]')
-    mv "$upName" "$loName"
-  done
-}
-
-function remove_suffix_files {
-  for file in *"$1"; do mv "$file" "${file/1/""}"; done
-}
-
-function remove_prefix_files {
-  for file in "$1"*; do mv "$file" "${file/1/""}"; done
-}
-
-function remove_middle_files {
-  for file in *"$1"*; do mv "$file" "${file/1/""}"; done
-}
-
-if is_binary systemctl; then
-  function kill_native_servers {
-    if is_binary mysql; then
-      sudo systemctl stop mysql
-    fi
-    if is_binary nginx; then
-      sudo systemctl stop nginx
-    fi
-    if is_binary apache2; then
-      sudo systemctl stop apache2
-    fi
-  }
-fi
-
 if is_binary uv; then
   function pysrc {
     if ! is_file "$PWD/venv/bin/activate"; then
@@ -305,8 +251,3 @@ if is_binary uv; then
     source "$PWD/venv/bin/activate"
   }
 fi
-
-function dunst_test {
-  killall dunst
-  notify-send foo
-}
