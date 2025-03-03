@@ -6,7 +6,6 @@ return {
     priority = 1000,
     opts = {
       integrations = {
-        snacks = true,
         aerial = true,
         alpha = true,
         cmp = true,
@@ -43,6 +42,10 @@ return {
         semantic_tokens = true,
         telescope = true,
         fzf = true,
+        snacks = {
+          enabled = true,
+          indent_scope_color = "lavender",
+        },
         treesitter = true,
         treesitter_context = true,
         which_key = true,
@@ -54,5 +57,5 @@ return {
     opts = {
       colorscheme = "catppuccin",
     },
-  }
+  },
 }
