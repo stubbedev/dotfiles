@@ -459,6 +459,31 @@ inoremap <C-W> <C-G>u<C-W>
 nnoremap Q @@
 " There are several more Neovim mappings that need to be ported.  See link.
 
+" Macro Keymaps
+set vim-macro
+let g:macro_cycle = "a"
+
+function! CycleMacroRegister()
+  if g:macro_cycle == "a"
+    let g:macro_cycle = "b"
+  elseif g:macro_cycle == "b"
+    let g:macro_cycle = "c"
+  else
+    let g:macro_cycle = "a"
+  endif
+  echo "Macro slot: " . g:macro_cycle
+endfunction
+
+" Start/stop recording in the current macro slot
+nnoremap <silent> q :execute "normal! q" . g:macro_cycle<CR>
+
+" Replay the macro from the current slot
+nnoremap <silent> Q :execute "normal! @" . g:macro_cycle<CR>
+
+" Cycle macro slot (Ctrl+q)
+nnoremap <silent> <C-q> :call CycleMacroRegister()<CR>
+
+
 " Jetbrains conflicts
 " https://github.com/JetBrains/ideavim/blob/master/doc/sethandler.md
 " None, yet.  Possible conflicts: ctrl -6befhjklorsvw
