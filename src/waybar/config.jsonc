@@ -32,9 +32,24 @@
   // Modules configuration
   "sway/workspaces": {
     "disable-scroll": false,
-    "all-outputs": true,
+    "all-outputs": false,
     "warp-on-scroll": true,
-    "format": "{name}"
+    "format": "{name}",
+    "format-icons": {
+      "1": "<span foreground='#89B4FA'> </span>",
+      "2": "<span foreground='#F0C6C6'> </span>",
+      "3": "<span foreground='#DDB6F2'> </span>",
+      "4": "<span foreground='#F5BDE6'> </span>",
+      "5": "<span foreground='#F28D8C'> </span>",
+      "6": "<span foreground='#E8A2A1'> </span>",
+      "7": "<span foreground='#F8BD96'> </span>",
+      "8": "<span foreground='#FAE3B0'> </span>",
+      "9": "<span foreground='#A6D189'> </span>",
+      "10": "<span foreground='#81C8BE'> </span>",
+      "default": "<span> </span>",
+      "focused": "<span> </span>",
+      "urgent": "<span> </span>"
+    }
   },
   "hyprland/workspaces": {
     "format": "{name} {icon}",
@@ -61,23 +76,6 @@
     "format-en": " EN",
     "format-da": " DA"
   },
-  // Modules configuration
-  // "sway/workspaces": {
-  //     "disable-scroll": true,
-  //     "all-outputs": true,
-  //     "warp-on-scroll": false,
-  //     "format": "{name}: {icon}",
-  //     "format-icons": {
-  //         "1": "",
-  //         "2": "",
-  //         "3": "",
-  //         "4": "",
-  //         "5": "",
-  //         "urgent": "",
-  //         "focused": "",
-  //         "default": ""
-  //     }
-  // },
   "keyboard-state": {
     "numlock": true,
     "capslock": true,
