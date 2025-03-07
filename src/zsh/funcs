@@ -124,21 +124,26 @@ if is_binary git; then
   }
 
   function gcb {
-    read branch_substring\?"Ticket Number: "
     local branch_name
-    branch_name=$(git branch --all | grep "$branch_substring" | sed -E 's/^[ *]*//' | head -n 1)
-    if [[ -n "$branch_name" ]]; then
+    branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query | tail -n1)
+
+    if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       git checkout "$branch_name"
     else
-      local branch_prefix=$(pick "feature" "bugfix" "hotfix")
+      local branch_substring="$branch_name" # Use the inputted query if no match is found
+      local branch_prefix
+      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: ")
+
       local new_branch_name
       read branch_suffix\?"Branch Suffix: "
+
       if [[ -n "$branch_suffix" ]]; then
-        branch_suffix=$(echo $branch_suffix | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+        branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
         new_branch_name="$branch_prefix/$branch_substring-$branch_suffix"
       else
         new_branch_name="$branch_prefix/$branch_substring"
       fi
+
       git checkout -b "$new_branch_name"
     fi
   }
