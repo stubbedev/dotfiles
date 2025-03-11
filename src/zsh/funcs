@@ -116,11 +116,16 @@ if is_binary git; then
   function gp {
     banned_branches=("develop" "staging" "production" "master")
     branch_name="$(git rev-parse --abbrev-ref HEAD)"
-    if [[ ! " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
-      git push origin "$branch_name"
-    else
-      echo "ON [$branch_name]: PUSH DENIED"
+
+    if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
+      echo "⚠️ WARNING: You are about to push to a protected branch [$branch_name]."
+      read confimation\?"Are you sure? (yes/no): "
+      if [[ ! "$confirmation" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+        echo "ON [$branch_name]: PUSH DENIED"
+        return 1
+      fi
     fi
+    git push origin "$branch_name"
   }
 
   function gcb {
@@ -131,7 +136,7 @@ if is_binary git; then
     if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       git checkout "$branch_name"
     else
-      local branch_substring="$branch_name" # Use the inputted query if no match is found
+      local branch_substring="$branch_name"
       local branch_prefix
       branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: ")
 
