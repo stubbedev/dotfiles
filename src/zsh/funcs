@@ -139,7 +139,7 @@ if is_binary git; then
     else
       local branch_substring="$branch_name"
       local branch_prefix
-      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=3)
+      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=4 --no-info)
 
       local new_branch_name
       branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
