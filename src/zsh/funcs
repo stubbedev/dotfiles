@@ -132,14 +132,14 @@ if is_binary git; then
   function gcb {
     git fetch --all
     local branch_name
-    branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --height=40% | tail -n1)
+    branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=2 | tail -n1)
 
     if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       git checkout "$branch_name"
     else
       local branch_substring="$branch_name"
       local branch_prefix
-      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=4 --no-info)
+      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
 
       local new_branch_name
       branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
@@ -151,7 +151,9 @@ if is_binary git; then
         new_branch_name="$branch_prefix/$branch_substring"
       fi
 
-      git checkout -b "$new_branch_name"
+      if [[ "$new_branch_name" != "/" ]]; then
+        git checkout -b "$new_branch_name"
+      fi
     fi
   }
 
