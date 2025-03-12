@@ -130,7 +130,7 @@ if is_binary git; then
   }
 
   function gcb {
-    git fetch --all
+    git fetch --all --quiet
     local branch_name
     branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=2 | tail -n1)
 
