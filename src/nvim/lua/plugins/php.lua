@@ -87,4 +87,40 @@ return {
     },
     ft = { "blade", "php" },
   },
+  {
+    "williamboman/mason.nvim",
+    opts = function(_, opts)
+      opts.ensure_installed = opts.ensure_installed or {}
+      vim.list_extend(opts.ensure_installed, {
+        "intelephense",
+      })
+    end,
+  },
+  -- intelephense lsp config
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      servers = {
+        intelephense = {
+          settings = {
+            intelephense = {
+              files = {
+                maxSize = 5000000,
+                exclude = {
+                  "**/.git/**",
+                  "**/.svn/**",
+                  "**/.hg/**",
+                  "**/.DS_Store/**",
+                  "**/node_modules/**",
+                  "**/bower_components/**",
+                  "**/vendor/**/{Tests,tests}/**",
+                  -- make sure you don't exclude _ide_helper.php or .phpstorm.meta.php here
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 }
