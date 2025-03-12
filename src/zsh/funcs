@@ -119,9 +119,9 @@ if is_binary git; then
 
     if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
       echo "⚠️ WARNING: You are about to push to a protected branch [$branch_name]."
-      read confimation\?"Are you sure? (yes/no): "
-      if [[ ! "$confirmation" =~ ^[Yy]([Ee][Ss])?$ ]]; then
-        echo "ON [$branch_name]: PUSH DENIED"
+      read confirmation\?"Are you sure? (yes/no): "
+      if [[ ! "$confirmation" =~ ^([Yy]|[Yy][Ee][Ss])$ ]]; then
+        echo "Push aborted on $branch_name"
         return 1
       fi
     fi
