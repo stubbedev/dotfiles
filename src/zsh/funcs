@@ -106,10 +106,11 @@ if is_binary git; then
   function gcm {
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
     if [[ "$commit_prefix" = "" ]]; then
-      read commit_message\?"Message: "
+      commit_prompt="Message: "
     else
-      read commit_message\?"Message for $commit_prefix: "
+      commit_prompt="Message for $commit_prefix: "
     fi
+    commit_message=$(fzf --height=1 --reverse --no-info --print-query --prompt="$commit_prompt" </dev/null | head -1)
     git commit -m "$commit_prefix: $commit_message"
   }
 
@@ -131,17 +132,17 @@ if is_binary git; then
   function gcb {
     git fetch --all
     local branch_name
-    branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query | tail -n1)
+    branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --height=40% | tail -n1)
 
     if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       git checkout "$branch_name"
     else
       local branch_substring="$branch_name"
       local branch_prefix
-      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: ")
+      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=3)
 
       local new_branch_name
-      read branch_suffix\?"Branch Suffix: "
+      branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
 
       if [[ -n "$branch_suffix" ]]; then
         branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
