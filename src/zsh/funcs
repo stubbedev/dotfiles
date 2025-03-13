@@ -115,7 +115,11 @@ if is_binary git; then
       commit_prompt="Message for $commit_prefix: "
     fi
     commit_message=$(fzf --height=1 --reverse --no-info --print-query --prompt="$commit_prompt" </dev/null | head -1)
-    git commit -m "$commit_prefix: $commit_message"
+    if [[ "$commit_prefix" = "" ]]; then
+      git commit -m "$commit_message"
+    else
+      git commit -m "$commit_prefix: $commit_message"
+    fi
   }
 
   function gp {
