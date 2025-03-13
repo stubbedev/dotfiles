@@ -108,7 +108,7 @@ if is_binary git; then
       return 0
     fi
 
-    commit_prefix="$(git rev-parse --abbrev-ref HEAD | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
+    commit_prefix="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
     if [[ "$commit_prefix" = "" ]]; then
       commit_prompt="Message: "
     else
@@ -124,12 +124,12 @@ if is_binary git; then
     fi
 
     banned_branches=("develop" "staging" "production" "master")
-    branch_name="$(git rev-parse --abbrev-ref HEAD)"
+    branch_name="$(git branch --show-current)"
 
     if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
       echo "You are about to push to a protected branch [$branch_name]."
 
-      choice=$(echo -e "Yes\nNo" | fzf --prompt="Push anyway? " --height=3 --no-info)
+      choice=$(echo -e "Yes\nNo" | fzf --prompt="Push to branch $branch_name: " --height=3 --no-info)
       if [[ "$confirmation" != "Yes" ]]; then
         echo "Push aborted on $branch_name"
         return 1
