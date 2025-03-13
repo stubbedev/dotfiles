@@ -104,6 +104,10 @@ fi
 
 if is_binary git; then
   function gcm {
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      return 0
+    fi
+
     commit_prefix="$(git rev-parse --abbrev-ref HEAD | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
     if [[ "$commit_prefix" = "" ]]; then
       commit_prompt="Message: "
@@ -115,13 +119,18 @@ if is_binary git; then
   }
 
   function gp {
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      return 0
+    fi
+
     banned_branches=("develop" "staging" "production" "master")
     branch_name="$(git rev-parse --abbrev-ref HEAD)"
 
     if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
-      echo "⚠️ WARNING: You are about to push to a protected branch [$branch_name]."
-      read confirmation\?"Are you sure? (yes/no): "
-      if [[ ! "$confirmation" =~ ^([Yy]|[Yy][Ee][Ss])$ ]]; then
+      echo "You are about to push to a protected branch [$branch_name]."
+
+      choice=$(echo -e "Yes\nNo" | fzf --prompt="Push anyway? " --height=3 --no-info)
+      if [[ "$confirmation" = "Yes" ]]; then
         echo "Push aborted on $branch_name"
         return 1
       fi
@@ -130,7 +139,10 @@ if is_binary git; then
   }
 
   function gcb {
-    git fetch --all --quiet
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      return 0
+    fi
+
     local branch_name
     branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=2 | tail -n1)
 
