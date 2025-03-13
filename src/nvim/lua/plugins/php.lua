@@ -106,6 +106,11 @@ return {
             intelephense = {
               files = {
                 maxSize = 5000000,
+                stubs = {
+                  "laravel",
+                  "Illuminate",
+                  "Symfony",
+                },
                 exclude = {
                   "**/.git/**",
                   "**/.svn/**",
@@ -114,7 +119,6 @@ return {
                   "**/node_modules/**",
                   "**/bower_components/**",
                   "**/vendor/**/{Tests,tests}/**",
-                  -- make sure you don't exclude _ide_helper.php or .phpstorm.meta.php here
                 },
               },
             },
