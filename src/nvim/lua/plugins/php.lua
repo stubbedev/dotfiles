@@ -103,6 +103,11 @@ return {
       servers = {
         intelephense = {
           settings = {
+            php = {
+              validate = {
+                enable = true,
+              },
+            },
             intelephense = {
               files = {
                 maxSize = 5000000,
