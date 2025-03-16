@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Get the current branch name
-BRANCH_NAME="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
+BRANCH_NAME="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }' | sed /./s/$/: /)"
 # Extract the dynamic part from the branch name
 if [[ "$BRANCH_NAME" != "" ]]; then
   echo "$BRANCH_NAME: "

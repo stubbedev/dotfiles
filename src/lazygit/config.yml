@@ -1,4 +1,7 @@
 disableStartupPopups: false
+keybinding:
+  files:
+    commitChanges: ""
 customCommands:
   - key: "k"
     context: "files"
@@ -7,7 +10,8 @@ customCommands:
         title: "Add Commit Message"
         key: "Message"
 
-    command: git commit -m "$(kontainer-commit-message){{ .Form.Message }}"
+    command: |
+      git commit -m "$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }' | sed '/./s/$/: /'){{ .Form.Message }}"
     description: "Custom commit message"
 gui:
   theme:
