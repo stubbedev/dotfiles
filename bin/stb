@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-options=("Edit Secrets" "Edit Aliases" "Edit Functions" "Edit Paths" "Edit Settings" "Clear Nvim Cache")
+options=("Edit Secrets" "Edit Aliases" "Edit Functions" "Edit Paths" "Edit Settings" "Clear Nvim Cache" "Clear Zsh Cache")
 chosen_option=""
 selected=0
 
@@ -40,10 +40,13 @@ run_option() {
     exit
     ;;
   "Clear Nvim Cache")
-    rm -rf "$HOME"/.local/share/nvim{,.bak}
-    rm -rf "$HOME"/.local/state/nvim{,.bak}
-    rm -rf "$HOME"/.cache/nvim{,.bak}
+    rm -rf "$HOME/.local/share/nvim{,.bak}"
+    rm -rf "$HOME/.local/state/nvim{,.bak}"
+    rm -rf "$HOME/.cache/nvim{,.bak}"
     exit
+    ;;
+  "Clear Zsh Cache")
+    rm -rf "$HOME/.stubbe/src/zsh/plugins.d/*"
     ;;
   *)
     exit
