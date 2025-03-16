@@ -133,8 +133,8 @@ if is_binary git; then
     if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
       echo "You are about to push to a protected branch [$branch_name]."
 
-      choice=$(echo -e "Yes\nNo" | fzf --prompt="Push to branch $branch_name: " --height=4 --no-info)
-      if [[ ! "Yes" =~ "$confirmation"* ]]; then
+      choice=$(echo -e "Yes\nNo" | fzf --reverse --prompt="Push to branch $branch_name: " --height=4 --no-info --select-1 --exit-0)
+      if [[ "$choice" != "Yes" ]]; then
         echo "Push aborted on $branch_name"
         return 1
       fi
