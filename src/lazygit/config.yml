@@ -3,7 +3,7 @@ keybinding:
   files:
     commitChanges: ""
 customCommands:
-  - key: "k"
+  - key: "c"
     context: "files"
     prompts:
       - type: "input"
