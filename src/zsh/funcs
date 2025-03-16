@@ -187,33 +187,29 @@ if is_binary git; then
 
     untracked_files=$(git status --porcelain | grep "??" | awk '{print $2}')
     tracked_files=$(git status --porcelain | grep -v "??" | awk '{print $2}')
+
     if [[ ${tracked_files[@]} ]]; then
+      tracked_selection=($(printf "%s\n" ${tracked_files[@]} | fzf --multi --preview='bat --style=numbers --color=always {}' --bind "tab:toggle" --bind 'enter:accept' --exit-0 | awk '{for(i=1; i<=NF; i++) print $i}'))
 
-      tracked_selection=()
-      while IFS= read -r line; do
-        tracked_selection+=("$line")
-      done <<<$(printf "%s\n" ${tracked_files[@]} | fzf --multi --preview='bat --style=numbers --color=always {}' --bind "tab:toggle" --bind 'enter:accept' --exit-0 | awk '{for(i=1; i<=NF; i++) print $i}')
-
-      if [[ ${tracked_selection[@]} ]]; then
+      if [[ ${#tracked_selection[@]} -gt 0 ]]; then
         for file in "${tracked_selection[@]}"; do
           echo "|$file|"
           git add $file -p
         done
       fi
     fi
-    if [[ ${untracked_files[@]} ]]; then
-      untracked_selection=()
-      while IFS= read -r line; do
-        untracked_selection+=("$line")
-      done <<<$(printf "%s\n" ${untracked_files[@]} | fzf --multi --preview='bat --style=numbers --color=always {}' --bind "tab:toggle" --bind 'enter:accept' --exit-0 | awk '{for(i=1; i<=NF; i++) print $i}')
 
-      if [[ ${untracked_selection[@]} ]]; then
+    if [[ ${untracked_files[@]} ]]; then
+      untracked_selection=($(printf "%s\n" ${untracked_files[@]} | fzf --multi --preview='bat --style=numbers --color=always {}' --bind "tab:toggle" --bind 'enter:accept' --exit-0 | awk '{for(i=1; i<=NF; i++) print $i}'))
+
+      if [[ ${#untracked_selection[@]} -gt 0 ]]; then
         for file in "${untracked_selection[@]}"; do
           git add $file
         done
       fi
     fi
   }
+
   function gd {
     git diff
   }
