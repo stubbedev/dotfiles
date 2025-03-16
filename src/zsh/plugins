@@ -19,11 +19,6 @@ if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
 fi
 source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
-# AUTOHIGHLIGHT
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
-  git clone "https://github.com/zdharma/fast-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"
-fi
-
 # LARAVEL
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"; then
   git clone "https://github.com/stubbedev/zsh-fzf-artisan.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"
@@ -35,3 +30,8 @@ if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"; then
   git clone "https://github.com/softmoth/zsh-vim-mode.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"
 fi
 source "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode/zsh-vim-mode.plugin.zsh"
+
+# AUTOHIGHLIGHT
+if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
+  git clone "https://github.com/zdharma/fast-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"
+fi
