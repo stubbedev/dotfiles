@@ -8,5 +8,5 @@ customCommands:
         key: "Message"
 
     command: git commit -m "$(kontainer-commit-message){{ .Form.Message }}"
-    subprocess: true
+    # subprocess: true
     description: "Custom commit message"
