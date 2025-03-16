@@ -127,7 +127,7 @@ if is_binary git; then
       return 0
     fi
 
-    banned_branches=("develop" "staging" "production" "master")
+    banned_branches=("develop" "staging" "production" "master" "main")
     branch_name="$(git branch --show-current)"
 
     if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
