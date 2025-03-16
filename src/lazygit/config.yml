@@ -1,12 +1,39 @@
 disableStartupPopups: false
+keybinding:
+  files:
+    commitChanges: ""
 customCommands:
-  - key: "k"
+  - key: "c"
     context: "files"
     prompts:
       - type: "input"
         title: "Add Commit Message"
         key: "Message"
 
-    command: git commit -m "$(kontainer-commit-message){{ .Form.Message }}"
-    subprocess: true
+    command: |
+      git commit -m "$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }' | sed '/./s/$/: /'){{ .Form.Message }}"
     description: "Custom commit message"
+gui:
+  theme:
+    activeBorderColor:
+      - "#b4befe"
+      - bold
+    inactiveBorderColor:
+      - "#a6adc8"
+    optionsTextColor:
+      - "#89b4fa"
+    selectedLineBgColor:
+      - "#313244"
+    cherryPickedCommitBgColor:
+      - "#45475a"
+    cherryPickedCommitFgColor:
+      - "#b4befe"
+    unstagedChangesColor:
+      - "#f38ba8"
+    defaultFgColor:
+      - "#cdd6f4"
+    searchingActiveBorderColor:
+      - "#f9e2af"
+
+  authorColors:
+    "*": "#b4befe"

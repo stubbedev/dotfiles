@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Get the current branch name
-BRANCH_NAME="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
-COMMIT_PREFIX="$(echo "$BRANCH_NAME" | sed -n 's|.*/\(KON-[0-9]*\).*|\1: |p')"
+BRANCH_NAME="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }' | sed /./s/$/: /)"
 # Extract the dynamic part from the branch name
 if [[ "$BRANCH_NAME" != "" ]]; then
-  echo "$COMMIT_PREFIX :"
+  echo "$BRANCH_NAME: "
 else
   echo ""
 fi
