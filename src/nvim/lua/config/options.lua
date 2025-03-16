@@ -36,6 +36,3 @@ vim.lsp.handlers["textDocument/hover"] = function(_, result, ctx, config)
   end
   return vim.lsp.util.open_floating_preview(markdown_lines, "markdown", config)
 end
-
-vim.api.nvim_set_hl(0, "SnackPickerNormal", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "SnackPickerBorder", { bg = "NONE" })
