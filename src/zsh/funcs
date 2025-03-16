@@ -175,6 +175,10 @@ if is_binary git; then
   }
 
   function ga {
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      return 0
+    fi
+
     untracked_files=$(git status --porcelain | grep "??" | awk '{print $2}')
     tracked_files=$(git status --porcelain | grep -v "??" | awk '{print $2}')
     if [[ ${tracked_files[@]} ]]; then
