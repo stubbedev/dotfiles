@@ -9,8 +9,12 @@ bindkey "^Xa" _expand_alias
 bindkey -s "^[r" "source ~/.zshrc && clear^M"
 bindkey -s "^[o" "nvim^M"
 bindkey -s "^[O" "nvim .^M"
-zstyle ':completion:*' completer _expand_alias _complete _ignored
+zstyle ':completion:*' completer _expand _expand_alias _complete _ignored
+zstyle ':completion:*' fzf-tab true
+zstyle ':completion:*' complete-options true
+zstyle ':completion:*' complete-aliases true
 zstyle ':completion:*' regular true
+zstyle ':completion:*' sort false
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # disable sort when completing `git checkout`
 zstyle ':completion:*:git-checkout:*' sort false
@@ -28,6 +32,8 @@ fi
 zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept
 # switch group using `<` and `>`
 zstyle ':fzf-tab:*' switch-group '<' '>'
+zstyle ':fzf-tab:*' fuzzy-search true
+zstyle ':fzf-tab:*' fzf-flags --height=40% --reverse --info=inline
 
 # export FZF_DEFAULT_OPTS=" \
 # --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
@@ -62,6 +68,7 @@ setopt APPEND_HISTORY
 setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
+setopt COMPLETE_ALIASES
 
 # FOR CLIPBOARD STUFF
 export DISPLAY=:1
