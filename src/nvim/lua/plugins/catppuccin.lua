@@ -43,7 +43,7 @@ return {
         telescope = true,
         fzf = true,
         snacks = {
-          enabled = true,
+          enabled = false,
           indent_scope_color = "lavender",
         },
         treesitter = true,
