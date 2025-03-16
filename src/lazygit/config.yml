@@ -14,6 +14,7 @@ customCommands:
       git commit -m "$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }' | sed '/./s/$/: /'){{ .Form.Message }}"
     description: "Custom commit message"
 gui:
+  border: "single"
   theme:
     activeBorderColor:
       - "#b4befe"
