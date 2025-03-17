@@ -160,6 +160,9 @@ if is_binary git; then
       branch_name=${branch_name#remotes/origin/}
       git checkout "$branch_name"
     else
+      if [[-z "$branch_name" ]]; then
+        branch_name=$(fzf --prompt="Enter branch name: " --height=1 --reverse --no-info --print-query </dev/null | head -1)
+      fi
       local branch_substring="$branch_name"
       local branch_prefix
       branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
