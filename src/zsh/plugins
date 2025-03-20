@@ -6,6 +6,7 @@ if ! is_binary "/usr/local/bin/starship"; then
 fi
 
 STUBBE_ZSH_PLUGS_DIR="$HOME/.stubbe/src/zsh/plugins.d"
+mkdir -p "$STUBBE_ZSH_PLUGS_DIR"
 
 # FZF-TAB
 if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"; then
