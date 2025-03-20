@@ -18,7 +18,7 @@ run_options() {
     "Clear Nvim Cache"
     "Update Zsh Plugins"
   )
-  chosen_option=$(printf "%s\n" "${stb_options[@]}" | fzf --prompt="Select an option: " --height=10 --border --no-info --reverse)
+  chosen_option=$(printf "%s\n" "${stb_options[@]}" | fzf --prompt="Select an option: " --height=10 --border --no-info --reverse --cycle)
 
   echo "Running: $chosen_option"
   case "$chosen_option" in
