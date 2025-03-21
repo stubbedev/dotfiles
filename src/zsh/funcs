@@ -225,7 +225,7 @@ if is_binary git; then
     in_git_repo
     if git pull 2>&1 | grep -q "no tracking information"; then
       local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
-      if [[ -n $remote_branch]]; then
+      if [[ -n $remote_branch ]]; then
         git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
       else
         exit 0
