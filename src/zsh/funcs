@@ -1,7 +1,8 @@
 #!/usr/bin/env zsh
 
 function src-stb-installers {
-  source "$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+  local install_funcs="$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+  is_file $install_funcs && source $install_funcs
 }
 
 function is_binary {
@@ -31,7 +32,7 @@ function is_elevated_shell {
 }
 
 function src_zsh {
-  source "$HOME/.zshrc"
+  is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
 }
 
 if is_binary php; then
@@ -110,9 +111,7 @@ fi
 
 if is_binary git; then
   function gcm {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      return 0
-    fi
+    in_git_repo
 
     commit_prefix="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
     if [[ "$commit_prefix" = "" ]]; then
@@ -129,9 +128,7 @@ if is_binary git; then
   }
 
   function gp {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      return 0
-    fi
+    in_git_repo
 
     banned_branches=("develop" "staging" "production" "master" "main")
     branch_name="$(git branch --show-current)"
@@ -149,12 +146,9 @@ if is_binary git; then
   }
 
   function gcb {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      return 0
-    fi
+    in_git_repo
 
-    local branch_name
-    branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
+    local branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
 
     if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       branch_name=${branch_name#remotes/origin/}
@@ -164,8 +158,7 @@ if is_binary git; then
         branch_name=$(fzf --prompt="Enter ticket number: " --height=1 --reverse --no-info --print-query </dev/null | head -1)
       fi
       local branch_substring="$branch_name"
-      local branch_prefix
-      branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
+      local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
 
       local new_branch_name
       branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
@@ -184,9 +177,7 @@ if is_binary git; then
   }
 
   function ga {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      return 0
-    fi
+    in_git_repo
 
     untracked_files=$(git status --porcelain | grep "??" | awk '{print $2}')
     tracked_files=$(git status --porcelain | grep -v "??" | awk '{print $2}')
@@ -196,7 +187,6 @@ if is_binary git; then
 
       if [[ ${#tracked_selection[@]} -gt 0 ]]; then
         for file in "${tracked_selection[@]}"; do
-          echo "|$file|"
           git add $file -p
         done
       fi
@@ -213,8 +203,19 @@ if is_binary git; then
     fi
   }
 
-  function gd {
+  function gsd {
     git diff
+  }
+  function gd {
+    in_git_repo
+    local current_branch="$(git branch --show-current)"
+    local remote_branch
+    if [[ -z "$1" ]]; then
+      remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
+    else
+      remote_branch="$1"
+    fi
+    git diff $current_branch..$remote_branch --color
   }
   function gst {
     git status
@@ -246,6 +247,11 @@ if is_binary git; then
   function gw {
     git stash
     git stash clear
+  }
+  function in_git_repo {
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      return 0
+    fi
   }
 fi
 
@@ -324,7 +330,7 @@ if is_binary uv; then
     if ! is_file "$PWD/venv/bin/activate"; then
       uv venv ./venv
     fi
-    source "$PWD/venv/bin/activate"
+    is_file "$PWD/venv/bin/activate" && source "$PWD/venv/bin/activate"
   }
 fi
 
