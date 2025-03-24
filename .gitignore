@@ -1,5 +1,4 @@
 bin/nvim
-src/go
 src/zsh/plugins.d
 src/zsh/history
 *.json
