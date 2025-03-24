@@ -34,7 +34,7 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.editor.refactoring" },
     { import = "lazyvim.plugins.extras.editor.fzf" },
     { import = "lazyvim.plugins.extras.ui.treesitter-context" },
-    -- { import = "lazyvim.plugins.extras.editor.snacks_picker" },
+    { import = "lazyvim.plugins.extras.ai.copilot" },
     { import = "plugins" },
   },
   defaults = {
