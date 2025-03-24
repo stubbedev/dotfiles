@@ -132,7 +132,7 @@ if is_binary git; then
     else
       commit_prompt="Message for $commit_prefix: "
     fi
-    commit_message=$(fzf --height=1 --reverse --no-info --print-query --prompt="$commit_prompt" </dev/null | head -1)
+    commit_message=$(fzf --height=1 --reverse --no-info --print-query --prompt="$commit_prompt" </dev/null)
     if [[ "$commit_prefix" = "" ]]; then
       git commit -m "$commit_message"
     else
@@ -161,20 +161,20 @@ if is_binary git; then
   function gcb {
     in_git_repo
 
-    local branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
+    local branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
 
     if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       branch_name=${branch_name#remotes/origin/}
       git checkout "$branch_name"
     else
       if [[ -z "$branch_name" ]]; then
-        branch_name=$(fzf --prompt="Enter ticket number: " --height=1 --reverse --no-info --print-query </dev/null | head -1)
+        branch_name=$(fzf --prompt="Enter ticket number: " --height=1 --reverse --no-info --print-query </dev/null)
       fi
       local branch_substring="$branch_name"
       local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
 
       local new_branch_name
-      branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
+      branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null)
 
       if [[ -n "$branch_suffix" ]]; then
         branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
@@ -241,7 +241,7 @@ if is_binary git; then
     local current_branch="$(git branch --show-current)"
     local remote_branch
     if [[ -z "$1" ]]; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
+      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
     else
       local remote_branch="$1"
     fi
@@ -253,7 +253,7 @@ if is_binary git; then
   function gg {
     in_git_repo
     if git pull 2>&1 | grep -q "no tracking information"; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
+      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
       if [[ -n $remote_branch ]]; then
         git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
       else
@@ -262,12 +262,12 @@ if is_binary git; then
     fi
     git pull
   }
-  function GG {
+  function gga {
     in_git_repo
     local git_status=$(git pull 2>&1)
     local missing_upstream=$(echo "$git_status" | grep -q "no tracking information")
     if $missing_upstream; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
+      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
       if [[ -n $remote_branch ]]; then
         git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
       else
@@ -279,7 +279,7 @@ if is_binary git; then
   function gf {
     git fetch
   }
-  function GF {
+  function gfa {
     git fetch --all
   }
   function ghr {
@@ -293,6 +293,9 @@ if is_binary git; then
   }
   function grn {
     git reset --soft HEAD~"$1"
+  }
+  function gsa {
+    git stash
   }
   function gw {
     git stash
@@ -318,46 +321,6 @@ fi
 if is_binary ss; then
   function pid_on_port {
     ss -lptn " sport = :$1"
-  }
-fi
-
-if is_binary curl; then
-  function color_swatches {
-    curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
-  }
-fi
-
-if is_binary tmux; then
-  function tls {
-    bash -c "tmux ls"
-  }
-
-  function ta {
-    if [ -z "$1" ]; then
-      tmux attach
-    else
-      tmux attach -t "$1"
-    fi
-  }
-fi
-
-if is_binary screen; then
-  function tx {
-    session_name="$(git symbolic-ref --short HEAD 2>/dev/null)"
-    case $1 in
-    l | ls)
-      screen -ls
-      ;;
-    n | new)
-      screen -S "$session_name"
-      ;;
-    j | join)
-      screen -r "$session_name"
-      ;;
-    *)
-      screen "$@"
-      ;;
-    esac
   }
 fi
 
