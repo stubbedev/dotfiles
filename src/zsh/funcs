@@ -193,24 +193,40 @@ if is_binary git; then
     in_git_repo
 
     untracked_files=$(git status --porcelain | grep "??" | awk '{print $2}')
-    tracked_files=$(git status --porcelain | grep -v "??" | awk '{print $2}')
+    tracked_files=$(git status --porcelain | awk '/^.M|^MM|^R.M/ {print $2}' | sort -u)
 
-    if [[ ${tracked_files[@]} ]]; then
-      tracked_selection=($(printf "%s\n" ${tracked_files[@]} | fzf --multi --preview='bat --style=numbers --color=always {}' --bind "tab:toggle" --bind 'enter:accept' --exit-0 | awk '{for(i=1; i<=NF; i++) print $i}'))
+    if [[ -n "$tracked_files" ]]; then
+      # Store fzf output in a variable first
+      tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
+        --preview='git diff --color=always --minimal --word-diff=color {}' \
+        --preview-window='up:90%' \
+        --bind "tab:toggle" \
+        --bind 'enter:accept' \
+        --exit-0)
 
-      if [[ ${#tracked_selection[@]} -gt 0 ]]; then
+      # Only proceed if selection is not empty
+      if [[ -n "$tracked_selected" ]]; then
+        tracked_selection=($(echo "$tracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
         for file in "${tracked_selection[@]}"; do
-          git add $file -p
+          git add "$file" -p
         done
       fi
     fi
 
-    if [[ ${untracked_files[@]} ]]; then
-      untracked_selection=($(printf "%s\n" ${untracked_files[@]} | fzf --multi --preview='bat --style=numbers --color=always {}' --bind "tab:toggle" --bind 'enter:accept' --exit-0 | awk '{for(i=1; i<=NF; i++) print $i}'))
+    if [[ -n "$untracked_files" ]]; then
+      # Store fzf output in a variable first
+      untracked_selected=$(printf "%s\n" $untracked_files | fzf --multi \
+        --preview='bat --style=numbers --color=always --line-range :20 {}' \
+        --preview-window='up:90%' \
+        --bind "tab:toggle" \
+        --bind 'enter:accept' \
+        --exit-0)
 
-      if [[ ${#untracked_selection[@]} -gt 0 ]]; then
+      # Only proceed if selection is not empty
+      if [[ -n "$untracked_selected" ]]; then
+        untracked_selection=($(echo "$untracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
         for file in "${untracked_selection[@]}"; do
-          git add $file
+          git add "$file"
         done
       fi
     fi
