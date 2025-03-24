@@ -20,8 +20,20 @@ function is_directory {
   [[ -d "$1" ]]
 }
 
+function are_directory {
+  for arg in "$@"; do
+    is_directory $arg
+  done
+}
+
 function is_file {
   [[ -f "$1" ]]
+}
+
+function are_file {
+  for arg in "$@"; do
+    is_file $arg
+  done
 }
 
 function has_string {
@@ -207,6 +219,7 @@ if is_binary git; then
   function gsd {
     git diff
   }
+
   function gd {
     in_git_repo
     local current_branch="$(git branch --show-current)"
@@ -286,12 +299,6 @@ else
   }
 fi
 
-if is_binary eza; then
-  alias ls='eza'
-else
-  alias ls='ls --color'
-fi
-
 if is_binary ss; then
   function pid_on_port {
     ss -lptn " sport = :$1"
@@ -302,14 +309,6 @@ if is_binary curl; then
   function color_swatches {
     curl -s "https://gist.githubusercontent.com/HaleTom/89ffe32783f89f403bba96bd7bcd1263/raw/e50a28ec54188d2413518788de6c6367ffcea4f7/print256colours.sh" | bash
   }
-fi
-
-if is_binary nvim; then
-  alias vim='nvim'
-  alias vi='nvim'
-  alias nano='nvim'
-  alias ed='nvim'
-  alias svim='nvim -u NONE'
 fi
 
 if is_binary tmux; then

@@ -1,14 +1,35 @@
 #!/usr/bin/env zsh
 
+# INFO: Default Aliases
 alias la='ls -laF'
 alias ff='find . -type f -name'
 alias h='history'
-alias hgrep="fc -El 0 | grep"
 alias p='ps -f'
 alias sortnr='sort -n -r'
 alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
-alias pbcopy='xclip -selection clipboard'
-alias pbpaste='xclip -selection clipboard -o'
-alias gzcat="gzip -dc"
+
+# INFO: Conditional Aliases
+if is_binary xclip; then
+  alias pbcopy='xclip -selection clipboard'
+  alias pbpaste='xclip -selection clipboard -o'
+fi
+
+if is_binary gzip; then
+  alias gzcat="gzip -dc"
+fi
+
+if is_binary nvim; then
+  alias vim='nvim'
+  alias vi='nvim'
+  alias nano='nvim'
+  alias ed='nvim'
+  alias svim='nvim -u NONE'
+fi
+
+if is_binary eza; then
+  alias ls='eza'
+else
+  alias ls='ls --color'
+fi
