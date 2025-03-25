@@ -200,6 +200,8 @@ if is_binary git; then
       tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
         --preview='git diff --color=always --minimal --word-diff=color {}' \
         --preview-window='up:90%' \
+        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
+        --header="Add tracked files" \
         --bind "tab:toggle" \
         --bind 'enter:accept' \
         --exit-0)
@@ -218,6 +220,8 @@ if is_binary git; then
       untracked_selected=$(printf "%s\n" $untracked_files | fzf --multi \
         --preview='bat --style=numbers --color=always --line-range :20 {}' \
         --preview-window='up:90%' \
+        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
+        --header="Add untracked files" \
         --bind "tab:toggle" \
         --bind 'enter:accept' \
         --exit-0)
