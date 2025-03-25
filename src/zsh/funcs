@@ -245,7 +245,7 @@ if is_binary git; then
     local current_branch="$(git branch --show-current)"
     local remote_branch
     if [[ -z "$1" ]]; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
+      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
     else
       local remote_branch="$1"
     fi
@@ -257,7 +257,7 @@ if is_binary git; then
   function gg {
     in_git_repo
     if git pull 2>&1 | grep -q "no tracking information"; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
+      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
       if [[ -n $remote_branch ]]; then
         git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
       else
@@ -271,7 +271,7 @@ if is_binary git; then
     local git_status=$(git pull 2>&1)
     local missing_upstream=$(echo "$git_status" | grep -q "no tracking information")
     if $missing_upstream; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
+      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
       if [[ -n $remote_branch ]]; then
         git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
       else
