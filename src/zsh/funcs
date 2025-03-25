@@ -218,7 +218,7 @@ if is_binary git; then
     if [[ -n "$untracked_files" ]]; then
       # Store fzf output in a variable first
       untracked_selected=$(printf "%s\n" $untracked_files | fzf --multi \
-        --preview='bat --style=numbers --color=always --line-range :20 {}' \
+        --preview='bat --style=numbers --color=always {}' \
         --preview-window='up:90%' \
         --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
         --header="Add untracked files" \
