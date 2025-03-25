@@ -161,20 +161,20 @@ if is_binary git; then
   function gcb {
     in_git_repo
 
-    local branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5)
+    local branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
 
     if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
       branch_name=${branch_name#remotes/origin/}
       git checkout "$branch_name"
     else
       if [[ -z "$branch_name" ]]; then
-        branch_name=$(fzf --prompt="Enter ticket number: " --height=1 --reverse --no-info --print-query </dev/null)
+        branch_name=$(fzf --prompt="Enter ticket number: " --height=1 --reverse --no-info --print-query </dev/null | head -1)
       fi
       local branch_substring="$branch_name"
       local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
 
       local new_branch_name
-      branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null)
+      branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
 
       if [[ -n "$branch_suffix" ]]; then
         branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
