@@ -196,17 +196,16 @@ if is_binary git; then
     tracked_files=$(git status --porcelain | awk '/^.M|^MM|^R.M/ {print $2}' | sort -u)
 
     if [[ -n "$tracked_files" ]]; then
-      # Store fzf output in a variable first
       tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
-        --preview='git diff --color=always --minimal --word-diff=color {}' \
-        --preview-window='up:90%' \
+        --preview='git diff --color=always {} | bat --style=numbers --color=always' \
+        --preview-window='up:90%:wrap:nohidden' \
         --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
         --header="Add tracked files" \
         --bind "tab:toggle" \
         --bind 'enter:accept' \
+        --no-info \
         --exit-0)
 
-      # Only proceed if selection is not empty
       if [[ -n "$tracked_selected" ]]; then
         tracked_selection=($(echo "$tracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
         for file in "${tracked_selection[@]}"; do
@@ -216,17 +215,16 @@ if is_binary git; then
     fi
 
     if [[ -n "$untracked_files" ]]; then
-      # Store fzf output in a variable first
       untracked_selected=$(printf "%s\n" $untracked_files | fzf --multi \
         --preview='bat --style=numbers --color=always {}' \
-        --preview-window='up:90%' \
+        --preview-window='up:90%:wrap:nohidden' \
         --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
         --header="Add untracked files" \
         --bind "tab:toggle" \
         --bind 'enter:accept' \
+        --no-info \
         --exit-0)
 
-      # Only proceed if selection is not empty
       if [[ -n "$untracked_selected" ]]; then
         untracked_selection=($(echo "$untracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
         for file in "${untracked_selection[@]}"; do
@@ -316,6 +314,59 @@ if is_binary bat; then
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
   }
+
+  function batshebang {
+    local file="$1"
+    shift
+
+    # If the file has an extension, use bat directly
+    if [[ "$file" == *.* ]]; then
+      bat "$file" "$@"
+      return
+    fi
+
+    # Check if file exists and is readable
+    if [[ ! -r "$file" ]]; then
+      bat "$file" "$@"
+      return
+    fi
+
+    # Read the first line of the file
+    local firstline=$(head -n 1 "$file")
+
+    # Check if the first line starts with #!
+    if [[ "$firstline" == \#\!* ]]; then
+      # Extract the last word from the shebang line
+      local interpreter=$(echo "$firstline" | awk '{print $NF}')
+      local language=""
+
+      # Get just the basename of the interpreter without path
+      interpreter=$(basename "$interpreter")
+
+      # Map common interpreters to languages
+      case "$interpreter" in
+      python* | python2 | python3) language="python" ;;
+      ruby) language="ruby" ;;
+      perl) language="perl" ;;
+      bash | sh | zsh | ksh) language="bash" ;;
+      node | nodejs) language="javascript" ;;
+      php) language="php" ;;
+      R) language="r" ;;
+      lua) language="lua" ;;
+      *) language="" ;; # Fall back to bat's auto-detection
+      esac
+
+      if [[ -n "$language" ]]; then
+        bat --language="$language" "$file" "$@"
+      else
+        bat "$file" "$@"
+      fi
+    else
+      # No shebang, use bat's default detection
+      bat "$file" "$@"
+    fi
+  }
+
 else
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat

@@ -17,7 +17,7 @@ if is_binary xclip; then
 fi
 
 if is_binary gzip; then
-  alias gzcat="gzip -dc"
+  alias gzcat='gzip -dc'
 fi
 
 if is_binary nvim; then
@@ -32,4 +32,8 @@ if is_binary eza; then
   alias ls='eza'
 else
   alias ls='ls --color'
+fi
+
+if is_binary bat; then
+  alias bat='batshebang'
 fi
