@@ -88,6 +88,10 @@
   "sway/mode": {
     "format": "<span style=\"italic\">{}</span>"
   },
+  "hyprland/submap": {
+    "format": " ",
+    "tooltip": false
+  },
   "sway/scratchpad": {
     "format": "{icon} {count}",
     "show-empty": false,
