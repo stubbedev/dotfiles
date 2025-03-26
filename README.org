@@ -22,9 +22,6 @@ This is a collection of personal dotfiles and utilities I use on linux. They are
   |     +--fonts
   |     +--i3
   |     +--tmux
-  |     +--go
-  |        +--packages
-  |           +--bin
   #+end_src
 
   The bin directory contains =stb= and =stb-install= which are the 2 utility binaries. It may also contain other utilities binaries if directly included in the repo.
