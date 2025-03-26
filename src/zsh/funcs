@@ -146,7 +146,6 @@ if is_binary git; then
         --bind "tab:toggle" \
         --bind 'enter:accept' \
         --no-info \
-        --select-1 \
         --exit-0)
 
       if [[ -n "$tracked_selected" ]]; then
@@ -167,7 +166,6 @@ if is_binary git; then
           --bind "tab:toggle" \
           --bind 'enter:accept' \
           --no-info \
-          --select-1 \
           --exit-0)
 
       if [[ -n "$untracked_selected" ]]; then
