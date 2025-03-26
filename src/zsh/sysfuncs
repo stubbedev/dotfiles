@@ -1,0 +1,45 @@
+#!/usr/bin/env zsh
+
+function is_binary {
+  command -v "$1" &>/dev/null
+}
+
+function are_binary {
+  for arg in "$@"; do
+    is_binary $arg
+  done
+}
+
+function is_directory {
+  [[ -d "$1" ]]
+}
+
+function are_directory {
+  for arg in "$@"; do
+    is_directory $arg
+  done
+}
+
+function is_file {
+  [[ -f "$1" ]]
+}
+
+function are_file {
+  for arg in "$@"; do
+    is_file $arg
+  done
+}
+
+function has_string {
+  grep -q "$2" "$1"
+}
+
+function is_elevated_shell {
+  [[ "$EUID" -eq 0 ]]
+}
+
+function to_lines {
+  local array=("$@")
+  printf "%s\n" "${array[@]}"
+}
+
