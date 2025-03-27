@@ -143,6 +143,7 @@ if is_binary git; then
         --preview-window='up:90%:wrap:nohidden' \
         --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
         --header="Add tracked files" \
+        --bind 'shift-tab:toggle-all' \
         --bind "tab:toggle" \
         --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
         --no-info \
@@ -163,6 +164,7 @@ if is_binary git; then
           --preview-window='up:90%:wrap:nohidden' \
           --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
           --header="Add untracked files" \
+          --bind 'shift-tab:toggle-all' \
           --bind "tab:toggle" \
           --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
           --no-info \
