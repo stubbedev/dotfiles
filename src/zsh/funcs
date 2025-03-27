@@ -479,6 +479,13 @@ if is_binary git; then
     fi
   }
 
+  function gcr {
+    # TODO: Implement Git Create Release Function
+    # $(git tag) -> get the latest tag
+    # choose fix, minor, major
+    # structure -> release/X.Y.Z
+  }
+
   function ga {
     in_git_repo
 
