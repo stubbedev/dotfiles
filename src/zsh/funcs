@@ -47,33 +47,68 @@ if is_binary git; then
       "master"
       "main"
     )
-    local branch_name="$(git branch --show-current)"
+    local branch_name=$(git branch --show-current)
 
     if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
-      echo "You are about to push to a protected branch [$branch_name]."
-
       local choice=$(echo -e "No\nYes" |
-        fzf --no-input \
+        fzf \
+          --no-input \
+          --header="[WARN] Protected Branch: Confirm Push" \
           --height=2 \
           --no-info \
-          --select-1 \
           --exit-0)
 
       if [[ "$choice" != "Yes" ]]; then
-        echo "Push aborted on $branch_name"
-        return 1
+        return 0
       fi
     fi
+
+    git branch --set-upstream-to="origin/$branch_name"
     git push origin "$branch_name"
   }
+  function gcr {
+    current_tag=$(git tag --sort=version:refname | awk '{print $1}' | tail -n 1)
+    local increment_action=$(echo -e "Major\nMinor\nPatch" |
+      fzf --prompt="(Enter: select action)" \
+        --height=3 \
+        --no-input \
+        --no-info)
 
+    local major=$(echo "$current_tag" | grep -oP '^\d+')
+    local minor=$(echo "$current_tag" | grep -oP '(?<=\.)\d+(?=\.)')
+    local patch=$(echo "$current_tag" | grep -oP '\d+$')
+
+    case $increment_action in
+    "Major")
+      major=$((major + 1))
+      ;;
+    "Minor")
+      minor=$((minor + 1))
+      ;;
+    "Patch")
+      patch=$((patch + 1))
+      ;;
+    *)
+      return 0
+      ;;
+    esac
+    local release_branch="$major.$minor.$patch"
+    git checkout -b "release/$release_branch"
+  }
   function gcb {
     in_git_repo
 
-    local branch_name=$(git branch --all |
-      sed -E 's/^[ *]*//' |
-      fzf --prompt="Search branch: " \
-        --query="" \
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
+    fi
+
+    local git_branches=$(git branch --all | awk '{print $1}')
+
+    local branch_name=$(echo -e $git_branches |
+      fzf --prompt="(Enter: checkout branch, Ctrl+C: create branch)" \
+        --query="$initial_query" \
+        --bind 'enter:accept' \
         --select-1 \
         --exit-0 \
         --print-query \
@@ -81,44 +116,52 @@ if is_binary git; then
         --height=5 |
       tail -n1)
 
-    if [[ -n "$branch_name" && $(git branch --all |
-      sed -E 's/^[ *]*//' |
-      grep -Fx "$branch_name") ]]; then
-      local branch_name=${branch_name#remotes/origin/}
+    if [[ -n "$branch_name" && $(echo -e $git_branches | grep -Fx "$branch_name") ]]; then
+      branch_name=${branch_name#remotes/origin/}
       git checkout "$branch_name"
-    else
-      if [[ -z "$branch_name" ]]; then
-        local branch_name=$(fzf --prompt="Enter ticket number: " \
-          --height=1 \
-          --reverse \
-          --no-info \
-          --print-query </dev/null |
-          head -1)
-      fi
-      local branch_substring="$branch_name"
-      local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
-        fzf --prompt="Select branch prefix: " \
-          --height=5 \
-          --no-info)
+      return 0
+    fi
 
-      local new_branch_name
-      local branch_suffix=$(fzf --height=1 \
+    if [[ -z "$branch_name" ]]; then
+      branch_name=$(fzf \
+        --prompt="(Ticket Number: ABC-1234, Tag Number: 4.3.21)" \
+        --height=1 \
         --reverse \
         --no-info \
-        --print-query \
-        --prompt="Enter your branch suffix: " </dev/null |
+        --print-query |
         head -1)
+    fi
 
-      if [[ -n "$branch_suffix" ]]; then
-        local branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
-        local new_branch_name="$branch_prefix/$branch_substring-$branch_suffix"
-      else
-        local new_branch_name="$branch_prefix/$branch_substring"
-      fi
+    local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
+    if [[ $branch_name =~ $tag_mask ]]; then
+      git checkout -b "release/$branch_name"
+      return 0
+    fi
 
-      if [[ "$new_branch_name" != "/" ]]; then
-        git checkout -b "$new_branch_name"
-      fi
+    local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
+      fzf --prompt="(Enter: select prefix)" \
+        --height=3 \
+        --no-input \
+        --no-info)
+
+    local new_branch_name
+    local branch_suffix=$(fzf \
+      --height=1 \
+      --reverse \
+      --no-info \
+      --print-query \
+      --prompt="(Enter: select suffix)" </dev/null |
+      head -1)
+
+    if [[ -n "$branch_suffix" ]]; then
+      branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+      new_branch_name="$branch_prefix/$branch_name-$branch_suffix"
+    else
+      new_branch_name="$branch_prefix/$branch_name"
+    fi
+
+    if [[ "$new_branch_name" != "/" ]]; then
+      git checkout -b "$new_branch_name"
     fi
   }
 
@@ -126,7 +169,8 @@ if is_binary git; then
     in_git_repo
 
     local untracked_files=$(git status --porcelain | grep "??" | awk '{print $2}')
-    local tracked_files=$(git status --porcelain | awk '/^.M|^MM|^R.M/ {print $2}' | sort -u)
+    local tracked_files=$(git status --porcelain | awk '/^.M|^MM/ {print $2}' | sort -u)
+    local deleted_files=$(git status --porcelain | awk '/^R.M/ {print $2}')
 
     if [[ -n "$tracked_files" ]]; then
       local tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
@@ -144,6 +188,27 @@ if is_binary git; then
         local tracked_selection=($(echo "$tracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
         for file in "${tracked_selection[@]}"; do
           git add "$file" -p
+        done
+      fi
+    fi
+
+    if [[ -n "$deleted_files" ]]; then
+      local deleted_selected=$(printf "%s\n" $deleted_files |
+        fzf --multi \
+          --preview='bat --style=numbers --color=always {}' \
+          --preview-window='up:90%:wrap:nohidden' \
+          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
+          --header="Add deleted files" \
+          --bind 'shift-tab:toggle-all' \
+          --bind "tab:toggle" \
+          --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
+          --no-info \
+          --exit-0)
+
+      if [[ -n "$deleted_selected" ]]; then
+        local deleted_selection=($(echo "$deleted_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
+        for file in "${deleted_selection[@]}"; do
+          git add "$file"
         done
       fi
     fi
@@ -176,22 +241,24 @@ if is_binary git; then
 
   function gd {
     in_git_repo
-    local current_branch="$(git branch --show-current)"
-    local remote_branch
-    if [[ -z "$1" ]]; then
-      local remote_branch=$(git branch --all |
-        sed -E 's/^[ *]*//' |
-        fzf --prompt="Search branch: " \
-          --query="" \
-          --select-1 \
-          --exit-0 \
-          --print-query \
-          --no-info \
-          --height=5 |
-        tail -n1)
-    else
-      local remote_branch="$1"
+
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
     fi
+
+    local current_branch=$(git branch --show-current)
+    local git_branches=$(git branch --all | awk '{print $1}')
+    local remote_branch=$(echo -e $git_branches |
+      fzf --prompt="(Enter: select comparison branch)" \
+        --query="$initial_query" \
+        --select-1 \
+        --exit-0 \
+        --print-query \
+        --no-info \
+        --height=5 |
+      tail -n1)
+
     git diff $current_branch..$remote_branch --color
   }
   function gst {
@@ -199,46 +266,16 @@ if is_binary git; then
   }
   function gg {
     in_git_repo
-    if git pull 2>&1 | grep -q "no tracking information"; then
-      local remote_branch=$(git branch --all |
-        sed -E 's/^[ *]*//' |
-        fzf --prompt="Search branch: " \
-          --query="" \
-          --select-1 \
-          --exit-0 \
-          --print-query \
-          --no-info \
-          --height=5 |
-        tail -n1)
-      if [[ -n $remote_branch ]]; then
-        git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
-      else
-        exit 0
-      fi
-    fi
+
+    local current_branch=$(git branch --show-current)
+    git branch --set-upstream-to="origin/$current_branch"
     git pull
   }
   function gga {
     in_git_repo
-    local git_status=$(git pull 2>&1)
-    local missing_upstream=$(echo "$git_status" | grep -q "no tracking information")
-    if $missing_upstream; then
-      local remote_branch=$(git branch --all |
-        sed -E 's/^[ *]*//' |
-        fzf --prompt="Search branch: " \
-          --query="" \
-          --select-1 \
-          --exit-0 \
-          --print-query \
-          --no-info \
-          --height=5 |
-        tail -n1)
-      if [[ -n $remote_branch ]]; then
-        git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
-      else
-        exit 0
-      fi
-    fi
+
+    local current_branch=$(git branch --show-current)
+    git branch --set-upstream-to="origin/$current_branch"
     git pull --all
   }
   function gf {
@@ -263,14 +300,14 @@ if is_binary git; then
     git stash
   }
   function gw {
-    git stash
-    git stash clear
+    git stash && git stash clear
   }
   function in_git_repo {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
       return 0
     fi
   }
+
 fi
 
 if is_binary bat; then
@@ -409,203 +446,6 @@ if is_binary pacstall; then
       sudo pacstall "${@}"
       ;;
     esac
-  }
-fi
-
-if is_binary git; then
-  function gcm {
-    in_git_repo
-
-    commit_prefix="$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')"
-    if [[ "$commit_prefix" = "" ]]; then
-      commit_prompt="Message: "
-    else
-      commit_prompt="Message for $commit_prefix: "
-    fi
-    commit_message=$(fzf --height=1 --reverse --no-info --print-query --prompt="$commit_prompt" </dev/null)
-    if [[ "$commit_prefix" = "" ]]; then
-      git commit -m "$commit_message"
-    else
-      git commit -m "$commit_prefix: $commit_message"
-    fi
-  }
-
-  function gp {
-    in_git_repo
-
-    banned_branches=("develop" "staging" "production" "master" "main")
-    branch_name="$(git branch --show-current)"
-
-    if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
-      echo "You are about to push to a protected branch [$branch_name]."
-
-      choice=$(echo -e "No\nYes" | fzf --no-input --height=2 --no-info --select-1 --exit-0)
-      if [[ "$choice" != "Yes" ]]; then
-        echo "Push aborted on $branch_name"
-        return 1
-      fi
-    fi
-    git push origin "$branch_name"
-  }
-
-  function gcb {
-    in_git_repo
-
-    local branch_name=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
-
-    if [[ -n "$branch_name" && $(git branch --all | sed -E 's/^[ *]*//' | grep -Fx "$branch_name") ]]; then
-      branch_name=${branch_name#remotes/origin/}
-      git checkout "$branch_name"
-    else
-      if [[ -z "$branch_name" ]]; then
-        branch_name=$(fzf --prompt="Enter ticket number: " --height=1 --reverse --no-info --print-query </dev/null | head -1)
-      fi
-      local branch_substring="$branch_name"
-      local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" | fzf --prompt="Select branch prefix: " --height=5 --no-info)
-
-      local new_branch_name
-      branch_suffix=$(fzf --height=1 --reverse --no-info --print-query --prompt="Enter your branch suffix: " </dev/null | head -1)
-
-      if [[ -n "$branch_suffix" ]]; then
-        branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
-        new_branch_name="$branch_prefix/$branch_substring-$branch_suffix"
-      else
-        new_branch_name="$branch_prefix/$branch_substring"
-      fi
-
-      if [[ "$new_branch_name" != "/" ]]; then
-        git checkout -b "$new_branch_name"
-      fi
-    fi
-  }
-
-  function gcr {
-    # TODO: Implement Git Create Release Function
-    # $(git tag) -> get the latest tag
-    # choose fix, minor, major
-    # structure -> release/X.Y.Z
-  }
-
-  function ga {
-    in_git_repo
-
-    untracked_files=$(git status --porcelain | grep "??" | awk '{print $2}')
-    tracked_files=$(git status --porcelain | awk '/^.M|^MM|^R.M/ {print $2}' | sort -u)
-
-    if [[ -n "$tracked_files" ]]; then
-      # Store fzf output in a variable first
-      tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
-        --preview='git diff --color=always --minimal --word-diff=color {}' \
-        --preview-window='up:90%' \
-        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
-        --header="Add tracked files" \
-        --bind "tab:toggle" \
-        --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
-        --exit-0)
-
-      # Only proceed if selection is not empty
-      if [[ -n "$tracked_selected" ]]; then
-        tracked_selection=($(echo "$tracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
-        for file in "${tracked_selection[@]}"; do
-          git add "$file" -p
-        done
-      fi
-    fi
-
-    if [[ -n "$untracked_files" ]]; then
-      # Store fzf output in a variable first
-      untracked_selected=$(printf "%s\n" $untracked_files | fzf --multi \
-        --preview='bat --style=numbers --color=always {}' \
-        --preview-window='up:90%' \
-        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
-        --header="Add untracked files" \
-        --bind "tab:toggle" \
-        --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
-        --exit-0)
-
-      # Only proceed if selection is not empty
-      if [[ -n "$untracked_selected" ]]; then
-        untracked_selection=($(echo "$untracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
-        for file in "${untracked_selection[@]}"; do
-          git add "$file"
-        done
-      fi
-    fi
-  }
-
-  function gsd {
-    git diff
-  }
-
-  function gd {
-    in_git_repo
-    local current_branch="$(git branch --show-current)"
-    local remote_branch
-    if [[ -z "$1" ]]; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
-    else
-      local remote_branch="$1"
-    fi
-    git diff $current_branch..$remote_branch --color
-  }
-  function gst {
-    git status
-  }
-  function gg {
-    in_git_repo
-    if git pull 2>&1 | grep -q "no tracking information"; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
-      if [[ -n $remote_branch ]]; then
-        git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
-      else
-        exit 0
-      fi
-    fi
-    git pull
-  }
-  function gga {
-    in_git_repo
-    local git_status=$(git pull 2>&1)
-    local missing_upstream=$(echo "$git_status" | grep -q "no tracking information")
-    if $missing_upstream; then
-      local remote_branch=$(git branch --all | sed -E 's/^[ *]*//' | fzf --prompt="Search branch: " --query="" --select-1 --exit-0 --print-query --no-info --height=5 | tail -n1)
-      if [[ -n $remote_branch ]]; then
-        git branch --set-upstream-to="origin/$remote_branch" "$(git branch --show-current)"
-      else
-        exit 0
-      fi
-    fi
-    git pull --all
-  }
-  function gf {
-    git fetch
-  }
-  function gfa {
-    git fetch --all
-  }
-  function ghr {
-    git reset --hard HEAD~
-  }
-  function ghrn {
-    git reset --hard HEAD~"$1"
-  }
-  function gr {
-    git reset --soft HEAD~
-  }
-  function grn {
-    git reset --soft HEAD~"$1"
-  }
-  function gsa {
-    git stash
-  }
-  function gw {
-    git stash
-    git stash clear
-  }
-  function in_git_repo {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      return 0
-    fi
   }
 fi
 
