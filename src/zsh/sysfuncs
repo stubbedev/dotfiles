@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+# shellcheck disable=SC1091
 
 function is_binary {
   command -v "$1" &>/dev/null
@@ -43,3 +44,11 @@ function to_lines {
   printf "%s\n" "${array[@]}"
 }
 
+function src-stb-installers {
+  local install_funcs="$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
+  is_file $install_funcs && source $install_funcs
+}
+
+function src_zsh {
+  is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
+}

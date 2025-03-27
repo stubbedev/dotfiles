@@ -1,15 +1,6 @@
 #!/usr/bin/env zsh
 # shellcheck disable=SC1091
 
-function src-stb-installers {
-  local install_funcs="$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
-  is_file $install_funcs && source $install_funcs
-}
-
-function src_zsh {
-  is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
-}
-
 if is_binary php; then
   function art {
     if is_file "$PWD/artisan"; then
