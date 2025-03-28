@@ -181,7 +181,7 @@ if is_binary git; then
       local tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
         --preview='git diff --color=always {} | bat --style=numbers --color=always' \
         --preview-window='up:90%:wrap:nohidden' \
-        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection)> " \
+        --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
         --header="Add tracked files" \
         --bind 'shift-tab:toggle-all' \
         --bind "tab:toggle" \
@@ -202,7 +202,7 @@ if is_binary git; then
         fzf --multi \
           --preview='bat --style=numbers --color=always {}' \
           --preview-window='up:90%:wrap:nohidden' \
-          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection)> " \
+          --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
           --header="Add deleted files" \
           --bind 'shift-tab:toggle-all' \
           --bind "tab:toggle" \
@@ -223,7 +223,7 @@ if is_binary git; then
         fzf --multi \
           --preview='bat --style=numbers --color=always {}' \
           --preview-window='up:90%:wrap:nohidden' \
-          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection)> " \
+          --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
           --header="Add untracked files" \
           --bind 'shift-tab:toggle-all' \
           --bind "tab:toggle" \
