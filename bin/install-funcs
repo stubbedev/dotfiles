@@ -371,6 +371,7 @@ function conf_git {
     git config --global core.excludesfile ~/.gitignore
     git config --global push.autoSetupRemote true
     git config --global advice.setUpstreamFailure false
+    git config --global core.editor "$(which nvim)"
   fi
 }
 function conf_dunst {
