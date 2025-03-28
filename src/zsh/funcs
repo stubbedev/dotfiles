@@ -17,12 +17,13 @@ if is_binary git; then
   function gcm {
     in_git_repo
 
+    local commit_prompt
     local commit_prefix=$(git branch --show-current |
       awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')
     if [[ "$commit_prefix" = "" ]]; then
-      local commit_prompt="Message: "
+      commit_prompt="(Enter: commit message)> "
     else
-      local commit_prompt="Message for $commit_prefix: "
+      commit_prompt="(Enter: commit message [$commit_prefix])> "
     fi
     local commit_message=$(fzf --height=1 \
       --reverse \
@@ -69,7 +70,7 @@ if is_binary git; then
   function gcr {
     current_tag=$(git tag --sort=version:refname | awk '{print $1}' | tail -n 1)
     local increment_action=$(echo -e "Major\nMinor\nPatch" |
-      fzf --prompt="(Enter: select action)" \
+      fzf --prompt="(Enter: select action)> " \
         --height=3 \
         --no-input \
         --no-info)
@@ -106,7 +107,7 @@ if is_binary git; then
     local git_branches=$(git branch --all | awk '{print $1}')
 
     local branch_name=$(echo -e $git_branches |
-      fzf --prompt="(Enter: checkout branch, Ctrl+C: create branch)" \
+      fzf --prompt="(Enter: checkout branch, Ctrl+C: create branch)> " \
         --query="$initial_query" \
         --bind 'enter:accept' \
         --select-1 \
@@ -124,12 +125,16 @@ if is_binary git; then
 
     if [[ -z "$branch_name" ]]; then
       branch_name=$(fzf \
-        --prompt="(Ticket Number: ABC-1234, Tag Number: 4.3.21)" \
+        --prompt="(Ticket Number: ABC-1234, Tag Number: 4.3.21)> " \
         --height=1 \
         --reverse \
         --no-info \
         --print-query |
         head -1)
+    fi
+
+    if [[ -z "$branch_name" ]]; then
+      return 0
     fi
 
     local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
@@ -139,7 +144,7 @@ if is_binary git; then
     fi
 
     local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
-      fzf --prompt="(Enter: select prefix)" \
+      fzf --prompt="(Enter: select prefix)> " \
         --height=3 \
         --no-input \
         --no-info)
@@ -150,7 +155,7 @@ if is_binary git; then
       --reverse \
       --no-info \
       --print-query \
-      --prompt="(Enter: select suffix)" </dev/null |
+      --prompt="(Enter: select suffix)> " </dev/null |
       head -1)
 
     if [[ -n "$branch_suffix" ]]; then
@@ -176,7 +181,7 @@ if is_binary git; then
       local tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
         --preview='git diff --color=always {} | bat --style=numbers --color=always' \
         --preview-window='up:90%:wrap:nohidden' \
-        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
+        --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection)> " \
         --header="Add tracked files" \
         --bind 'shift-tab:toggle-all' \
         --bind "tab:toggle" \
@@ -197,7 +202,7 @@ if is_binary git; then
         fzf --multi \
           --preview='bat --style=numbers --color=always {}' \
           --preview-window='up:90%:wrap:nohidden' \
-          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
+          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection)> " \
           --header="Add deleted files" \
           --bind 'shift-tab:toggle-all' \
           --bind "tab:toggle" \
@@ -218,7 +223,7 @@ if is_binary git; then
         fzf --multi \
           --preview='bat --style=numbers --color=always {}' \
           --preview-window='up:90%:wrap:nohidden' \
-          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection): " \
+          --prompt="(Tab: toggle file, Enter: submit selection, Ctrl+C: cancel selection)> " \
           --header="Add untracked files" \
           --bind 'shift-tab:toggle-all' \
           --bind "tab:toggle" \
@@ -250,7 +255,7 @@ if is_binary git; then
     local current_branch=$(git branch --show-current)
     local git_branches=$(git branch --all | awk '{print $1}')
     local remote_branch=$(echo -e $git_branches |
-      fzf --prompt="(Enter: select comparison branch)" \
+      fzf --prompt="(Enter: select comparison branch)> " \
         --query="$initial_query" \
         --select-1 \
         --exit-0 \
