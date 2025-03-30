@@ -77,7 +77,7 @@ if is_binary fzf; then
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target
-      --preview 'bat -n --color=always {}'
+      --preview '[[ -f {} ]] && bat -n --color=always {} || ls -lhA --color=always {}'
       --bind 'ctrl-/:change-preview-window(down|hidden|)'"
     export FZF_CTRL_R_OPTS=""
     export FZF_ALT_C_COMMAND=""
