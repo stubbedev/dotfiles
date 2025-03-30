@@ -180,6 +180,11 @@ if is_binary git; then
   function ga {
     in_git_repo
 
+    local direct_add="$@"
+    if [[ -n "$@" ]]; then
+      git add "$@"
+    fi
+
     local git_status=$(git status --porcelain)
     local untracked_files=$(echo -e "$git_status" | awk '/^\?\?/ {print $2}')
     local tracked_files=$(echo -e "$git_status" | awk '/^.M|^MM|^R.M/ {print $2}' | sort -u)

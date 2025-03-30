@@ -358,3 +358,5 @@ if [ "$funcstack[1]" = "_volta" ]; then
 else
     compdef _volta volta
 fi
+
+compdef _git ga=git-add
