@@ -493,9 +493,3 @@ if is_binary fzf; then
     clear
   }
 fi
-
-if are_binary fzf expressvpn; then
-  function expressvpn_wrapper {
-    echo "WIP"
-  }
-fi
