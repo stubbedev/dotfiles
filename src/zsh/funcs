@@ -20,7 +20,7 @@ if is_binary git; then
     local commit_prompt
     local commit_prefix=$(git branch --show-current |
       awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')
-    if [[ "$commit_prefix" = "" ]]; then
+    if [[ -z "$commit_prefix" ]]; then
       commit_prompt="(Enter: commit message)> "
     else
       commit_prompt="(Enter: commit message [$commit_prefix])> "
