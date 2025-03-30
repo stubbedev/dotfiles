@@ -17,6 +17,11 @@ if is_binary git; then
   function gcm {
     in_git_repo
 
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
+    fi
+
     local commit_prompt
     local commit_prefix=$(git branch --show-current |
       awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')
@@ -25,13 +30,15 @@ if is_binary git; then
     else
       commit_prompt="(Enter: commit message [$commit_prefix])> "
     fi
+
     local commit_message=$(fzf --height=1 \
+      --query="$initial_query" \
       --reverse \
       --no-info \
       --print-query \
       --prompt="$commit_prompt" </dev/null)
 
-    if [[ "$commit_prefix" = "" ]]; then
+    if [[ -z "$commit_prefix" ]]; then
       git commit -m "$commit_message"
     else
       git commit -m "$commit_prefix: $commit_message"
