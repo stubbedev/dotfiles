@@ -4,8 +4,8 @@ function info {
   echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
   SCRIPT_DIR="$PWD"
   export SCRIPT_DIR
+  source "$SCRIPT_DIR/src/zsh/sysfuncs"
   source "$SCRIPT_DIR/bin/install-funcs"
-  source "$SCRIPT_DIR/src/zsh/funcs"
   mkdir -p "$HOME/.ssh/"
   installer_prompt
 }

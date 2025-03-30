@@ -44,7 +44,7 @@ function to_lines {
   printf "%s\n" "${array[@]}"
 }
 
-function src-stb-installers {
+function src_stb {
   local install_funcs="$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
   is_file $install_funcs && source $install_funcs
 }

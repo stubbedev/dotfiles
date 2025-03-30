@@ -85,7 +85,6 @@ function install_toolchain_reliant_binaries {
   rust_deps
   go_deps
   volta_deps
-  # astral_deps
   src_zsh
 }
 
@@ -177,9 +176,6 @@ function go_deps {
 function volta_deps {
   volta install node npm
   volta install yarn deno bun
-}
-function astral_deps {
-  uv tool install --python 3.12 posting
 }
 
 # INFO: Non-Toolchain dependent

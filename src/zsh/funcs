@@ -251,6 +251,8 @@ if is_binary git; then
         done
       fi
     fi
+
+    git status --short
   }
 
   function gsd {
