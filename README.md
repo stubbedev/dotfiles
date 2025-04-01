@@ -3,7 +3,6 @@
 <!--toc:start-->
 - [STUBBEDEV DOTFILES](#stubbedev-dotfiles)
   - [STRUCTURE](#structure)
-  - [CONTENT](#content)
   - [INSTALLATION](#installation)
 <!--toc:end-->
 
@@ -62,23 +61,6 @@ The structure is as follows:
 The bin directory contains `stb` and `stb-install` which are the 2 utility binaries. It may also contain other utilities binaries if directly included in the repo.
 
 In the `src` directory we find various applications, each with their own directory. If an application such as `zsh` or `golang` install more packages, they are placed in a child directory of that plugin.
-
-## CONTENT
-
-The main applications provided are:
-
-- Terminal emulator.
-- Nvim binary.
-- Nvim config.
-- Tmux config.
-- i3 config.
-- Ligature Nerd Font.
-
-This is the stuff I normally set up on any machine I work on.
-
-Note that there are some things you will have to install manually, if you get errors.
-Nvim for example may require fuselib2 to be on your system.
-Tmux or Zsh may not come preinstalled on your system.
 
 ## INSTALLATION
 
