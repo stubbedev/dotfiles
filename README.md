@@ -1,26 +1,62 @@
 # STUBBEDEV DOTFILES
 
+<!--toc:start-->
+- [STUBBEDEV DOTFILES](#stubbedev-dotfiles)
+  - [STRUCTURE](#structure)
+  - [CONTENT](#content)
+  - [INSTALLATION](#installation)
+<!--toc:end-->
+
 This is a collection of personal dotfiles and utilities I use on linux. They are bundled as an installer and a maintenance utility.
 
 ## STRUCTURE
+
 The dotfiles and utilities are stored and applied in a way where they try to be as self contained as possible.
 The main way I try to achieve this is by creating a directory `~/.stubbe` and symlinking this git repository to that path.
 This means that all settings should be removed together with the utils from your system, if you delete the repo.
 
 The structure is as follows:
-```
-$HOME
-|
-+--.stubbe
-|  +--bin
-|  +--src
-|     +--zsh
-|        +--plugins.d
-|     +--nvim
-|     +--st
-|     +--fonts
-|     +--i3
-|     +--tmux
+
+```tree
+.stubbe/
+├── bin/
+│   ├── scripts/
+│   ├── utils/
+│   ├── fzf-tmux-project-picker*
+│   ├── fzf-tmux-session-picker*
+│   ├── install-funcs*
+│   ├── stb*
+│   ├── stb-install*
+│   ├── tmux-lazy-docker*
+│   ├── tmux-lazy-git*
+│   ├── tmux-new-session*
+│   ├── tmux-new-temp-session*
+│   └── tmux-system-monitor*
+├── src/
+│   ├── alacritty/
+│   ├── btop/
+│   ├── dunst/
+│   ├── fonts/
+│   ├── go/
+│   ├── hypr/
+│   ├── icons/
+│   ├── ideavim/
+│   ├── keyd/
+│   ├── lazygit/
+│   ├── nvim/
+│   ├── picom/
+│   ├── regolith/
+│   ├── regolith-look/
+│   ├── screenlayout/
+│   ├── starship/
+│   ├── sway/
+│   ├── tmux/
+│   ├── wallpapers/
+│   ├── waybar/
+│   ├── wezterm/
+│   ├── xmodmap/
+│   └── zsh/
+└── README.md
 ```
 
 The bin directory contains `stb` and `stb-install` which are the 2 utility binaries. It may also contain other utilities binaries if directly included in the repo.
@@ -28,7 +64,9 @@ The bin directory contains `stb` and `stb-install` which are the 2 utility binar
 In the `src` directory we find various applications, each with their own directory. If an application such as `zsh` or `golang` install more packages, they are placed in a child directory of that plugin.
 
 ## CONTENT
+
 The main applications provided are:
+
 - Terminal emulator.
 - Nvim binary.
 - Nvim config.
@@ -43,6 +81,7 @@ Nvim for example may require fuselib2 to be on your system.
 Tmux or Zsh may not come preinstalled on your system.
 
 ## INSTALLATION
+
 In order to install the utils and config, you simply need to run the following command:
 
 `git clone --depth 1 git@github.com:stubbedev/dotfiles.git && cd dotfiles && ./bin/stb-install`
