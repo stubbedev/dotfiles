@@ -187,7 +187,7 @@ if is_binary git; then
 
     local git_status=$(git status --porcelain)
     local untracked_files=$(echo -e "$git_status" | awk '/^\?\?/ {print $2}')
-    local tracked_files=$(echo -e "$git_status" | awk '/^.M|^MM|^R.M/ {print $2}' | sort -u)
+    local tracked_files=$(echo -e "$git_status" | awk '/^.M|^MM|^R.M/ {if ($4 != "") print $4; else print $2}' | sort -u)
     local deleted_files=$(echo -e "$git_status" | awk '/^.D/ {print $2}')
 
     if [[ -n "$tracked_files" ]]; then
@@ -234,7 +234,7 @@ if is_binary git; then
     if [[ -n "$untracked_files" ]]; then
       local untracked_selected=$(printf "%s\n" $untracked_files |
         fzf --multi \
-          --preview='bat --style=numbers --color=always {}' \
+          --preview='[[ $(command -v eza &>/dev/null) && -d {} ]] && eza -lAh --color=always {} || [[ -d {} ]] && ls -lAh --color=always {} || bat --style=numbers --color=always {}' \
           --preview-window='up:90%:wrap:nohidden' \
           --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
           --header="Add untracked files" \
