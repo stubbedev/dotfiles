@@ -33,7 +33,3 @@ if is_binary eza; then
 else
   alias ls='ls --color'
 fi
-
-if is_binary bat; then
-  alias bat='batshebang'
-fi

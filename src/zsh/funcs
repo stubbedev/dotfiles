@@ -13,7 +13,7 @@ if is_binary php; then
   }
 fi
 
-if is_binary git; then
+if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
   function gcm {
     in_git_repo
 
@@ -252,6 +252,7 @@ if is_binary git; then
       fi
     fi
     clear
+    echo -e ""
     git status --short
   }
 
@@ -334,51 +335,6 @@ if is_binary bat; then
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
   }
-
-  function batshebang {
-    local file="$1"
-    shift
-
-    if [[ "$file" == *.* ]]; then
-      bat "$file" "$@"
-      return
-    fi
-
-    if [[ ! -r "$file" ]]; then
-      bat "$file" "$@"
-      return
-    fi
-
-    local firstline=$(head -n 1 "$file")
-
-    if [[ "$firstline" == \#\!* ]]; then
-      local interpreter=$(echo "$firstline" | awk '{print $NF}')
-      local language=""
-
-      interpreter=$(basename "$interpreter")
-
-      case "$interpreter" in
-      python* | python2 | python3) language="python" ;;
-      ruby) language="ruby" ;;
-      perl) language="perl" ;;
-      bash | sh | zsh | ksh) language="bash" ;;
-      node | nodejs) language="javascript" ;;
-      php) language="php" ;;
-      R) language="r" ;;
-      lua) language="lua" ;;
-      *) language="" ;; # Fall back to bat's auto-detection
-      esac
-
-      if [[ -n "$language" ]]; then
-        bat --language="$language" "$file" "$@"
-      else
-        bat "$file" "$@"
-      fi
-    else
-      bat "$file" "$@"
-    fi
-  }
-
 else
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
