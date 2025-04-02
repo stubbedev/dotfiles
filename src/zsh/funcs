@@ -114,7 +114,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
     local git_branches=$(git branch --all | awk '{print $1}')
 
     local branch_name=$(echo -e $git_branches |
-      fzf --prompt="(Enter: checkout branch, Ctrl+C: create branch)> " \
+      fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
         --bind 'enter:accept' \
         --select-1 \
@@ -132,12 +132,11 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
     if [[ -z "$branch_name" ]]; then
       branch_name=$(fzf \
-        --prompt="(Ticket Number: ABC-1234, Tag Number: 4.3.21)> " \
+        --prompt="(Enter: create branch [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel command)> " \
         --height=1 \
         --reverse \
         --no-info \
-        --print-query |
-        head -1)
+        --print-query </dev/null)
     fi
 
     if [[ -z "$branch_name" ]]; then
