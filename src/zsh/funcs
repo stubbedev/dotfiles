@@ -155,6 +155,10 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-input \
         --no-info)
 
+    if [[ -z "$branch_prefix" ]]; then
+      return 0
+    fi
+
     local new_branch_name
     local branch_suffix=$(fzf \
       --height=1 \
