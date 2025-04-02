@@ -147,7 +147,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
     local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
     if [[ $branch_name =~ $tag_mask ]]; then
-      git checkout -b "release/$branch_name"
+      git checkout -b "release/$branch_name" || git checkout "release/$branch_name"
       return 0
     fi
 
