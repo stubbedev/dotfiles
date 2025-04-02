@@ -62,8 +62,10 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         fzf \
           --no-input \
           --header="[WARN] Protected Branch: Confirm Push" \
+          --reverse \
           --height=3 \
           --no-info \
+          --no-multi \
           --exit-0)
 
       if [[ "$choice" != "Yes" ]]; then
