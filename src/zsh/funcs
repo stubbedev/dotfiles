@@ -336,38 +336,6 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
 fi
 
-if is_binary bat; then
-  function view_git_file {
-    curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
-  }
-else
-  function view_git_file {
-    curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | cat
-  }
-fi
-
-if is_binary ss; then
-  function pid_on_port {
-    ss -lptn " sport = :$1"
-  }
-fi
-
-if is_binary uv; then
-  function pysrc {
-    if ! is_file "$PWD/venv/bin/activate"; then
-      uv venv ./venv
-    fi
-    is_file "$PWD/venv/bin/activate" && source "$PWD/venv/bin/activate"
-  }
-fi
-
-if is_binary fzf; then
-  function fzf-project-picker {
-    cd $(find ~/git -maxdepth 3 -mindepth 1 -type d -exec test -d '{}/.git' \; -print 2>/dev/null | fzf)
-    clear
-  }
-fi
-
 if is_binary nala; then
   function npt {
     case "$1" in
@@ -441,7 +409,7 @@ else
 fi
 
 if is_binary ss; then
-  function pid_on_port {
+  function pop {
     ss -lptn " sport = :$1"
   }
 fi
