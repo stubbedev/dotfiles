@@ -429,7 +429,7 @@ if is_binary fzf; then
     clear
   }
   function fzf-directory-picker {
-    cd $(find $PWD -maxdepth 5 -mindepth 1 -type d ! -path '*/\.*' 2>/dev/null | fzf --algo=v1)
+    cd $(find . -maxdepth 5 -mindepth 1 -type d ! -path '*/\.*' -print 2>/dev/null | fzf --algo=v1)
     clear
   }
 fi
