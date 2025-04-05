@@ -74,6 +74,7 @@ if is_binary fzf; then
     bindkey -s "^[f" "fzf-tmux-project-picker^M"
     bindkey -s "^[F" "fzf-project-picker^M"
     bindkey -s "^[d" "fzf-tmux-session-picker^M"
+    bindkey -s "^[D" "fzf-tmux-directory-picker^M"
     source <(fzf --zsh)
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target
