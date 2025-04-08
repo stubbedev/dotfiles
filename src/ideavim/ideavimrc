@@ -444,9 +444,9 @@ nmap <leader>xt <Action>(ActivateTODOToolWindow)
 " Todo/Fix/Fixme (Trouble)
 nmap <leader>xT <Action>(ActivateTODOToolWindow)
 " Previous Todo Comment
-nmap [t ?\(TODO\|FIX\|HACK\|WARN\|PERF\|NOTE\|TEST\):<cr>
+nmap [t ?\(TODO\|FIX\|HACK\|WARN\|PERF\|NOTE\|TEST\|INFO\):<cr>
 " Next Todo Comment
-nmap ]t /\(TODO\|FIX\|HACK\|WARN\|PERF\|NOTE\|TEST\):<cr>
+nmap ]t /\(TODO\|FIX\|HACK\|WARN\|PERF\|NOTE\|TEST\|INFO\):<cr>
 
 " DAP UI Keymaps
 
