@@ -1,8 +1,8 @@
 bin/nvim
 src/zsh/plugins.d
 src/zsh/history
-*.json
 src/nvim/lazy-lock.json
+src/nvim/lazyvim.json
 src/lazygit/state.yml
 src/btop/btop.log
 
