@@ -390,6 +390,11 @@ function conf_waybar {
   rm -rf "$HOME/.config/waybar"
   ln -sf "$STUBBE_SRC/waybar" "$HOME/.config/waybar"
 }
+function conf_zed {
+  mkdir -p "$HOME/.config"
+  rm -rf "$HOME/.config/zed"
+  ln -sf "$STUBBE_SRC/zed" "$HOME/.config/zed"
+}
 
 # INFO: Private licenses
 function license_intelephense {
