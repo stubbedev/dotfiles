@@ -113,7 +113,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       initial_query="$1"
     fi
 
-    local git_branches=$(git branch --all | awk '{print $1}')
+    local git_branches=$(git branch --all | awk '{sub(/^remotes\/origin\//, "", $1); print $1}' | sort -u)
 
     local branch_name=$(echo -e $git_branches |
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
@@ -127,7 +127,6 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       tail -n1)
 
     if [[ -n "$branch_name" && $(echo -e $git_branches | grep -Fx "$branch_name") ]]; then
-      branch_name=${branch_name#remotes/origin/}
       git checkout "$branch_name"
       return 0
     fi
