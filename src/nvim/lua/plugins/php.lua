@@ -14,7 +14,17 @@ return {
     optional = true,
     opts = {
       linters_by_ft = {
-        php = {},
+        php = {
+          {
+            cmd = "phpcs",
+            args = {
+              "--standard=WordPress",
+              "--report=full",
+              "--report-file=/dev/stdout",
+            },
+            stdin = false,
+          },
+        },
       },
     },
   },
