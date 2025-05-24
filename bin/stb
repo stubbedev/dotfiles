@@ -5,6 +5,7 @@ run_options() {
   local stb_options
   local chosen_option
   stb_options=(
+    "Edit Nix"
     "Edit Secrets"
     "Edit Aliases"
     "Edit Functions"
@@ -17,6 +18,9 @@ run_options() {
 
   echo "Running: $chosen_option"
   case "$chosen_option" in
+  "Edit Nix")
+    sudo $(which nvim) "/etc/nix/nix.conf"
+    ;;
   "Edit Secrets")
     nvim "$HOME/.stubbe/src/zsh/secrets"
     ;;
