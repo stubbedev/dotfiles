@@ -38,12 +38,13 @@ run_options() {
     nvim "$HOME/.stubbe/src/zsh/settings"
     ;;
   "Clear Nvim Cache")
-    rm -rf "$HOME/.local/share/nvim{,.bak}"
-    rm -rf "$HOME/.local/state/nvim{,.bak}"
-    rm -rf "$HOME/.cache/nvim{,.bak}"
+    rm -rf "$HOME/.local/share/nvim" && mkdir -p "$HOME/.local/share/nvim"
+    rm -rf "$HOME/.local/state/nvim" && mkdir -p "$HOME/.local/state/nvim"
+    rm -rf "$HOME/.cache/nvim" && mkdir -p "$HOME/.cache/nvim"
     ;;
-  "Update Zsh Plugins")
+  "Update Zsh")
     rm -rf "$HOME/.stubbe/src/zsh/plugins.d"
+    rm -rf "$HOME/.stubbe/src/zsh/fpaths.d"
     source "$HOME/.zshrc"
     ;;
   *)
