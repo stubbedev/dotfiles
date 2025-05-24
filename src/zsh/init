@@ -1,7 +1,6 @@
 #!/usr/bin/env zsh
 
 autoload -Uz compinit
-compinit
 
 STBZSHSOURCES=(
   "paths"
@@ -10,6 +9,7 @@ STBZSHSOURCES=(
   "aliases"
   "secrets"
   "plugins"
+  "fpaths"
   "settings"
 )
 

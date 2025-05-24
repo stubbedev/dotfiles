@@ -11,6 +11,10 @@ zstyle ':completion:*' complete-aliases true
 zstyle ':completion:*' regular true
 zstyle ':completion:*' sort false
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+
+zstyle ':completion:*:*:nix-*:*' sort false
+zstyle ':completion:*:*:nix-env:*' menu yes select
+
 # disable sort when completing `git checkout`
 zstyle ':completion:*:git-checkout:*' sort false
 # set descriptions format to enable group support
@@ -93,3 +97,5 @@ if is_binary starship; then
       }
 fi
 
+# INFO: Must stay here
+compinit

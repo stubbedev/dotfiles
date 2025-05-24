@@ -78,6 +78,7 @@ function install_toolchain_binaries {
   install_rust
   install_volta
   install_astral
+  install_nix
   src_zsh
 }
 
@@ -160,6 +161,9 @@ function install_volta {
 }
 function install_astral {
   curl -LsSf https://astral.sh/uv/install.sh | sh
+}
+function install_nix {
+  sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
 }
 
 # INFO: Toolchain dependent apps

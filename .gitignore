@@ -1,5 +1,6 @@
 bin/nvim
 src/zsh/plugins.d
+src/zsh/fpaths.d
 src/zsh/history
 src/nvim/lazy-lock.json
 src/nvim/lazyvim.json
