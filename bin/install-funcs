@@ -74,15 +74,16 @@ function install_stubbe_all {
 
 function install_toolchain_binaries {
   install_build_essential
+  install_nix
   install_go
   install_rust
   install_volta
   install_astral
-  install_nix
   src_zsh
 }
 
 function install_toolchain_reliant_binaries {
+  nix_deps
   rust_deps
   go_deps
   volta_deps
@@ -134,13 +135,13 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential curl wget git grep tmux podman zsh htop lua5.1 libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev dunst"
+    bash -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
   fi
   if is_binary dnf; then
-    bash -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++ curl wget git grep zsh"
+    bash -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
   fi
   if is_binary pacman; then
-    bash -c "sudo pacman -S zsh tmux lua51 cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
+    bash -c "sudo pacman -S cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
   fi
   sudo chsh -s "$(which "zsh")" "$USER"
 }
@@ -168,61 +169,54 @@ function install_nix {
 
 # INFO: Toolchain dependent apps
 function rust_deps {
-  cargo install tree-sitter-cli eza bat ripgrep jless alacritty
+  cargo install tree-sitter-cli
 }
 function go_deps {
-  go install github.com/jesseduffield/lazygit@latest
-  go install github.com/jesseduffield/lazydocker@latest
-  go install github.com/air-verse/air@latest
-  go install github.com/gopasspw/gopass@latest
-  go install golang.org/x/tools/cmd/godoc@latest
+  # INFO: Replaced by NIX
 }
 function volta_deps {
   volta install node npm
   volta install yarn deno bun
 }
+function nix_deps {
+  nix-env -iA nixpkgs.nh
+  nix-env -iA nixpkgs.zsh
+  nix-env -iA nixpkgs.curl
+  nix-env -iA nixpkgs.wget
+  nix-env -iA nixpkgs.neovim
+  nix-env -iA nixpkgs.tmux
+  nix-env -iA nixpkgs.git
+  nix-env -iA nixpkgs.gnugrep
+  nix-env -iA nixpkgs.bat
+  nix-env -iA nixpkgs.fzf
+  nix-env -iA nixpkgs.eza
+  nix-env -iA nixpkgs.htop
+  nix-env -iA nixpkgs.btop
+  nix-env -iA nixpkgs.dunst
+  nix-env -iA nixpkgs.jless
+  nix-env -iA nixpkgs.ripgrep
+  nix-env -iA nixpkgs.lazygit
+  nix-env -iA nixpkgs.lazydocker
+  nix-env -iA nixpkgs.podman
+  nix-env -iA nixpkgs.alacritty
+  nix-env -iA nixpkgs.air
+  nix-env -iA nixpkgs.gopass
+  nix-env -iA nixpkgs.gotools
+  nix-env -iA lua51Packages.lua -f https://github.com/NixOS/nixpkgs/archive/21808d22b1cda1898b71cf1a1beb524a97add2c4.tar.gz
+}
 
 # INFO: Non-Toolchain dependent
 function install_nvim {
-  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
-  sudo rm -rf /opt/nvim
-  sudo tar -C /opt -xzvf nvim-linux-x86_64.tar.gz
-  rm -rf nvim-linux-x86_64.tar.gz
+  # INFO: Replaced by NIX
 }
 function install_nvim_nightly {
-  curl -LO https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz
-  sudo rm -rf /opt/nvim
-  sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
-  rm -rf nvim-linux-x86_64.tar.gz
+  # INFO: Replaced by NIX
 }
 function install_fzf {
-  FZFTMPDIR=$(mktemp -d)
-  repo="junegunn/fzf"
-  release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
-  url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'amd64' | grep 'linux')
-  wget "$url" -O "$FZFTMPDIR"/fzf.tar.gz
-  sudo tar -xvzf "$FZFTMPDIR"/fzf.tar.gz -C /bin
+  # INFO: Replaced by NIX
 }
 function install_btop {
-  local RESET_PWD=$PWD
-  BTOPTMPDIR=$(mktemp -d)
-  repo="aristocratos/btop"
-  release=$(curl --silent -m 10 --connect-timeout 5 "https://api.github.com/repos/$repo/releases/latest")
-  url=$(echo "$release" | grep '"browser_download_url":' | sed -E 's/.*"([^"]+)".*/\1/' | grep 'x86_64' | grep 'linux')
-  wget "$url" -O "$BTOPTMPDIR"/btop.tbz
-  tar -xjf "$BTOPTMPDIR"/btop.tbz -C "$BTOPTMPDIR"
-  cd "$BTOPTMPDIR"/btop || exit
-  sudo make install
-  cd "$RESET_PWD" || exit
-  rm -rf "$BTOPTMPDIR"
-}
-function install_docker {
-  DOCKERTMPDIR=$(mktemp -d)
-  curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
-  sudo sh "$DOCKERTMPDIR/get-docker.sh"
-  sudo groupadd docker
-  sudo usermod -aG docker "$USER"
-  rm -rf "$DOCKERTMPDIR"
+  # INFO: Replaced by NIX
 }
 function install_jetbrains_toolbox {
   JBTMPDIR=$(mktemp -d)
@@ -235,6 +229,15 @@ function install_jetbrains_toolbox {
   sudo ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
   sudo /usr/bin/jetbrains-toolbox
 }
+function install_docker {
+  DOCKERTMPDIR=$(mktemp -d)
+  curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
+  sudo sh "$DOCKERTMPDIR/get-docker.sh"
+  sudo groupadd docker
+  sudo usermod -aG docker "$USER"
+  rm -rf "$DOCKERTMPDIR"
+}
+
 function install_zed {
   curl -f https://zed.dev/install.sh | sh
 }
