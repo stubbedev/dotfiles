@@ -68,6 +68,7 @@ export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 
 export DEPLOYER_REMOTE_USER="abs"
+export NIXPKGS_ALLOW_UNFREE=1
 
 bindkey -s "^[A" "tmux-lazy-docker^M"
 bindkey -s "^[t" "tmux-new-session^M"
