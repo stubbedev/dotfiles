@@ -10,19 +10,15 @@ STUBBE_PATHS=(
   "$HOME/.local/bin"
   "$HOME/.config/composer/vendor/bin"
   "$HOME/.config/emacs/bin"
+  "$HOME/.volta/bin"
   "$HOME/.nimble/bin"
   "$HOME/.bun/bin"
   "$HOME/.cargo/bin"
   "$HOME/.deno/bin"
-  "$HOME/go/bin"
+  "$HOME/.nix-profile/bin"
   "$HOME/.go/bin"
+  "$HOME/go/bin"
   "$HOME/bin"
-  "$HOME/.volta/bin"
-  "/home/linuxbrew/.linuxbrew/bin"
-  "/usr/local/go/bin"
-  "/sbin"
-  "/opt/nvim-linux64/bin"
-  "/opt/nvim-linux-x86_64/bin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
