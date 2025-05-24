@@ -1,12 +1,7 @@
 #!/usr/bin/env zsh
 
-info() {
-  echo "Welcome to the STUBBEDEV CLI"
-  echo
-  echo "Please provide an input for the desired option."
-}
-
 run_options() {
+  echo "Welcome to the STUBBEDEV CLI"
   local stb_options
   local chosen_option
   stb_options=(
@@ -54,5 +49,4 @@ run_options() {
   esac
 }
 
-info
 run_options
