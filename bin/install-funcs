@@ -103,6 +103,7 @@ function install_non_toolchain_binaries {
 
 function install_confs {
   conf_zsh
+  conf_nix
   conf_nvim
   conf_tmux
   conf_fonts
@@ -272,6 +273,11 @@ function conf_zsh {
   touch "$HOME/.zshrc"
   if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
     echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
+  fi
+}
+function conf_nix {
+  if ! grep -Fxq "experimental-features = nix-command flakes" /etc/nix/nix.conf; then
+      echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf > /dev/null
   fi
 }
 function conf_nvim {
