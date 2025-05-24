@@ -45,6 +45,7 @@ run_options() {
   "Update Zsh")
     rm -rf "$HOME/.stubbe/src/zsh/plugins.d"
     rm -rf "$HOME/.stubbe/src/zsh/fpaths.d"
+    rm -f "$HOME/.zcompdump"
     source "$HOME/.zshrc"
     ;;
   *)
