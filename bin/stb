@@ -16,7 +16,7 @@ run_options() {
     "Edit Paths"
     "Edit Settings"
     "Clear Nvim Cache"
-    "Update Zsh Plugins"
+    "Update Zsh"
   )
   chosen_option=$(printf "%s\n" "${stb_options[@]}" | fzf --prompt="Select an option: " --height=10 --border --no-info --reverse --cycle)
 
