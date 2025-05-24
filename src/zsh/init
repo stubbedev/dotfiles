@@ -6,6 +6,7 @@ autoload -Uz add-zsh-hook
 STBZSHSOURCES=(
   "paths"
   "sysfuncs"
+  "updates"
   "funcs"
   "aliases"
   "secrets"

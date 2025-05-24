@@ -2,6 +2,7 @@ bin/nvim
 src/zsh/plugins.d
 src/zsh/fpaths.d
 src/zsh/history
+src/zsh/update_flag
 src/nvim/lazy-lock.json
 src/nvim/lazyvim.json
 src/lazygit/state.yml
