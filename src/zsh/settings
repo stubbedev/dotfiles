@@ -97,7 +97,7 @@ if is_binary starship; then
       }
 fi
 
-# INFO: Must stay here
+# INFO: MUST BE VERY LAST THING LOADED
 add-zsh-hook precmd _delayed_compinit
 function _delayed_compinit {
   add-zsh-hook -d precmd _delayed_compinit
