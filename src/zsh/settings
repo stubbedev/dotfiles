@@ -98,4 +98,14 @@ if is_binary starship; then
 fi
 
 # INFO: Must stay here
-compinit
+add-zsh-hook precmd _delayed_compinit
+function _delayed_compinit {
+  add-zsh-hook -d precmd _delayed_compinit
+  zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+  if [[ ! -f $zcompdump || $zcompdump -ot ~/.zshrc ]]; then
+    compinit -C
+  else
+    compinit -C -d "$zcompdump"
+  fi
+}
+
