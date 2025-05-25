@@ -5,6 +5,10 @@ function is_binary {
   command -v "$1" &>/dev/null
 }
 
+function is_nix {
+  grep -q '^ID=nixos' /etc/os-release 2>/dev/null
+}
+
 function are_binary {
   for arg in "$@"; do
     is_binary $arg

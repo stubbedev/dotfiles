@@ -4,10 +4,6 @@
 STUBBE_SRC="$HOME/.stubbe/src"
 export STUBBE_SRC
 
-function is_nix {
-  grep -q '^ID=nixos' /etc/os-release 2>/dev/null
-}
-
 # INFO: INSTALL FUNCTION
 function installer_prompt {
   if [[ "$SHELL" != */zsh ]]; then
@@ -164,39 +160,7 @@ function nix_deps {
   if is_nix; then
     return 0
   fi
-
-  nix profile install nixpkgs#nh
-  nix profile install nixpkgs#zsh
-  nix profile install nixpkgs#nix-zsh-completions
-  nix profile install nixpkgs#curl
-  nix profile install nixpkgs#wget
-  nix profile install nixpkgs#neovim
-  nix profile install nixpkgs#tmux
-  nix profile install nixpkgs#git
-  nix profile install nixpkgs#gnugrep
-  nix profile install nixpkgs#bat
-  nix profile install nixpkgs#fzf
-  nix profile install nixpkgs#eza
-  nix profile install nixpkgs#htop
-  nix profile install nixpkgs#btop
-  nix profile install nixpkgs#dunst
-  nix profile install nixpkgs#jless
-  nix profile install nixpkgs#ripgrep
-  nix profile install nixpkgs#lazygit
-  nix profile install nixpkgs#lazydocker
-  nix profile install nixpkgs#podman
-  nix profile install nixpkgs#alacritty
-  nix profile install nixpkgs#air
-  nix profile install nixpkgs#gopass
-  nix profile install nixpkgs#gotools
-  nix profile install nixpkgs#jujutsu
-  nix profile install nixpkgs#tree-sitter
-  nix profile install nixpkgs#nodejs
-  nix profile install nixpkgs#bun
-  nix profile install nixpkgs#yarn
-  nix profile install nixpkgs#deno
-  nix profile install nixpkgs#jetbrains-toolbox --impure
-  nix profile install "github:NixOS/nixpkgs/21808d22b1cda1898b71cf1a1beb524a97add2c4#lua51Packages.lua"
+  nix profile install $(cat "$STUBBE_SRC/nix/nix/packages.txt") --impure
 }
 
 # INFO: Non-Toolchain dependent
