@@ -180,30 +180,30 @@ function volta_deps {
   volta install yarn deno bun
 }
 function nix_deps {
-  nix-env -iA nixpkgs.nh
-  nix-env -iA nixpkgs.zsh
-  nix-env -iA nixpkgs.curl
-  nix-env -iA nixpkgs.wget
-  nix-env -iA nixpkgs.neovim
-  nix-env -iA nixpkgs.tmux
-  nix-env -iA nixpkgs.git
-  nix-env -iA nixpkgs.gnugrep
-  nix-env -iA nixpkgs.bat
-  nix-env -iA nixpkgs.fzf
-  nix-env -iA nixpkgs.eza
-  nix-env -iA nixpkgs.htop
-  nix-env -iA nixpkgs.btop
-  nix-env -iA nixpkgs.dunst
-  nix-env -iA nixpkgs.jless
-  nix-env -iA nixpkgs.ripgrep
-  nix-env -iA nixpkgs.lazygit
-  nix-env -iA nixpkgs.lazydocker
-  nix-env -iA nixpkgs.podman
-  nix-env -iA nixpkgs.alacritty
-  nix-env -iA nixpkgs.air
-  nix-env -iA nixpkgs.gopass
-  nix-env -iA nixpkgs.gotools
-  nix-env -iA lua51Packages.lua -f https://github.com/NixOS/nixpkgs/archive/21808d22b1cda1898b71cf1a1beb524a97add2c4.tar.gz
+  nix profile install nixpkgs#nh
+  nix profile install nixpkgs#zsh
+  nix profile install nixpkgs#curl
+  nix profile install nixpkgs#wget
+  nix profile install nixpkgs#neovim
+  nix profile install nixpkgs#tmux
+  nix profile install nixpkgs#git
+  nix profile install nixpkgs#gnugrep
+  nix profile install nixpkgs#bat
+  nix profile install nixpkgs#fzf
+  nix profile install nixpkgs#eza
+  nix profile install nixpkgs#htop
+  nix profile install nixpkgs#btop
+  nix profile install nixpkgs#dunst
+  nix profile install nixpkgs#jless
+  nix profile install nixpkgs#ripgrep
+  nix profile install nixpkgs#lazygit
+  nix profile install nixpkgs#lazydocker
+  nix profile install nixpkgs#podman
+  nix profile install nixpkgs#alacritty
+  nix profile install nixpkgs#air
+  nix profile install nixpkgs#gopass
+  nix profile install nixpkgs#gotools
+  nix profile install "github:NixOS/nixpkgs/21808d22b1cda1898b71cf1a1beb524a97add2c4#lua51Packages.lua"
 }
 
 # INFO: Non-Toolchain dependent
