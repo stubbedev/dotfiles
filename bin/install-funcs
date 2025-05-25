@@ -4,6 +4,10 @@
 STUBBE_SRC="$HOME/.stubbe/src"
 export STUBBE_SRC
 
+function is_nix {
+  grep -q '^ID=nixos' /etc/os-release 2>/dev/null
+}
+
 # INFO: INSTALL FUNCTION
 function installer_prompt {
   if [[ "$SHELL" != */zsh ]]; then
@@ -157,6 +161,10 @@ function install_nix {
 
 # INFO: Toolchain dependent apps
 function nix_deps {
+  if is_nix; then
+    return 0
+  fi
+
   nix profile install nixpkgs#nh
   nix profile install nixpkgs#zsh
   nix profile install nixpkgs#nix-zsh-completions
@@ -227,6 +235,9 @@ function conf_zsh {
   fi
 }
 function conf_nix {
+  if is_nix; then
+    return 0
+  fi
   if ! grep -Fxq "experimental-features = nix-command flakes" /etc/nix/nix.conf; then
       echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf > /dev/null
   fi
