@@ -1,13 +1,9 @@
 #!/usr/bin/env zsh
 
-STUBBE_ZSH_FPATHS_DIR="$HOME/.stubbe/src/zsh/fpaths.d/"
+STUBBE_ZSH_FPATHS_DIR="$HOME/.stubbe/src/zsh/fpaths.d"
 mkdir -p "$STUBBE_ZSH_FPATHS_DIR"
 
-# NIX-COMP
-if ! is_directory "$STUBBE_ZSH_FPATHS_DIR/nix-comps"; then
-  git clone "https://github.com/nix-community/nix-zsh-completions.git" "$STUBBE_ZSH_FPATHS_DIR/nix-comps"
-elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-  git -C "$STUBBE_ZSH_FPATHS_DIR/nix-comps" pull --force
-fi
-source "$STUBBE_ZSH_FPATHS_DIR/nix-comps/nix-zsh-completions.plugin.zsh"
-fpath+=("$STUBBE_ZSH_FPATHS_DIR/nix-comps")
+fpath+=("$HOME/.nix-profile/share/zsh/site-functions")
+
+autoload -Uz compinit
+autoload -Uz add-zsh-hook

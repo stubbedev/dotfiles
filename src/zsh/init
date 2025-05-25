@@ -1,8 +1,5 @@
 #!/usr/bin/env zsh
 
-autoload -Uz compinit
-autoload -Uz add-zsh-hook
-
 STBZSHSOURCES=(
   "paths"
   "sysfuncs"

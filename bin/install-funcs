@@ -159,6 +159,7 @@ function install_nix {
 function nix_deps {
   nix profile install nixpkgs#nh
   nix profile install nixpkgs#zsh
+  nix profile install nixpkgs#nix-zsh-completions
   nix profile install nixpkgs#curl
   nix profile install nixpkgs#wget
   nix profile install nixpkgs#neovim
