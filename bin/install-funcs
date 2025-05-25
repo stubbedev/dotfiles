@@ -142,9 +142,6 @@ function install_go {
 function install_rust {
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 }
-function install_php {
-  bash -c "$(curl -fsSL https://php.new/install/linux/8.2)"
-}
 function install_volta {
   curl https://get.volta.sh | bash
 }
@@ -165,7 +162,7 @@ function nix_deps {
 
 # INFO: Non-Toolchain dependent
 function install_docker {
-  DOCKERTMPDIR=$(mktemp -d)
+  local DOCKERTMPDIR=$(mktemp -d)
   curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
   sudo sh "$DOCKERTMPDIR/get-docker.sh"
   sudo groupadd docker
@@ -173,8 +170,8 @@ function install_docker {
   rm -rf "$DOCKERTMPDIR"
 }
 function install_keyd {
-  CURRENTDIR=$PWD
-  KEYDDIR=$(mktemp -d)
+  local CURRENTDIR=$PWD
+  local KEYDDIR=$(mktemp -d)
   git clone https://github.com/rvaiya/keyd "$KEYDDIR/keyd"
   cd "$KEYDDIR/keyd" || exit
   make
@@ -187,14 +184,14 @@ function install_keyd {
 
 # INFO: Configs
 function conf_fonts {
-  SOURCE_FONT="$STUBBE_SRC/fonts"
+  local SOURCE_FONT="$STUBBE_SRC/fonts"
   mkdir -p "$HOME/.fonts"
   mkdir -p "$HOME/.local/share/fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.local/share/fonts"
 }
 function conf_zsh {
-  SOURCE_ZSH="$STUBBE_SRC/zsh/init"
+  local SOURCE_ZSH="$STUBBE_SRC/zsh/init"
   touch "$HOME/.zshrc"
   if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
     echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
@@ -216,7 +213,7 @@ function conf_tmux {
   if ! is_directory "$HOME/.tmux/plugins/tpm"; then
     git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
   fi
-  SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
+  local SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
   touch "$HOME/.tmux.conf"
   if ! has_string "$HOME/.tmux.conf" "$SOURCE_TMUX"; then
     echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
@@ -235,12 +232,12 @@ function conf_regolith_i3 {
   ln -sf "$STUBBE_SRC/regolith/i3" "$HOME/.config/regolith3/i3"
 }
 function conf_wezterm {
-  SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
+  local SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
   mkdir -p "$HOME/.config/wezterm"
   ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
 }
 function conf_lazygit {
-  SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
+  local SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
   mkdir -p "$HOME/.config/lazygit"
   ln -sf "$SOURCE_LAZYGIT/config.yml" "$HOME/.config/lazygit"
   touch "$HOME/.config/lazygit/state.yml"
@@ -249,16 +246,16 @@ function conf_lazygit {
   fi
 }
 function conf_ideavim {
-  SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
+  local SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
   ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
 }
 function conf_keyd {
-  SOURCE_KEYD="$STUBBE_SRC/keyd"
+  local SOURCE_KEYD="$STUBBE_SRC/keyd"
   sudo ln -sf "$SOURCE_KEYD/default.conf" "/etc/keyd"
   sudo keyd reload
 }
 function conf_xmodmap {
-  XMODMAPDIR="$STUBBE_SRC/xmodmap"
+  local XMODMAPDIR="$STUBBE_SRC/xmodmap"
   ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
   touch "$HOME/.profile"
   if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
@@ -290,8 +287,7 @@ function conf_alacritty {
   mkdir -p "$HOME/.config"
   ln -sf "$STUBBE_SRC/alacritty" "$HOME/.config"
   if is_binary "alacritty" && is_binary update-alternatives; then
-    local alacritty_path
-    alacritty_path="$(which alacritty)"
+    local alacritty_path="$(which alacritty)"
     sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$alacritty_path" 50
     sudo update-alternatives --set x-terminal-emulator "$alacritty_path"
   fi
@@ -334,7 +330,7 @@ function conf_zed {
 
 # INFO: Private licenses
 function license_intelephense {
-  TMPDIR=$(mktemp -d)
+  local TMPDIR=$(mktemp -d)
   git clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
   mkdir -p "$HOME/intelephense"
   if ! is_file "$HOME/intelephense/license.txt"; then
@@ -343,7 +339,7 @@ function license_intelephense {
   rm -rf "$TMPDIR"
 }
 function license_openai {
-  TMPDIR=$(mktemp -d)
+  local TMPDIR=$(mktemp -d)
   git clone --depth=1 git@gist.github.com:5bb1f5258de2d120a0ea8c6627c4d4e1.git "$TMPDIR" --quiet
   cat "$TMPDIR/OPENAI" >>"$HOME/.zshrc"
   rm -rf "$TMPDIR"
