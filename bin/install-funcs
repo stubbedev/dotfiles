@@ -88,7 +88,6 @@ function install_toolchain_reliant_binaries {
 
 function install_non_toolchain_binaries {
   install_docker
-  install_jetbrains_toolbox
   install_keyd
   src_zsh
 }
@@ -187,33 +186,11 @@ function nix_deps {
   nix profile install nixpkgs#bun
   nix profile install nixpkgs#yarn
   nix profile install nixpkgs#deno
+  nix profile install nixpkgs#jetbrains-toolbox --impure
   nix profile install "github:NixOS/nixpkgs/21808d22b1cda1898b71cf1a1beb524a97add2c4#lua51Packages.lua"
 }
 
 # INFO: Non-Toolchain dependent
-function install_nvim {
-  # INFO: Replaced by NIX
-}
-function install_nvim_nightly {
-  # INFO: Replaced by NIX
-}
-function install_fzf {
-  # INFO: Replaced by NIX
-}
-function install_btop {
-  # INFO: Replaced by NIX
-}
-function install_jetbrains_toolbox {
-  JBTMPDIR=$(mktemp -d)
-  curl -fsSL "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA" -o "$JBTMPDIR/jetbrains-toolbox.tar.gz"
-  tar -xvzf "$JBTMPDIR/jetbrains-toolbox.tar.gz" -C "$JBTMPDIR"
-  rm -rf "$JBTMPDIR/jetbrains-toolbox.tar.gz"
-  mv "$JBTMPDIR/jetbrains-toolbox-"* "$JBTMPDIR/jetbrains"
-  sudo rm -rf /opt/jetbrains
-  sudo mv "$JBTMPDIR/jetbrains" /opt
-  sudo ln -sf /opt/jetbrains/jetbrains-toolbox /usr/bin/jetbrains-toolbox
-  sudo /usr/bin/jetbrains-toolbox
-}
 function install_docker {
   DOCKERTMPDIR=$(mktemp -d)
   curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
