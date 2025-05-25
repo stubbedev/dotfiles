@@ -1,0 +1,3 @@
+@import "catppuccin-mocha"
+configuration {}
+@theme "catppuccin-default"

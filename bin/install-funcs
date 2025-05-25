@@ -108,6 +108,7 @@ function install_confs {
   conf_btop
   conf_dunst
   conf_sway
+  conf_rofi
   conf_hyprland
   conf_alacritty
   conf_git
@@ -310,6 +311,11 @@ function conf_sway {
   mkdir -p "$HOME/.config"
   rm -rf "$HOME/.config/sway"
   ln -sf "$STUBBE_SRC/sway" "$HOME/.config/sway"
+}
+function conf_rofi {
+  mkdir -p "$HOME/.config"
+  rm -rf "$HOME/.config/rofi"
+  ln -sf "$STUBBE_SRC/rofi" "$HOME/.config/rofi"
 }
 function conf_hyprland {
   mkdir -p "$HOME/.config"
