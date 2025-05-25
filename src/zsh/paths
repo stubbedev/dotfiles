@@ -10,8 +10,6 @@ STUBBE_PATHS=(
   "$HOME/.local/bin"
   "$HOME/.config/composer/vendor/bin"
   "$HOME/.config/emacs/bin"
-  "$HOME/.volta/bin"
-  "$HOME/.nimble/bin"
   "$HOME/.bun/bin"
   "$HOME/.cargo/bin"
   "$HOME/.deno/bin"

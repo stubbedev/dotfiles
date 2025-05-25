@@ -77,33 +77,25 @@ function install_toolchain_binaries {
   install_nix
   install_go
   install_rust
-  install_volta
   install_astral
   src_zsh
 }
 
 function install_toolchain_reliant_binaries {
   nix_deps
-  rust_deps
-  go_deps
-  volta_deps
   src_zsh
 }
 
 function install_non_toolchain_binaries {
-  install_nvim
-  install_fzf
-  install_btop
   install_docker
   install_jetbrains_toolbox
   install_keyd
-  install_zed
   src_zsh
 }
 
 function install_confs {
-  conf_zsh
   conf_nix
+  conf_zsh
   conf_nvim
   conf_tmux
   conf_fonts
@@ -112,7 +104,6 @@ function install_confs {
   conf_regolith_i3
   conf_lazygit
   conf_ideavim
-  conf_coffeescript
   conf_keyd
   conf_dark_mode
   conf_btop
@@ -155,9 +146,6 @@ function install_rust {
 function install_php {
   bash -c "$(curl -fsSL https://php.new/install/linux/8.2)"
 }
-function install_nim {
-  curl https://nim-lang.org/choosenim/init.sh -sSf | sh
-}
 function install_volta {
   curl https://get.volta.sh | bash
 }
@@ -169,16 +157,6 @@ function install_nix {
 }
 
 # INFO: Toolchain dependent apps
-function rust_deps {
-  cargo install tree-sitter-cli
-}
-function go_deps {
-  # INFO: Replaced by NIX
-}
-function volta_deps {
-  volta install node npm
-  volta install yarn deno bun
-}
 function nix_deps {
   nix profile install nixpkgs#nh
   nix profile install nixpkgs#zsh
@@ -204,6 +182,11 @@ function nix_deps {
   nix profile install nixpkgs#gopass
   nix profile install nixpkgs#gotools
   nix profile install nixpkgs#jujutsu
+  nix profile install nixpkgs#tree-sitter
+  nix profile install nixpkgs#nodejs
+  nix profile install nixpkgs#bun
+  nix profile install nixpkgs#yarn
+  nix profile install nixpkgs#deno
   nix profile install "github:NixOS/nixpkgs/21808d22b1cda1898b71cf1a1beb524a97add2c4#lua51Packages.lua"
 }
 
@@ -239,10 +222,6 @@ function install_docker {
   sudo usermod -aG docker "$USER"
   rm -rf "$DOCKERTMPDIR"
 }
-
-function install_zed {
-  curl -f https://zed.dev/install.sh | sh
-}
 function install_keyd {
   CURRENTDIR=$PWD
   KEYDDIR=$(mktemp -d)
@@ -254,13 +233,6 @@ function install_keyd {
   sudo systemctl start keyd
   cd "$CURRENTDIR" || exit
   rm -rf "$KEYDDIR"
-}
-function install_regolith_look {
-  sudo mkdir -p "/usr/share/regolith-look"
-  sudo rm -rf "/usr/share/regolith-look/catppuccin"
-  sudo cp -r "$STUBBE_SRC/regolith-look/catppuccin" "/usr/share/regolith-look"
-  sudo rm -rf "/usr/share/icons/Catppuccin"
-  sudo cp -r "$STUBBE_SRC/icons/Catppuccin" "/usr/share/icons"
 }
 
 # INFO: Configs
@@ -324,11 +296,6 @@ function conf_lazygit {
 function conf_ideavim {
   SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
   ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
-}
-function conf_coffeescript {
-  COFFELINT_LIB="$HOME/.volta/tools/shared/@coffeelint/cli/lib"
-  sed -i 's/value: 2,/value: 4,/' "$COFFELINT_LIB/coffeelint.js"
-  sed -i 's/value: 80,/value: 500,/' "$COFFELINT_LIB/coffeelint.js"
 }
 function conf_keyd {
   SOURCE_KEYD="$STUBBE_SRC/keyd"
