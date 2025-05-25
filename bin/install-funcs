@@ -225,7 +225,9 @@ function install_keyd {
 function conf_fonts {
   SOURCE_FONT="$STUBBE_SRC/fonts"
   mkdir -p "$HOME/.fonts"
+  mkdir -p "$HOME/.local/share/fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
+  cp -rf "$SOURCE_FONT/." "$HOME/.local/share/fonts"
 }
 function conf_zsh {
   SOURCE_ZSH="$STUBBE_SRC/zsh/init"
