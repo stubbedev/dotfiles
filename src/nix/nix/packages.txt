@@ -18,6 +18,7 @@ nixpkgs#ripgrep
 nixpkgs#lazygit
 nixpkgs#lazydocker
 nixpkgs#podman
+nixpkgs#dbeaver-bin
 nixpkgs#alacritty
 nixpkgs#air
 nixpkgs#gopass
