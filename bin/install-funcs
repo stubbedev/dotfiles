@@ -159,7 +159,7 @@ function nix_deps {
     return 0
   fi
   nix profile install $(cat "$STUBBE_SRC/nix/nix/packages.txt") --impure
-  sudo "$HOME/.stubbe/bin/scripts/relink_nix_bins" # make nix bins shared on system path
+  "$HOME/.stubbe/bin/scripts/relink_nix_bins" # make nix bins shared on system path
 }
 
 # INFO: Non-Toolchain dependent
