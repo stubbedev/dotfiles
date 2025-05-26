@@ -1,0 +1,4 @@
+#!/bin/bash
+
+nix profile upgrade --all --impure
+"$HOME/.stubbe/bin/scripts/relink_nix_bins"
