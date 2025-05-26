@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# This script finds and deletes all symlinks in /usr/share that point to a path containing ".nix-profile/bin".
+
+TARGET_SUBSTRING=".nix-profile/bin"
+TARGET_DIR="/usr/share"
+
+# Elevate with sudo if not already running as root
+if [[ $EUID -ne 0 ]]; then
+  echo "This script needs to run as root. Re-running with sudo..."
+  exec sudo "$0" "$@"
+fi
+
+find "$TARGET_DIR" -type l | while read -r symlink; do
+  target=$(readlink "$symlink")
+  if [[ "$target" == *"$TARGET_SUBSTRING"* ]]; then
+    echo "Removing symlink: $symlink (-> $target)"
+    rm "$symlink"
+  fi
+done
+

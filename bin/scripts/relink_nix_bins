@@ -1,0 +1,5 @@
+#!/bin/bash
+
+unlink_nix_bins
+symlink_nix_bins
+
