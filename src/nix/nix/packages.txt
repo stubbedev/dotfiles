@@ -43,6 +43,7 @@ nixpkgs#hyprnotify
 nixpkgs#hyprcursor
 nixpkgs#hyprpolkitagent
 nixpkgs#hyprutils
+nixpkgs#hyprsysteminfo
 nixpkgs#waybar
 nixpkgs#rofi
 nixpkgs#swaynotificationcenter
