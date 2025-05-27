@@ -41,6 +41,8 @@ nixpkgs#hyprsunset
 nixpkgs#hyprpicker
 nixpkgs#hyprnotify
 nixpkgs#hyprcursor
+nixpkgs#hyprpolkitagent
+nixpkgs#hyprutils
 nixpkgs#waybar
 nixpkgs#rofi
 nixpkgs#swaynotificationcenter
