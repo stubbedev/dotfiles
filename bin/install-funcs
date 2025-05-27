@@ -82,6 +82,7 @@ function install_toolchain_binaries {
 }
 
 function install_toolchain_reliant_binaries {
+  rust_deps
   nix_deps
   src_zsh
 }
@@ -160,6 +161,10 @@ function nix_deps {
   fi
   NIXPKGS_ALLOW_INSECURE=1 nix profile install $(cat "$STUBBE_SRC/nix/nix/packages.txt") --impure
   "$HOME/.stubbe/bin/scripts/relink_nix_bins" # make nix bins shared on system path
+}
+function rust_deps {
+  cargo install alacritty
+  sudo ln -sf "$HOME/.cargo/bin/alacritty" /usr/bin/alacritty
 }
 
 # INFO: Non-Toolchain dependent
