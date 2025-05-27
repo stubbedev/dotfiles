@@ -51,3 +51,15 @@ nixpkgs#xdg-desktop-portal
 nixpkgs#xdg-desktop-portal-hyprland
 nixpkgs#xdg-desktop-portal-wlr
 github:NixOS/nixpkgs/21808d22b1cda1898b71cf1a1beb524a97add2c4#lua51Packages.lua
+nixpkgs#imagemagick
+nixpkgs#exiftool
+nixpkgs#ffmpeg-full
+nixpkgs#dcraw
+nixpkgs#libraw
+nixpkgs#libreoffice
+nixpkgs#librsvg
+nixpkgs#zip
+nixpkgs#ghostscript
+nixpkgs#unzip
+nixpkgs#p7zip
+

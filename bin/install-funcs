@@ -158,7 +158,7 @@ function nix_deps {
   if is_nix; then
     return 0
   fi
-  nix profile install $(cat "$STUBBE_SRC/nix/nix/packages.txt") --impure
+  NIXPKGS_ALLOW_INSECURE=1 nix profile install $(cat "$STUBBE_SRC/nix/nix/packages.txt") --impure
   "$HOME/.stubbe/bin/scripts/relink_nix_bins" # make nix bins shared on system path
 }
 
