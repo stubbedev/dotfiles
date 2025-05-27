@@ -62,4 +62,4 @@ nixpkgs#zip
 nixpkgs#ghostscript
 nixpkgs#unzip
 nixpkgs#p7zip
-
+nixpkgs#libsForQt5.layer-shell-qt
