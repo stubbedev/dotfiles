@@ -1,0 +1,14 @@
+:root {
+  --background: #1e1e2e;
+  --border: #f5e0dc;
+  --border-radius: 5px;
+  --border-size: 2px;
+  --padding: 20px 20px 20px 20px;
+  --margin: 5px;
+  --font: JetBrainsMono Nerd Font;
+  --font-size: 1.1em;
+  --text: #cdd6f4;
+  --icon-size: 42px;
+  --shadow: 0 8px 32px 0 #00000088;
+}
+

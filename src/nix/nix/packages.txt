@@ -12,7 +12,6 @@ nixpkgs#fzf
 nixpkgs#eza
 nixpkgs#htop
 nixpkgs#btop
-nixpkgs#dunst
 nixpkgs#jless
 nixpkgs#ripgrep
 nixpkgs#lazygit
@@ -46,7 +45,6 @@ nixpkgs#hyprutils
 nixpkgs#hyprsysteminfo
 nixpkgs#waybar
 nixpkgs#rofi
-nixpkgs#swaynotificationcenter
 nixpkgs#xdg-desktop-portal
 nixpkgs#xdg-desktop-portal-hyprland
 nixpkgs#xdg-desktop-portal-wlr
