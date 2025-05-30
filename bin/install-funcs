@@ -313,6 +313,10 @@ function conf_dunst {
   mkdir -p "$HOME/.config"
   ln -sf "$STUBBE_SRC/dunst" "$HOME/.config/dunst"
 }
+function conf_swaync {
+  mkdir -p "$HOME/.config"
+  ln -sf "$STUBBE_SRC/swaync" "$HOME/.config/swaync"
+}
 function conf_sway {
   mkdir -p "$HOME/.config"
   rm -rf "$HOME/.config/sway"

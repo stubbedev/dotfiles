@@ -44,6 +44,7 @@ nixpkgs#hyprutils
 nixpkgs#hyprsysteminfo
 nixpkgs#dunst
 nixpkgs#waybar
+nixpkgs#swaynotificationcenter
 nixpkgs#rofi
 nixpkgs#xdg-desktop-portal
 nixpkgs#xdg-desktop-portal-hyprland
