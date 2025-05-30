@@ -18,7 +18,6 @@ nixpkgs#lazygit
 nixpkgs#lazydocker
 nixpkgs#podman
 nixpkgs#dbeaver-bin
-nixpkgs#alacritty
 nixpkgs#air
 nixpkgs#gopass
 nixpkgs#gotools
@@ -43,6 +42,7 @@ nixpkgs#hyprcursor
 nixpkgs#hyprpolkitagent
 nixpkgs#hyprutils
 nixpkgs#hyprsysteminfo
+nixpkgs#dunst
 nixpkgs#waybar
 nixpkgs#rofi
 nixpkgs#xdg-desktop-portal
