@@ -1,4 +1,5 @@
 nixpkgs#nh
+nixpkgs#fd
 nixpkgs#zsh
 nixpkgs#nix-zsh-completions
 nixpkgs#curl
