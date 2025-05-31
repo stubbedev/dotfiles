@@ -8,4 +8,4 @@ src/nvim/lazyvim.json
 src/lazygit/state.yml
 src/btop/btop.log
 src/btop/btop.conf
-
+src/nix/home-manager/flake.lock
