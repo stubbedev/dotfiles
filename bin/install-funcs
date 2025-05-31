@@ -62,7 +62,6 @@ function install_stubbe_all {
   printf "\n"
   case "$REPLY" in
   [Yy][Ee][Ss] | [Yy])
-    license_openai
     license_intelephense
     ;;
   *)
@@ -77,44 +76,24 @@ function install_toolchain_binaries {
   install_nix
   install_nix_home_manager
   install_go
-  # install_rust
   install_astral
   src_zsh
 }
 
 function install_toolchain_reliant_binaries {
   rust_deps
-  # nix_deps
   src_zsh
 }
 
 function install_non_toolchain_binaries {
   install_docker
-  install_keyd
   src_zsh
 }
 
 function install_confs {
   conf_nix
   conf_nix_home_manager
-  conf_zsh
-  conf_nvim
-  conf_tmux
   conf_fonts
-  conf_wezterm
-  conf_regolith_xresources
-  conf_regolith_i3
-  conf_lazygit
-  conf_ideavim
-  conf_keyd
-  conf_dark_mode
-  conf_btop
-  conf_dunst
-  conf_sway
-  conf_rofi
-  conf_hyprland
-  conf_alacritty
-  conf_git
   src_zsh
 }
 
@@ -130,7 +109,7 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
+    bash -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev python3.13-venv"
   fi
   if is_binary dnf; then
     bash -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
@@ -167,13 +146,6 @@ function install_nix_home_manager {
 }
 
 # INFO: Toolchain dependent apps
-function nix_deps {
-  if is_nix; then
-    return 0
-  fi
-  NIXPKGS_ALLOW_INSECURE=1 nix profile install $(cat "$STUBBE_SRC/nix/nix/packages.txt") --impure
-  "$HOME/.stubbe/bin/scripts/relink_nix_bins" # make nix bins shared on system path
-}
 function rust_deps {
   cargo install alacritty
   sudo ln -sf "$HOME/.cargo/bin/alacritty" /usr/bin/alacritty
@@ -188,18 +160,6 @@ function install_docker {
   sudo usermod -aG docker "$USER"
   rm -rf "$DOCKERTMPDIR"
 }
-function install_keyd {
-  local CURRENTDIR=$PWD
-  local KEYDDIR=$(mktemp -d)
-  git clone https://github.com/rvaiya/keyd "$KEYDDIR/keyd"
-  cd "$KEYDDIR/keyd" || exit
-  make
-  sudo make install
-  sudo systemctl enable keyd
-  sudo systemctl start keyd
-  cd "$CURRENTDIR" || exit
-  rm -rf "$KEYDDIR"
-}
 
 # INFO: Configs
 function conf_fonts {
@@ -208,13 +168,6 @@ function conf_fonts {
   mkdir -p "$HOME/.local/share/fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.local/share/fonts"
-}
-function conf_zsh {
-  local SOURCE_ZSH="$STUBBE_SRC/zsh/init"
-  touch "$HOME/.zshrc"
-  if ! has_string "$HOME/.zshrc" "$SOURCE_ZSH"; then
-    echo "source $SOURCE_ZSH" >>"$HOME/.zshrc"
-  fi
 }
 function conf_nix {
   if is_nix; then
@@ -230,141 +183,6 @@ function conf_nix_home_manager {
   ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config/home-manager"
   ln -sf "$STUBBE_SRC" "$HOME/.config/home-manager/src"
 }
-function conf_nvim {
-  rm -rf "$HOME/.config/nvim"
-  ln -sf "$STUBBE_SRC/nvim" "$HOME/.config/"
-}
-function conf_tmux {
-  if ! is_directory "$HOME/.tmux/plugins/tpm"; then
-    git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
-  fi
-  local SOURCE_TMUX="$STUBBE_SRC/tmux/tmux.conf"
-  touch "$HOME/.tmux.conf"
-  if ! has_string "$HOME/.tmux.conf" "$SOURCE_TMUX"; then
-    echo "source-file $SOURCE_TMUX" >>"$HOME/.tmux.conf"
-  fi
-}
-function conf_regolith_xresources {
-  sudo mkdir -p /usr/share/backgrounds
-  sudo cp -rf "$STUBBE_SRC/wallpapers/"* /usr/share/backgrounds
-  mkdir -p "$HOME/.config/regolith3"
-  ln -sf "$STUBBE_SRC/regolith/Xresources" "$HOME/.config/regolith3/Xresources"
-  ln -sf "$STUBBE_SRC/picom" "$HOME/.config/regolith3/picom"
-}
-function conf_regolith_i3 {
-  mkdir -p "$HOME/.config/regolith3"
-  rm -rf "$HOME/.config/regolith3/i3"
-  ln -sf "$STUBBE_SRC/regolith/i3" "$HOME/.config/regolith3/i3"
-}
-function conf_wezterm {
-  local SOURCE_WEZTERM="$STUBBE_SRC/wezterm"
-  mkdir -p "$HOME/.config/wezterm"
-  ln -sf "$SOURCE_WEZTERM/wezterm.lua" "$HOME/.config/wezterm"
-}
-function conf_lazygit {
-  local SOURCE_LAZYGIT="$STUBBE_SRC/lazygit"
-  mkdir -p "$HOME/.config/lazygit"
-  ln -sf "$SOURCE_LAZYGIT/config.yml" "$HOME/.config/lazygit"
-  touch "$HOME/.config/lazygit/state.yml"
-  if ! has_string "$HOME/.config/lazygit/state.yml" "startuppopupversion"; then
-    echo "startuppopupversion: 5" >>"$HOME/.config/lazygit/state.yml"
-  fi
-}
-function conf_ideavim {
-  local SOURCE_IDEAVIM="$STUBBE_SRC/ideavim"
-  ln -sf "$SOURCE_IDEAVIM/ideavimrc" "$HOME/.ideavimrc"
-}
-function conf_keyd {
-  local SOURCE_KEYD="$STUBBE_SRC/keyd"
-  sudo ln -sf "$SOURCE_KEYD/default.conf" "/etc/keyd"
-  sudo keyd reload
-}
-function conf_xmodmap {
-  local XMODMAPDIR="$STUBBE_SRC/xmodmap"
-  ln -sf "$XMODMAPDIR/Xmodmap" "$HOME/.Xmodmap"
-  touch "$HOME/.profile"
-  if ! grep -Fxq "xmodmap ~/.Xmodmap" "$HOME/.profile"; then
-    {
-      echo ""
-      echo "echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode"
-      echo "echo 1 | sudo tee /sys/module/hid_apple/parameters/swap_opt_cmd"
-      echo "xmodmap ~/.Xmodmap"
-    } >>"$HOME/.profile"
-  fi
-}
-function conf_dark_mode {
-  mkdir -p "$HOME/.config"
-  mkdir -p "$HOME/.config/xdg-desktop-portal"
-  touch "$HOME/.config/xdg-desktop-portal/portals.conf"
-  if ! grep -Fxq "default=gtk;wlr" "$HOME/.config/xdg-desktop-portal/portals.conf"; then
-    {
-      echo "[preferred]"
-      echo "default=gtk;wlr"
-      echo ""
-    } >>"$HOME/.config/xdg-desktop-portal/portals.conf"
-  fi
-}
-function conf_btop {
-  mkdir -p "$HOME/.config"
-  ln -sf "$STUBBE_SRC/btop" "$HOME/.config/btop"
-}
-function conf_alacritty {
-  mkdir -p "$HOME/.config"
-  ln -sf "$STUBBE_SRC/alacritty" "$HOME/.config"
-  if is_binary "alacritty" && is_binary update-alternatives; then
-    local alacritty_path="$(which alacritty)"
-    sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator "$alacritty_path" 50
-    sudo update-alternatives --set x-terminal-emulator "$alacritty_path"
-  fi
-}
-function conf_git {
-  if is_binary git; then
-    git config --global user.name "Alexander Bugge Stage"
-    git config --global user.email "abs@stubbe.dev"
-    git config --global core.excludesfile ~/.gitignore
-    git config --global push.autoSetupRemote true
-    git config --global advice.setUpstreamFailure false
-    git config --global core.editor "$(which nvim || echo 'vim')"
-  fi
-}
-function conf_dunst {
-  mkdir -p "$HOME/.config"
-  ln -sf "$STUBBE_SRC/dunst" "$HOME/.config/dunst"
-}
-function conf_swaync {
-  mkdir -p "$HOME/.config"
-  ln -sf "$STUBBE_SRC/swaync" "$HOME/.config/swaync"
-}
-function conf_sway {
-  mkdir -p "$HOME/.config"
-  rm -rf "$HOME/.config/sway"
-  ln -sf "$STUBBE_SRC/sway" "$HOME/.config/sway"
-}
-function conf_rofi {
-  mkdir -p "$HOME/.config"
-  rm -rf "$HOME/.config/rofi"
-  ln -sf "$STUBBE_SRC/rofi" "$HOME/.config/rofi"
-}
-function conf_hyprland {
-  mkdir -p "$HOME/.config"
-  rm -rf "$HOME/.config/hypr"
-  ln -sf "$STUBBE_SRC/hypr" "$HOME/.config/hypr"
-  mkdir -p "$HOME/.config/systemd/user"
-  ln -sf "$STUBBE_SRC/hypr/services/waybar-reload-on-power-profile.service" "$HOME/.config/systemd/user/waybar-reload-on-power-profile.service"
-  conf_waybar
-  systemctl --user daemon-reload
-  systemctl --user enable waybar-reload-on-power-profile.service
-}
-function conf_waybar {
-  mkdir -p "$HOME/.config"
-  rm -rf "$HOME/.config/waybar"
-  ln -sf "$STUBBE_SRC/waybar" "$HOME/.config/waybar"
-}
-function conf_zed {
-  mkdir -p "$HOME/.config"
-  rm -rf "$HOME/.config/zed"
-  ln -sf "$STUBBE_SRC/zed" "$HOME/.config/zed"
-}
 
 # INFO: Private licenses
 function license_intelephense {
@@ -376,9 +194,4 @@ function license_intelephense {
   fi
   rm -rf "$TMPDIR"
 }
-function license_openai {
-  local TMPDIR=$(mktemp -d)
-  git clone --depth=1 git@gist.github.com:5bb1f5258de2d120a0ea8c6627c4d4e1.git "$TMPDIR" --quiet
-  cat "$TMPDIR/OPENAI" >>"$HOME/.zshrc"
-  rm -rf "$TMPDIR"
-}
+
