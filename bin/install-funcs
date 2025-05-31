@@ -77,7 +77,7 @@ function install_toolchain_binaries {
   install_nix
   install_nix_home_manager
   install_go
-  install_rust
+  # install_rust
   install_astral
   src_zsh
 }
