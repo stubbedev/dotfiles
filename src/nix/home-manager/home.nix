@@ -12,6 +12,9 @@ in {
   home.homeDirectory = "/home/stubbe";
   home.stateVersion = "25.05";
 
+  # FIXME: need to migrate the hyprland config files to avoid conflicts
+  # wayland.windowManager.hyprland.enable = true;
+
   nixpkgs.config = {
     allowUnfree = true;
     allowUnfreePredicate = (pkg: true);
@@ -29,21 +32,31 @@ in {
     ".config/lazygit/config.yml".source = dotsDir + "/lazygit/config.yml";
     ".config/lazygit/state.yml".text = "startuppopupversion: 5";
     ".config/alacritty".source = dotsDir + "/alacritty";
-    ".config/hypr".source = dotsDir + "/hypr";
-    ".config/systemd/user/waybar-reload-on-power-profile.service".source = dotsDir + "/hypr/services/waybar-reload-on-power-profile.service";
     ".config/rofi".source = dotsDir + "/rofi";
     ".config/btop".source = dotsDir + "/btop";
     ".config/sway".source = dotsDir + "/sway";
     ".config/swaync".source = dotsDir + "/swaync";
     ".config/waybar".source = dotsDir + "/waybar";
+    ".config/hypr/hyprland.conf".source = dotsDir + "/hypr/hyprland.conf";
+    ".config/hypr/hyprlock.conf".source = dotsDir + "/hypr/hyprlock.conf";
+    ".config/hypr/hypridle.conf".source = dotsDir + "/hypr/hypridle.conf";
+    ".config/hypr/hyprpaper.conf".source = dotsDir + "/hypr/hyprpaper.conf";
+    ".config/hypr/hyprsunset.conf".source = dotsDir + "/hypr/hyprsunset.conf";
+    ".config/hypr/keybinds.conf".source = dotsDir + "/hypr/keybinds.conf";
+    ".config/hypr/monitors.conf".source = dotsDir + "/hypr/monitors.conf";
+    ".config/hypr/settings.conf".source = dotsDir + "/hypr/settings.conf";
+    ".config/hypr/theme.conf".source = dotsDir + "/hypr/theme.conf";
+    ".config/hypr/env.conf".source = dotsDir + "/hypr/env.conf";
+    ".config/hypr/scripts".source = dotsDir + "/hypr/scripts";
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
       default=gtk;wlr
     '';
   };
   home.sessionVariables = {
-    NIXPKGS_ALLOW_UNFREE = 1;
-    NIXPKGS_ALLOW_INSECURE = 1;
+    NIXPKGS_ALLOW_UNFREE = "1";
+    NIXPKGS_ALLOW_INSECURE = "1";
+    NIXOS_OZONE_WL = "1";
     EDITOR = "nvim";
     DISPLAY = ":1";
     MANPAGER = "sh -c 'col -bx | bat -l man -p'";
@@ -60,6 +73,7 @@ in {
   '';
   programs.home-manager.enable = true;
   programs.neovim.enable = true;
+  programs.kitty.enable = true;
   programs.git = {
     enable = true;
     userName = "Alexander Bugge Stage";
@@ -76,9 +90,18 @@ in {
 
   systemd.user.services = {
     waybar-reload-on-power-profile = {
-      enable = true;
-      wantedBy = [ "default.target" ];
+      Unit = {
+        Description = "Reload Waybar when power-profiles-daemon starts";
+        After = [ "graphical-session.target" ];
+      };
+      Install = { WantedBy = [ "default.target" ]; };
+      Service = {
+        Type = "simple";
+        ExecStart = "%h/.stubbe/src/hypr/scripts/wait_for_power_profiles.sh";
+        Restart = "no";
+      };
     };
   };
+
 }
 
