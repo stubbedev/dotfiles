@@ -96,7 +96,7 @@ function install_non_toolchain_binaries {
 
 function install_confs {
   conf_nix
-	conf_nix_home_manager
+  conf_nix_home_manager
   conf_zsh
   conf_nvim
   conf_tmux
@@ -221,13 +221,14 @@ function conf_nix {
     return 0
   fi
   if ! grep -Fxq "experimental-features = nix-command flakes" /etc/nix/nix.conf; then
-      echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf > /dev/null
+    echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf >/dev/null
   fi
 }
 function conf_nix_home_manager {
-	mkdir -p "$HOME/.config"
-	rm -rf "$HOME/.config/home-manager"
-	ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config/home-manager"
+  mkdir -p "$HOME/.config"
+  rm -rf "$HOME/.config/home-manager"
+  ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config/home-manager"
+  ln -sf "$STUBBE_SRC" "$HOME/.config/home-manager/src"
 }
 function conf_nvim {
   rm -rf "$HOME/.config/nvim"
