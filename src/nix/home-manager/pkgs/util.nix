@@ -1,0 +1,46 @@
+{ pkgs }:
+
+[
+  pkgs.rustup
+  pkgs.zig
+  pkgs.fd
+  pkgs.zsh
+  pkgs.curl
+  pkgs.wget
+  pkgs.neovim
+  pkgs.tmux
+  pkgs.git
+  pkgs.gnugrep
+  pkgs.bat
+  pkgs.fzf
+  pkgs.eza
+  pkgs.htop
+  pkgs.btop
+  pkgs.jless
+  pkgs.ripgrep
+  pkgs.lazygit
+  pkgs.lazydocker
+  pkgs.podman
+  pkgs.air
+  pkgs.gopass
+  pkgs.gotools
+  pkgs.tree-sitter
+  pkgs.nodejs
+  pkgs.bun
+  pkgs.yarn
+  pkgs.deno
+  pkgs.jetbrains-toolbox
+  pkgs.imagemagick
+  pkgs.exiftool
+  pkgs.ffmpeg-full
+  pkgs.dcraw
+  pkgs.libraw
+  pkgs.libreoffice
+  pkgs.librsvg
+  pkgs.zip
+  pkgs.ghostscript
+  pkgs.unzip
+  pkgs.p7zip
+  pkgs.nh
+  pkgs.nix-zsh-completions
+]

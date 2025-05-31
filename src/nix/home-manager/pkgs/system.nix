@@ -1,0 +1,33 @@
+{ pkgs }:
+
+[
+  pkgs.hyprland
+  pkgs.hyprshot
+  pkgs.hyprlock
+  pkgs.hyprlang
+  pkgs.hyprkeys
+  pkgs.hypridle
+  pkgs.hyprpaper
+  pkgs.hyprsunset
+  pkgs.hyprpicker
+  pkgs.hyprnotify
+  pkgs.hyprcursor
+  pkgs.hyprpolkitagent
+  pkgs.hyprutils
+  pkgs.hyprsysteminfo
+  pkgs.waybar
+  pkgs.swaynotificationcenter
+  pkgs.adwaita-icon-theme
+  pkgs.adwaita-fonts
+  pkgs.adwaita-qt
+  pkgs.adwaita-qt6
+  pkgs.rofi-wayland
+  pkgs.xdg-desktop-portal
+  pkgs.xdg-desktop-portal-hyprland
+  pkgs.xdg-desktop-portal-wlr
+  pkgs.libsForQt5.layer-shell-qt
+  pkgs.clipman
+  pkgs.cliphist
+  pkgs.wl-clip-persist
+  pkgs.nerdfonts
+]

@@ -1,6 +1,11 @@
-{ config, pkgs, ... }:
-
-{
+{ config, pkgs, self, ... }:
+let
+  pkgsDir = self + "/pkgs";
+  nixFiles = builtins.filter (name: builtins.match ".*\\.nix$" name != null)
+    (builtins.attrNames (builtins.readDir pkgsDir));
+  packageLists =
+    map (file: import (pkgsDir + "/${file}") { inherit pkgs; }) nixFiles;
+in {
   home.username = "stubbe";
   home.homeDirectory = "/home/stubbe";
   home.stateVersion = "25.05";
@@ -10,82 +15,7 @@
     allowUnfreePredicate = (pkg: true);
   };
 
-  home.packages = [
-    pkgs.nh
-    pkgs.rustup
-    pkgs.fd
-    pkgs.zsh
-    pkgs.nix-zsh-completions
-    pkgs.nerdfonts
-    pkgs.curl
-    pkgs.wget
-    pkgs.neovim
-    pkgs.tmux
-    pkgs.git
-    pkgs.gnugrep
-    pkgs.bat
-    pkgs.fzf
-    pkgs.eza
-    pkgs.htop
-    pkgs.btop
-    pkgs.jless
-    pkgs.ripgrep
-    pkgs.lazygit
-    pkgs.lazydocker
-    pkgs.podman
-    pkgs.dbeaver-bin
-    pkgs.air
-    pkgs.gopass
-    pkgs.gotools
-    pkgs.jujutsu
-    pkgs.tree-sitter
-    pkgs.nodejs
-    pkgs.bun
-    pkgs.yarn
-    pkgs.deno
-    pkgs.jetbrains-toolbox
-    pkgs.hyprland
-    pkgs.hyprshot
-    pkgs.hyprlock
-    pkgs.hyprlang
-    pkgs.hyprkeys
-    pkgs.hypridle
-    pkgs.hyprpaper
-    pkgs.hyprsunset
-    pkgs.hyprpicker
-    pkgs.hyprnotify
-    pkgs.hyprcursor
-    pkgs.hyprpolkitagent
-    pkgs.hyprutils
-    pkgs.hyprsysteminfo
-    pkgs.waybar
-    pkgs.swaynotificationcenter
-    pkgs.adwaita-icon-theme
-    pkgs.adwaita-fonts
-    pkgs.adwaita-qt
-    pkgs.adwaita-qt6
-    pkgs.rofi-wayland
-    pkgs.xdg-desktop-portal
-    pkgs.xdg-desktop-portal-hyprland
-    pkgs.xdg-desktop-portal-wlr
-    pkgs.imagemagick
-    pkgs.exiftool
-    pkgs.ffmpeg-full
-    pkgs.dcraw
-    pkgs.libraw
-    pkgs.libreoffice
-    pkgs.librsvg
-    pkgs.zip
-    pkgs.ghostscript
-    pkgs.unzip
-    pkgs.p7zip
-    pkgs.libsForQt5.layer-shell-qt
-    pkgs.clipman
-    pkgs.cliphist
-    pkgs.wl-clip-persist
-    pkgs.ghostty
-    pkgs.mysql
-  ];
+  home.packages = builtins.concatLists packageLists;
 
   home.file = {
     # # Building this configuration will create a copy of 'dotfiles/screenrc' in
