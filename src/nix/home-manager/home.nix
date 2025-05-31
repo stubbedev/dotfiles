@@ -1,11 +1,5 @@
 { config, pkgs, ... }:
 
-let
-  pinnedLuaPkgs = import (fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/21808d22b1cda1898b71cf1a1beb524a97add2c4.tar.gz";
-  }) {};
-in
-
 {
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
@@ -21,12 +15,17 @@ in
   # release notes.
   home.stateVersion = "25.05"; # Please read the comment before changing.
 
+  # Allow unfree and insecure packages in Nixpkgs
+  nixpkgs.config = {
+    allowUnfree = true;
+    allowUnfreePredicate = (pkg: true);
+  };
+
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
-    pkgs.hello
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
@@ -44,6 +43,7 @@ in
     pkgs.fd
     pkgs.zsh
     pkgs.nix-zsh-completions
+    pkgs.nerdfonts
     pkgs.curl
     pkgs.wget
     pkgs.neovim
@@ -85,7 +85,6 @@ in
     pkgs.hyprpolkitagent
     pkgs.hyprutils
     pkgs.hyprsysteminfo
-    pkgs.dunst
     pkgs.waybar
     pkgs.swaynotificationcenter
     pkgs.adwaita-icon-theme
@@ -112,7 +111,7 @@ in
     pkgs.cliphist
     pkgs.wl-clip-persist
     pkgs.ghostty
-		pinnedLuaPkgs.lua
+    pkgs.mysql
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage

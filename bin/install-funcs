@@ -44,6 +44,9 @@ function install_stubbe_all {
   # INFO: Install generic symlinks
   install_symlinks
 
+  # INFO: Install configs
+  install_confs
+
   # INFO: Install toolchains
   install_toolchain_binaries
 
@@ -52,9 +55,6 @@ function install_stubbe_all {
 
   # INFO: Install non-toolchain apps
   install_non_toolchain_binaries
-
-  # INFO: Install configs
-  install_confs
 
   # INFO: Install private licenses
   echo "Install private licenses:"
@@ -84,7 +84,7 @@ function install_toolchain_binaries {
 
 function install_toolchain_reliant_binaries {
   rust_deps
-  nix_deps
+  # nix_deps
   src_zsh
 }
 
@@ -163,6 +163,7 @@ function install_nix_home_manager {
   nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
   nix-channel --update
   nix-shell '<home-manager>' -A install
+  home-manager switch
 }
 
 # INFO: Toolchain dependent apps
