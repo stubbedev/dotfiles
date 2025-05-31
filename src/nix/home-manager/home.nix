@@ -1,6 +1,7 @@
-{ config, pkgs, self, ... }:
+{ pkgs, self, ... }:
 let
   pkgsDir = self + "/pkgs";
+  dotsDir = self + "/src";
   nixFiles = builtins.filter (name: builtins.match ".*\\.nix$" name != null)
     (builtins.attrNames (builtins.readDir pkgsDir));
   packageLists =
@@ -13,39 +14,14 @@ in {
   nixpkgs.config = {
     allowUnfree = true;
     allowUnfreePredicate = (pkg: true);
+    allowInsecure = true;
+    allowInsecurePredicate = (pkg: true);
   };
 
   home.packages = builtins.concatLists packageLists;
 
   home.file = {
-    # # Building this configuration will create a copy of 'dotfiles/screenrc' in
-    # # the Nix store. Activating the configuration will then make '~/.screenrc' a
-    # # symlink to the Nix store copy.
-    # ".screenrc".source = dotfiles/screenrc;
-
-    # # You can also set the file content immediately.
-    # ".gradle/gradle.properties".text = ''
-    #   org.gradle.console=verbose
-    #   org.gradle.daemon.idletimeout=3600000
-    # '';
   };
-
-  # Home Manager can also manage your environment variables through
-  # 'home.sessionVariables'. These will be explicitly sourced when using a
-  # shell provided by Home Manager. If you don't want to manage your shell
-  # through Home Manager then you have to manually source 'hm-session-vars.sh'
-  # located at either
-  #
-  #  ~/.nix-profile/etc/profile.d/hm-session-vars.sh
-  #
-  # or
-  #
-  #  ~/.local/state/nix/profiles/profile/etc/profile.d/hm-session-vars.sh
-  #
-  # or
-  #
-  #  /etc/profiles/per-user/stubbe/etc/profile.d/hm-session-vars.sh
-  #
   home.sessionVariables = {
     EDITOR = "nvim";
     DISPLAY = ":1";
@@ -56,7 +32,6 @@ in {
     NIXPKGS_ALLOW_INSECURE = 1;
   };
 
-  # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 }
 

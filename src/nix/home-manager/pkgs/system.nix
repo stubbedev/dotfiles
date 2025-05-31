@@ -29,5 +29,5 @@
   pkgs.clipman
   pkgs.cliphist
   pkgs.wl-clip-persist
-  pkgs.nerdfonts
+  pkgs.nerd-fonts.jetbrains-mono
 ]

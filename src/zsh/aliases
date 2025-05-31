@@ -33,3 +33,7 @@ if is_binary eza; then
 else
   alias ls='ls --color'
 fi
+
+if is_binary home-manager; then
+  alias hm='home-manager --option warn-dirty false --impure'
+fi
