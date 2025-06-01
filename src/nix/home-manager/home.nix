@@ -69,7 +69,19 @@ in {
       git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
     fi
     rm -rf "$HOME/.config/nvim" && ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/nvim"
-    mkdir -p "$HOME/.config/lazygit" && echo "startuppopupversion: 5" > "$HOME/.config/lazygit/state.yml"
+    mkdir -p "$HOME/.config/lazygit" && echo \
+    "lastupdatecheck: 0
+    startuppopupversion: 5
+    customcommandshistory: []
+    hidecommandlog: false
+    ignorewhitespaceindiffview: true
+    diffcontextsize: 3
+    renamesimilaritythreshold: 50
+    localbranchsortorder: recency
+    remotebranchsortorder: alphabetical
+    gitlogorder: topo-order
+    gitlogshowgraph: always" \
+    > "$HOME/.config/lazygit/state.yml"
   '';
 
   systemd.user.services = {
