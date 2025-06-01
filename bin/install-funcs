@@ -1,178 +1,186 @@
-#!/usr/bin/env zsh
+#!/bin/sh
 
 # INFO: REQUIRED ENV VARS
 STUBBE_SRC="$HOME/.stubbe/src"
 export STUBBE_SRC
 
+# Helper: Check if command exists
+is_binary() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+# Helper: Check if running as root
+is_elevated_shell() {
+  [ "$(id -u)" -eq 0 ]
+}
+
+# Helper: Check if Nix is installed
+is_nix() {
+  grep -q '^ID=nixos' /etc/os-release 2>/dev/null
+}
+
+# Helper: Check if a file exists
+is_file() {
+  [ -f "$1" ]
+}
+
 # INFO: INSTALL FUNCTION
-function installer_prompt {
-  if [[ "$SHELL" != */zsh ]]; then
-    install_build_essential
-    exit
-  fi
+installer_prompt() {
+  case "$SHELL" in
+    */zsh) ;;
+    *) install_build_essential; exit ;;
+  esac
+
   if is_elevated_shell; then
     echo "Please do not run this script with sudo."
     echo "Execute it normally and any functions which need sudo will prompt for it."
     exit 0
   fi
-  touch "$HOME"/.zshrc
-  if ! [[ -f "$HOME/.ssh/id_ed25519.pub" || -f "$HOME/.ssh/id_rsa.pub" ]]; then
+
+  if ! [ -f "$HOME/.ssh/id_ed25519.pub" ] && ! [ -f "$HOME/.ssh/id_rsa.pub" ]; then
     echo "Need to set SSH key before being able to install."
     echo "Goodbye!"
     exit 0
   fi
+
   echo "Please enter your desired option:"
-  read REPLY\?"(I)nstall Mandatory or (C)ancel?"
+  printf "(I)nstall Mandatory or (C)ancel? "
+  read -r REPLY
   printf "\n"
   case "$REPLY" in
-  i | I)
-    install_stubbe_all
-    exit
-    ;;
-  c | C)
-    echo "Cancelling!"
-    exit
-    ;;
-  *)
-    info
-    exit
-    ;;
+    i|I)
+      install_stubbe_all
+      exit
+      ;;
+    c|C)
+      echo "Cancelling!"
+      exit
+      ;;
+    *)
+      echo "Unrecognized option."
+      exit
+      ;;
   esac
 }
 
-function install_stubbe_all {
-  # INFO: Install generic symlinks
+install_stubbe_all() {
   install_symlinks
-
-  # INFO: Install toolchains
+  install_nix
   install_toolchain_binaries
-
-  # INFO: Install toolchain apps
   install_toolchain_reliant_binaries
-
-  # INFO: Install non-toolchain apps
   install_non_toolchain_binaries
-
-  # INFO: Install configs
   install_confs
 
-  # INFO: Install private licenses
   echo "Install private licenses:"
-  read REPLY\?"(Y)es or [N]o?"
+  printf "(Y)es or [N]o? "
+  read -r REPLY
   printf "\n"
   case "$REPLY" in
-  [Yy][Ee][Ss] | [Yy])
-    license_intelephense
-    ;;
-  *)
-    echo "Skipping private installs"
-    ;;
+    [Yy][Ee][Ss]|[Yy])
+      license_intelephense
+      ;;
+    *)
+      echo "Skipping private installs"
+      ;;
   esac
-  src_zsh
 }
 
-function install_toolchain_binaries {
-  install_build_essential
-  install_go
-  install_rust
-  install_astral
-  install_volta
-  install_nix
+install_nix() {
+  sh -c "$(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)" --daemon
   install_nix_home_manager
-  src_zsh
-}
-
-function install_toolchain_reliant_binaries {
-  rust_deps
-  src_zsh
-}
-
-function install_non_toolchain_binaries {
-  install_docker
-  src_zsh
-}
-
-function install_confs {
   conf_nix
   conf_nix_home_manager
-  conf_fonts
   conf_sessions
-  src_zsh
 }
 
-# INFO: Generic symlinks
-function install_symlinks {
-  rm -rf "$HOME/.stubbe" && ln -sf "$SCRIPT_DIR" "$HOME/.stubbe"
-  src_zsh
+install_toolchain_binaries() {
+  install_build_essential
+  install_go
+  install_astral
+  install_volta
 }
 
-# INFO: Toolchains
-function install_build_essential {
+install_toolchain_reliant_binaries() {
+  rust_deps
+}
+
+install_non_toolchain_binaries() {
+  install_docker
+}
+
+install_confs() {
+  conf_fonts
+}
+
+install_symlinks() {
+  rm -rf "$HOME/.stubbe"
+  ln -sf "$SCRIPT_DIR" "$HOME/.stubbe"
+}
+
+install_build_essential() {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
+    sh -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
     if grep -qi 'ubuntu' /etc/os-release; then
       sudo apt install -y python3.13-venv
     fi
   fi
   if is_binary dnf; then
-    bash -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
+    sh -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
   fi
   if is_binary pacman; then
-    bash -c "sudo pacman -S cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
+    sh -c "sudo pacman -S cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
   fi
-  sudo chsh -s "$(which "zsh")" "$USER"
 }
-function install_go {
-  bash <(curl -sL https://git.io/go-installer)
+
+install_go() {
+  sh -c "$(curl -sL https://git.io/go-installer)"
 }
-function install_rust {
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+install_volta() {
+  "$HOME/.nix-profile/bin/curl" https://get.volta.sh | bash
 }
-function install_volta {
-  curl https://get.volta.sh | bash
+
+install_astral() {
+  "$HOME/.nix-profile/bin/curl" -LsSf https://astral.sh/uv/install.sh | sh
 }
-function install_astral {
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-}
-function install_nix {
-  sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
-  src_zsh
-}
-function install_nix_home_manager {
+
+install_nix_home_manager() {
   if is_nix; then
     return 0
   fi
-  nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
-  nix-channel --update
-  nix-shell '<home-manager>' -A install
-  home-manager switch
+  /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
+  /nix/var/nix/profiles/default/bin/nix-channel --update
+  /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
+  /home/stubbe/.nix-profile/bin/home-manager switch
+  if ! grep -Fxq ".nix-profile/bin/zsh" /etc/shells; then
+    echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
+  fi
+  usermod -s "$HOME/.nix-profile/bin/zsh" "$USER"
 }
 
-# INFO: Toolchain dependent apps
-function rust_deps {
-  cargo install alacritty
+rust_deps() {
+  "$HOME/.nix-profile/bin/cargo" install alacritty
   sudo ln -sf "$HOME/.cargo/bin/alacritty" /usr/bin/alacritty
 }
 
-# INFO: Non-Toolchain dependent
-function install_docker {
-  local DOCKERTMPDIR=$(mktemp -d)
-  curl -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
+install_docker() {
+  DOCKERTMPDIR=$(mktemp -d)
+  "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
   sudo sh "$DOCKERTMPDIR/get-docker.sh"
-  sudo groupadd docker
+  sudo groupadd docker 2>/dev/null || true
   sudo usermod -aG docker "$USER"
   rm -rf "$DOCKERTMPDIR"
 }
 
-# INFO: Configs
-function conf_fonts {
-  local SOURCE_FONT="$STUBBE_SRC/fonts"
+conf_fonts() {
+  SOURCE_FONT="$STUBBE_SRC/fonts"
   mkdir -p "$HOME/.fonts"
   mkdir -p "$HOME/.local/share/fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
   cp -rf "$SOURCE_FONT/." "$HOME/.local/share/fonts"
 }
-function conf_nix {
+
+conf_nix() {
   if is_nix; then
     return 0
   fi
@@ -180,24 +188,25 @@ function conf_nix {
     echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf >/dev/null
   fi
 }
-function conf_nix_home_manager {
+
+conf_nix_home_manager() {
   mkdir -p "$HOME/.config"
   rm -rf "$HOME/.config/home-manager"
   ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config/home-manager"
   ln -sf "$STUBBE_SRC" "$HOME/.config/home-manager/src"
 }
-function conf_sessions {
+
+conf_sessions() {
   mkdir -p "$HOME/.local/share/wayland-sessions"
-  sed "s|__BINARY_PATH__|$(which hyprland)|g" "$STUBBE_SRC/sessions/hyprland.desktop" | tee "$HOME/.local/share/wayland-sessions/hyprland.desktop" >/dev/null
+  sed "s|__BINARY_PATH__|$(command -v hyprland)|g" "$STUBBE_SRC/sessions/hyprland.desktop" > "$HOME/.local/share/wayland-sessions/hyprland.desktop"
 }
 
-# INFO: Private licenses
-function license_intelephense {
-  local TMPDIR=$(mktemp -d)
-  git clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
+license_intelephense() {
+  TMPDIR=$(mktemp -d)
+  "$HOME/.nix-profile/bin/git" clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
   mkdir -p "$HOME/intelephense"
   if ! is_file "$HOME/intelephense/license.txt"; then
-    cat "$TMPDIR/INTELEPHENSE" >"$HOME/intelephense/license.txt"
+    cat "$TMPDIR/INTELEPHENSE" > "$HOME/intelephense/license.txt"
   fi
   rm -rf "$TMPDIR"
 }

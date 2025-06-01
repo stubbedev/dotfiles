@@ -1,12 +1,11 @@
-#!/usr/bin/env zsh
+#!/bin/sh
 
-function info {
+info() {
   echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
+  mkdir -p "$HOME/.ssh"
   SCRIPT_DIR="$PWD"
   export SCRIPT_DIR
-  source "$SCRIPT_DIR/src/zsh/sysfuncs"
-  source "$SCRIPT_DIR/bin/install-funcs"
-  mkdir -p "$HOME/.ssh/"
+  . "$SCRIPT_DIR/bin/install-funcs"
   installer_prompt
 }
 
