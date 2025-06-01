@@ -8,21 +8,28 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixgl.url = "github:guibou/nixGL";
+    nixGL = {
+      url = "github:guibou/nixGL";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs =
-    { nixpkgs, home-manager, nixgl, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ nixgl.overlay ];
-      };
-    in
+  outputs = { self, nixpkgs, home-manager, nixGL, ... }:
     {
       homeConfigurations."stubbe" = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
+        pkgs = import nixpkgs {
+          system = "x86_64-linux";
+          config = {
+            allowUnfree = true;
+            allowUnfreePredicate = (_: true);
+            allowInsecure = true;
+            allowInsecurePredicate = (_: true);
+          };
+        };
+        extraSpecialArgs = {
+          inherit nixGL;
+          inherit self;
+        };
         modules = [ ./home.nix ];
       };
     };

@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, nixGL, self, ... }:
 
 let
   pkgsDir = ./pkgs;
@@ -13,6 +13,11 @@ let
   importedPrograms =
     map (name: import (programsDir + "/${name}")) nixPrograms;
 in {
+
+  nixGL = {
+    packages = nixGL.packages;
+    defaultWrapper = "mesa";
+  };
 
   imports = importedPrograms;
 
@@ -31,6 +36,7 @@ in {
 
   wayland.windowManager.hyprland = {
     enable = true;
+    package = config.lib.nixGL.wrap pkgs.hyprland;
     systemd.variables = [ "--all" ];
     extraConfig = builtins.readFile ./../../hypr/hyprland.conf;
   };
@@ -63,6 +69,10 @@ in {
     GOPATH = "/home/stubbe/go";
     DEPLOYER_REMOTE_USER = "abs";
   };
+
+  xdg.configFile."environment.d/envvars.conf".text = ''
+    PATH="$HOME/.nix-profile/bin:$PATH"
+  '';
 
   home.activation.stubbePostBuild = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
