@@ -1,7 +1,7 @@
 { pkgs }:
 
 [
-  # pkgs.hyprland
+  pkgs.hyprland
   pkgs.hyprshot
   pkgs.hyprlock
   pkgs.hyprlang
@@ -23,7 +23,7 @@
   pkgs.adwaita-qt6
   pkgs.rofi-wayland
   pkgs.xdg-desktop-portal
-  # pkgs.xdg-desktop-portal-hyprland
+  pkgs.xdg-desktop-portal-hyprland
   pkgs.xdg-desktop-portal-wlr
   pkgs.libsForQt5.layer-shell-qt
   pkgs.clipman

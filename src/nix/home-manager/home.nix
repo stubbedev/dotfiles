@@ -35,7 +35,7 @@ in {
   home.packages = builtins.concatLists packageLists;
 
   wayland.windowManager.hyprland = {
-    enable = true;
+    enable = false;
     package = config.lib.nixGL.wrap pkgs.hyprland;
     systemd.enable = true;
     xwayland.enable = true;
