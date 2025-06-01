@@ -2,7 +2,6 @@
 
 [
   (config.lib.nixGL.wrap pkgs.hyprland)
-  pkgs.hyprland
   pkgs.hyprshot
   pkgs.hyprlock
   pkgs.hyprlang
