@@ -94,6 +94,7 @@ function install_confs {
   conf_nix
   conf_nix_home_manager
   conf_fonts
+  conf_sessions
   src_zsh
 }
 
@@ -179,6 +180,10 @@ function conf_nix_home_manager {
   rm -rf "$HOME/.config/home-manager"
   ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config/home-manager"
   ln -sf "$STUBBE_SRC" "$HOME/.config/home-manager/src"
+}
+function conf_sessions {
+  sudo mkdir -p /usr/share/wayland-sessions
+  sed "s|__BINARY_PATH__|$(which hyprland)|g" "$STUBBE_SRC/sessions/hyprland.desktop" | sudo tee /usr/share/wayland-sessions/hyprland.desktop > /dev/null
 }
 
 # INFO: Private licenses

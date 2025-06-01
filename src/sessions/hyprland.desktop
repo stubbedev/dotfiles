@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Hyprland
+Comment=An intelligent dynamic tiling Wayland compositor
+Exec=__BINARY_PATH__
+Type=Application
+
