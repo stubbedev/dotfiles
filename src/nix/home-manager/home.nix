@@ -29,6 +29,12 @@ in {
 
   home.packages = builtins.concatLists packageLists;
 
+  wayland.windowManager.hyprland = {
+    enable = true;
+    systemd.variables = ["--all"];
+    extraConfig = builtins.readFile ./../../hypr/hyprland.conf;
+  };
+
   home.file = {
     ".zshrc".text = "source /home/stubbe/.stubbe/src/zsh/init";
     ".ideavimrc".source = ./../../ideavim/ideavimrc;
