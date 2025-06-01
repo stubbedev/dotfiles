@@ -1,0 +1,85 @@
+{ config, pkgs, ... }:
+{
+  programs.tmux = {
+    enable = true;
+
+    # Extra config as string, directly inserted into tmux.conf
+    extraConfig = ''
+      set -g default-terminal "tmux-256color"
+      set -ga terminal-overrides ",*256col*:Tc"
+      set -ga terminal-overrides '*:Ss=\E[%p1%d q:Se=\E[ q'
+      set-environment -g COLORTERM "truecolor"
+      set -as terminal-features ",*:RGB"
+      set -ag terminal-overrides ",xterm-256color:RGB"
+
+      bind -n M-Left select-pane -L
+      bind -n M-Right select-pane -R
+      bind -n M-Up select-pane -U
+      bind -n M-Down select-pane -D
+      bind -n M-S-Down resize-pane -D
+      bind -n M-S-Up resize-pane -U
+      bind -n M-S-Left resize-pane -L
+      bind -n M-S-Right resize-pane -R
+      bind -n M-z resize-pane -Z
+      bind -n M-q kill-pane
+      bind -n M-Q kill-window
+      bind -n M-d detach-client
+      bind -n M-| split-pane -h
+      bind -n M-\\ split-pane -h -l '30%'
+      bind -n M-- split-pane -v
+      bind -n M-_ split-pane -v -l '30%'
+      bind -n M-e new-window -c "#{pane_current_path}"
+      bind -n M-x swap-pane -D
+      bind -n M-s choose-window
+      bind -n M-S choose-session
+      bind -n M-c command-prompt -I "#W" "rename-window '%%'"
+      bind -r -T prefix , resize-pane -L 20
+      bind -r -T prefix . resize-pane -R 20
+      bind -r -T prefix - resize-pane -D 7
+      bind -r -T prefix = resize-pane -U 7
+      bind -n M-n next-window
+      bind -n M-N switch-client -n
+      bind -n M-L next-window
+      bind -n M-b previous-window
+      bind -n M-B switch-client -p
+      bind -n M-H previous-window
+      bind -n M-m choose-window 'join-pane -s "%%"'
+      bind -n M-M choose-window 'join-pane -h -s "%%"'
+      bind -n M-t next-layout
+      bind -n M-T previous-layout
+      bind -n M-1 select-window -t 1
+      bind -n M-2 select-window -t 2
+      bind -n M-3 select-window -t 3
+      bind -n M-4 select-window -t 4
+      bind -n M-5 select-window -t 5
+      bind -n M-6 select-window -t 6
+      bind -n M-7 select-window -t 7
+      bind -n M-8 select-window -t 8
+      bind -n M-9 select-window -t 9
+      bind -n M-0 select-window -t 10
+      bind -n M-W select-pane -t :.+
+      bind -n M-w select-pane -t :.-
+      bind -n M-v copy-mode
+      bind -n M-p paste-buffer
+      bind -n M-f run-shell "tmux neww ~/.stubbe/bin/fzf-tmux-project-picker"
+      bind -n M-D run-shell "tmux neww fzf-directory-picker"
+      bind-key -T copy-mode-vi v send-keys -X begin-selection
+
+      set -g detach-on-destroy off
+      set -sg escape-time 50
+      set -g history-limit 1000000
+      setw -g mode-keys vi
+
+      set -g @plugin 'tmux-plugins/tpm'
+      set -g @plugin 'tmux-plugins/tmux-sensible'
+      set -g @plugin 'tmux-plugins/tmux-yank'
+      set -g @plugin 'tmux-plugins/tmux-resurrect'
+      set -g @plugin 'tmux-plugins/tmux-continuum'
+      set -g @plugin 'stubbedev/tmux-stubbe'
+
+      set -g mouse off
+
+      run '~/.tmux/plugins/tpm/tpm'
+    '';
+  };
+}
