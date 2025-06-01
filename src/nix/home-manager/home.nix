@@ -16,7 +16,7 @@ in {
 
   nixGL = {
     packages = nixGL.packages;
-    defaultWrapper = "mesa";
+    defaultWrapper = "nvidia";
   };
 
   imports = importedPrograms;
