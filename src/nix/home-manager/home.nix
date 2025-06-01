@@ -1,35 +1,19 @@
-{ config, lib, pkgs, inputs, nixGL, self, ... }:
+{ config, lib, pkgs, nixGL, ... }:
 
-let
-  pkgsDir = ./pkgs;
-  nixFiles = builtins.filter (name: builtins.match ".*\\.nix$" name != null)
-    (builtins.attrNames (builtins.readDir pkgsDir));
-  packageLists =
-    map (file: import (pkgsDir + "/${file}") { inherit pkgs; }) nixFiles;
-in {
+{
+  home.username = "stubbe";
+  home.homeDirectory = "/home/stubbe";
+  home.stateVersion = "25.05";
 
-  nixGL = {
-    packages = nixGL.packages;
-    defaultWrapper = "nvidia";
-  };
+  home.packages =
+    (import ./pkgs/app.nix { inherit pkgs; }) ++
+    (import ./pkgs/system.nix { inherit pkgs; }) ++
+    (import ./pkgs/util.nix { inherit pkgs; });
 
   imports = [
     ./programs/alacritty.nix
     ./programs/git.nix
   ];
-
-  home.username = "stubbe";
-  home.homeDirectory = "/home/stubbe";
-  home.stateVersion = "25.05";
-
-  nixpkgs.config = {
-    allowUnfree = true;
-    allowUnfreePredicate = (pkg: true);
-    allowInsecure = true;
-    allowInsecurePredicate = (pkg: true);
-  };
-
-  home.packages = builtins.concatLists packageLists;
 
   wayland.windowManager.hyprland = {
     enable = false;

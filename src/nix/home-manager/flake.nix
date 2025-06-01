@@ -14,7 +14,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, nixGL, ... }:
+  outputs = { nixpkgs, home-manager, nixGL, ... }:
     {
       homeConfigurations."stubbe" = home-manager.lib.homeManagerConfiguration {
         pkgs = import nixpkgs {
@@ -28,7 +28,6 @@
         };
         extraSpecialArgs = {
           inherit nixGL;
-          inherit self;
         };
         modules = [ ./home.nix ];
       };

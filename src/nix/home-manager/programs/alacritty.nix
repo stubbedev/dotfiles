@@ -1,7 +1,7 @@
-{ config, pkgs, ... }:
+{ config, pkgs, nixGL, ... }:
 {
   programs.alacritty = {
     enable = true;
-    package = config.lib.nixGL.wrap pkgs.hyprland;
+    package = nixGL.nixGLDefault pkgs.alacritty;
   };
 }
