@@ -30,4 +30,5 @@
   pkgs.cliphist
   pkgs.wl-clip-persist
   pkgs.nerd-fonts.jetbrains-mono
+  pkgs.nixgl.auto.nixGLDefault
 ]

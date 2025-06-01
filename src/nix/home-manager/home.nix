@@ -20,9 +20,6 @@ in {
   home.homeDirectory = "/home/stubbe";
   home.stateVersion = "25.05";
 
-  # FIXME: need to migrate the hyprland config files to avoid conflicts
-  # wayland.windowManager.hyprland.enable = true;
-
   nixpkgs.config = {
     allowUnfree = true;
     allowUnfreePredicate = (pkg: true);
