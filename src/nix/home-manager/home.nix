@@ -6,12 +6,6 @@ let
     (builtins.attrNames (builtins.readDir pkgsDir));
   packageLists =
     map (file: import (pkgsDir + "/${file}") { inherit pkgs; }) nixFiles;
-
-  programsDir = ./programs;
-  nixPrograms = builtins.filter (name: builtins.match ".*\\.nix$" name != null)
-    (builtins.attrNames (builtins.readDir programsDir));
-  importedPrograms =
-    map (name: import (programsDir + "/${name}")) nixPrograms;
 in {
 
   nixGL = {
@@ -19,7 +13,10 @@ in {
     defaultWrapper = "nvidia";
   };
 
-  imports = importedPrograms;
+  imports = [
+    ./programs/alacritty.nix
+    ./programs/git.nix
+  ];
 
   home.username = "stubbe";
   home.homeDirectory = "/home/stubbe";
