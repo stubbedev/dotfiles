@@ -44,9 +44,6 @@ function install_stubbe_all {
   # INFO: Install generic symlinks
   install_symlinks
 
-  # INFO: Install configs
-  install_confs
-
   # INFO: Install toolchains
   install_toolchain_binaries
 
@@ -55,6 +52,9 @@ function install_stubbe_all {
 
   # INFO: Install non-toolchain apps
   install_non_toolchain_binaries
+
+  # INFO: Install configs
+  install_confs
 
   # INFO: Install private licenses
   echo "Install private licenses:"
@@ -73,10 +73,12 @@ function install_stubbe_all {
 
 function install_toolchain_binaries {
   install_build_essential
+  install_go
+  install_rust
+  install_astral
+  install_volta
   install_nix
   install_nix_home_manager
-  install_go
-  install_astral
   src_zsh
 }
 
@@ -100,7 +102,7 @@ function install_confs {
 
 # INFO: Generic symlinks
 function install_symlinks {
-  ln -sf "$SCRIPT_DIR" "$HOME/.stubbe"
+  rm -rf "$HOME/.stubbe" && ln -sf "$SCRIPT_DIR" "$HOME/.stubbe"
   src_zsh
 }
 
