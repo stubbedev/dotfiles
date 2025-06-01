@@ -7,7 +7,7 @@
   pkgs.zsh
   pkgs.curl
   pkgs.wget
-  # pkgs.neovim
+  pkgs.neovim
   pkgs.tmux
   pkgs.git
   pkgs.gnugrep

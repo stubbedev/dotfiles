@@ -36,7 +36,6 @@ in {
     ".zshrc".text = "source /home/stubbe/.stubbe/src/zsh/init";
     ".ideavimrc".source = ./../../ideavim/ideavimrc;
     ".tmux.conf".source = ./../../tmux/tmux.conf;
-    ".config/nvim".source = ./../../nvim;
     ".config/lazygit/config.yml".source = ./../../lazygit/config.yml;
     ".config/lazygit/state.yml".text = "startuppopupversion: 5";
     ".config/alacritty".source = ./../../alacritty;
@@ -63,11 +62,13 @@ in {
     DEPLOYER_REMOTE_USER = "abs";
   };
 
-  home.activation.installTpm = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.stubbePostBuild = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
       git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
     fi
+    ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/nvim"
   '';
+
 
   systemd.user.services = {
     waybar-reload-on-power-profile = {

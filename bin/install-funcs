@@ -99,10 +99,7 @@ function install_confs {
 
 # INFO: Generic symlinks
 function install_symlinks {
-  mkdir -p "$HOME/.stubbe"
-  ln -sf "$SCRIPT_DIR/bin" "$HOME/.stubbe"
-  ln -sf "$SCRIPT_DIR/src" "$HOME/.stubbe"
-  touch "$HOME/.zshrc"
+  ln -sf "$SCRIPT_DIR" "$HOME/.stubbe"
   src_zsh
 }
 
