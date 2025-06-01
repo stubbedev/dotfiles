@@ -31,7 +31,7 @@ in {
 
   wayland.windowManager.hyprland = {
     enable = true;
-    systemd.variables = ["--all"];
+    systemd.variables = [ "--all" ];
     extraConfig = builtins.readFile ./../../hypr/hyprland.conf;
   };
 
@@ -71,7 +71,6 @@ in {
     rm -rf "$HOME/.config/nvim" && ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/nvim"
     mkdir -p "$HOME/.config/lazygit" && echo "startuppopupversion: 5" > "$HOME/.config/lazygit/state.yml"
   '';
-
 
   systemd.user.services = {
     waybar-reload-on-power-profile = {
