@@ -37,6 +37,8 @@ in {
   wayland.windowManager.hyprland = {
     enable = true;
     package = config.lib.nixGL.wrap pkgs.hyprland;
+    systemd.enable = true;
+    xwayland.enable = true;
     systemd.variables = [ "--all" ];
     extraConfig = builtins.readFile ./../../hypr/hyprland.conf;
   };
