@@ -107,7 +107,10 @@ function install_symlinks {
 # INFO: Toolchains
 function install_build_essential {
   if is_binary apt; then
-    bash -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev python3.13-venv"
+    bash -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
+    if grep -qi 'ubuntu' /etc/os-release; then
+      sudo apt install -y python3.13-venv
+    fi
   fi
   if is_binary dnf; then
     bash -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
