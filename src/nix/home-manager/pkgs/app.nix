@@ -1,7 +1,7 @@
-{ pkgs }:
+{ pkgs, config }:
 
 [
   pkgs.dbeaver-bin
   pkgs.ghostty
-  pkgs.alacritty
+  (config.lib.nixGL.wrap pkgs.alacritty)
 ]

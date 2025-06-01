@@ -1,7 +1,6 @@
 { pkgs }:
 
 [
-  # pkgs.hyprland
   pkgs.hyprshot
   pkgs.hyprlock
   pkgs.hyprlang

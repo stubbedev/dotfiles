@@ -67,7 +67,6 @@ install_stubbe_all() {
   install_symlinks
   install_nix
   install_toolchain_binaries
-  install_toolchain_reliant_binaries
   install_non_toolchain_binaries
   install_confs
 
@@ -98,10 +97,6 @@ install_toolchain_binaries() {
   install_go
   install_astral
   install_volta
-}
-
-install_toolchain_reliant_binaries() {
-  rust_deps
 }
 
 install_non_toolchain_binaries() {
@@ -156,11 +151,6 @@ install_nix_home_manager() {
     echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
   fi
   usermod -s "$HOME/.nix-profile/bin/zsh" "$USER"
-}
-
-rust_deps() {
-  "$HOME/.nix-profile/bin/cargo" install alacritty
-  sudo ln -sf "$HOME/.cargo/bin/alacritty" /usr/bin/alacritty
 }
 
 install_docker() {
