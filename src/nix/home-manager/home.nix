@@ -37,7 +37,6 @@ in {
     ".ideavimrc".source = ./../../ideavim/ideavimrc;
     ".tmux.conf".source = ./../../tmux/tmux.conf;
     ".config/lazygit/config.yml".source = ./../../lazygit/config.yml;
-    ".config/lazygit/state.yml".text = "startuppopupversion: 5";
     ".config/alacritty".source = ./../../alacritty;
     ".config/rofi".source = ./../../rofi;
     ".config/btop".source = ./../../btop;
