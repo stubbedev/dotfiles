@@ -1,13 +1,13 @@
-{ config, lib, pkgs, self, ... }:
+{ config, lib, pkgs, ... }:
 
 let
-  pkgsDir = self + "/pkgs";
+  pkgsDir = ./pkgs;
   nixFiles = builtins.filter (name: builtins.match ".*\\.nix$" name != null)
     (builtins.attrNames (builtins.readDir pkgsDir));
   packageLists =
     map (file: import (pkgsDir + "/${file}") { inherit pkgs; }) nixFiles;
 
-  programsDir = self + "/programs";
+  programsDir = ./programs;
   nixPrograms = builtins.filter (name: builtins.match ".*\\.nix$" name != null)
     (builtins.attrNames (builtins.readDir programsDir));
   importedPrograms =
