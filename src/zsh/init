@@ -1,7 +1,12 @@
 #!/usr/bin/env zsh
 
 autoload -Uz compinit
-autoload -Uz add-zsh-hook
+zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+if [[ ! -f $zcompdump || $zcompdump -ot ~/.zshrc ]]; then
+  compinit -C
+else
+  compinit -C -d "$zcompdump"
+fi
 
 STBZSHSOURCES=(
   "paths"
