@@ -11,19 +11,10 @@
   home.stateVersion = "25.05";
 
   home.packages = (import ./pkgs/app.nix { inherit pkgs config; })
-    ++ (import ./pkgs/system.nix { inherit pkgs; })
+    ++ (import ./pkgs/system.nix { inherit pkgs config; })
     ++ (import ./pkgs/util.nix { inherit pkgs; });
 
   imports = [ ./programs/git.nix ];
-
-  wayland.windowManager.hyprland = {
-    enable = true;
-    package = (config.lib.nixGL.wrap pkgs.hyprland);
-    systemd.enable = true;
-    xwayland.enable = true;
-    systemd.variables = [ "--all" ];
-    extraConfig = builtins.readFile ./../../hypr/hyprland.conf;
-  };
 
   home.file = {
     ".zshrc".text = "source /home/stubbe/.stubbe/src/zsh/init";
