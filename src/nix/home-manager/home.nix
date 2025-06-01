@@ -66,7 +66,8 @@ in {
     if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
       git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
     fi
-    ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/nvim"
+    rm -rf "$HOME/.config/nvim" && ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/nvim"
+    mkdir -p "$HOME/.config/lazygit" && echo "startuppopupversion: 5" > "$HOME/.config/lazygit/state.yml"
   '';
 
 
