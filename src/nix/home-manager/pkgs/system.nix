@@ -2,8 +2,7 @@
 
 with pkgs;[
   (config.lib.nixGL.wrap hyprland)
-  (config.lib.nixGL.wrap hyprlock)
-  networkmanagerapplet
+  hyprlock
   hyprshot
   hyprlang
   hyprkeys
@@ -16,6 +15,7 @@ with pkgs;[
   hyprutils
   hyprsysteminfo
   waybar
+  networkmanagerapplet
   swaynotificationcenter
   adwaita-icon-theme
   adwaita-fonts
@@ -31,5 +31,6 @@ with pkgs;[
   wl-clip-persist
   nerd-fonts.jetbrains-mono
   tela-circle-icon-theme
+  xwayland
   whitesur-icon-theme
 ]
