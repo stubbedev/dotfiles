@@ -29,7 +29,7 @@ in {
     ".config/hypr".source = ./../../hypr;
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
-      default=gtk;wlr
+      default=hyprland;gtk;wlr
     '';
   };
   home.sessionVariables = {
