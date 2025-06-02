@@ -1,8 +1,6 @@
 { config, lib, pkgs, nixGL, ... }:
-let
-  nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
-in
-{
+let nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
+in {
   nixGL = {
     packages = nixGL.packages;
     defaultWrapper = nixglWrapper;
@@ -84,6 +82,19 @@ in
         Restart = "no";
       };
     };
+  };
+
+  gtk = {
+    enable = true;
+    iconTheme = {
+      name = "Tela-circle";
+      package = pkgs.tela-circle-icon-theme;
+    };
+  };
+
+  qt = {
+    enable = true;
+    platformTheme = "qt5ct";
   };
 
   programs.home-manager.enable = true;

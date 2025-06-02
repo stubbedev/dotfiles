@@ -3,6 +3,7 @@
 with pkgs;[
   (config.lib.nixGL.wrap hyprland)
   (config.lib.nixGL.wrap hyprlock)
+  networkmanagerapplet
   hyprshot
   hyprlang
   hyprkeys
@@ -29,4 +30,5 @@ with pkgs;[
   cliphist
   wl-clip-persist
   nerd-fonts.jetbrains-mono
+  tela-circle-icon-theme
 ]
