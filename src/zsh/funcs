@@ -436,9 +436,9 @@ fi
 if is_binary home-manager; then
   function hm {
     if lspci | grep -qi nvidia >/dev/null; then
-      NIXGL_WRAPPER="nvidia"
+      export NIXGL_WRAPPER="nvidia"
     else
-      NIXGL_WRAPPER="mesa"
+      export NIXGL_WRAPPER="mesa"
     fi
     home-manager "$@" --impure
   }

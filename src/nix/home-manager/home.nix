@@ -1,9 +1,11 @@
 { config, lib, pkgs, nixGL, ... }:
-
+let
+  nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
+in
 {
   nixGL = {
     packages = nixGL.packages;
-    defaultWrapper = builtins.getEnv "NIXGL_WRAPPER";
+    defaultWrapper = nixglWrapper;
   };
 
   home.username = "stubbe";

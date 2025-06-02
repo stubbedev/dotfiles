@@ -147,9 +147,9 @@ install_nix_home_manager() {
     return 0
   fi
   if lspci | grep -qi nvidia >/dev/null; then
-    NIXGL_WRAPPER="nvidia"
+    export NIXGL_WRAPPER="nvidia"
   else
-    NIXGL_WRAPPER="mesa"
+    export NIXGL_WRAPPER="mesa"
   fi
   /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
   /nix/var/nix/profiles/default/bin/nix-channel --update
