@@ -182,8 +182,7 @@ conf_nix() {
 conf_nix_home_manager() {
   mkdir -p "$HOME/.config"
   rm -rf "$HOME/.config/home-manager"
-  ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config/home-manager"
-  ln -sf "$STUBBE_SRC" "$HOME/.config/home-manager/src"
+  ln -sf "$STUBBE_SRC/nix/home-manager" "$HOME/.config"
 }
 
 conf_sessions() {
