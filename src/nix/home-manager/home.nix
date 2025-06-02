@@ -3,7 +3,7 @@
 {
   nixGL = {
     packages = nixGL.packages;
-    defaultWrapper = "mesa";
+    defaultWrapper = builtins.getEnv "NIXGL_WRAPPER";
   };
 
   home.username = "stubbe";

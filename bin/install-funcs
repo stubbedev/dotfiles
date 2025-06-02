@@ -27,8 +27,11 @@ is_file() {
 # INFO: INSTALL FUNCTION
 installer_prompt() {
   case "$SHELL" in
-    */zsh) ;;
-    *) install_build_essential; exit ;;
+  */zsh) ;;
+  *)
+    install_build_essential
+    exit
+    ;;
   esac
 
   if is_elevated_shell; then
@@ -48,18 +51,18 @@ installer_prompt() {
   read -r REPLY
   printf "\n"
   case "$REPLY" in
-    i|I)
-      install_stubbe_all
-      exit
-      ;;
-    c|C)
-      echo "Cancelling!"
-      exit
-      ;;
-    *)
-      echo "Unrecognized option."
-      exit
-      ;;
+  i | I)
+    install_stubbe_all
+    exit
+    ;;
+  c | C)
+    echo "Cancelling!"
+    exit
+    ;;
+  *)
+    echo "Unrecognized option."
+    exit
+    ;;
   esac
 }
 
@@ -75,12 +78,12 @@ install_stubbe_all() {
   read -r REPLY
   printf "\n"
   case "$REPLY" in
-    [Yy][Ee][Ss]|[Yy])
-      license_intelephense
-      ;;
-    *)
-      echo "Skipping private installs"
-      ;;
+  [Yy][Ee][Ss] | [Yy])
+    license_intelephense
+    ;;
+  *)
+    echo "Skipping private installs"
+    ;;
   esac
 }
 
@@ -143,10 +146,17 @@ install_nix_home_manager() {
   if is_nix; then
     return 0
   fi
+  if lspci | grep -qi nvidia >/dev/null; then
+    NIXGL_WRAPPER="nvidia"
+  elif lspci | grep -qi intel >/dev/null; then
+    NIXGL_WRAPPER="intel"
+  else
+    NIXGL_WRAPPER="mesa"
+  fi
   /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
   /nix/var/nix/profiles/default/bin/nix-channel --update
   /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
-  /home/stubbe/.nix-profile/bin/home-manager switch
+  /home/stubbe/.nix-profile/bin/home-manager switch --impure
   if ! grep -Fxq ".nix-profile/bin/zsh" /etc/shells; then
     echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
   fi
@@ -187,7 +197,7 @@ conf_nix_home_manager() {
 
 conf_sessions() {
   mkdir -p "$HOME/.local/share/wayland-sessions"
-  sed "s|__BINARY_PATH__|$(command -v hyprland)|g" "$STUBBE_SRC/sessions/hyprland.desktop" > "$HOME/.local/share/wayland-sessions/hyprland.desktop"
+  sed "s|__BINARY_PATH__|$(command -v hyprland)|g" "$STUBBE_SRC/sessions/hyprland.desktop" >"$HOME/.local/share/wayland-sessions/hyprland.desktop"
 }
 
 license_intelephense() {
@@ -195,8 +205,7 @@ license_intelephense() {
   "$HOME/.nix-profile/bin/git" clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
   mkdir -p "$HOME/intelephense"
   if ! is_file "$HOME/intelephense/license.txt"; then
-    cat "$TMPDIR/INTELEPHENSE" > "$HOME/intelephense/license.txt"
+    cat "$TMPDIR/INTELEPHENSE" >"$HOME/intelephense/license.txt"
   fi
   rm -rf "$TMPDIR"
 }
-

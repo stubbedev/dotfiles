@@ -34,6 +34,3 @@ else
   alias ls='ls --color'
 fi
 
-if is_binary home-manager; then
-  alias hm='home-manager --impure'
-fi
