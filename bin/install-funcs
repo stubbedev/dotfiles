@@ -148,8 +148,6 @@ install_nix_home_manager() {
   fi
   if lspci | grep -qi nvidia >/dev/null; then
     NIXGL_WRAPPER="nvidia"
-  elif lspci | grep -qi intel >/dev/null; then
-    NIXGL_WRAPPER="intel"
   else
     NIXGL_WRAPPER="mesa"
   fi

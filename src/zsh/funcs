@@ -437,8 +437,6 @@ if is_binary home-manager; then
   function hm {
     if lspci | grep -qi nvidia >/dev/null; then
       NIXGL_WRAPPER="nvidia"
-    elif lspci | grep -qi intel >/dev/null; then
-      NIXGL_WRAPPER="intel"
     else
       NIXGL_WRAPPER="mesa"
     fi
