@@ -1,33 +1,32 @@
 { pkgs, config }:
 
-[
-  (config.lib.nixGL.wrap pkgs.hyprland)
-  pkgs.hyprshot
-  pkgs.hyprlock
-  pkgs.hyprlang
-  pkgs.hyprkeys
-  pkgs.hypridle
-  pkgs.hyprpaper
-  pkgs.hyprsunset
-  pkgs.hyprpicker
-  pkgs.hyprnotify
-  pkgs.hyprcursor
-  pkgs.hyprpolkitagent
-  pkgs.hyprutils
-  pkgs.hyprsysteminfo
-  pkgs.waybar
-  pkgs.swaynotificationcenter
-  pkgs.adwaita-icon-theme
-  pkgs.adwaita-fonts
-  pkgs.adwaita-qt
-  pkgs.adwaita-qt6
-  pkgs.rofi-wayland
-  pkgs.xdg-desktop-portal
-  pkgs.xdg-desktop-portal-hyprland
-  pkgs.xdg-desktop-portal-wlr
-  pkgs.libsForQt5.layer-shell-qt
-  pkgs.clipman
-  pkgs.cliphist
-  pkgs.wl-clip-persist
-  pkgs.nerd-fonts.jetbrains-mono
+with pkgs;[
+  (config.lib.nixGL.wrap hyprland)
+  (config.lib.nixGL.wrap hyprlock)
+  hyprshot
+  hyprlang
+  hyprkeys
+  hypridle
+  hyprpaper
+  hyprsunset
+  hyprpicker
+  hyprcursor
+  hyprpolkitagent
+  hyprutils
+  hyprsysteminfo
+  waybar
+  swaynotificationcenter
+  adwaita-icon-theme
+  adwaita-fonts
+  adwaita-qt
+  adwaita-qt6
+  rofi-wayland
+  xdg-desktop-portal
+  xdg-desktop-portal-hyprland
+  xdg-desktop-portal-wlr
+  libsForQt5.layer-shell-qt
+  clipman
+  cliphist
+  wl-clip-persist
+  nerd-fonts.jetbrains-mono
 ]

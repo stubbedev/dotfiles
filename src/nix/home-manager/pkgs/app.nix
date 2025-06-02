@@ -1,7 +1,8 @@
 { pkgs, config }:
 
-[
-  pkgs.dbeaver-bin
-  pkgs.ghostty
-  (config.lib.nixGL.wrap pkgs.alacritty)
+with pkgs;[
+  dbeaver-bin
+  ghostty
+  (config.lib.nixGL.wrap alacritty)
+  (config.lib.nixGL.wrap mailspring)
 ]
