@@ -31,4 +31,5 @@ with pkgs;[
   wl-clip-persist
   nerd-fonts.jetbrains-mono
   tela-circle-icon-theme
+  whitesur-icon-theme
 ]

@@ -87,14 +87,17 @@ in {
   gtk = {
     enable = true;
     iconTheme = {
-      name = "Tela-circle";
-      package = pkgs.tela-circle-icon-theme;
+      name = "Whitesur";
+      package = pkgs.whitesur-icon-theme;
     };
   };
 
   qt = {
     enable = true;
-    platformTheme = "qt5ct";
+    platformTheme = {
+      name = "gtk";
+      package = pkgs.whitesur-icon-theme;
+    };
   };
 
   programs.home-manager.enable = true;
