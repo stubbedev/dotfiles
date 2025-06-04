@@ -43,4 +43,5 @@ with pkgs;[
   p7zip
   nh
   nix-zsh-completions
+  mongodb-tools
 ]
