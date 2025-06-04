@@ -15,8 +15,9 @@ with pkgs;[
   hyprutils
   hyprsysteminfo
   waybar
-  networkmanagerapplet
   swaynotificationcenter
+  networkmanagerapplet
+  blueman
   adwaita-icon-theme
   adwaita-fonts
   adwaita-qt
