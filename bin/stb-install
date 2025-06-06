@@ -1,12 +1,204 @@
 #!/bin/sh
 
-info() {
-  echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
-  mkdir -p "$HOME/.ssh"
-  SCRIPT_DIR="$PWD"
-  export SCRIPT_DIR
-  . "$SCRIPT_DIR/bin/install-funcs"
-  installer_prompt
+is_binary() {
+  command -v "$1" >/dev/null 2>&1
 }
 
-info
+is_elevated_shell() {
+  [ "$(id -u)" -eq 0 ]
+}
+
+is_nix() {
+  grep -q '^ID=nixos' /etc/os-release 2>/dev/null
+}
+
+is_file() {
+  [ -f "$1" ]
+}
+
+# INFO: INSTALL FUNCTION
+installer_prompt() {
+  echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
+  case "$SHELL" in
+  */zsh) ;;
+  *)
+    install_build_essential
+    exit
+    ;;
+  esac
+
+  if is_elevated_shell; then
+    echo "Please do not run this script with sudo."
+    echo "Execute it normally and any functions which need sudo will prompt for it."
+    exit 0
+  fi
+
+  if ! [ -f "$HOME/.ssh/id_ed25519.pub" ] && ! [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+    echo "Need to set SSH key before being able to install."
+    echo "Goodbye!"
+    exit 0
+  fi
+
+  echo "Please enter your desired option:"
+  printf "(I)nstall Mandatory or (C)ancel? "
+  read -r REPLY
+  printf "\n"
+  case "$REPLY" in
+  i | I)
+    install_stubbe_all
+    exit
+    ;;
+  c | C)
+    echo "Cancelling!"
+    exit
+    ;;
+  *)
+    echo "Unrecognized option."
+    exit
+    ;;
+  esac
+}
+
+install_stubbe_all() {
+  install_nix
+  install_toolchain_binaries
+  install_non_toolchain_binaries
+  install_confs
+
+  echo "Install private licenses:"
+  printf "(Y)es or [N]o? "
+  read -r REPLY
+  printf "\n"
+  case "$REPLY" in
+  [Yy][Ee][Ss] | [Yy])
+    license_intelephense
+    ;;
+  *)
+    echo "Skipping private installs"
+    ;;
+  esac
+}
+
+install_nix() {
+  sh -c "$(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)" --daemon
+  conf_nix
+  install_nix_home_manager
+  conf_sessions
+}
+
+install_toolchain_binaries() {
+  install_build_essential
+  install_go
+  install_astral
+  install_volta
+}
+
+install_non_toolchain_binaries() {
+  install_docker
+}
+
+install_confs() {
+  conf_fonts
+}
+
+install_build_essential() {
+  if is_binary apt; then
+    sh -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
+    if grep -qi 'ubuntu' /etc/os-release; then
+      sudo apt install -y python3.13-venv
+    fi
+  fi
+  if is_binary dnf; then
+    sh -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
+  fi
+  if is_binary pacman; then
+    sh -c "sudo pacman -S cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
+  fi
+}
+
+install_go() {
+  sh -c "$("$HOME/.nix-profile/bin/curl" -sL https://git.io/go-installer)"
+}
+
+install_volta() {
+  "$HOME/.nix-profile/bin/curl" https://get.volta.sh | bash
+}
+
+install_astral() {
+  "$HOME/.nix-profile/bin/curl" -LsSf https://astral.sh/uv/install.sh | sh
+}
+
+install_nix_home_manager() {
+  if is_nix; then
+    return 0
+  fi
+
+  if lspci | grep -qi nvidia >/dev/null; then
+    export NIXGL_WRAPPER="nvidia"
+  else
+    export NIXGL_WRAPPER="mesa"
+  fi
+
+  rm -rf "$HOME/.config/home-manager"
+
+  /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
+  /nix/var/nix/profiles/default/bin/nix-channel --update
+  /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
+
+  conf_nix_home_manager
+
+  "$HOME/.nix-profile/bin/home-manager" switch --impure
+  if ! grep -Fxq ".nix-profile/bin/zsh" /etc/shells; then
+    echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
+  fi
+  usermod -s "$HOME/.nix-profile/bin/zsh" "$USER"
+}
+
+install_docker() {
+  DOCKERTMPDIR=$(mktemp -d)
+  "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
+  sudo sh "$DOCKERTMPDIR/get-docker.sh"
+  sudo groupadd docker 2>/dev/null || true
+  sudo usermod -aG docker "$USER"
+  rm -rf "$DOCKERTMPDIR"
+}
+
+conf_fonts() {
+  SOURCE_FONT="$PWD/src/fonts"
+  mkdir -p "$HOME/.fonts"
+  mkdir -p "$HOME/.local/share/fonts"
+  cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
+  cp -rf "$SOURCE_FONT/." "$HOME/.local/share/fonts"
+}
+
+conf_nix() {
+  if is_nix; then
+    return 0
+  fi
+  if ! grep -Fxq "experimental-features = nix-command flakes" /etc/nix/nix.conf; then
+    echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf >/dev/null
+  fi
+}
+
+conf_nix_home_manager() {
+  mkdir -p "$HOME/.config"
+  rm -rf "$HOME/.config/home-manager"
+  ln -sf "$PWD/src/nix/home-manager" "$HOME/.config"
+}
+
+conf_sessions() {
+  mkdir -p "$HOME/.local/share/wayland-sessions"
+  sed "s|__BINARY_PATH__|$(command -v hyprland)|g" "$PWD/sessions/hyprland.desktop" >"$HOME/.local/share/wayland-sessions/hyprland.desktop"
+}
+
+license_intelephense() {
+  TMPDIR=$(mktemp -d)
+  "$HOME/.nix-profile/bin/git" clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
+  mkdir -p "$HOME/intelephense"
+  if ! is_file "$HOME/intelephense/license.txt"; then
+    cat "$TMPDIR/INTELEPHENSE" >"$HOME/intelephense/license.txt"
+  fi
+  rm -rf "$TMPDIR"
+}
+
+installer_prompt
