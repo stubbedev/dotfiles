@@ -67,7 +67,6 @@ installer_prompt() {
 }
 
 install_stubbe_all() {
-  install_symlinks
   install_nix
   install_toolchain_binaries
   install_non_toolchain_binaries
@@ -107,11 +106,6 @@ install_non_toolchain_binaries() {
 
 install_confs() {
   conf_fonts
-}
-
-install_symlinks() {
-  rm -rf "$HOME/.stubbe"
-  ln -sf "$SCRIPT_DIR" "$HOME/.stubbe"
 }
 
 install_build_essential() {

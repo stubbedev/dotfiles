@@ -8,5 +8,6 @@ while ! systemctl is-active --quiet "$SERVICE"; do
 done
 
 # Send the signal to Waybar once
-pkill waybar && hyprctl dispatch exec waybar
+pkill waybar
+hyprctl dispatch exec waybar
 

@@ -17,7 +17,7 @@ in {
   imports = [ ./programs/git.nix ];
 
   home.file = {
-    ".zshrc".text = "source /home/stubbe/.stubbe/src/zsh/init";
+    ".zshrc".text = "source ${config.home.homeDirectory}/.stubbe/src/zsh/init";
     ".ideavimrc".source = ./../../ideavim/ideavimrc;
     ".tmux.conf".source = ./../../tmux/tmux.conf;
     ".config/lazygit/config.yml".source = ./../../lazygit/config.yml;
@@ -36,27 +36,32 @@ in {
     NIXPKGS_ALLOW_UNFREE = "1";
     NIXPKGS_ALLOW_INSECURE = "1";
     NIXOS_OZONE_WL = "1";
-    EDITOR = "nvim";
+    EDITOR = "${pkgs.neovim}/bin/nvim";
     DISPLAY = ":1";
     MANPAGER = "sh -c 'col -bx | bat -l man -p'";
     MANROFFOPT = "-c";
-    GOROOT = "/home/stubbe/.go";
-    GOPATH = "/home/stubbe/go";
+    GOROOT = "${config.home.homeDirectory}/.go";
+    GOPATH = "${config.home.homeDirectory}/go";
     DEPLOYER_REMOTE_USER = "abs";
   };
 
   xdg.configFile."environment.d/envvars.conf".text = ''
-    PATH="$HOME/.nix-profile/bin:$PATH"
+    PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
   '';
 
   home.activation.stubbePostBuild = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
-      ${pkgs.git}/bin/git clone --quiet https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
+    rm -rf "${config.home.homeDirectory}/.stubbe"
+    ln -sf "${toString ./../../..}" "${config.home.homeDirectory}/.stubbe"
+    if [ ! -d "${config.home.homeDirectory}/.tmux/plugins/tpm" ]; then
+      ${pkgs.git}/bin/git clone --quiet https://github.com/tmux-plugins/tpm ${config.home.homeDirectory}/.tmux/plugins/tpm
     fi
-    rm -rf "$HOME/.config/nvim" && ln -sf "$HOME/.stubbe/src/nvim" "$HOME/.config/nvim"
-    mkdir -p "$HOME/.config/lazygit" && echo \
-    "lastupdatecheck: 0
+    rm -rf "${config.home.homeDirectory}/.config/nvim"
+    ln -sf "${config.home.homeDirectory}/.stubbe/src/nvim" "${config.home.homeDirectory}/.config/nvim"
+    mkdir -p "${config.home.homeDirectory}/.config/lazygit"
+    cat <<EOF > "${config.home.homeDirectory}/.config/lazygit/state.yml"
+    lastupdatecheck: 0
     startuppopupversion: 5
+    lastversion: ${pkgs.lazygit.version}
     customcommandshistory: []
     hidecommandlog: false
     ignorewhitespaceindiffview: true
@@ -65,8 +70,8 @@ in {
     localbranchsortorder: recency
     remotebranchsortorder: alphabetical
     gitlogorder: topo-order
-    gitlogshowgraph: always" \
-    > "$HOME/.config/lazygit/state.yml"
+    gitlogshowgraph: always
+    EOF
   '';
 
   systemd.user.services = {
@@ -78,7 +83,7 @@ in {
       Install = { WantedBy = [ "default.target" ]; };
       Service = {
         Type = "simple";
-        ExecStart = "%h/.stubbe/src/hypr/scripts/wait_for_power_profiles.sh";
+        ExecStart = "${config.home.homeDirectory}/.stubbe/src/hypr/scripts/wait_for_power_profiles.sh";
         Restart = "no";
       };
     };
