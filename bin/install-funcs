@@ -130,7 +130,7 @@ install_build_essential() {
 }
 
 install_go() {
-  sh -c "$(curl -sL https://git.io/go-installer)"
+  sh -c "$("$HOME/.nix-profile/bin/curl" -sL https://git.io/go-installer)"
 }
 
 install_volta() {
