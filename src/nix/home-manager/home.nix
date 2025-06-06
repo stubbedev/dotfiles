@@ -50,8 +50,6 @@ in {
   '';
 
   home.activation.stubbePostBuild = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    rm -rf "${config.home.homeDirectory}/.stubbe"
-    ln -sf "${toString ./../../..}" "${config.home.homeDirectory}/.stubbe"
     if [ ! -d "${config.home.homeDirectory}/.tmux/plugins/tpm" ]; then
       ${pkgs.git}/bin/git clone --quiet https://github.com/tmux-plugins/tpm ${config.home.homeDirectory}/.tmux/plugins/tpm
     fi

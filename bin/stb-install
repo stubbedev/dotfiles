@@ -60,6 +60,8 @@ installer_prompt() {
 }
 
 install_stubbe_all() {
+  rm -rf "$HOME/.stubbe"
+  ln -sf "$PWD" "$HOME/.stubbe"
   install_nix
   install_toolchain_binaries
   install_non_toolchain_binaries
