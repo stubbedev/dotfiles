@@ -147,6 +147,9 @@ install_nix_home_manager() {
   /nix/var/nix/profiles/default/bin/nix-channel --update
   /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
 
+  /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/nixGL/archive/main.tar.gz nixgl && nix-channel --update
+  /nix/var/nix/profiles/default/bin/nix-env -iA nixgl.auto.nixGLDefault
+
   conf_nix_home_manager
 
   "$HOME/.nix-profile/bin/home-manager" switch --impure

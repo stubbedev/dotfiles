@@ -14,6 +14,8 @@ with pkgs;[
   hyprpolkitagent
   hyprutils
   hyprsysteminfo
+  hyprwayland-scanner
+  wayland-scanner
   waybar
   swaynotificationcenter
   networkmanagerapplet
