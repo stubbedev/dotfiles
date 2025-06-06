@@ -89,9 +89,8 @@ install_stubbe_all() {
 
 install_nix() {
   sh -c "$(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)" --daemon
-  install_nix_home_manager
   conf_nix
-  conf_nix_home_manager
+  install_nix_home_manager
   conf_sessions
 }
 
@@ -146,15 +145,22 @@ install_nix_home_manager() {
   if is_nix; then
     return 0
   fi
+
   if lspci | grep -qi nvidia >/dev/null; then
     export NIXGL_WRAPPER="nvidia"
   else
     export NIXGL_WRAPPER="mesa"
   fi
+
+  rm -rf "$HOME/.config/home-manager"
+
   /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
   /nix/var/nix/profiles/default/bin/nix-channel --update
   /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
-  /home/stubbe/.nix-profile/bin/home-manager switch --impure
+
+  conf_nix_home_manager
+
+  "$HOME/.nix-profile/bin/home-manager" switch --impure
   if ! grep -Fxq ".nix-profile/bin/zsh" /etc/shells; then
     echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
   fi
