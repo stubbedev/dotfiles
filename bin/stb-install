@@ -19,23 +19,10 @@ is_file() {
 # INFO: INSTALL FUNCTION
 installer_prompt() {
   echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
-  case "$SHELL" in
-  */zsh) ;;
-  *)
-    install_build_essential
-    exit
-    ;;
-  esac
 
   if is_elevated_shell; then
     echo "Please do not run this script with sudo."
     echo "Execute it normally and any functions which need sudo will prompt for it."
-    exit 0
-  fi
-
-  if ! [ -f "$HOME/.ssh/id_ed25519.pub" ] && ! [ -f "$HOME/.ssh/id_rsa.pub" ]; then
-    echo "Need to set SSH key before being able to install."
-    echo "Goodbye!"
     exit 0
   fi
 
@@ -156,7 +143,7 @@ install_nix_home_manager() {
   if ! grep -Fxq ".nix-profile/bin/zsh" /etc/shells; then
     echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
   fi
-  usermod -s "$HOME/.nix-profile/bin/zsh" "$USER"
+  sudo usermod -s "$HOME/.nix-profile/bin/zsh" "$USER"
 }
 
 install_docker() {
