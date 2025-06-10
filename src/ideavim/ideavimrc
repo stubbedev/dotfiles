@@ -209,7 +209,9 @@ nmap <leader>ft <Action>(ActivateTerminalToolWindow)
 " Terminal (cwd)
 nmap <leader>fT <Action>(ActivateTerminalToolWindow)
 " Terminal (Root Dir)
-nmap <C-/> <Action>(nl.deschepers.laraveltinker.action.OpenLastConsoleAction)
+nmap <C-/> <Action>(NewScratchFile)
+nmap <leader>rs <Action>(Scratch.ShowFilesPopup)
+nmap <leader>rr <Action>(RunClass)
 " nmap <C-_> 'There is no equivalent mapping for <c-_>.'<cr>
 " Hide Terminal - terminal mode maps not possible
 " Split Window Below.  :split<cr> doesn't work.
