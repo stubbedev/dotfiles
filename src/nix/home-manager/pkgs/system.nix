@@ -18,6 +18,7 @@ with pkgs;[
   wayland-scanner
   waybar
   swaynotificationcenter
+  polkit
   networkmanagerapplet
   blueman
   adwaita-icon-theme
