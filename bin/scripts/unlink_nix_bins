@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for f in /usr/bin/*; do
+for f in /usr/local/bin/*; do
   if [ -L "$f" ]; then
     target=$(readlink -f "$f")
     if [[ "$target" == *"/nix/store/"* ]]; then

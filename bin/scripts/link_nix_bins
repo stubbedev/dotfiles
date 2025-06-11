@@ -4,7 +4,7 @@
 # for each one in /usr/bin if a file by the same name does not already exist.
 
 NIX_BIN_DIR="$HOME/.nix-profile/bin"
-TARGET_DIR="/usr/bin"
+TARGET_DIR="/usr/local/bin"
 
 if [[ ! -d "$NIX_BIN_DIR" ]]; then
   echo "Directory $NIX_BIN_DIR does not exist."
