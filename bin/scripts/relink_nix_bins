@@ -1,5 +1,5 @@
 #!/bin/bash
 
 "$HOME"/.stubbe/bin/scripts/unlink_nix_bins
-"$HOME"/.stubbe/bin/scripts/symlink_nix_bins
+"$HOME"/.stubbe/bin/scripts/link_nix_bins
 
