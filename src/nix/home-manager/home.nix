@@ -30,7 +30,7 @@ in {
     ".config/foot".source = ./../../foot;
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
-      default=hyprland;gtk;wlr
+      default=hyprland;gtk;wlr;
     '';
   };
   home.sessionVariables = {

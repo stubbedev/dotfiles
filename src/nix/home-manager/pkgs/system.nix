@@ -13,6 +13,7 @@ with pkgs;[
   hyprcursor
   hyprpolkitagent
   hyprutils
+  hyprprop
   hyprsysteminfo
   hyprwayland-scanner
   wayland-scanner
