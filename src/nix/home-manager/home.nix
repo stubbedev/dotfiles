@@ -32,6 +32,9 @@ in {
       [preferred]
       default=hyprland;gtk;wlr;
     '';
+    ".icons/vimix" = {
+      source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
+    };
   };
   home.sessionVariables = {
     NIXPKGS_ALLOW_UNFREE = "1";
@@ -91,16 +94,14 @@ in {
   gtk = {
     enable = true;
     iconTheme = {
-      name = "Tela-circle";
-      package = pkgs.tela-circle-icon-theme;
+      name = "vimix";
     };
   };
 
   qt = {
     enable = true;
     platformTheme = {
-      name = "gtk";
-      package = pkgs.tela-circle-icon-theme;
+      name = "vimix";
     };
   };
 

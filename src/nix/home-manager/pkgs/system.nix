@@ -38,4 +38,5 @@ with pkgs;[
   nerd-fonts.jetbrains-mono
   tela-circle-icon-theme
   whitesur-icon-theme
+  vimix-icon-theme
 ]
