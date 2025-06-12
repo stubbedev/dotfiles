@@ -1,24 +1,23 @@
 { pkgs, config }:
 
 with pkgs;[
-  (config.lib.nixGL.wrap hyprland)
-  hyprlock
-  hyprshot
-  hyprlang
-  hyprkeys
-  hypridle
-  hyprpaper
-  hyprsunset
-  hyprpicker
-  hyprcursor
-  hyprpolkitagent
-  hyprutils
-  hyprsysteminfo
-  hyprwayland-scanner
-  wayland-scanner
+  # (config.lib.nixGL.wrap hyprland)
+  # hyprlock
+  # hyprshot
+  # hyprlang
+  # hyprkeys
+  # hypridle
+  # hyprpaper
+  # hyprsunset
+  # hyprpicker
+  # hyprcursor
+  # hyprpolkitagent
+  # hyprutils
+  # hyprsysteminfo
+  # hyprwayland-scanner
+  # wayland-scanner
   waybar
   swaynotificationcenter
-  polkit
   networkmanagerapplet
   blueman
   adwaita-icon-theme
