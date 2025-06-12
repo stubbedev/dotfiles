@@ -5,6 +5,6 @@ with pkgs;[
   adwaita-fonts
   adwaita-qt
   adwaita-qt6
-  catppuccin-gtk
+  rose-pine-gtk-theme
   vimix-icon-theme
 ]

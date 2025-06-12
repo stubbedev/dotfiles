@@ -37,7 +37,7 @@ in {
       source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
     };
     ".themes/stubbe" = {
-      source = "${pkgs.catppuccin-gtk}";
+      source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
     };
   };
   home.sessionVariables = {
@@ -98,7 +98,7 @@ in {
   gtk = {
     enable = true;
     iconTheme = {
-      name = "vimix";
+      name = "stubbe";
     };
     theme = {
       name = "stubbe";
