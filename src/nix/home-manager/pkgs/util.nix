@@ -45,4 +45,5 @@ with pkgs;[
   nix-zsh-completions
   mongodb-tools
   wayland-utils
+  yazi
 ]
