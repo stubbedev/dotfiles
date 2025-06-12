@@ -18,6 +18,7 @@ with pkgs;[
   hyprsysteminfo
   hyprwayland-scanner
   wayland-scanner
+  xwayland
   waybar
   swaynotificationcenter
   networkmanagerapplet
@@ -36,6 +37,5 @@ with pkgs;[
   wl-clip-persist
   nerd-fonts.jetbrains-mono
   tela-circle-icon-theme
-  xwayland
   whitesur-icon-theme
 ]

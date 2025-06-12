@@ -91,8 +91,8 @@ in {
   gtk = {
     enable = true;
     iconTheme = {
-      name = "Whitesur";
-      package = pkgs.whitesur-icon-theme;
+      name = "Tela-circle";
+      package = pkgs.tela-circle-icon-theme;
     };
   };
 
@@ -100,7 +100,7 @@ in {
     enable = true;
     platformTheme = {
       name = "gtk";
-      package = pkgs.whitesur-icon-theme;
+      package = pkgs.tela-circle-icon-theme;
     };
   };
 
