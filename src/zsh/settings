@@ -60,7 +60,6 @@ setopt HIST_IGNORE_ALL_DUPS
 setopt COMPLETE_ALIASES
 
 # FOR CLIPBOARD STUFF
-export DISPLAY=:1
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
 

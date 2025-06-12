@@ -45,7 +45,7 @@ in {
     NIXPKGS_ALLOW_INSECURE = "1";
     NIXOS_OZONE_WL = "1";
     EDITOR = "${pkgs.neovim}/bin/nvim";
-    DISPLAY = ":1";
+    DISPLAY = ":0";
     MANPAGER = "sh -c 'col -bx | bat -l man -p'";
     MANROFFOPT = "-c";
     GOROOT = "${config.home.homeDirectory}/.go";
