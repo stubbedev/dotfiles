@@ -23,10 +23,6 @@ with pkgs;[
   swaynotificationcenter
   networkmanagerapplet
   blueman
-  adwaita-icon-theme
-  adwaita-fonts
-  adwaita-qt
-  adwaita-qt6
   rofi-wayland
   xdg-desktop-portal
   xdg-desktop-portal-hyprland
@@ -36,7 +32,4 @@ with pkgs;[
   cliphist
   wl-clip-persist
   nerd-fonts.jetbrains-mono
-  tela-circle-icon-theme
-  whitesur-icon-theme
-  vimix-icon-theme
 ]

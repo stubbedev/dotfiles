@@ -12,7 +12,8 @@ in {
 
   home.packages = (import ./pkgs/app.nix { inherit pkgs config; })
     ++ (import ./pkgs/system.nix { inherit pkgs config; })
-    ++ (import ./pkgs/util.nix { inherit pkgs; });
+    ++ (import ./pkgs/util.nix { inherit pkgs; })
+    ++ (import ./pkgs/theme.nix { inherit pkgs; });
 
   imports = [ ./programs/git.nix ];
 
@@ -32,8 +33,11 @@ in {
       [preferred]
       default=hyprland;gtk;wlr;
     '';
-    ".icons/vimix" = {
+    ".icons/stubbe" = {
       source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
+    };
+    ".themes/stubbe" = {
+      source = "${pkgs.catppuccin-gtk}";
     };
   };
   home.sessionVariables = {
@@ -96,12 +100,15 @@ in {
     iconTheme = {
       name = "vimix";
     };
+    theme = {
+      name = "stubbe";
+    };
   };
 
   qt = {
     enable = true;
     platformTheme = {
-      name = "vimix";
+      name = "gtk3";
     };
   };
 
