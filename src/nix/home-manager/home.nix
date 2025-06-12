@@ -27,6 +27,7 @@ in {
     ".config/swaync".source = ./../../swaync;
     ".config/waybar".source = ./../../waybar;
     ".config/hypr".source = ./../../hypr;
+    ".config/foot".source = ./../../foot;
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
       default=hyprland;gtk;wlr
