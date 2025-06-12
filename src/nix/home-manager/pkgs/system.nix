@@ -14,6 +14,7 @@ with pkgs;[
   hyprpolkitagent
   hyprutils
   hyprprop
+  wlprop
   hyprsysteminfo
   hyprwayland-scanner
   wayland-scanner
