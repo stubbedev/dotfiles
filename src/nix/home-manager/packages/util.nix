@@ -1,6 +1,6 @@
-{ pkgs }:
+{ pkgs, ... }:
 
-with pkgs;[
+with pkgs; [
   rustup
   zig
   fd

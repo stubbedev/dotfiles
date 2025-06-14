@@ -1,5 +1,4 @@
-{ pkgs, config }:
-
+{ pkgs, config, ... }:
 with pkgs;[
   (config.lib.nixGL.wrap dbeaver-bin)
   (config.lib.nixGL.wrap ghostty)

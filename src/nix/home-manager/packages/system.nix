@@ -1,4 +1,4 @@
-{ pkgs, config }:
+{ pkgs, config, ... }:
 
 with pkgs;[
   # (config.lib.nixGL.wrap hyprland)
