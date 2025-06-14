@@ -1,5 +1,10 @@
 { config, lib, pkgs, nixGL, ... }:
-let nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
+let
+  nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
+  homePackages = builtins.concatLists
+    (map (file: import (./packages + "/${file}") { inherit pkgs config; })
+      (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
+        (builtins.attrNames (builtins.readDir ./packages))));
 in {
   nixGL = {
     packages = nixGL.packages;
@@ -10,15 +15,9 @@ in {
   home.homeDirectory = "/home/stubbe";
   home.stateVersion = "25.05";
 
-  home.packages = (import ./pkgs/app.nix { inherit pkgs config; })
-    ++ (import ./pkgs/system.nix { inherit pkgs config; })
-    ++ (import ./pkgs/util.nix { inherit pkgs; })
-    ++ (import ./pkgs/theme.nix { inherit pkgs; });
+  home.packages = homePackages;
 
-  imports = [
-    ./programs/git.nix
-    ./programs/steam.nix
-  ];
+  imports = [ ./programs/git.nix ];
 
   home.file = {
     ".zshrc".text = "source ${config.home.homeDirectory}/.stubbe/src/zsh/init";
@@ -93,7 +92,8 @@ in {
       Install = { WantedBy = [ "default.target" ]; };
       Service = {
         Type = "simple";
-        ExecStart = "${config.home.homeDirectory}/.stubbe/src/hypr/scripts/wait_for_power_profiles.sh";
+        ExecStart =
+          "${config.home.homeDirectory}/.stubbe/src/hypr/scripts/wait_for_power_profiles.sh";
         Restart = "no";
       };
     };
@@ -101,19 +101,13 @@ in {
 
   gtk = {
     enable = true;
-    iconTheme = {
-      name = "stubbe";
-    };
-    theme = {
-      name = "stubbe";
-    };
+    iconTheme = { name = "stubbe"; };
+    theme = { name = "stubbe"; };
   };
 
   qt = {
     enable = true;
-    platformTheme = {
-      name = "gtk3";
-    };
+    platformTheme = { name = "gtk3"; };
   };
 
   programs.home-manager.enable = true;
