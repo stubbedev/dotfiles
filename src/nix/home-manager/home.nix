@@ -51,6 +51,7 @@ in {
     GOROOT = "${config.home.homeDirectory}/.go";
     GOPATH = "${config.home.homeDirectory}/go";
     DEPLOYER_REMOTE_USER = "abs";
+    GTK_THEME = "stubbe";
   };
 
   xdg.configFile."environment.d/envvars.conf".text = ''
