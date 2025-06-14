@@ -15,7 +15,10 @@ in {
     ++ (import ./pkgs/util.nix { inherit pkgs; })
     ++ (import ./pkgs/theme.nix { inherit pkgs; });
 
-  imports = [ ./programs/git.nix ];
+  imports = [
+    ./programs/git.nix
+    ./programs/steam.nix
+  ];
 
   home.file = {
     ".zshrc".text = "source ${config.home.homeDirectory}/.stubbe/src/zsh/init";
