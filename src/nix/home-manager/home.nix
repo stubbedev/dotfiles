@@ -5,6 +5,9 @@ let
     (map (file: import (./packages + "/${file}") args)
       (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
         (builtins.attrNames (builtins.readDir ./packages))));
+  programs = map (f: ./programs + "/${f}")
+    (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
+      (builtins.attrNames (builtins.readDir ./programs)));
 in {
   nixGL = {
     packages = nixGL.packages;
@@ -17,7 +20,7 @@ in {
 
   home.packages = homePackages;
 
-  imports = [ ./programs/git.nix ];
+  imports = programs;
 
   home.file = {
     ".zshrc".text = "source ${config.home.homeDirectory}/.stubbe/src/zsh/init";
