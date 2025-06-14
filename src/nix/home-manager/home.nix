@@ -1,8 +1,8 @@
-{ config, lib, pkgs, nixGL, ... }:
+{ config, lib, pkgs, nixGL, ... }@args:
 let
   nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
   homePackages = builtins.concatLists
-    (map (file: import (./packages + "/${file}") { inherit pkgs config; })
+    (map (file: import (./packages + "/${file}") args)
       (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
         (builtins.attrNames (builtins.readDir ./packages))));
 in {
