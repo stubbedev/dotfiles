@@ -12,9 +12,6 @@ let
     (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
       (builtins.attrNames (builtins.readDir ./services)));
   importedProgramsAndServices = programs ++ services;
-  overlays = map (f: ./overlays + "/${f}")
-    (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
-      (builtins.attrNames (builtins.readDir ./overlays)));
 in {
   nixGL = {
     packages = nixGL.packages;
@@ -26,7 +23,6 @@ in {
   home.stateVersion = "25.05";
 
   home.packages = homePackages;
-  nixpkgs.overlays = overlays;
 
   imports = importedProgramsAndServices;
 
