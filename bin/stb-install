@@ -50,7 +50,6 @@ install_stubbe_all() {
   rm -rf "$HOME/.stubbe"
   ln -sf "$PWD" "$HOME/.stubbe"
   install_nix
-  install_build_essential
   install_docker
   conf_fonts
 
@@ -73,21 +72,6 @@ install_nix() {
   conf_nix
   install_nix_home_manager
   conf_sessions
-}
-
-install_build_essential() {
-  if is_binary apt; then
-    sh -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
-    if grep -qi 'ubuntu' /etc/os-release; then
-      sudo apt install -y python3.13-venv
-    fi
-  fi
-  if is_binary dnf; then
-    sh -c "sudo dnf install cmake freetype-devel fontconfig-devel libxcb-devel libxkbcommon-devel g++"
-  fi
-  if is_binary pacman; then
-    sh -c "sudo pacman -S cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
-  fi
 }
 
 install_nix_home_manager() {

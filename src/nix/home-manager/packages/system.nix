@@ -1,6 +1,6 @@
 { pkgs, config, ... }:
 
-with pkgs;[
+with pkgs; [
   networkmanagerapplet
   blueman
   clipman
