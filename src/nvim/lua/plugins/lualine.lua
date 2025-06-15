@@ -29,6 +29,7 @@ return {
         config = function()
           require("recorder").setup({
             slots = { "a", "b", "c" },
+            dynamicSlots = "rotate",
             mapping = {
               startStopRecording = "q",
               playMacro = "Q",
