@@ -24,8 +24,8 @@ return {
       },
     },
     keys = {
-      { "<leader>aa", "<cmd>CodeCompanion Toggle<cr>", desc = "CodeCompanion Toggle Chat" },
-      { "<leader>ae", "<cmd>CodeCompanion Add<cr>", desc = "CodeCompanion Add Buffer" },
+      { "<leader>aa", "<cmd>CodeCompanionChat Toggle<cr>", desc = "CodeCompanion Toggle Chat" },
+      { "<leader>ae", "<cmd>CodeCompanionChat Add<cr>", desc = "CodeCompanion Add Buffer" },
       { "<leader>ap", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions" },
       { "<leader>aq", "<cmd>CodeCompanion<cr>", desc = "CodeCompanion Prompt" },
     },
