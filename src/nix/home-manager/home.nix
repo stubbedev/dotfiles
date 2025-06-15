@@ -23,6 +23,18 @@ in {
   home.stateVersion = "25.05";
 
   home.packages = homePackages;
+  nixpkgs.overlays = [
+    (self: super: {
+      vesktop = super.vesktop.overrideAttrs (oldAttrs: {
+        buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ super.makeWrapper ];
+        installPhase = ''
+          ${oldAttrs.installPhase or ""}
+          wrapProgram $out/bin/vesktop \
+            --add-flags "--no-sandbox"
+        '';
+      });
+    })
+  ];
 
   imports = importedProgramsAndServices;
 
