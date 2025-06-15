@@ -18,4 +18,6 @@ with pkgs; [
   zig
   rustup
   mongodb-tools
+  jetbrains.phpstorm
+  jetbrains.datagrip
 ]
