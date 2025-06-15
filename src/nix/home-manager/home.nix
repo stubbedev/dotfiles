@@ -5,13 +5,12 @@ let
     (map (file: import (./packages + "/${file}") args)
       (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
         (builtins.attrNames (builtins.readDir ./packages))));
-  programs = map (f: ./programs + "/${f}")
+  importedProgramsAndServices = map (f: ./programs + "/${f}")
     (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
-      (builtins.attrNames (builtins.readDir ./programs)));
-  services = map (f: ./services + "/${f}")
+      (builtins.attrNames (builtins.readDir ./programs)))
+    ++ map (f: ./services + "/${f}")
     (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
       (builtins.attrNames (builtins.readDir ./services)));
-  importedProgramsAndServices = programs ++ services;
 in {
   nixGL = {
     packages = nixGL.packages;
