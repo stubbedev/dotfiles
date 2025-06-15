@@ -11,12 +11,16 @@
       url = "github:guibou/nixGL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    ashell = {
+      url = "github:MalpenZibo/ashell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { nixpkgs, home-manager, nixGL, ... }:
+  outputs = { ... } @ inputs:
     {
-      homeConfigurations."stubbe" = home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
+      homeConfigurations."stubbe" = inputs.home-manager.lib.homeManagerConfiguration {
+        pkgs = import inputs.nixpkgs {
           system = "x86_64-linux";
           config = {
             allowUnfree = true;
@@ -25,9 +29,7 @@
             allowInsecurePredicate = (_: true);
           };
         };
-        extraSpecialArgs = {
-          inherit nixGL;
-        };
+        extraSpecialArgs = inputs;
         modules = [ ./home.nix ];
       };
     };
