@@ -19,5 +19,6 @@ with pkgs; [
   rustup
   mongodb-tools
   jetbrains.phpstorm
-  jetbrains.datagrip
+  dbvisualizer
+  dbeaver-bin
 ]
