@@ -1,5 +1,6 @@
 { pkgs, ... }:
 with pkgs; [
+  volta
   nodejs
   bun
   yarn

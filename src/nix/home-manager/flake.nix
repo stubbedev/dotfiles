@@ -11,15 +11,11 @@
       url = "github:guibou/nixGL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    ashell = {
-      url = "github:MalpenZibo/ashell";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { ... } @ inputs:
-    {
-      homeConfigurations."stubbe" = inputs.home-manager.lib.homeManagerConfiguration {
+  outputs = { ... }@inputs: {
+    homeConfigurations."stubbe" =
+      inputs.home-manager.lib.homeManagerConfiguration {
         pkgs = import inputs.nixpkgs {
           system = "x86_64-linux";
           config = {
@@ -32,6 +28,6 @@
         extraSpecialArgs = inputs;
         modules = [ ./home.nix ];
       };
-    };
+  };
 }
 

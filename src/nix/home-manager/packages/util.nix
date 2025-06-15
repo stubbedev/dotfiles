@@ -23,5 +23,4 @@ with pkgs; [
   gopass
   gotools
   tree-sitter
-  yazi
 ]

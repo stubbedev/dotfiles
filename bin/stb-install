@@ -50,9 +50,9 @@ install_stubbe_all() {
   rm -rf "$HOME/.stubbe"
   ln -sf "$PWD" "$HOME/.stubbe"
   install_nix
-  install_toolchain_binaries
-  install_non_toolchain_binaries
-  install_confs
+  install_build_essential
+  install_docker
+  conf_fonts
 
   echo "Install private licenses:"
   printf "(Y)es or [N]o? "
@@ -75,21 +75,6 @@ install_nix() {
   conf_sessions
 }
 
-install_toolchain_binaries() {
-  install_build_essential
-  install_go
-  install_astral
-  install_volta
-}
-
-install_non_toolchain_binaries() {
-  install_docker
-}
-
-install_confs() {
-  conf_fonts
-}
-
 install_build_essential() {
   if is_binary apt; then
     sh -c "sudo apt install -y build-essential libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libssl-dev libxext-dev libxft-dev libx11-dev libharfbuzz-dev libfribidi-dev unifont libfuse2 libreadline-dev"
@@ -103,18 +88,6 @@ install_build_essential() {
   if is_binary pacman; then
     sh -c "sudo pacman -S cmake freetype2 fontconfig pkg-config make libxcb libxkbcommon python"
   fi
-}
-
-install_go() {
-  sh -c "$("$HOME/.nix-profile/bin/curl" -sL https://git.io/go-installer)"
-}
-
-install_volta() {
-  "$HOME/.nix-profile/bin/curl" https://get.volta.sh | bash
-}
-
-install_astral() {
-  "$HOME/.nix-profile/bin/curl" -LsSf https://astral.sh/uv/install.sh | sh
 }
 
 install_nix_home_manager() {

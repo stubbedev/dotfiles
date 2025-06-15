@@ -1,0 +1,6 @@
+{...}:
+{
+  programs.vimf = {
+    enable = true;
+  };
+}
