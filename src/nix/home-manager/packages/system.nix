@@ -1,35 +1,9 @@
 { pkgs, config, ... }:
 
 with pkgs;[
-  # (config.lib.nixGL.wrap hyprland)
-  # hyprlock
-  hyprshot
-  hyprlang
-  hyprkeys
-  hypridle
-  hyprpaper
-  hyprsunset
-  hyprpicker
-  hyprcursor
-  hyprpolkitagent
-  hyprutils
-  hyprprop
-  wlprop
-  hyprsysteminfo
-  hyprwayland-scanner
-  wayland-scanner
-  xwayland
-  waybar
-  swaynotificationcenter
   networkmanagerapplet
   blueman
-  rofi-wayland
-  xdg-desktop-portal
-  xdg-desktop-portal-hyprland
-  xdg-desktop-portal-wlr
-  libsForQt5.layer-shell-qt
   clipman
   cliphist
-  wl-clip-persist
-  nerd-fonts.jetbrains-mono
+  globalprotect-openconnect
 ]

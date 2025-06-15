@@ -1,8 +1,7 @@
 { pkgs, ... }:
-
 with pkgs; [
-  rustup
-  zig
+  nh
+  nix-zsh-completions
   fd
   zsh
   curl
@@ -20,30 +19,9 @@ with pkgs; [
   ripgrep
   lazygit
   lazydocker
-  podman
   air
   gopass
   gotools
   tree-sitter
-  nodejs
-  bun
-  yarn
-  deno
-  jetbrains-toolbox
-  imagemagick
-  exiftool
-  ffmpeg-full
-  dcraw
-  libraw
-  libreoffice
-  librsvg
-  zip
-  ghostscript
-  unzip
-  p7zip
-  nh
-  nix-zsh-completions
-  mongodb-tools
-  wayland-utils
   yazi
 ]
