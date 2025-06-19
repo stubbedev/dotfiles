@@ -17,6 +17,8 @@ in {
     defaultWrapper = nixglWrapper;
   };
 
+  targets.genericLinux.enable = true;
+
   home.username = "stubbe";
   home.homeDirectory = "/home/stubbe";
   home.stateVersion = "25.05";
