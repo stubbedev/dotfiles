@@ -8,4 +8,5 @@ with pkgs; [
   rose-pine-gtk-theme
   vimix-icon-theme
   nerd-fonts.jetbrains-mono
+  gtk4-layer-shell
 ]
