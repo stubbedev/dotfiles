@@ -251,7 +251,8 @@
         ""
       ]
     },
-    "on-click": "pavucontrol"
+    "on-click": "pavucontrol",
+    "max-volume": 200
   },
   "custom/media": {
     "format": "{icon} {}",
