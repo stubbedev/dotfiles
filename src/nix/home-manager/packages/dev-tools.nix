@@ -22,4 +22,5 @@ with pkgs; [
   jetbrains.phpstorm
   dbvisualizer
   dbeaver-bin
+  templ
 ]
