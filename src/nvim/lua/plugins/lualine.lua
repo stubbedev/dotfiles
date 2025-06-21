@@ -9,7 +9,7 @@ return {
         "rcarriga/nvim-notify",
         opts = {
           render = "compact",
-          stages = "fade",
+          stages = "static",
           background_colour = "transparent",
         },
       },
