@@ -1,34 +1,5 @@
 return {
   {
-    "stevearc/conform.nvim",
-    optional = true,
-    opts = {
-      formatters_by_ft = {
-        php = { "pint" },
-      },
-    },
-  },
-  {
-    -- Remove phpcs linter.
-    "mfussenegger/nvim-lint",
-    optional = true,
-    opts = {
-      linters_by_ft = {
-        php = {
-          {
-            cmd = "phpcs",
-            args = {
-              "--standard=WordPress",
-              "--report=full",
-              "--report-file=/dev/stdout",
-            },
-            stdin = false,
-          },
-        },
-      },
-    },
-  },
-  {
     -- A package is also available for PHPUnit if needed.
     "nvim-neotest/neotest",
     dependencies = { "olimorris/neotest-phpunit" },
@@ -37,15 +8,6 @@ return {
   {
     -- Add a Treesitter parser for Laravel Blade to provide Blade syntax highlighting.
     "nvim-treesitter/nvim-treesitter",
-    opts = function(_, opts)
-      vim.list_extend(opts.ensure_installed, {
-        "html",
-        "php_only",
-        "php",
-        "bash",
-        "http",
-      })
-    end,
     config = function(_, opts)
       vim.filetype.add({
         pattern = {
@@ -96,50 +58,5 @@ return {
       "hrsh7th/nvim-cmp",
     },
     ft = { "blade", "php" },
-  },
-  {
-    "williamboman/mason.nvim",
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, {
-        "intelephense",
-      })
-    end,
-  },
-  -- intelephense lsp config
-  {
-    "neovim/nvim-lspconfig",
-    opts = {
-      servers = {
-        intelephense = {
-          settings = {
-            php = {
-              validate = {
-                enable = true,
-              },
-            },
-            intelephense = {
-              files = {
-                maxSize = 5000000,
-                stubs = {
-                  "laravel",
-                  "Illuminate",
-                  "Symfony",
-                },
-                exclude = {
-                  "**/.git/**",
-                  "**/.svn/**",
-                  "**/.hg/**",
-                  "**/.DS_Store/**",
-                  "**/node_modules/**",
-                  "**/bower_components/**",
-                  "**/vendor/**/{Tests,tests}/**",
-                },
-              },
-            },
-          },
-        },
-      },
-    },
   },
 }
