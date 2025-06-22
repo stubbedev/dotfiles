@@ -5,6 +5,9 @@ return {
     opts = {
       inlay_hints = { enabled = false },
       servers = {
+        htmx = {
+          filetypes = { "html", "htm", "templ", "tmpl", "php", "blade", "twig" },
+        },
         templ = {
           filetypes = { "templ" },
           settings = {
