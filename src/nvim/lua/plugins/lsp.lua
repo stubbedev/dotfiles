@@ -24,6 +24,9 @@ return {
             project = true,
           },
         },
+        taplo = {
+          filetypes = { "toml" },
+        },
         intelephense = {
           settings = {
             php = {

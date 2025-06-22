@@ -10,7 +10,8 @@ return {
       ensure_installed = {
         "templ",
         "intelephense",
-        "htmx-lsp"
+        "htmx-lsp",
+        "taplo"
       },
     },
   },
