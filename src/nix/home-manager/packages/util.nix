@@ -24,4 +24,5 @@ with pkgs; [
   gotools
   tree-sitter
   tabiew
+  hunspell
 ]
