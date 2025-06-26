@@ -33,7 +33,7 @@ return {
     "adalessa/laravel.nvim",
     dependencies = {
       "tpope/vim-dotenv",
-      "nvim-telescope/telescope.nvim",
+      "ibhagwan/fzf-lua",
       "MunifTanjim/nui.nvim",
       "kevinhwang91/promise-async",
     },
@@ -48,6 +48,10 @@ return {
     opts = {
       lsp_server = "intelephense",
       features = { null_ls = { enable = false } },
+      pickers = {
+        enable = true,
+        provider = "fzf-lua"
+      }
     },
   },
   {
@@ -55,7 +59,7 @@ return {
     -- for Blade files.
     "ricardoramirezr/blade-nav.nvim",
     dependencies = {
-      "hrsh7th/nvim-cmp",
+      "saghen/blink.cmp",
     },
     ft = { "blade", "php" },
   },
