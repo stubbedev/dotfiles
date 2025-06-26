@@ -35,12 +35,18 @@ return {
               },
             },
             intelephense = {
+              init_options = {
+                clearCache = true,
+              },
               files = {
                 maxSize = 5000000,
                 stubs = {
                   "laravel",
                   "Illuminate",
                   "Symfony",
+                  vim.fn.expand('~/.config/composer/vendor/php-stubs/acf-pro-stubs/'),
+                  vim.fn.expand('~/.config/composer/vendor/php-stubs/woocommerce-stubs/'),
+                  vim.fn.expand('~/.config/composer/vendor/php-stubs/wordpress-stubs/'),
                 },
                 exclude = {
                   "**/.git/**",
