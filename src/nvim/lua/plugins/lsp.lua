@@ -38,16 +38,24 @@ return {
               init_options = {
                 clearCache = true,
               },
+              stubs = {
+                "phpcore",
+                "laravel",
+                "Illuminate",
+                "Symfony",
+                "wordpress",
+                "woocommerce",
+                "acf-pro"
+              },
+              environment = {
+                includePaths = {
+                  '~/.config/composer/vendor/php-stubs/acf-pro-stubs/',
+                  '~/.config/composer/vendor/php-stubs/woocommerce-stubs/',
+                  '~/.config/composer/vendor/php-stubs/wordpress-stubs/',
+                }
+              },
               files = {
                 maxSize = 5000000,
-                stubs = {
-                  "laravel",
-                  "Illuminate",
-                  "Symfony",
-                  vim.fn.expand('~/.config/composer/vendor/php-stubs/acf-pro-stubs/'),
-                  vim.fn.expand('~/.config/composer/vendor/php-stubs/woocommerce-stubs/'),
-                  vim.fn.expand('~/.config/composer/vendor/php-stubs/wordpress-stubs/'),
-                },
                 exclude = {
                   "**/.git/**",
                   "**/.svn/**",
