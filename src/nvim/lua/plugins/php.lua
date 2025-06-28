@@ -1,12 +1,10 @@
 return {
   {
-    -- A package is also available for PHPUnit if needed.
     "nvim-neotest/neotest",
     dependencies = { "olimorris/neotest-phpunit" },
     opts = { adapters = { "neotest-phpunit" } },
   },
   {
-    -- Add a Treesitter parser for Laravel Blade to provide Blade syntax highlighting.
     "nvim-treesitter/nvim-treesitter",
     config = function(_, opts)
       vim.filetype.add({
@@ -53,14 +51,5 @@ return {
         provider = "fzf-lua"
       }
     },
-  },
-  {
-    -- Add the blade-nav.nvim plugin which provides Goto File capabilities
-    -- for Blade files.
-    "ricardoramirezr/blade-nav.nvim",
-    dependencies = {
-      "saghen/blink.cmp",
-    },
-    ft = { "blade", "php" },
   },
 }

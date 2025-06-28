@@ -7,15 +7,8 @@ return {
     },
     opts = {
       sources = {
-        default = { "lsp", "buffer", "snippets", "path", "blade-nav" },
-        providers = {
-          ["blade-nav"] = {
-            module = "blade-nav.blink",
-            opts = {
-              close_tag_on_complete = true
-            }
-          }
-        }
+        completion = { documentation = { auto_show = true } },
+        default = { "lsp", "buffer", "snippets", "path" },
       },
     },
   }
