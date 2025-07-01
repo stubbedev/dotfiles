@@ -22,5 +22,4 @@ with pkgs; [
   jetbrains.phpstorm
   dbvisualizer
   templ
-  gemini-cli
 ]
