@@ -28,6 +28,7 @@ return {
       { "<leader>ae", "<cmd>CodeCompanionChat Add<cr>", desc = "CodeCompanion Add Buffer", mode = { "n", "v" } },
       { "<leader>ap", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions", mode = { "n", "v" } },
       { "<leader>aq", "<cmd>CodeCompanion<cr>", desc = "CodeCompanion Prompt", mode = { "n", "v" } },
+      { "<leader>ad", "<cmd>CodeCompanion /explain<cr>", desc = "CodeCompanion Explain", mode = { "n", "v" } },
     },
     dependencies = {
       "nvim-lua/plenary.nvim",
