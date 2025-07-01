@@ -21,6 +21,6 @@ with pkgs; [
   mongodb-tools
   jetbrains.phpstorm
   dbvisualizer
-  dbeaver-bin
   templ
+  gemini-cli
 ]
