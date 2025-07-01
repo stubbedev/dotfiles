@@ -24,10 +24,10 @@ return {
       },
     },
     keys = {
-      { "<leader>aa", "<cmd>CodeCompanionChat Toggle<cr>", desc = "CodeCompanion Toggle Chat" },
-      { "<leader>ae", "<cmd>CodeCompanionChat Add<cr>", desc = "CodeCompanion Add Buffer" },
-      { "<leader>ap", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions" },
-      { "<leader>aq", "<cmd>CodeCompanion<cr>", desc = "CodeCompanion Prompt" },
+      { "<leader>aa", "<cmd>CodeCompanionChat Toggle<cr>", desc = "CodeCompanion Toggle Chat", mode = { "n", "v" } },
+      { "<leader>ae", "<cmd>CodeCompanionChat Add<cr>", desc = "CodeCompanion Add Buffer", mode = { "n", "v" } },
+      { "<leader>ap", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions", mode = { "n", "v" } },
+      { "<leader>aq", "<cmd>CodeCompanion<cr>", desc = "CodeCompanion Prompt", mode = { "n", "v" } },
     },
     dependencies = {
       "nvim-lua/plenary.nvim",
