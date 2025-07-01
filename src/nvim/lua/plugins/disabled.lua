@@ -11,7 +11,7 @@ return {
       scroll = { enabled = false },
       indent = { enabled = false },
       picker = { enabled = false },
-      image = { enabled = true },
+      image = { enabled = false },
     }
   },
 }
