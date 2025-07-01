@@ -29,6 +29,8 @@ return {
       { "<leader>ap", "<cmd>CodeCompanionActions<cr>", desc = "CodeCompanion Actions", mode = { "n", "v" } },
       { "<leader>aq", "<cmd>CodeCompanion<cr>", desc = "CodeCompanion Prompt", mode = { "n", "v" } },
       { "<leader>ad", "<cmd>CodeCompanion /explain<cr>", desc = "CodeCompanion Explain", mode = { "n", "v" } },
+      { "<leader>af", "<cmd>CodeCompanion /fix<cr>", desc = "CodeCompanion Fix", mode = { "n", "v" } },
+      { "<leader>al", "<cmd>CodeCompanion /lsp<cr>", desc = "CodeCompanion LSP", mode = { "n", "v" } },
     },
     dependencies = {
       "nvim-lua/plenary.nvim",
