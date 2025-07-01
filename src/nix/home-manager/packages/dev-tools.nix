@@ -22,4 +22,7 @@ with pkgs; [
   jetbrains.phpstorm
   dbvisualizer
   templ
+  ueberzugpp
+  chafa
+  viu
 ]
