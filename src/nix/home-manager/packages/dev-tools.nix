@@ -25,4 +25,5 @@ with pkgs; [
   ueberzugpp
   chafa
   viu
+  pngquant
 ]
