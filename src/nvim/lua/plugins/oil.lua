@@ -11,9 +11,6 @@ return {
     default_file_explorer = true,
     columns = {
       "icon",
-      "permissions",
-      "size",
-      "mtime",
     },
     buf_options = {
       buflisted = false,
@@ -21,7 +18,7 @@ return {
     },
     win_options = {
       wrap = false,
-      signcolumn = "no",
+      signcolumn = "auto",
       cursorcolumn = false,
       foldcolumn = "0",
       spell = false,
