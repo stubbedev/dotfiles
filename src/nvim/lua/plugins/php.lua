@@ -31,7 +31,7 @@ return {
     "adalessa/laravel.nvim",
     dependencies = {
       "tpope/vim-dotenv",
-      "ibhagwan/fzf-lua",
+      "folke/snacks.nvim",
       "MunifTanjim/nui.nvim",
       "kevinhwang91/promise-async",
     },
@@ -48,7 +48,7 @@ return {
       features = { null_ls = { enable = false } },
       pickers = {
         enable = true,
-        provider = "fzf-lua"
+        provider = "snacks"
       }
     },
   },

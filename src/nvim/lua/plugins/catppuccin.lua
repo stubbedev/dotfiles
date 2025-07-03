@@ -41,9 +41,8 @@ return {
         notify = true,
         semantic_tokens = true,
         telescope = true,
-        fzf = true,
         snacks = {
-          enabled = false,
+          enabled = true,
           indent_scope_color = "lavender",
         },
         treesitter = true,

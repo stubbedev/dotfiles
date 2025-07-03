@@ -4,12 +4,15 @@ return {
   { "folke/flash.nvim",             enabled = false },
   {
     "folke/snacks.nvim",
-    opts_extend = { "explorer", "scroll", "indent", "picker", "image" },
     opts = {
-      explorer = { enabled = false },
+      explorer = { enabled = false, enable = false },
       scroll = { enabled = false },
-      indent = { enabled = false },
-      picker = { enabled = false },
+      indent = {
+        enabled = false,
+        scope = {
+          enabled = false,
+        }
+      },
       image = { enabled = false },
     }
   },

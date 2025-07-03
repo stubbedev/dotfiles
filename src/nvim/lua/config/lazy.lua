@@ -32,7 +32,6 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.editor.overseer" },
     { import = "lazyvim.plugins.extras.editor.inc-rename" },
     { import = "lazyvim.plugins.extras.editor.refactoring" },
-    { import = "lazyvim.plugins.extras.editor.fzf" },
     { import = "lazyvim.plugins.extras.ui.treesitter-context" },
     { import = "lazyvim.plugins.extras.ai.copilot" },
     { import = "plugins" },
@@ -50,14 +49,13 @@ require("lazy").setup({
   checker = { enabled = true }, -- automatically check for plugin updates
   performance = {
     rtp = {
-      -- disable some rtp plugins
       disabled_plugins = {
         "gzip",
         "netrwPlugin",
         "tarPlugin",
         "zipPlugin",
         "tohtml",
-        -- "tutor",
+        "tutor",
         "matchparen",
         "matchit",
       },

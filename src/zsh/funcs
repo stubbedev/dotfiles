@@ -17,10 +17,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
   function gcm {
     in_git_repo
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
+    local initial_query="$*"
 
     local commit_prompt
     local commit_prefix=$(git branch --show-current |
