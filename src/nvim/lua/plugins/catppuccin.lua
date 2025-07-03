@@ -5,6 +5,9 @@ return {
     name = "catppuccin",
     priority = 1000,
     opts = {
+      flavour = "mocha", -- latte, frappe, macchiato, mocha
+      default_integrations = true,
+      transparent_background = true,
       integrations = {
         aerial = true,
         alpha = true,
@@ -43,7 +46,6 @@ return {
         telescope = true,
         snacks = {
           enabled = true,
-          indent_scope_color = "lavender",
         },
         treesitter = true,
         treesitter_context = true,
