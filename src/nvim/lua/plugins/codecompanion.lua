@@ -63,11 +63,7 @@ return {
       {
         "<leader>ad",
         function()
-          vim.ui.input({ prompt = "CodeCompanion Explain: " }, function(input)
-            if input and input ~= "" then
-              vim.cmd("CodeCompanion /explain " .. input)
-            end
-          end)
+          vim.cmd("CodeCompanion /explain")
         end,
         desc = "CodeCompanion Explain (Prompt)",
         mode = { "n" }
@@ -75,11 +71,7 @@ return {
       {
         "<leader>ad",
         function()
-          vim.ui.input({ prompt = "CodeCompanion Explain: " }, function(input)
-            if input and input ~= "" then
-              vim.cmd("'<,'>CodeCompanion /explain " .. input)
-            end
-          end)
+          vim.cmd("'<,'>CodeCompanion /explain")
         end,
         desc = "CodeCompanion Explain (Prompt)",
         mode = { "v" }
@@ -87,11 +79,7 @@ return {
       {
         "<leader>af",
         function()
-          vim.ui.input({ prompt = "CodeCompanion Fix: " }, function(input)
-            if input and input ~= "" then
-              vim.cmd("CodeCompanion /fix " .. input)
-            end
-          end)
+          vim.cmd("CodeCompanion /fix")
         end,
         desc = "CodeCompanion Fix (Prompt)",
         mode = { "n" }
@@ -99,11 +87,7 @@ return {
       {
         "<leader>af",
         function()
-          vim.ui.input({ prompt = "CodeCompanion Fix: " }, function(input)
-            if input and input ~= "" then
-              vim.cmd("'<,'>CodeCompanion /fix " .. input)
-            end
-          end)
+          vim.cmd("'<,'>CodeCompanion /fix")
         end,
         desc = "CodeCompanion Fix (Prompt)",
         mode = { "v" }
@@ -111,11 +95,7 @@ return {
       {
         "<leader>al",
         function()
-          vim.ui.input({ prompt = "CodeCompanion LSP: " }, function(input)
-            if input and input ~= "" then
-              vim.cmd("CodeCompanion /lsp " .. input)
-            end
-          end)
+          vim.cmd("CodeCompanion /lsp")
         end,
         desc = "CodeCompanion LSP (Prompt)",
         mode = { "n" }
@@ -123,11 +103,7 @@ return {
       {
         "<leader>al",
         function()
-          vim.ui.input({ prompt = "CodeCompanion LSP: " }, function(input)
-            if input and input ~= "" then
-              vim.cmd("'<,'>CodeCompanion /lsp " .. input)
-            end
-          end)
+          vim.cmd("'<,'>CodeCompanion /lsp")
         end,
         desc = "CodeCompanion LSP (Prompt)",
         mode = { "v" }
