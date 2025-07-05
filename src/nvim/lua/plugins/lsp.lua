@@ -5,6 +5,27 @@ return {
     opts = {
       inlay_hints = { enabled = false },
       servers = {
+        lua_ls = {
+          settings = {
+            Lua = {
+              runtime = {
+                version = "LuaJIT"
+              },
+              diagnostics = {
+                globals = { "vim" }
+              },
+              workspace = {
+                checkThirdParty = false,
+                library = {
+                  vim.env.VIMRUNTIME,
+                  "${3rd}/luv/library",
+                  "${3rd}/busted/library",
+                  vim.env.VIMRUNTIME .. "/lua"
+                }
+              }
+            }
+          }
+        },
         htmx = {
           filetypes = { "html", "htm", "templ", "tmpl", "php", "blade", "twig" },
         },
