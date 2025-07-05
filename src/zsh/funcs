@@ -363,37 +363,6 @@ if is_binary nala; then
   }
 fi
 
-if is_binary pacstall; then
-  function pt {
-    case "$1" in
-    [iI] | [iI]nstall)
-      sudo pacstall -I "${@:2}"
-      ;;
-    [uU] | [uU]pdate)
-      sudo pacstall -U "${@:2}"
-      ;;
-    [uU]g | [uU]pgrade)
-      sudo pacstall -Up "${@:2}"
-      ;;
-    [sS] | [sS]earch)
-      sudo pacstall -S "${@:2}"
-      ;;
-    [rR] | [rR]emove)
-      sudo pacstall -R "${@:2}"
-      ;;
-    l | ls | list)
-      sudo pacstall -L
-      ;;
-    [hH] | [hH]help)
-      pacstall -h
-      ;;
-    *)
-      sudo pacstall "${@}"
-      ;;
-    esac
-  }
-fi
-
 if is_binary bat; then
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
@@ -437,6 +406,14 @@ if is_binary home-manager; then
     else
       export NIXGL_WRAPPER="mesa"
     fi
-    home-manager "$@" --impure
+
+    if [[ "$1" == "update" ]]; then
+      nix-channel --update
+    elif [[ "$1" == "upgrade" ]]; then
+      nix-channel --update
+      home-manager switch --impure
+    else
+      home-manager "$@" --impure
+    fi
   }
 fi
