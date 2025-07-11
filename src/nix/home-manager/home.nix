@@ -89,8 +89,8 @@ in {
     gitlogorder: topo-order
     gitlogshowgraph: always
     EOF
-    gh extension install github/gh-copilot
-    gh extension upgrade github/gh-copilot
+    ${pkgs.gh}/bin/gh extension install github/gh-copilot
+    ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot
   '';
 
   systemd.user.services = {
