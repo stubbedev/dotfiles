@@ -21,7 +21,6 @@ with pkgs; [
   rustup
   mongodb-tools
   jetbrains.phpstorm
-  dbvisualizer
   templ
   ueberzugpp
   chafa
