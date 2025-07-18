@@ -98,19 +98,19 @@ install_nix_home_manager() {
   conf_nix_home_manager
 
   "$HOME/.nix-profile/bin/home-manager" switch --impure
-  if ! grep -Fxq ".nix-profile/bin/zsh" /etc/shells; then
-    echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
-  fi
-  sudo usermod -s "$HOME/.nix-profile/bin/zsh" "$USER"
 }
 
 install_docker() {
-  DOCKERTMPDIR=$(mktemp -d)
-  "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
-  sudo sh "$DOCKERTMPDIR/get-docker.sh"
+  if grep -q '^ID=arch$' /etc/os-release; then
+    sudo pacman -S docker docker-compose docker-buildx
+  else
+    DOCKERTMPDIR=$(mktemp -d)
+    "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
+    sudo sh "$DOCKERTMPDIR/get-docker.sh"
+    rm -rf "$DOCKERTMPDIR"
+  fi
   sudo groupadd docker 2>/dev/null || true
   sudo usermod -aG docker "$USER"
-  rm -rf "$DOCKERTMPDIR"
 }
 
 conf_fonts() {
