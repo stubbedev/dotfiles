@@ -84,6 +84,8 @@ install_nix_home_manager() {
   else
     export NIXGL_WRAPPER="mesa"
   fi
+  
+  export NIXPKGS_ALLOW_UNFREE=1
 
   rm -rf "$HOME/.config/home-manager"
 
