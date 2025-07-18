@@ -71,7 +71,6 @@ install_nix() {
   sh -c "$(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)" --daemon
   conf_nix
   install_nix_home_manager
-  conf_sessions
 }
 
 install_nix_home_manager() {
@@ -135,11 +134,6 @@ conf_nix_home_manager() {
   mkdir -p "$HOME/.config"
   rm -rf "$HOME/.config/home-manager"
   ln -sf "$PWD/src/nix/home-manager" "$HOME/.config"
-}
-
-conf_sessions() {
-  mkdir -p "$HOME/.local/share/wayland-sessions"
-  sed "s|__BINARY_PATH__|$(command -v hyprland)|g" "$PWD/sessions/hyprland.desktop" >"$HOME/.local/share/wayland-sessions/hyprland.desktop"
 }
 
 license_intelephense() {
