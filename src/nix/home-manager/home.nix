@@ -110,13 +110,13 @@ in {
   };
 
   gtk = {
-    enable = true;
+    enable = false;
     iconTheme = { name = "stubbe"; };
     theme = { name = "stubbe"; };
   };
 
   qt = {
-    enable = true;
+    enable = false;
     platformTheme = { name = "gtk3"; };
   };
 
