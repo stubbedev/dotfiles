@@ -1,9 +1,5 @@
 #!/bin/sh
 
-is_binary() {
-  command -v "$1" >/dev/null 2>&1
-}
-
 is_elevated_shell() {
   [ "$(id -u)" -eq 0 ]
 }
@@ -12,8 +8,20 @@ is_nix() {
   grep -q '^ID=nixos' /etc/os-release 2>/dev/null
 }
 
+is_arch() {
+  grep -q '^ID=arch' /etc/os-release 2>/dev/null
+}
+
+is_nvidia() {
+  lspci | grep -qi nvidia 2>/dev/null
+}
+
 is_file() {
   [ -f "$1" ]
+}
+
+is_binary() {
+  command -v "$1" >/dev/null 2>&1
 }
 
 # INFO: INSTALL FUNCTION
@@ -32,7 +40,7 @@ installer_prompt() {
   printf "\n"
   case "$REPLY" in
   i | I)
-    install_stubbe_all
+    install_all_nix
     exit
     ;;
   c | C)
@@ -46,25 +54,13 @@ installer_prompt() {
   esac
 }
 
-install_stubbe_all() {
+install_all_nix() {
   rm -rf "$HOME/.stubbe"
   ln -sf "$PWD" "$HOME/.stubbe"
   install_nix
   install_docker
   conf_fonts
-
-  echo "Install private licenses:"
-  printf "(Y)es or [N]o? "
-  read -r REPLY
-  printf "\n"
-  case "$REPLY" in
-  [Yy][Ee][Ss] | [Yy])
-    license_intelephense
-    ;;
-  *)
-    echo "Skipping private installs"
-    ;;
-  esac
+  license_intelephense
 }
 
 install_nix() {
@@ -78,7 +74,7 @@ install_nix_home_manager() {
     return 0
   fi
 
-  if lspci | grep -qi nvidia >/dev/null; then
+  if is_nvidia; then
     export NIXGL_WRAPPER="nvidia"
   else
     export NIXGL_WRAPPER="mesa"
@@ -100,8 +96,8 @@ install_nix_home_manager() {
 }
 
 install_docker() {
-  if grep -q '^ID=arch$' /etc/os-release; then
-    sudo pacman -S docker docker-compose docker-buildx
+  if is_arch; then
+    sudo pacman -Sy docker docker-compose docker-buildx
   else
     DOCKERTMPDIR=$(mktemp -d)
     "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
