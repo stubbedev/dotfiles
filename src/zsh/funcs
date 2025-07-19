@@ -411,6 +411,12 @@ if is_binary home-manager; then
       export NIXGL_WRAPPER="mesa"
     fi
 
+    if is_binary hyprctl; then
+      export USE_HYPRLAND=true
+    else
+      export USE_HYPRLAND=false
+    fi
+
     if [[ "$1" == "update" ]]; then
       nix-channel --update
     elif [[ "$1" == "upgrade" ]]; then

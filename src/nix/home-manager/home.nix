@@ -1,10 +1,15 @@
 { config, lib, pkgs, nixGL, ... }@args:
 let
   nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
+  enableHyprland = builtins.getEnv "USE_HYPRLAND";
   homePackages = builtins.concatLists
     (map (file: import (./packages + "/${file}") args)
       (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
         (builtins.attrNames (builtins.readDir ./packages))));
+  hyprlandPackages = builtins.concatLists
+      (map (file: import (./hyprland + "/${file}") args)
+        (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
+          (builtins.attrNames (builtins.readDir ./hyprland))));
   importedProgramsAndServices = map (f: ./programs + "/${f}")
     (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
       (builtins.attrNames (builtins.readDir ./programs)))
@@ -17,12 +22,14 @@ in {
     defaultWrapper = nixglWrapper;
   };
 
+  useHyprland = enableHyprland == "true" || enableHyprland == true then true else false;
+
   targets.genericLinux.enable = true;
 
   home.username = "stubbe";
   home.homeDirectory = "/home/stubbe";
   home.stateVersion = "25.05";
-  home.packages = homePackages;
+  home.packages = if useHyprland then homePackages ++ hyprlandPackages else homePackages;
 
   imports = importedProgramsAndServices;
 
@@ -110,13 +117,13 @@ in {
   };
 
   gtk = {
-    enable = false;
+    enable = useHyprland;
     iconTheme = { name = "stubbe"; };
     theme = { name = "stubbe"; };
   };
 
   qt = {
-    enable = false;
+    enable = useHyprland;
     platformTheme = { name = "gtk3"; };
   };
 
