@@ -2,6 +2,7 @@
 let
   nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
+  useHyprland = if enableHyprland == "true" || enableHyprland == true then true else false;
   homePackages = builtins.concatLists
     (map (file: import (./packages + "/${file}") args)
       (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
@@ -21,8 +22,6 @@ in {
     packages = nixGL.packages;
     defaultWrapper = nixglWrapper;
   };
-
-  useHyprland = enableHyprland == "true" || enableHyprland == true then true else false;
 
   targets.genericLinux.enable = true;
 
