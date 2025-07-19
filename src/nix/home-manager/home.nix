@@ -41,7 +41,7 @@ in {
     ".config/neomutt".source = ./../../neomutt;
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
-      default=hyprland;gtk;wlr;
+      default=hyprland;gtk;wlr;kde;
     '';
     ".icons/stubbe" = {
       source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";

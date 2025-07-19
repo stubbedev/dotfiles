@@ -92,7 +92,7 @@ install_nix_home_manager() {
 
   conf_nix_home_manager
 
-  "$HOME/.nix-profile/bin/home-manager" switch --impure -b backup
+  "$HOME/.nix-profile/bin/home-manager" switch --impure
 }
 
 install_docker() {
