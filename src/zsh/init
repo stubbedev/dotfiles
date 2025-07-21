@@ -11,7 +11,7 @@ fi
 STBZSHSOURCES=(
   "paths"
   "sysfuncs"
-  "updates"
+  "manager"
   "funcs"
   "aliases"
   "secrets"

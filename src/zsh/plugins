@@ -5,46 +5,11 @@ if ! is_binary $(which starship); then
   curl -sS https://starship.rs/install.sh | sh
 fi
 
-STUBBE_ZSH_PLUGS_DIR="$HOME/.stubbe/src/zsh/plugins.d"
-mkdir -p "$STUBBE_ZSH_PLUGS_DIR"
-
-# FZF-TAB
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"; then
-  git clone "https://github.com/Aloxaf/fzf-tab.git" "$STUBBE_ZSH_PLUGS_DIR/fzf-tab"
-elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-  git -C "$STUBBE_ZSH_PLUGS_DIR/fzf-tab" pull --force
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/fzf-tab/fzf-tab.plugin.zsh"
-
-# AUTOSUGGESTIONS
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"; then
-  git clone "https://github.com/zsh-users/zsh-autosuggestions.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions"
-elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-  git -C "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions" pull --force
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/zsh-autosuggestions/zsh-autosuggestions.zsh"
-
-# LARAVEL
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"; then
-  git clone "https://github.com/stubbedev/zsh-fzf-artisan.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan"
-elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-  git -C "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan" pull --force
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/zsh-artisan/artisan.plugin.zsh"
-
-# VIM-MODE
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"; then
-  git clone "https://github.com/softmoth/zsh-vim-mode.git" "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode"
-elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-  git -C "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode" pull --force
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/zsh-vim-mode/zsh-vim-mode.plugin.zsh"
-
-# AUTOHIGHLIGHT
-if ! is_directory "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"; then
-  git clone "https://github.com/zdharma/fast-syntax-highlighting.git" "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting"
-elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-  git -C "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting" pull --force
-fi
-source "$STUBBE_ZSH_PLUGS_DIR/fast-syntax-highlighting/F-Sy-H.plugin.zsh"
-
+local -a plugins=(
+  "Aloxaf/fzf-tab.git"
+  "zsh-users/zsh-autosuggestions.git"
+  "stubbedev/zsh-fzf-artisan.git"
+  "softmoth/zsh-vim-mode.git"
+  "zdharma/fast-syntax-highlighting.git"
+)
+source_github_plugins $plugins "$HOME/.stubbe/src/zsh/plugins.d"
