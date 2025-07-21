@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 if ! is_file "$STBDIR/update_flag"; then
-  date -d "+1 days" +%s > "$STBDIR/update_flag"
+  date -d "+1 days" +%s >"$STBDIR/update_flag"
 fi
 
 STB_TIME_TO_UPDATE=$(cat $STBDIR/update_flag)
@@ -12,7 +12,7 @@ if [[ "$STB_TIME_NOW" -lt "$STB_TIME_TO_UPDATE" ]]; then
 else
   STB_SHOULD_UPDATE=true
   truncate -s 0 "$STBDIR/update_flag"
-  date -d "+1 days" +%s > "$STBDIR/update_flag"
+  date -d "+1 days" +%s >"$STBDIR/update_flag"
 fi
 
 function source_github_plugins() {
@@ -27,9 +27,17 @@ function source_github_plugins() {
     local repo="${url:t:r}"
     local target="$parent_dir/$repo"
     if ! is_directory "$target"; then
-      git clone "$url" "$target" > /dev/null
+      echo "ADDING: $repo"
+      git clone "$url" "$target" >/dev/null
     elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-      git -C "$target" pull --force > /dev/null
+      echo "CHECKING: $repo"
+      git -C "$target" fetch > /dev/null 2>&1
+      local local_commit=$(git -C "$target" rev-parse @)
+      local remote_commit=$(git -C "$target" rev-parse @{u})
+      if [[ "$local_commit" != "$remote_commit" ]]; then
+        echo "UPDATING: $repo"
+        git -C "$target" pull --force >/dev/null
+      fi
     fi
     local plugin_files=(${target}/*.plugin.zsh)
     for plugin_file in $plugin_files; do
