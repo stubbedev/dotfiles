@@ -11,8 +11,11 @@ function is_nix {
 
 function are_binary {
   for arg in "$@"; do
-    is_binary $arg
+    if ! is_binary "$arg"; then
+      return 1
+    fi
   done
+  return 0
 }
 
 function is_directory {
@@ -21,9 +24,13 @@ function is_directory {
 
 function are_directory {
   for arg in "$@"; do
-    is_directory $arg
+    if ! is_directory "$arg"; then
+      return 1
+    fi
   done
+  return 0
 }
+
 
 function is_file {
   [[ -f "$1" ]]
@@ -31,8 +38,11 @@ function is_file {
 
 function are_file {
   for arg in "$@"; do
-    is_file $arg
+    if ! is_file "$arg"; then
+      return 1
+    fi
   done
+  return 0
 }
 
 function has_string {
