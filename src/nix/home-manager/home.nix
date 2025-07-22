@@ -97,6 +97,7 @@ in {
     EOF
     ${pkgs.gh}/bin/gh extension install github/gh-copilot
     ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot
+    ${pkgs.bun}/bin/bun install opencode-ai@latest --global
   '';
 
   systemd.user.services = {
