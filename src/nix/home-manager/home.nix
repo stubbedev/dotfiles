@@ -44,7 +44,7 @@ in {
     ".config/waybar".source = ./../../waybar;
     ".config/hypr".source = ./../../hypr;
     ".config/foot".source = ./../../foot;
-    ".config/neomutt".source = ./../../neomutt;
+    ".config/opencode".source = ./../../opencode;
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
       default=hyprland;gtk;wlr;kde;
