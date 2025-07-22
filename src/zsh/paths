@@ -14,7 +14,6 @@ STUBBE_PATHS=(
   "$HOME/.cargo/bin"
   "$HOME/.deno/bin"
   "$HOME/.nix-profile/bin"
-  "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
   "$HOME/.go/bin"
   "$HOME/go/bin"
   "$HOME/bin"
