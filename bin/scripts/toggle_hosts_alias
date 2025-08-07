@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <domain>"
+  exit 1
+fi
+
+DOMAIN="$1"
+HOSTS_FILE="/etc/hosts"
+
+# Check if the domain exists in any form in the hosts file
+if grep -q "$DOMAIN" "$HOSTS_FILE"; then
+  # Remove all lines containing the domain
+  sudo sed -i "/$DOMAIN/d" "$HOSTS_FILE"
+  echo "Removed all host entries for $DOMAIN"
+else
+  # Add the three host entries
+  {
+    echo "# DNS ALIAS <$DOMAIN>"
+    echo "127.0.0.1 $DOMAIN"
+    echo "127.0.0.1 www.$DOMAIN"
+    echo "127.0.0.1 *.$DOMAIN"
+    echo "# DNS ALIAS <$DOMAIN>"
+  } | sudo tee -a "$HOSTS_FILE" > /dev/null
+  echo "Added host entries for $DOMAIN"
+fi
+
+cat /etc/hosts
