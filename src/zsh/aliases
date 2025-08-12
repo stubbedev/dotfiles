@@ -25,6 +25,7 @@ if is_binary nvim; then
   alias vi='nvim'
   alias nano='nvim'
   alias ed='nvim'
+  alias code='nvim'
   alias svim='nvim -u NONE'
 fi
 
