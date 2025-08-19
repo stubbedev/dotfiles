@@ -75,7 +75,8 @@
   "hyprland/language": {
     "format": "{}",
     "format-en": " EN",
-    "format-da": " DA"
+    "format-da": " DA",
+    "format-es": " ES"
   },
   "keyboard-state": {
     "numlock": true,
