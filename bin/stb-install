@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 is_elevated_shell() {
   [ "$(id -u)" -eq 0 ]
