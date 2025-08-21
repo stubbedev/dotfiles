@@ -45,6 +45,7 @@ in {
     ".config/hypr".source = ./../../hypr;
     ".config/foot".source = ./../../foot;
     ".config/opencode/opencode.json".source = ./../../opencode/opencode.json;
+    ".config/opencode/themes/catppuccin-mocha.json".source = ./../../opencode/catppuccin-mocha.json;
     ".config/xdg-desktop-portal/portals.conf".text = ''
       [preferred]
       default=hyprland;gtk;wlr;kde;

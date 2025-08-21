@@ -1,0 +1,258 @@
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "defs": {
+    "mochaBase": "#1e1e2e",
+    "mochaMantle": "#181825",
+    "mochaCrust": "#11111b",
+    "mochaText": "#cdd6f4",
+    "mochaSubtext1": "#bac2de",
+    "mochaSubtext0": "#a6adc8",
+    "mochaOverlay2": "#9399b2",
+    "mochaOverlay1": "#7f849c",
+    "mochaOverlay0": "#6c7086",
+    "mochaSurface2": "#585b70",
+    "mochaSurface1": "#45475a",
+    "mochaSurface0": "#313244",
+    "mochaBlue": "#89b4fa",
+    "mochaLavender": "#b4befe",
+    "mochaSapphire": "#74c7ec",
+    "mochaSky": "#89dceb",
+    "mochaTeal": "#94e2d5",
+    "mochaGreen": "#a6e3a1",
+    "mochaYellow": "#f9e2af",
+    "mochaPeach": "#fab387",
+    "mochaMaroon": "#eba0ac",
+    "mochaRed": "#f38ba8",
+    "mochaMauve": "#cba6f7",
+    "mochaPink": "#f5c2e7",
+    "mochaFlamingo": "#f2cdcd",
+    "mochaRosewater": "#f5e0dc",
+
+    "latteBase": "#eff1f5",
+    "latteMantle": "#e6e9ef",
+    "latteCrust": "#dce0e8",
+    "latteText": "#4c4f69",
+    "latteSubtext1": "#5c5f77",
+    "latteSubtext0": "#6c6f85",
+    "latteOverlay2": "#7c7f93",
+    "latteOverlay1": "#8c8fa1",
+    "latteOverlay0": "#9ca0b0",
+    "latteSurface2": "#acb0be",
+    "latteSurface1": "#bcc0cc",
+    "latteSurface0": "#ccd0da",
+    "latteBlue": "#1e66f5",
+    "latteLavender": "#7287fd",
+    "latteSapphire": "#209fb5",
+    "latteSky": "#04a5e5",
+    "latteTeal": "#179299",
+    "latteGreen": "#40a02b",
+    "latteYellow": "#df8e1d",
+    "lattePeach": "#fe640b",
+    "latteMaroon": "#e64553",
+    "latteRed": "#d20f39",
+    "latteMauve": "#8839ef",
+    "lattePink": "#ea76cb",
+    "latteFlamingo": "#dd7878",
+    "latteRosewater": "#dc8a78"
+  },
+  "theme": {
+    "primary": {
+      "dark": "mochaBlue",
+      "light": "latteBlue"
+    },
+    "secondary": {
+      "dark": "mochaMauve",
+      "light": "latteMauve"
+    },
+    "accent": {
+      "dark": "mochaPeach",
+      "light": "lattePeach"
+    },
+    "error": {
+      "dark": "mochaRed",
+      "light": "latteRed"
+    },
+    "warning": {
+      "dark": "mochaYellow",
+      "light": "latteYellow"
+    },
+    "success": {
+      "dark": "mochaGreen",
+      "light": "latteGreen"
+    },
+    "info": {
+      "dark": "mochaSapphire",
+      "light": "latteSapphire"
+    },
+    "text": {
+      "dark": "mochaText",
+      "light": "latteText"
+    },
+    "textMuted": {
+      "dark": "mochaOverlay1",
+      "light": "latteOverlay1"
+    },
+    "background": "none",
+    "backgroundPanel": {
+      "dark": "mochaSurface0",
+      "light": "latteSurface0"
+    },
+    "backgroundElement": {
+      "dark": "mochaSurface1",
+      "light": "latteSurface1"
+    },
+    "border": {
+      "dark": "mochaSurface2",
+      "light": "latteSurface2"
+    },
+    "borderActive": {
+      "dark": "mochaOverlay0",
+      "light": "latteOverlay0"
+    },
+    "borderSubtle": {
+      "dark": "mochaSurface1",
+      "light": "latteSurface1"
+    },
+    "diffAdded": {
+      "dark": "mochaGreen",
+      "light": "latteGreen"
+    },
+    "diffRemoved": {
+      "dark": "mochaRed",
+      "light": "latteRed"
+    },
+    "diffContext": {
+      "dark": "mochaOverlay1",
+      "light": "latteOverlay1"
+    },
+    "diffHunkHeader": {
+      "dark": "mochaOverlay2",
+      "light": "latteOverlay2"
+    },
+    "diffHighlightAdded": {
+      "dark": "mochaGreen",
+      "light": "latteGreen"
+    },
+    "diffHighlightRemoved": {
+      "dark": "mochaRed",
+      "light": "latteRed"
+    },
+    "diffAddedBg": {
+      "dark": "#243424",
+      "light": "#e6f8e6"
+    },
+    "diffRemovedBg": {
+      "dark": "#3a1f29",
+      "light": "#fde9ec"
+    },
+    "diffContextBg": {
+      "dark": "mochaSurface0",
+      "light": "latteSurface0"
+    },
+    "diffLineNumber": {
+      "dark": "mochaOverlay0",
+      "light": "latteOverlay0"
+    },
+    "diffAddedLineNumberBg": {
+      "dark": "#243424",
+      "light": "#e6f8e6"
+    },
+    "diffRemovedLineNumberBg": {
+      "dark": "#3a1f29",
+      "light": "#fde9ec"
+    },
+    "markdownText": {
+      "dark": "mochaText",
+      "light": "latteText"
+    },
+    "markdownHeading": {
+      "dark": "mochaBlue",
+      "light": "latteBlue"
+    },
+    "markdownLink": {
+      "dark": "mochaMauve",
+      "light": "latteMauve"
+    },
+    "markdownLinkText": {
+      "dark": "mochaPeach",
+      "light": "lattePeach"
+    },
+    "markdownCode": {
+      "dark": "mochaGreen",
+      "light": "latteGreen"
+    },
+    "markdownBlockQuote": {
+      "dark": "mochaOverlay1",
+      "light": "latteOverlay1"
+    },
+    "markdownEmph": {
+      "dark": "mochaPeach",
+      "light": "lattePeach"
+    },
+    "markdownStrong": {
+      "dark": "mochaYellow",
+      "light": "latteYellow"
+    },
+    "markdownHorizontalRule": {
+      "dark": "mochaSurface2",
+      "light": "latteSurface2"
+    },
+    "markdownListItem": {
+      "dark": "mochaSapphire",
+      "light": "latteSapphire"
+    },
+    "markdownListEnumeration": {
+      "dark": "mochaLavender",
+      "light": "latteLavender"
+    },
+    "markdownImage": {
+      "dark": "mochaSky",
+      "light": "latteSky"
+    },
+    "markdownImageText": {
+      "dark": "mochaTeal",
+      "light": "latteTeal"
+    },
+    "markdownCodeBlock": {
+      "dark": "mochaText",
+      "light": "latteText"
+    },
+    "syntaxComment": {
+      "dark": "mochaOverlay1",
+      "light": "latteOverlay1"
+    },
+    "syntaxKeyword": {
+      "dark": "mochaMauve",
+      "light": "latteMauve"
+    },
+    "syntaxFunction": {
+      "dark": "mochaBlue",
+      "light": "latteBlue"
+    },
+    "syntaxVariable": {
+      "dark": "mochaRosewater",
+      "light": "latteRosewater"
+    },
+    "syntaxString": {
+      "dark": "mochaGreen",
+      "light": "latteGreen"
+    },
+    "syntaxNumber": {
+      "dark": "mochaPeach",
+      "light": "lattePeach"
+    },
+    "syntaxType": {
+      "dark": "mochaYellow",
+      "light": "latteYellow"
+    },
+    "syntaxOperator": {
+      "dark": "mochaSky",
+      "light": "latteSky"
+    },
+    "syntaxPunctuation": {
+      "dark": "mochaText",
+      "light": "latteText"
+    }
+  }
+}
+
