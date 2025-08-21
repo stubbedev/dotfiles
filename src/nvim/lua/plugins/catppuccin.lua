@@ -1,7 +1,6 @@
 return {
   {
     "catppuccin/nvim",
-    lazy = true,
     name = "catppuccin",
     priority = 1000,
     opts = {
@@ -52,6 +51,20 @@ return {
         which_key = true,
       },
     },
+    specs = {
+      {
+        "akinsho/bufferline.nvim",
+        optional = true,
+        opts = function(_, opts)
+          if (vim.g.colors_name or ""):find("catppuccin") then
+            local ok, bufferline = pcall(require, "catppuccin.groups.integrations.bufferline")
+            if ok and bufferline then
+              opts.highlights = bufferline.get()
+            end
+          end
+        end,
+      },
+    }
   },
   {
     "LazyVim/LazyVim",
