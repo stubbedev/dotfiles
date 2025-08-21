@@ -92,10 +92,7 @@
       "dark": "mochaOverlay1",
       "light": "latteOverlay1"
     },
-    "background": {
-      "dark": "mochaBase",
-      "light": "latteBase"
-    },
+    "background": "none",
     "backgroundPanel": {
       "dark": "mochaSurface0",
       "light": "latteSurface0"
