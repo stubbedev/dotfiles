@@ -17,6 +17,7 @@ return {
         flash = false,
         grug_far = true,
         overseer = true,
+        bufferline = true,
         gitsigns = true,
         headlines = true,
         illuminate = true,
@@ -55,6 +56,7 @@ return {
   },
   {
     "LazyVim/LazyVim",
+    dependencies = { "catppuccin/nvim" },
     opts = {
       colorscheme = "catppuccin",
     },
