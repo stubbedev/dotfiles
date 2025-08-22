@@ -1,7 +1,6 @@
 return {
   {
     "neovim/nvim-lspconfig",
-    opt_extend = { "servers", "inlay_hints" },
     opts = {
       inlay_hints = { enabled = false },
       servers = {
