@@ -62,9 +62,17 @@ return {
           table.insert(lualineZ, { require("recorder").recordingStatus })
           table.insert(lualineY, { require("recorder").displaySlots })
           table.insert(lualineX, 1, {
-            "filename",
-            file_status = true,   -- displays file status (readonly status, modified status)
-            path = 1,             -- 0 = just filename, 1 = relative path, 2 = absolute path
+            'filename',
+            file_status = true,
+            newfile_status = false,
+            path = 1,
+            shorting_target = 40,
+            symbols = {
+              modified = '[+]',
+              readonly = '',
+              unnamed = '',
+              newfile = '',
+            }
           })
           local lualineC = {
             {
@@ -83,11 +91,7 @@ return {
               -- it can also be a function that returns
               -- the value of `max_length` dynamically.
               filetype_names = {
-                TelescopePrompt = 'Telescope',
-                dashboard = 'Dashboard',
-                packer = 'Packer',
-                fzf = 'FZF',
-                alpha = 'Alpha'
+                snacks_dashboard = '',
               }, -- Shows specific buffer name for that filetype ( { `filetype` = `buffer_name`, ... } )
 
               -- Automatically updates active buffer color to match color of other components (will be overidden if buffers_color is set)
