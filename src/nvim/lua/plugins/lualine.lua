@@ -80,7 +80,6 @@ return {
               show_filename_only = true,       -- Shows shortened relative path when set to false.
               hide_filename_extension = false, -- Hide filename extension when set to true.
               show_modified_status = true,     -- Shows indicator when the buffer is modified.
-
               mode = 0,                        -- 0: Shows buffer name
               -- 1: Shows buffer index
               -- 2: Shows buffer name + buffer index
@@ -126,7 +125,7 @@ return {
       require("lualine").setup({
         options = {
           theme = "catppuccin",
-          extensions = { "lazy", "mason" },
+          extensions = { "lazy", "mason", "oil", "nvim-dap", "overseer", "trouble" },
         },
       })
     end,
