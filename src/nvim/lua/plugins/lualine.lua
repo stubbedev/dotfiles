@@ -56,6 +56,50 @@ return {
             timeout = 300,
           })
 
+          local function get_tabline()
+            local buffers = vim.tbl_filter(function(bufnr)
+              return vim.api.nvim_buf_is_loaded(bufnr) and (vim.fn.buflisted(bufnr) == 1)
+            end, vim.api.nvim_list_bufs())
+            if #buffers < 2 then
+              return nil
+            end
+            return {
+              lualine_a = {
+                {
+                  'buffers',
+                  show_filename_only = true,
+                  hide_filename_extension = false,
+                  show_modified_status = true,
+                  mode = 0,
+                  max_length = vim.o.columns * 2 / 3,
+                  filetype_names = { snacks_dashboard = '' },
+                  use_mode_colors = true,
+                  symbols = {
+                    modified = ' ●',
+                    alternate_file = '^',
+                    directory = '',
+                  },
+                }
+              },
+            }
+          end
+
+          local function update_lualine_tabline()
+            local lualine = require("lualine")
+            local config = lualine.get_config()
+            config.tabline = get_tabline()
+            lualine.setup(config)
+          end
+
+          vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete", "BufWipeout", "BufEnter" }, {
+            callback = function()
+              vim.schedule(function()
+                pcall(update_lualine_tabline)
+              end)
+            end,
+            nested = true,
+          })
+
           local lualineZ = require("lualine").get_config().sections.lualine_z or {}
           local lualineY = require("lualine").get_config().sections.lualine_y or {}
           local lualineX = require("lualine").get_config().sections.lualine_x or {}
@@ -63,52 +107,18 @@ return {
           table.insert(lualineY, { require("recorder").displaySlots })
           table.insert(lualineX, 1, {
             'filename',
-            file_status = true,
+            file_status = false,
             newfile_status = false,
             path = 1,
             shorting_target = 40,
             symbols = {
-              modified = '[+]',
+              modified = '',
               readonly = '',
               unnamed = '',
               newfile = '',
             }
           })
-          local lualineC = {
-            {
-              'buffers',
-              show_filename_only = true,       -- Shows shortened relative path when set to false.
-              hide_filename_extension = false, -- Hide filename extension when set to true.
-              show_modified_status = true,     -- Shows indicator when the buffer is modified.
-              mode = 0,                        -- 0: Shows buffer name
-              -- 1: Shows buffer index
-              -- 2: Shows buffer name + buffer index
-              -- 3: Shows buffer number
-              -- 4: Shows buffer name + buffer number
-
-              max_length = vim.o.columns * 2 / 3, -- Maximum width of buffers component,
-              -- it can also be a function that returns
-              -- the value of `max_length` dynamically.
-              filetype_names = {
-                snacks_dashboard = '',
-              }, -- Shows specific buffer name for that filetype ( { `filetype` = `buffer_name`, ... } )
-
-              -- Automatically updates active buffer color to match color of other components (will be overidden if buffers_color is set)
-              use_mode_colors = true,
-
-              buffers_color = {
-                -- Same values as the general color option can be used here.
-                active = 'lualine_c_normal',     -- Color for active buffer.
-                inactive = 'lualine_c_inactive', -- Color for inactive buffer.
-              },
-
-              symbols = {
-                modified = ' ●', -- Text to show when the buffer is modified
-                alternate_file = '^', -- Text to show to identify the alternate file
-                directory = '', -- Text to show when the buffer is a directory
-              },
-            }
-          }
+          local lualineC = {}
           require("lualine").setup({
             sections = {
               lualine_c = lualineC,
@@ -116,6 +126,7 @@ return {
               lualine_y = lualineY,
               lualine_z = lualineZ,
             },
+            tabline = get_tabline()
           })
         end,
       },
