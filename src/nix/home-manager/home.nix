@@ -69,6 +69,7 @@ in {
     GOPATH = "${config.home.homeDirectory}/go";
     DEPLOYER_REMOTE_USER = "abs";
     GTK_THEME = "stubbe";
+    PAGER = "${pkgs.more}/bin/more";
   };
 
   xdg.configFile."environment.d/envvars.conf".text = ''

@@ -26,4 +26,6 @@ with pkgs; [
   chafa
   viu
   pngquant
+  less
+  more
 ]
