@@ -71,7 +71,7 @@ return {
                   hide_filename_extension = false,
                   show_modified_status = true,
                   mode = 0,
-                  max_length = vim.o.columns * 2 / 3,
+                  max_length = vim.o.columns,
                   filetype_names = { snacks_dashboard = '' },
                   use_mode_colors = true,
                   symbols = {
