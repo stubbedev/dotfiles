@@ -6,10 +6,11 @@ if ! is_binary $(which starship); then
 fi
 
 local -a plugins=(
-  "Aloxaf/fzf-tab.git"
-  "zsh-users/zsh-autosuggestions.git"
-  "stubbedev/zsh-fzf-artisan.git"
-  "softmoth/zsh-vim-mode.git"
-  "zdharma/fast-syntax-highlighting.git"
+  "Aloxaf/fzf-tab"
+  "zsh-users/zsh-autosuggestions"
+  "stubbedev/zsh-fzf-artisan"
+  "stubbedev/zsh-fzf-npm-run"
+  "softmoth/zsh-vim-mode"
+  "zdharma/fast-syntax-highlighting"
 )
 source_github_plugins $plugins "$HOME/.stubbe/src/zsh/plugins.d"

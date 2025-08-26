@@ -28,7 +28,7 @@ function source_github_plugins() {
     local target="$parent_dir/$repo"
     if ! is_directory "$target"; then
       echo "ADDING: $repo"
-      git clone "$url" "$target" >/dev/null
+      git clone "$url.git" "$target" >/dev/null
     elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
       echo "CHECKING: $repo"
       git -C "$target" fetch > /dev/null 2>&1
