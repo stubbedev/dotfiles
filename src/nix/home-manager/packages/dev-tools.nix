@@ -28,4 +28,5 @@ with pkgs; [
   pngquant
   less
   more
+  pass
 ]
