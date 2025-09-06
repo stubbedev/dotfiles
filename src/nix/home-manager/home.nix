@@ -82,6 +82,7 @@ in {
   '';
 
   home.activation.stubbePostBuild = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    rm -f ${config.home.homeDirectory}/.zcompdump > /dev/null 2>&1
     if [ ! -d "${config.home.homeDirectory}/.tmux/plugins/tpm" ]; then
       ${pkgs.git}/bin/git clone --quiet https://github.com/tmux-plugins/tpm ${config.home.homeDirectory}/.tmux/plugins/tpm
     fi
