@@ -102,9 +102,10 @@ in {
     gitlogorder: topo-order
     gitlogshowgraph: always
     EOF
-    ${pkgs.gh}/bin/gh extension install github/gh-copilot
-    ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot
-    ${pkgs.bun}/bin/bun install opencode-ai@latest --global
+    ${pkgs.gh}/bin/gh extension install github/gh-copilot > /dev/null 2>&1
+    ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot > /dev/null 2>&1
+    ${pkgs.gh}/bin/gh completion -s zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_gh
+    ${pkgs.bun}/bin/bun install opencode-ai@latest --global > /dev/null 2>&1
   '';
 
   systemd.user.services = {
