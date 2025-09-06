@@ -16,6 +16,7 @@ with pkgs; [
   htop
   btop
   jless
+  jq
   ripgrep
   lazygit
   lazydocker
