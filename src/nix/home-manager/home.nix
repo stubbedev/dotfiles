@@ -37,7 +37,7 @@ in {
       if [[ -f "${config.home.homeDirectory}/.stubbe/src/zsh/init" ]]; then
         source ${config.home.homeDirectory}/.stubbe/src/zsh/init
       fi
-      ''
+    '';
     ".ideavimrc".source = ./../../ideavim/ideavimrc;
     ".tmux.conf".source = ./../../tmux/tmux.conf;
     ".config/lazygit/config.yml".source = ./../../lazygit/config.yml;
