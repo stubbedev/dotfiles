@@ -442,13 +442,84 @@ if is_binary home-manager; then
       export USE_HYPRLAND=false
     fi
 
-    if [[ "$1" == "update" ]]; then
-      nix-channel --update
-    elif [[ "$1" == "upgrade" ]]; then
-      nix-channel --update
-      home-manager switch --impure
-    else
-      home-manager "$@" --impure
-    fi
+    case "$1" in
+      "update"|"upgrade")
+        echo "🔄 Starting system update process..."
+
+        # Update system packages
+        echo "📦 Updating system packages..."
+        if is_binary nala; then
+          sudo nala update && sudo nala upgrade
+        elif is_binary pacman; then
+          sudo pacman -Syu
+        elif is_binary apt; then
+          sudo apt update && sudo apt upgrade
+        elif is_binary dnf; then
+          sudo dnf update && sudo dnf upgrade
+        else
+          echo "⚠️  No native package manager found"
+        fi
+
+        # Update snaps if installed
+        if is_binary snap; then
+          echo "📱 Updating snap packages..."
+          sudo snap refresh
+        fi
+
+        # Update flatpaks if installed
+        if is_binary flatpak; then
+          echo "📦 Updating flatpak packages..."
+          flatpak update
+        fi
+
+        # Update nix channels
+        echo "❄️  Updating nix channels..."
+        nix-channel --update
+
+        # Run home-manager switch for upgrade
+        if [[ "$1" == "upgrade" ]]; then
+          echo "🏠 Applying home-manager configuration..."
+          home-manager switch --impure
+        fi
+
+        echo "✅ Update process completed!"
+        ;;
+      "search")
+        if [[ -z "$2" ]]; then
+          echo "Usage: hm search <package_name>"
+          return 1
+        fi
+
+        echo "🔍 Searching nix packages for: $2" >&2
+        if is_binary fzf; then
+          # Search nixpkgs with fzf and print selected package name
+          local selected=$(nix search nixpkgs "$2" --json 2>/dev/null | \
+            jq -r 'to_entries[] | "\(.key)|\(.value.pname // "unknown")|\(.value.description // "no description")"' | \
+            column -t -s '|' | \
+            fzf --ansi \
+                --preview 'echo {}' \
+                --preview-window=up:3:wrap \
+                --header="🔍 Select package (Enter to print name, Esc to exit)" \
+                --color='fg+:bright-white,bg+:bright-black,hl:yellow,hl+:bright-yellow')
+
+          if [[ -n "$selected" ]]; then
+            # Extract package name and strip legacyPackages prefix
+            echo "$selected" | awk '{print $1}' | sed 's/^legacyPackages\.[^.]*\.//'
+          fi
+        else
+          # Fallback search with basic formatting
+          if is_binary jq; then
+            echo "📦 Available packages matching '$2':" >&2
+            nix search nixpkgs "$2" --json 2>/dev/null | \
+              jq -r 'to_entries[] | "\u001b[36m\(.key | sub("^legacyPackages\\.[^.]*\\."; ""))\u001b[0m - \u001b[32m\(.value.pname // "unknown")\u001b[0m - \(.value.description // "no description")"' >&2
+          else
+            nix search nixpkgs "$2" 2>/dev/null >&2 || nix-env -qaP | grep -i "$2" >&2
+          fi
+        fi
+        ;;
+      *)
+        home-manager "$@" --impure
+        ;;
+    esac
   }
 fi
