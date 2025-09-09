@@ -27,5 +27,4 @@ with pkgs; [
   tabiew
   hunspell
   xsel
-  xcopy
 ]
