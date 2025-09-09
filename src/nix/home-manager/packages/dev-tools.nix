@@ -21,6 +21,7 @@ with pkgs; [
   rustup
   mongodb-tools
   jetbrains.phpstorm
+  jetbrains.pycharm-community-bin
   templ
   ueberzugpp
   chafa
