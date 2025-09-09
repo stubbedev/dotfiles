@@ -3,4 +3,7 @@
 STUBBE_ZSH_FPATHS_DIR="$HOME/.stubbe/src/zsh/fpaths.d"
 mkdir -p "$STUBBE_ZSH_FPATHS_DIR"
 
-fpath+=("$HOME/.nix-profile/share/zsh/site-functions")
+fpath+=(
+  "$STUBBE_ZSH_FPATHS_DIR"
+  "$HOME/.nix-profile/share/zsh/site-functions"
+)
