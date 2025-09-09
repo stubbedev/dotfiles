@@ -94,6 +94,23 @@ function source_github_plugins() {
     fi
   done
 
+  # Source plugin files in the foreground after all jobs are done
+  for url in $urls; do
+    if [[ ! "$url" =~ ^https?: ]]; then
+      url="https://github.com/$url"
+    fi
+    local repo="${url:t:r}"
+    local target="$parent_dir/$repo"
+    if [[ -d "$target" ]]; then
+      local plugin_files=(${target}/*.plugin.zsh)
+      for plugin_file in $plugin_files; do
+        if [[ -f "$plugin_file" ]]; then
+          source "$plugin_file"
+        fi
+      done
+    fi
+  done
+
   rm -rf "$tmpdir"
 
   # Re-enable job control
