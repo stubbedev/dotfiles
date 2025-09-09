@@ -353,6 +353,29 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
     git stash && git stash clear
   }
+  function ggo {
+    in_git_repo || return 1
+
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
+    fi
+
+    local git_branches=$(git branch --all | awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' | grep -v '^HEAD' | sort -u)
+
+    local selected_branch=$(echo -e "$git_branches" |
+      fzf --prompt="(Enter: select branch to pull from origin)> " \
+        --query="$initial_query" \
+        --select-1 \
+        --exit-0 \
+        --no-info \
+        --height=10)
+
+    if [[ -n "$selected_branch" ]]; then
+      echo "Pulling from origin/$selected_branch..."
+      git pull origin "$selected_branch"
+    fi
+  }
   function in_git_repo {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
       return 1
