@@ -515,10 +515,11 @@ if is_binary home-manager; then
         echo "🔍 Searching nix packages for: $2" >&2
         if is_binary fzf; then
           # Search nixpkgs with fzf and print selected package name
-          local selected=$(nix search nixpkgs "$2" --json 2>/dev/null | \
+          local selected=$(nix search nixpkgs "^$2" --json 2>/dev/null | \
             jq -r 'to_entries[] | "\(.key)|\(.value.pname // "unknown")|\(.value.description // "no description")"' | \
             column -t -s '|' | \
             fzf --ansi \
+                --exact \
                 --preview 'echo {}' \
                 --preview-window=up:3:wrap \
                 --header="🔍 Select package (Enter to print name, Esc to exit)" \
@@ -532,10 +533,10 @@ if is_binary home-manager; then
           # Fallback search with basic formatting
           if is_binary jq; then
             echo "📦 Available packages matching '$2':" >&2
-            nix search nixpkgs "$2" --json 2>/dev/null | \
+            nix search nixpkgs "^$2" --json 2>/dev/null | \
               jq -r 'to_entries[] | "\u001b[36m\(.key | sub("^legacyPackages\\.[^.]*\\."; ""))\u001b[0m - \u001b[32m\(.value.pname // "unknown")\u001b[0m - \(.value.description // "no description")"' >&2
           else
-            nix search nixpkgs "$2" 2>/dev/null >&2 || nix-env -qaP | grep -i "$2" >&2
+            nix search nixpkgs "^$2" 2>/dev/null >&2 || nix-env -qaP | grep -i "^$2" >&2
           fi
         fi
         ;;
