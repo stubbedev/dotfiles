@@ -371,8 +371,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-info \
         --height=10)
 
-    if [[ -n "$selected_branch" ]]; then
-      echo "Pulling from origin/$selected_branch..."
+    if [[ -n "$selected_branch" && $(echo -e "$git_branches" | grep -Fx "$selected_branch") ]]; then
       git pull origin "$selected_branch"
     fi
   }
