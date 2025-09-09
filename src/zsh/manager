@@ -16,34 +16,86 @@ else
 fi
 
 function source_github_plugins() {
+  # Disable job control to suppress background job messages
+  set +m
+
   local -a args=("$@")
   local parent_dir=${args[-1]}
   local urls=("${args[@]:0:${#args[@]}-1}")
   mkdir -p "$parent_dir"
+  local tmpdir=$(mktemp -d)
+  local pids=()
+  local tmpfiles=()
+
+  # Build list of expected repo names
+  local -a expected_repos=()
   for url in $urls; do
     if [[ ! "$url" =~ ^https?: ]]; then
       url="https://github.com/$url"
     fi
     local repo="${url:t:r}"
-    local target="$parent_dir/$repo"
-    if ! is_directory "$target"; then
-      echo "ADDING: $repo"
-      git clone "$url.git" "$target" >/dev/null
-    elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
-      echo "CHECKING: $repo"
-      git -C "$target" fetch > /dev/null 2>&1
-      local local_commit=$(git -C "$target" rev-parse @)
-      local remote_commit=$(git -C "$target" rev-parse @{u})
-      if [[ "$local_commit" != "$remote_commit" ]]; then
-        echo "UPDATING: $repo"
-        git -C "$target" pull --force >/dev/null
-      fi
-    fi
-    local plugin_files=(${target}/*.plugin.zsh)
-    for plugin_file in $plugin_files; do
-      if [[ -f "$plugin_file" ]]; then
-        source "$plugin_file"
+    expected_repos+=("$repo")
+  done
+
+  # Remove directories that aren't in the expected list
+  if [[ -d "$parent_dir" ]]; then
+    for existing_dir in "$parent_dir"/*(/N); do
+      local existing_repo="${existing_dir:t}"
+      if [[ ! " ${expected_repos[@]} " =~ " $existing_repo " ]]; then
+        echo "\033[31mREMOVING: $existing_repo\033[0m"
+        rm -rf "$existing_dir"
       fi
     done
+  fi
+
+  for url in $urls; do
+    local repo="${url:t:r}"
+    local out="$tmpdir/$repo.out"
+    (
+      if [[ ! "$url" =~ ^https?: ]]; then
+        url="https://github.com/$url"
+      fi
+      local target="$parent_dir/$repo"
+      {
+        if ! is_directory "$target"; then
+          echo "\033[32mADDING: $repo\033[0m"
+          git clone "$url.git" "$target" >/dev/null 2>&1
+        elif [[ $STB_SHOULD_UPDATE == "true" ]]; then
+          echo "\033[34mCHECKING: $repo\033[0m"
+          git -C "$target" fetch >/dev/null 2>&1
+          local local_commit=$(git -C "$target" rev-parse @)
+          local remote_commit=$(git -C "$target" rev-parse @{u})
+          if [[ "$local_commit" != "$remote_commit" ]]; then
+            echo "\033[33mUPDATING: $repo\033[0m"
+            git -C "$target" pull --force >/dev/null 2>&1
+          fi
+        fi
+        local plugin_files=(${target}/*.plugin.zsh)
+        for plugin_file in $plugin_files; do
+          if [[ -f "$plugin_file" ]]; then
+            source "$plugin_file" >/dev/null 2>&1
+          fi
+        done
+      } >"$out" 2>&1
+    ) &
+    pids+=($!)
+    tmpfiles+=("$out")
   done
+
+  # Wait for all jobs to finish
+  for pid in $pids; do
+    wait $pid
+  done
+
+  # Output only status messages (ADDING/CHECKING/UPDATING), filter out everything else
+  for tmp in $tmpfiles; do
+    if [[ -f "$tmp" ]]; then
+      grep -E "^$(echo -e '\033')\[[0-9]+m(ADDING|CHECKING|UPDATING):" "$tmp" 2>/dev/null
+    fi
+  done
+
+  rm -rf "$tmpdir"
+
+  # Re-enable job control
+  set -m
 }

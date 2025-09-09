@@ -26,4 +26,6 @@ with pkgs; [
   tree-sitter
   tabiew
   hunspell
+  xsel
+  xcopy
 ]
