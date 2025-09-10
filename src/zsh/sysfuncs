@@ -64,6 +64,6 @@ function src_stb {
 }
 
 function src_zsh {
-  is file "$HOME/.zcompdump" && rm -rf "$HOME/.zcompdump"
+  is_file "$HOME/.zcompdump" && rm -rf "$HOME/.zcompdump"
   is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
 }
