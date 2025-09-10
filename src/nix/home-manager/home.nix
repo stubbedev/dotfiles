@@ -1,108 +1,109 @@
 { config, lib, pkgs, nixGL, ... }@args:
 let
+  homeLib = import ./lib.nix { inherit lib; };
+  constants = import ./constants.nix { inherit config; };
+
   nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland = if enableHyprland == "true" || enableHyprland == true then true else false;
-  homePackages = builtins.concatLists
-    (map (file: import (./packages + "/${file}") args)
-      (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
-        (builtins.attrNames (builtins.readDir ./packages))));
-  hyprlandPackages = builtins.concatLists
-      (map (file: import (./hyprland + "/${file}") args)
-        (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
-          (builtins.attrNames (builtins.readDir ./hyprland))));
-  importedProgramsAndServices = map (f: ./programs + "/${f}")
-    (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
-      (builtins.attrNames (builtins.readDir ./programs)))
-    ++ map (f: ./services + "/${f}")
-    (builtins.filter (f: builtins.match ".*\\.nix$" f != null)
-      (builtins.attrNames (builtins.readDir ./services)));
+  useHyprland =
+    if enableHyprland == "true" || enableHyprland == true then true else false;
+
+  homePackages = import ./packages args;
+  hyprlandPackages =
+    homeLib.conditionalPackages useHyprland (import ./hyprland args);
+  importedProgramsAndServices = homeLib.loadModulesFromDir ./programs
+    ++ homeLib.loadModulesFromDir ./services;
 in {
   nixGL = {
     packages = nixGL.packages;
-    defaultWrapper = nixglWrapper;
+    defaultWrapper = if nixglWrapper != "" then nixglWrapper else "mesa";
   };
 
   targets.genericLinux.enable = true;
 
-  home.username = "stubbe";
-  home.homeDirectory = "/home/stubbe";
+  home.username = constants.user.name;
+  home.homeDirectory = "/home/${constants.user.name}";
   home.stateVersion = "25.05";
-  home.packages = if useHyprland then homePackages ++ hyprlandPackages else homePackages;
+  home.packages = homePackages ++ hyprlandPackages;
 
   imports = importedProgramsAndServices;
 
   home.file = {
     ".zshrc".text = ''
-      if [[ -f "${config.home.homeDirectory}/.stubbe/src/zsh/init" ]]; then
-        source ${config.home.homeDirectory}/.stubbe/src/zsh/init
+      if [[ -f "${constants.paths.zsh}/init" ]]; then
+        source ${constants.paths.zsh}/init
       fi
 
     '';
     ".ideavimrc".source = ./../../ideavim/ideavimrc;
     ".tmux.conf".source = ./../../tmux/tmux.conf;
-    ".config/lazygit/config.yml".source = ./../../lazygit/config.yml;
-    ".config/alacritty".source = ./../../alacritty;
-    ".config/rofi".source = ./../../rofi;
-    ".config/btop".source = ./../../btop;
-    ".config/swaync".source = ./../../swaync;
-    ".config/waybar".source = ./../../waybar;
-    ".config/hypr".source = ./../../hypr;
-    ".config/foot".source = ./../../foot;
-    ".config/opencode/opencode.json".source = ./../../opencode/opencode.json;
-    ".config/opencode/themes/catppuccin-mocha.json".source = ./../../opencode/catppuccin-mocha.json;
-    ".config/xdg-desktop-portal/portals.conf".text = ''
-      [preferred]
-      default=hyprland;gtk;wlr;kde;
-    '';
-    ".icons/stubbe" = {
+
+    # Theme files
+    ".icons/${constants.theme.iconTheme}" = {
       source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
     };
-    ".themes/stubbe" = {
+    ".themes/${constants.theme.gtkTheme}" = {
       source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
     };
   };
+
+  # XDG Config files 
+  xdg.configFile = {
+    "lazygit/config.yml".source = ./../../lazygit/config.yml;
+    "alacritty".source = ./../../alacritty;
+    "rofi".source = ./../../rofi;
+    "btop".source = ./../../btop;
+    "swaync".source = ./../../swaync;
+    "waybar".source = ./../../waybar;
+    "hypr".source = ./../../hypr;
+    "foot".source = ./../../foot;
+    "opencode/opencode.json".source = ./../../opencode/opencode.json;
+    "opencode/themes/catppuccin-mocha.json".source =
+      ./../../opencode/catppuccin-mocha.json;
+
+    "xdg-desktop-portal/portals.conf".text = ''
+      [preferred]
+      default=hyprland;gtk;wlr;kde;
+    '';
+
+    "environment.d/envvars.conf".text = ''
+      PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
+    '';
+  };
+
   home.sessionVariables = {
+    # Nix configuration
     NIXPKGS_ALLOW_UNFREE = "1";
     NIXPKGS_ALLOW_INSECURE = "1";
     NIXOS_OZONE_WL = "1";
+
+    # Editor and display
     EDITOR = "${pkgs.neovim}/bin/nvim";
     DISPLAY = ":0";
+
+    # Paging and documentation
     MANPAGER = "sh -c 'col -bx | bat -l man -p'";
     MANROFFOPT = "-c";
+    PAGER = "${pkgs.more}/bin/more";
+
+    # Go configuration
     GOROOT = "${config.home.homeDirectory}/.go";
     GOPATH = "${config.home.homeDirectory}/go";
+
+    # Theme and custom variables
+    GTK_THEME = constants.theme.gtkTheme;
     DEPLOYER_REMOTE_USER = "abs";
-    GTK_THEME = "stubbe";
-    PAGER = "${pkgs.more}/bin/more";
   };
 
-  xdg.configFile."environment.d/envvars.conf".text = ''
-    PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
-  '';
-
-  home.activation.customConfigCleanUp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    rm -f ${config.home.homeDirectory}/.zcompdump > /dev/null 2>&1
-    rm -rf "${config.home.homeDirectory}/.config/nvim"
-    ln -sf "${config.home.homeDirectory}/.stubbe/src/nvim" "${config.home.homeDirectory}/.config/nvim"
-    mkdir -p "${config.home.homeDirectory}/.tmux/plugins"
-    if [ ! -d "${config.home.homeDirectory}/.tmux/plugins/tpm" ]; then
-      ${pkgs.git}/bin/git clone --quiet https://github.com/tmux-plugins/tpm ${config.home.homeDirectory}/.tmux/plugins/tpm
-    fi
-    mkdir -p "${config.home.homeDirectory}/.config/lazygit"
-    cat "${config.home.homeDirectory}/.stubbe/src/lazygit/state.yml" > "${config.home.homeDirectory}/.config/lazygit/state.yml"
-    echo "lastversion: ${pkgs.lazygit.version}" >> "${config.home.homeDirectory}/.config/lazygit/state.yml"
-  '';
-  home.activation.customBinInstall = lib.hm.dag.entryAfter [ "customConfigCleanUp" ] ''
-    ${pkgs.gh}/bin/gh extension install github/gh-copilot > /dev/null 2>&1
-    ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot > /dev/null 2>&1
-    ${pkgs.bun}/bin/bun install opencode-ai@latest --global > /dev/null 2>&1
-  '';
-  home.activation.customShellCompletions = lib.hm.dag.entryAfter [ "customBinInstall" ] ''
-    ${pkgs.gh}/bin/gh completion -s zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_gh
-    ${pkgs.volta}/bin/volta completions zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_volta
-    ${pkgs.uv}/bin/uv generate-shell-completion zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_uv
-  '';
+  home.activation.customConfigCleanUp =
+    lib.hm.dag.entryAfter [ "writeBoundary" ]
+    (import ./scripts/config-cleanup.nix { inherit config pkgs constants; });
+  home.activation.customBinInstall =
+    lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
+    (import ./scripts/bin-install.nix { inherit config pkgs; });
+  home.activation.customShellCompletions =
+    lib.hm.dag.entryAfter [ "customBinInstall" ]
+    (import ./scripts/shell-completions.nix { inherit config pkgs constants; });
 
   systemd.user.services = {
     waybar-reload-on-power-profile = {
@@ -114,7 +115,7 @@ in {
       Service = {
         Type = "simple";
         ExecStart =
-          "${config.home.homeDirectory}/.stubbe/src/hypr/scripts/wait_for_power_profiles.sh";
+          "${constants.paths.hypr}/scripts/wait_for_power_profiles.sh";
         Restart = "no";
       };
     };
@@ -122,8 +123,8 @@ in {
 
   gtk = {
     enable = useHyprland;
-    iconTheme = { name = "stubbe"; };
-    theme = { name = "stubbe"; };
+    iconTheme = { name = constants.theme.iconTheme; };
+    theme = { name = constants.theme.gtkTheme; };
   };
 
   qt = {
