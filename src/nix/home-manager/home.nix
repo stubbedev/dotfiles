@@ -81,32 +81,27 @@ in {
     PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
   '';
 
-  home.activation.stubbePostBuild = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.customConfigCleanUp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     rm -f ${config.home.homeDirectory}/.zcompdump > /dev/null 2>&1
+    rm -rf "${config.home.homeDirectory}/.config/nvim"
+    ln -sf "${config.home.homeDirectory}/.stubbe/src/nvim" "${config.home.homeDirectory}/.config/nvim"
+    mkdir -p "${config.home.homeDirectory}/.tmux/plugins"
     if [ ! -d "${config.home.homeDirectory}/.tmux/plugins/tpm" ]; then
       ${pkgs.git}/bin/git clone --quiet https://github.com/tmux-plugins/tpm ${config.home.homeDirectory}/.tmux/plugins/tpm
     fi
-    rm -rf "${config.home.homeDirectory}/.config/nvim"
-    ln -sf "${config.home.homeDirectory}/.stubbe/src/nvim" "${config.home.homeDirectory}/.config/nvim"
     mkdir -p "${config.home.homeDirectory}/.config/lazygit"
-    cat <<EOF > "${config.home.homeDirectory}/.config/lazygit/state.yml"
-    lastupdatecheck: 0
-    startuppopupversion: 5
-    lastversion: ${pkgs.lazygit.version}
-    customcommandshistory: []
-    hidecommandlog: false
-    ignorewhitespaceindiffview: true
-    diffcontextsize: 3
-    renamesimilaritythreshold: 50
-    localbranchsortorder: recency
-    remotebranchsortorder: alphabetical
-    gitlogorder: topo-order
-    gitlogshowgraph: always
-    EOF
+    cat "${config.home.homeDirectory}/.stubbe/src/lazygit/state.yml" > "${config.home.homeDirectory}/.config/lazygit/state.yml"
+    echo "lastversion: ${pkgs.lazygit.version}" >> "${config.home.homeDirectory}/.config/lazygit/state.yml"
+  '';
+  home.activation.customBinInstall = lib.hm.dag.entryAfter [ "customConfigCleanUp" ] ''
     ${pkgs.gh}/bin/gh extension install github/gh-copilot > /dev/null 2>&1
     ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot > /dev/null 2>&1
-    ${pkgs.gh}/bin/gh completion -s zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_gh
     ${pkgs.bun}/bin/bun install opencode-ai@latest --global > /dev/null 2>&1
+  '';
+  home.activation.customShellCompletions = lib.hm.dag.entryAfter [ "customBinInstall" ] ''
+    ${pkgs.gh}/bin/gh completion -s zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_gh
+    ${pkgs.volta}/bin/volta completions zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_volta
+    ${pkgs.uv}/bin/uv generate-shell-completion zsh > ${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d/_uv
   '';
 
   systemd.user.services = {
