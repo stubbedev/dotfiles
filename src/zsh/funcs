@@ -502,6 +502,7 @@ if is_binary home-manager; then
         if [[ "$1" == "upgrade" ]]; then
           echo "🏠 Applying home-manager configuration..."
           home-manager switch --impure
+          src_zsh
         fi
 
         echo "✅ Update process completed!"
