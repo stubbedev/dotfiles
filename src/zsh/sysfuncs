@@ -53,16 +53,6 @@ function is_elevated_shell {
   [[ "$EUID" -eq 0 ]]
 }
 
-function to_lines {
-  local array=("$@")
-  printf "%s\n" "${array[@]}"
-}
-
-function src_stb {
-  local install_funcs="$(readlink -f "$HOME/.stubbe/bin/install-funcs")"
-  is_file $install_funcs && source $install_funcs
-}
-
 function src_zsh {
   is_file "$HOME/.zcompdump" && rm -rf "$HOME/.zcompdump"
   is_file "$HOME/.zshrc" && source "$HOME/.zshrc"

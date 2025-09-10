@@ -11,5 +11,5 @@ sudo usermod -aG docker stubbe
 echo "stubbe ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/stubbe
 sudo chmod 0440 /etc/sudoers.d/stubbe
 
-sudo echo "" > /etc/motd
+echo "" | sudo tee /etc/motd
 
