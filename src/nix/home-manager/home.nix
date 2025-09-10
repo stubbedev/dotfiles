@@ -3,16 +3,22 @@ let
   homeLib = import ./lib.nix { inherit lib; };
   constants = import ./constants.nix { inherit config; };
 
+  # Environment-based feature flags with validation
   nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland =
-    if enableHyprland == "true" || enableHyprland == true then true else false;
+  useHyprland = enableHyprland == "true" || enableHyprland == true;
 
-  homePackages = import ./packages args;
-  hyprlandPackages =
-    homeLib.conditionalPackages useHyprland (import ./hyprland args);
-  importedProgramsAndServices = homeLib.loadModulesFromDir ./programs
-    ++ homeLib.loadModulesFromDir ./services;
+  # Optimized package loading with error handling
+  homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
+  hyprlandPackages = homeLib.conditionalPackages useHyprland
+    (homeLib.safeLoadPackagesFromDir ./hyprland args);
+
+  # Optimized module imports with conditional loading
+  coreModules = homeLib.loadModulesFromDir ./programs;
+  serviceModules = homeLib.conditionalImports useHyprland
+    (homeLib.loadModulesFromDir ./services);
+
+  allModules = coreModules ++ serviceModules;
 in {
   nixGL = {
     packages = nixGL.packages;
@@ -26,7 +32,7 @@ in {
   home.stateVersion = "25.05";
   home.packages = homePackages ++ hyprlandPackages;
 
-  imports = importedProgramsAndServices;
+  imports = allModules;
 
   home.file = {
     ".zshrc".text = ''

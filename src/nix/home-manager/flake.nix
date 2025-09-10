@@ -1,5 +1,5 @@
 {
-  description = "Home Manager configuration of stubbe";
+  description = "Home Manager Config";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
