@@ -465,85 +465,101 @@ if is_binary home-manager; then
     fi
 
     case "$1" in
-      "update"|"upgrade")
-        echo "🔄 Starting system update process..."
+    "update" | "upgrade")
+      echo "🔄 Starting system update process..."
 
-        # Update system packages
-        echo "📦 Updating system packages..."
-        if is_binary nala; then
-          sudo nala update && sudo nala upgrade
-        elif is_binary pacman; then
-          sudo pacman -Syu
-        elif is_binary apt; then
-          sudo apt update && sudo apt upgrade
-        elif is_binary dnf; then
-          sudo dnf update && sudo dnf upgrade
+      # Update system packages
+      echo "📦 Updating system packages..."
+      if is_binary nala; then
+        sudo nala update && sudo nala upgrade
+      elif is_binary pacman; then
+        sudo pacman -Syu
+      elif is_binary apt; then
+        sudo apt update && sudo apt upgrade
+      elif is_binary dnf; then
+        sudo dnf update && sudo dnf upgrade
+      else
+        echo "⚠️  No native package manager found"
+      fi
+
+      # Update snaps if installed
+      if is_binary snap; then
+        echo "📱 Updating snap packages..."
+        sudo snap refresh
+      fi
+
+      # Update flatpaks if installed
+      if is_binary flatpak; then
+        echo "📦 Updating flatpak packages..."
+        flatpak update
+      fi
+
+      # Update nix channels
+      echo "❄️  Updating nix channels..."
+      nix-channel --update
+
+      # Run home-manager switch for upgrade
+      if [[ "$1" == "upgrade" ]]; then
+        echo "🏠 Applying home-manager configuration..."
+        home-manager switch --impure
+        src_zsh
+      fi
+
+      echo "✅ Update process completed!"
+      ;;
+    "search")
+      if [[ -z "$2" ]]; then
+        echo -e "\033[33mUsage:\033[0m hm search \033[36m<package_name>\033[0m"
+        return 1
+      fi
+
+      echo -e "🔍 \033[1;34mSearching nix packages for:\033[0m \033[1;36m$2\033[0m" >&2
+      if is_binary fzf; then
+        local formatted_output
+        formatted_output=$(nix search nixpkgs "^$2" --json 2>/dev/null |
+          jq -r 'to_entries[] | "\(.key)|\(.value.pname // "unknown")|\(.value.description // "no description")|\(.value.version // "unknown")"')
+
+        local selected
+        selected=$(echo "$formatted_output" |
+          while IFS='|' read -r package pname description version; do
+            clean_package=$(echo "$package" | sed 's/^legacyPackages\.[^.]*\.//')
+            printf "\033[1;36m%-30s\033[0m \033[32m%-15s\033[0m \033[33m%-10s\033[0m \033[37m%s\033[0m\n" \
+              "$clean_package" "$pname" "$version" "$description"
+          done |
+          fzf --ansi \
+            --exact \
+            --multi \
+            --preview 'echo -e "\033[1;34mPackage:\033[0m \033[1;36m{1}\033[0m\n\033[1;34mProgram:\033[0m \033[32m{2}\033[0m\n\033[1;34mVersion:\033[0m \033[33m{3}\033[0m\n\033[1;34mDescription:\033[0m \033[37m{4}\033[0m"' \
+            --preview-window=up:6:wrap \
+            --header="🔍 Select package(s) (Tab: multi-select, Enter: print names, Esc: exit)" \
+            --bind='ctrl-a:select-all,ctrl-d:deselect-all' \
+            --color='fg:white,hl:yellow,fg+:bright-cyan,hl+:bright-yellow,info:green,prompt:cyan,pointer:bright-magenta,marker:bright-red,spinner:yellow,header:blue')
+
+        if [[ -n "$selected" ]]; then
+          echo "$selected" | while read -r line; do
+            echo "$line" | awk '{print $1}'
+          done
+        fi
+      else
+        if is_binary jq; then
+          echo -e "📦 \033[1;34mAvailable packages matching '\033[1;36m$2\033[1;34m':\033[0m" >&2
+          echo "" >&2
+          nix search nixpkgs "^$2" --json 2>/dev/null |
+            jq -r 'to_entries[] | "\(.key)|\(.value.pname // "unknown")|\(.value.description // "no description")|\(.value.version // "unknown")"' |
+            while IFS='|' read -r package pname description version; do
+              clean_package=$(echo "$package" | sed 's/^legacyPackages\.[^.]*\.//')
+              printf "  \033[1;36m%-30s\033[0m \033[32m%-15s\033[0m \033[33m%-10s\033[0m \033[37m%s\033[0m\n" \
+                "$clean_package" "$pname" "$version" "$description"
+            done >&2
         else
-          echo "⚠️  No native package manager found"
+          echo -e "📦 \033[1;34mSearching packages...\033[0m" >&2
+          nix search nixpkgs "^$2" 2>/dev/null >&2 || nix-env -qaP | grep -i "^$2" >&2
         fi
-
-        # Update snaps if installed
-        if is_binary snap; then
-          echo "📱 Updating snap packages..."
-          sudo snap refresh
-        fi
-
-        # Update flatpaks if installed
-        if is_binary flatpak; then
-          echo "📦 Updating flatpak packages..."
-          flatpak update
-        fi
-
-        # Update nix channels
-        echo "❄️  Updating nix channels..."
-        nix-channel --update
-
-        # Run home-manager switch for upgrade
-        if [[ "$1" == "upgrade" ]]; then
-          echo "🏠 Applying home-manager configuration..."
-          home-manager switch --impure
-          src_zsh
-        fi
-
-        echo "✅ Update process completed!"
-        ;;
-      "search")
-        if [[ -z "$2" ]]; then
-          echo "Usage: hm search <package_name>"
-          return 1
-        fi
-
-        echo "🔍 Searching nix packages for: $2" >&2
-        if is_binary fzf; then
-          # Search nixpkgs with fzf and print selected package name
-          local selected=$(nix search nixpkgs "^$2" --json 2>/dev/null | \
-            jq -r 'to_entries[] | "\(.key)|\(.value.pname // "unknown")|\(.value.description // "no description")"' | \
-            column -t -s '|' | \
-            fzf --ansi \
-                --exact \
-                --preview 'echo {}' \
-                --preview-window=up:3:wrap \
-                --header="🔍 Select package (Enter to print name, Esc to exit)" \
-                --color='fg+:bright-white,bg+:bright-black,hl:yellow,hl+:bright-yellow')
-
-          if [[ -n "$selected" ]]; then
-            # Extract package name and strip legacyPackages prefix
-            echo "$selected" | awk '{print $1}' | sed 's/^legacyPackages\.[^.]*\.//'
-          fi
-        else
-          # Fallback search with basic formatting
-          if is_binary jq; then
-            echo "📦 Available packages matching '$2':" >&2
-            nix search nixpkgs "^$2" --json 2>/dev/null | \
-              jq -r 'to_entries[] | "\u001b[36m\(.key | sub("^legacyPackages\\.[^.]*\\."; ""))\u001b[0m - \u001b[32m\(.value.pname // "unknown")\u001b[0m - \(.value.description // "no description")"' >&2
-          else
-            nix search nixpkgs "^$2" 2>/dev/null >&2 || nix-env -qaP | grep -i "^$2" >&2
-          fi
-        fi
-        ;;
-      *)
-        home-manager "$@" --impure
-        ;;
+      fi
+      ;;
+    *)
+      home-manager "$@" --impure
+      ;;
     esac
   }
 fi
