@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 if [ -d "$HOME/.stubbe" ]; then
+  touch "$HOME/.zsh_history"
   STBDIR="$HOME/.stubbe/src/zsh"
   STBZSHSOURCES=(
     "paths"

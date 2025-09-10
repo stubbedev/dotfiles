@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 bindkey "^Xa" _expand_alias
-bindkey -s "^[r" "rm -rf ~/.zcompdump && source ~/.zshrc && clear^M"
+bindkey -s "^[r" "src_zsh^M"
 bindkey -s "^[o" "nvim^M"
 bindkey -s "^[O" "nvim .^M"
 zstyle ':completion:*' completer _expand _expand_alias _complete _ignored
@@ -43,16 +43,12 @@ DISABLE_AUTO_TITLE=true
 ENABLE_CORRECTION=true
 VIM_MODE_NO_DEFAULT_BINDINGS=true
 ARTISAN_OPEN_ON_MAKE_EDITOR=vim
-
-if ! is_file "$HOME/.zsh_history"; then
-    touch "$HOME/.zsh_history"
-fi
-HISTFILE=$HOME/.zsh_history
-
+HISTFILE="$HOME/.zsh_history"
 HISTTIMEFORMAT="[%F %T] "
 SAVEHIST=10000
 HISTSIZE=10000
 ZSH_FZF_HISTORY_SEARCH_BIND='^r'
+
 setopt APPEND_HISTORY
 setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
@@ -62,7 +58,6 @@ setopt COMPLETE_ALIASES
 # FOR CLIPBOARD STUFF
 export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export MANROFFOPT="-c"
-
 export DEPLOYER_REMOTE_USER="abs"
 export NIXPKGS_ALLOW_UNFREE=1
 export NIXPKGS_ALLOW_INSECURE=1
