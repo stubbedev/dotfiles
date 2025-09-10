@@ -58,7 +58,7 @@ in {
     "lazygit/config.yml".source = ./../../lazygit/config.yml;
     "alacritty".source = ./../../alacritty;
     "rofi".source = ./../../rofi;
-    "btop".source = ./../../btop;
+    "btop/themes".source = ./../../btop/themes;
     "swaync".source = ./../../swaync;
     "waybar".source = ./../../waybar;
     "hypr".source = ./../../hypr;
