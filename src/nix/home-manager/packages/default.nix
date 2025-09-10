@@ -1,5 +1,3 @@
-# Enhanced package loader with better organization
-# Loads packages in optimal order with improved categorization
 args:
 let
   lib = args.lib or (import <nixpkgs/lib>);
