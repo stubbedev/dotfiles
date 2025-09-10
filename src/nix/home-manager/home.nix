@@ -58,7 +58,10 @@ in {
     "lazygit/config.yml".source = ./../../lazygit/config.yml;
     "alacritty".source = ./../../alacritty;
     "rofi".source = ./../../rofi;
-    "btop/themes".source = ./../../btop/themes;
+    "btop/themes/catppuccin_frappe.theme".source = ./../../btop/themes/catppuccin_frappe.theme;
+    "btop/themes/catppuccin_latte.theme".source = ./../../btop/themes/catppuccin_latte.theme;
+    "btop/themes/catppuccin_macchiato.theme".source = ./../../btop/themes/catppuccin_macchiato.theme;
+    "btop/themes/catppuccin_mocha.theme".source = ./../../btop/themes/catppuccin_mocha.theme;
     "swaync".source = ./../../swaync;
     "waybar".source = ./../../waybar;
     "hypr".source = ./../../hypr;

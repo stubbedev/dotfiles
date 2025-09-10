@@ -16,7 +16,8 @@ in ''
   fi
   mkdir -p "${homeDir}/.config/lazygit"
   cat "${stubbeDir}/src/lazygit/state.yml" > "${homeDir}/.config/lazygit/state.yml"
-  echo "lastversion: ${pkgs.lazygit.version}" >> "${homeDir}/.config/lazygit/state.yml
+  echo "lastversion: ${pkgs.lazygit.version}" >> "${homeDir}/.config/lazygit/state.yml"
+  mkdir -p "${homeDir}/.config/btop"
   cat "${stubbeDir}/src/btop/btop.conf" > "${homeDir}/.config/btop/btop.conf"
 ''
 
