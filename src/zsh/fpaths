@@ -2,8 +2,11 @@
 
 STUBBE_ZSH_FPATHS_DIR="$HOME/.stubbe/src/zsh/fpaths.d"
 mkdir -p "$STUBBE_ZSH_FPATHS_DIR"
+STUBBE_ZSH_FPATHS_DEFAULT_DIR="$HOME/.stubbe/src/zsh/fpaths.default.d"
+mkdir -p "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"
 
 fpath+=(
+  "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"
   "$STUBBE_ZSH_FPATHS_DIR"
   "$HOME/.nix-profile/share/zsh/site-functions"
 )

@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 bindkey "^Xa" _expand_alias
-bindkey -s "^[r" "source ~/.zshrc && clear^M"
+bindkey -s "^[r" "rm -rf ~/.zcompdump && source ~/.zshrc && clear^M"
 bindkey -s "^[o" "nvim^M"
 bindkey -s "^[O" "nvim .^M"
 zstyle ':completion:*' completer _expand _expand_alias _complete _ignored

@@ -1,0 +1,119 @@
+#compdef hm
+
+_hm() {
+  local context state line
+  typeset -A opt_args
+
+  local -a commands
+  commands=(
+    # Custom hm function commands
+    'update:Update system packages and nix channels'
+    'upgrade:Update system packages, nix channels, and apply home-manager configuration'
+    'search:Search for nix packages'
+    
+    # Home Manager commands
+    'help:Print help message'
+    'edit:Open the home configuration in $VISUAL or $EDITOR'
+    'option:Inspect configuration option'
+    'build:Build configuration into result directory'
+    'init:Initialize a configuration in the given directory'
+    'instantiate:Instantiate the configuration and print the resulting derivation'
+    'switch:Build and activate configuration'
+    'generations:List all home environment generations'
+    'remove-generations:Remove indicated generations'
+    'expire-generations:Remove generations older than timestamp'
+    'packages:List all packages installed in home-manager-path'
+    'news:Show news entries in a pager'
+    'uninstall:Remove Home Manager'
+  )
+
+  local -a global_opts
+  global_opts=(
+    '(-f --file)'{-f,--file}'[The home configuration file]:file:_files'
+    '(-A --attribute)'{-A,--attribute}'[Optional attribute that selects a configuration expression]:attribute:'
+    '(-I --include)'{-I,--include}'[Add a path to the Nix expression search path]:path:_directories'
+    '--flake[Use Home Manager configuration at flake-uri]:flake-uri:'
+    '(-b --backup)'{-b,--backup}'[Move existing files to new path rather than fail]:extension:'
+    '(-v --verbose)'{-v,--verbose}'[Verbose output]'
+    '(-n --dry-run)'{-n,--dry-run}'[Do a dry run, only prints what actions would be taken]'
+    '(-h --help)'{-h,--help}'[Print help]'
+    '--version[Print the Home Manager version]'
+    '--arg[Override inputs passed to home-manager.nix]:name: :value:'
+    '--argstr[Override inputs passed to home-manager.nix (string)]:name: :value:'
+    '--cores[Number of cores to use]:cores:'
+    '--debug[Enable debug mode]'
+    '--impure[Allow impure evaluation]'
+    '--keep-failed[Keep failed builds]'
+    '--keep-going[Keep going on build failures]'
+    '(-j --max-jobs)'{-j,--max-jobs}'[Maximum number of jobs]:jobs:'
+    '--option[Set Nix option]:name: :value:'
+    '(-L --print-build-logs)'{-L,--print-build-logs}'[Print build logs]'
+    '--log-format[Set log format]:format:(raw internal-json bar bar-with-logs)'
+    '--show-trace[Show trace on errors]'
+    '--substitute[Enable substitution]'
+    '--no-substitute[Disable substitution]'
+    '--no-out-link[Do not create a symlink to the output path]'
+    '--no-write-lock-file[Do not write lock file]'
+    '--builders[Builders to use]:builders:'
+    '--refresh[Consider all previously downloaded files out-of-date]'
+  )
+
+  _arguments -C \
+    $global_opts \
+    '1: :->command' \
+    '*:: :->args' \
+    && return 0
+
+  case $state in
+    command)
+      _describe -t commands 'hm commands' commands
+      ;;
+    args)
+      case $words[1] in
+        search)
+          _message 'package name to search for'
+          ;;
+        option)
+          _message 'configuration option name'
+          ;;
+        remove-generations)
+          # Get generation IDs
+          local -a generations
+          if [[ -n $(command -v home-manager) ]]; then
+            generations=(${(f)"$(home-manager generations 2>/dev/null | grep -o '^[0-9]\+' || true)"})
+            if [[ ${#generations} -gt 0 ]]; then
+              _describe 'generation IDs' generations
+            else
+              _message 'generation ID'
+            fi
+          else
+            _message 'generation ID'
+          fi
+          ;;
+        expire-generations)
+          _message 'timestamp (e.g., "-30 days" or "2018-01-01")'
+          ;;
+        init)
+          _arguments \
+            '--switch[Immediately activate the generated configuration]' \
+            '1:directory:_directories'
+          ;;
+        update|upgrade|help|edit|build|instantiate|switch|generations|packages|news|uninstall)
+          # These commands don't take additional arguments
+          return 0
+          ;;
+        *)
+          # For any unrecognized command, fall back to home-manager completion
+          # by removing the first word and calling home-manager completion
+          shift words
+          (( CURRENT-- ))
+          _command_names -e
+          ;;
+      esac
+      ;;
+  esac
+
+  return 1
+}
+
+_hm "$@"

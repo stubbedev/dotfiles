@@ -1,38 +1,32 @@
 #!/usr/bin/env zsh
-
-STBZSHSOURCES=(
-  "paths"
-  "sysfuncs"
-  "manager"
-  "funcs"
-  "aliases"
-  "secrets"
-  "plugins"
-  "fpaths"
-  "settings"
-)
-
 if [ -d "$HOME/.stubbe" ]; then
   STBDIR="$HOME/.stubbe/src/zsh"
+  STBZSHSOURCES=(
+    "paths"
+    "sysfuncs"
+    "manager"
+    "funcs"
+    "aliases"
+    "secrets"
+    "plugins"
+    "settings"
+  )
   # Source fpaths first to set fpath before compinit
   if [ -f "$STBDIR/fpaths" ]; then
     source "$STBDIR/fpaths"
   fi
-fi
 
-autoload -Uz compinit
-zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
-if [[ ! -f $zcompdump || $zcompdump -ot ~/.zshrc ]]; then
-  compinit -C
-else
-  compinit -C -d "$zcompdump"
-fi
+  autoload -Uz compinit
+  zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+  if [[ ! -f $zcompdump || $zcompdump -ot ~/.zshrc ]]; then
+    compinit -C
+  else
+    compinit -C -d "$zcompdump"
+  fi
 
-if [ -d "$HOME/.stubbe" ]; then
-  STBDIR="$HOME/.stubbe/src/zsh"
   # Source remaining files (excluding fpaths which was already sourced)
   for SZP in "${STBZSHSOURCES[@]}"; do
-    if [ -f "$STBDIR/$SZP" ] && [ "$SZP" != "fpaths" ]; then
+    if [ -f "$STBDIR/$SZP" ]; then
       source "$STBDIR/$SZP"
     fi
   done
