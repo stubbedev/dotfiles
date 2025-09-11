@@ -13,6 +13,7 @@ with pkgs; [
   templ
   mongodb-tools
   jetbrains.phpstorm
+  jetbrains.webstorm
   jetbrains.pycharm-community-bin
 ]
 
