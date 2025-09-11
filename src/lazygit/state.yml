@@ -1,0 +1,11 @@
+lastupdatecheck: 0
+startuppopupversion: 5
+customcommandshistory: []
+hidecommandlog: false
+ignorewhitespaceindiffview: true
+diffcontextsize: 3
+renamesimilaritythreshold: 50
+localbranchsortorder: recency
+remotebranchsortorder: alphabetical
+gitlogorder: topo-order
+gitlogshowgraph: always
