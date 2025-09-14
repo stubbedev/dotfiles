@@ -1,7 +1,7 @@
 { pkgs, config, ... }:
 with pkgs; [
-  hyprland
-  hyprlock
+  # hyprland
+  # hyprlock
   hyprshot
   hyprlang
   hyprkeys
