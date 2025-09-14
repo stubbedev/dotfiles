@@ -74,26 +74,12 @@ install_nix_home_manager() {
     return 0
   fi
 
-  if is_nvidia; then
-    export NIXGL_WRAPPER="nvidia"
-  else
-    export NIXGL_WRAPPER="mesa"
-  fi
-
   export NIXPKGS_ALLOW_UNFREE=1
-
-  if is_binary hyprctl; then
-    export USE_HYPRLAND=true
-  else
-    export USE_HYPRLAND=false
-  fi
 
   rm -rf "$HOME/.config/home-manager"
 
-  /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/nixGL/archive/main.tar.gz nixgl
   /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
   /nix/var/nix/profiles/default/bin/nix-channel --update
-  /nix/var/nix/profiles/default/bin/nix-env -iA nixgl.auto.nixGLDefault
   /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
 
   conf_nix_home_manager

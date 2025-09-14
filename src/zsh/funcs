@@ -452,18 +452,6 @@ fi
 
 if is_binary home-manager; then
   function hm {
-    if lspci | grep -qi nvidia >/dev/null; then
-      export NIXGL_WRAPPER="nvidia"
-    else
-      export NIXGL_WRAPPER="mesa"
-    fi
-
-    if is_binary hyprctl; then
-      export USE_HYPRLAND=true
-    else
-      export USE_HYPRLAND=false
-    fi
-
     case "$1" in
     "update" | "upgrade")
       echo "🔄 Starting system update process..."

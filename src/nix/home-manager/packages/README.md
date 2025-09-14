@@ -23,7 +23,7 @@ Image, video, and document processing tools.
 - **Usage**: Always loaded
 
 ### 🖥️ **applications.nix** - Desktop Applications
-GUI applications that require nixGL wrapping for graphics acceleration.
+GUI applications for desktop use.
 - **Examples**: alacritty, mongodb-compass
 - **Priority**: Medium
 - **Usage**: Loaded when desktop features are enabled
