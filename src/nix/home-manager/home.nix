@@ -6,16 +6,13 @@ let
   # Environment-based feature flags with validation
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
   useHyprland = enableHyprland == "true" || enableHyprland == true;
-
   # Optimized package loading with error handling
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
-  hyprlandPackages = homeLib.conditionalPackages useHyprland
-    (homeLib.safeLoadPackagesFromDir ./hyprland args);
+  hyprlandPackages = homeLib.safeLoadPackagesFromDir ./hyprland args;
 
   # Optimized module imports with conditional loading
   coreModules = homeLib.loadModulesFromDir ./programs;
-  serviceModules = homeLib.conditionalImports useHyprland
-    (homeLib.loadModulesFromDir ./services);
+  serviceModules = homeLib.loadModulesFromDir ./services;
 
   allModules = coreModules ++ serviceModules;
 in {
@@ -125,13 +122,13 @@ in {
   };
 
   gtk = {
-    enable = useHyprland;
+    enable = true;
     iconTheme = { name = constants.theme.iconTheme; };
     theme = { name = constants.theme.gtkTheme; };
   };
 
   qt = {
-    enable = useHyprland;
+    enable = true;
     platformTheme = { name = "gtk3"; };
   };
 

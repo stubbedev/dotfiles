@@ -1,7 +1,7 @@
 { pkgs, config, ... }:
 with pkgs; [
-  # (config.lib.nixGL.wrap hyprland) # installed natively
-  # hyprlock # installed natively
+  # hyprland
+  # hyprlock
   hyprshot
   hyprlang
   hyprkeys
@@ -21,7 +21,7 @@ with pkgs; [
   xwayland
   waybar
   swaynotificationcenter
-  rofi-wayland
+  rofi
   xdg-desktop-portal
   xdg-desktop-portal-hyprland
   xdg-desktop-portal-wlr

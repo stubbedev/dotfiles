@@ -7,7 +7,7 @@ with pkgs; [
   rose-pine-gtk-theme
   adwaita-qt
   adwaita-qt6
-  libsForQt5.layer-shell-qt
+  kdePackages.layer-shell-qt
   gtk4-layer-shell
 ]
 
