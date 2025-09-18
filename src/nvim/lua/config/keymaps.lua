@@ -4,7 +4,7 @@
 local map = LazyVim.safe_keymap_set
 local function delete_all_buffers()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(bufnr) and vim.api.nvim_buf_get_option(bufnr, "buflisted") then
+    if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].buflisted then
       vim.api.nvim_buf_delete(bufnr, { force = true })
     end
   end
@@ -13,7 +13,7 @@ end
 local function delete_other_buffers()
   local current = vim.api.nvim_get_current_buf()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if bufnr ~= current and vim.api.nvim_buf_is_loaded(bufnr) and vim.api.nvim_buf_get_option(bufnr, "buflisted") then
+    if bufnr ~= current and vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].buflisted then
       vim.api.nvim_buf_delete(bufnr, { force = true })
     end
   end
@@ -27,6 +27,8 @@ map("n", "[b", "<cmd>bprevious<cr>", { desc = "Prev Buffer" })
 map("n", "]b", "<cmd>bnext<cr>", { desc = "Next Buffer" })
 map("n", "<leader>bA", delete_all_buffers, { desc = "Delete All Buffers" })
 map("n", "<leader>ba", delete_other_buffers, { desc = "Delete Other Buffers Except Current" })
+map("n", "<leader>ur", "<cmd>nohlsearch<cr>", { desc = "Clear search highlighting" })
+map("n", "gx", function() vim.ui.open(vim.fn.expand("<cfile>")) end, { desc = "Open with system app" })
 -- map("n", "<C-1>", "<cmd>LuaLineBuffersJump 0", { desc = "1st Buffer" })
 -- map("n", "<C-2>", "<cmd>LuaLineBuffersJump 1", { desc = "2nd Buffer" })
 -- map("n", "<C-3>", "<cmd>LuaLineBuffersJump 2", { desc = "3rd Buffer" })
