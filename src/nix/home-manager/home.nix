@@ -56,6 +56,7 @@ in {
   # XDG Config files 
   xdg.configFile = {
     "lazygit/config.yml".source = ./../../lazygit/config.yml;
+    "ghostty".source = ./../../ghostty;
     "alacritty".source = ./../../alacritty;
     "rofi".source = ./../../rofi;
     "btop/themes/catppuccin_frappe.theme".source = ./../../btop/themes/catppuccin_frappe.theme;
