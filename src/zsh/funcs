@@ -122,7 +122,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
         --bind 'enter:accept' \
-        --exact
+        --exact \
         --select-1 \
         --exit-0 \
         --print-query \
