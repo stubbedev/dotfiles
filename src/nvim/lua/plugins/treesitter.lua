@@ -40,5 +40,12 @@ return {
         "hyprlang",
       },
     },
+    init = function()
+      vim.filetype.add({
+        pattern = {
+          [".*%.blade%.php"] = "blade",
+        },
+      })
+    end,
   },
 }

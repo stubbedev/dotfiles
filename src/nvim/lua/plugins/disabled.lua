@@ -1,5 +1,5 @@
 return {
-  { "echasnovski/mini.indentscope", enabled = false },
+  { "nvim-mini/mini.indentscope", enabled = false },
   { "goolord/alpha-nvim",           enabled = false },
   { "folke/flash.nvim",             enabled = false },
   { "akinsho/bufferline.nvim",      enabled = false },

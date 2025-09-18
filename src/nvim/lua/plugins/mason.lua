@@ -1,6 +1,6 @@
 return {
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason.nvim",
     event = "LazyFile",
     cmd = "Mason",
     keys = { { "<leader>cm", "<cmd>Mason<cr>", desc = "Mason" } },
