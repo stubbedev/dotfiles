@@ -12,6 +12,7 @@ with pkgs; [
   air
   templ
   mongodb-tools
+  mago
   jetbrains.phpstorm
   jetbrains.webstorm
   jetbrains.pycharm-community-bin
