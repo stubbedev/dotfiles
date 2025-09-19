@@ -64,6 +64,7 @@ in {
     "btop/themes/catppuccin_macchiato.theme".source = ./../../btop/themes/catppuccin_macchiato.theme;
     "btop/themes/catppuccin_mocha.theme".source = ./../../btop/themes/catppuccin_mocha.theme;
     "swaync".source = ./../../swaync;
+    "sway".source = ./../../sway;
     "waybar".source = ./../../waybar;
     "hypr".source = ./../../hypr;
     "foot".source = ./../../foot;
