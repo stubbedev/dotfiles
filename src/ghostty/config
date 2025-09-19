@@ -16,7 +16,7 @@ cursor-style = block
 cursor-style-blink = false
 
 # Scrollback
-scrollback-limit = 1000000
+scrollback-limit = 10000
 
 # Mouse configuration
 mouse-hide-while-typing = true
@@ -68,23 +68,22 @@ clipboard-write = allow
 copy-on-select = false
 
 # Performance and rendering
-window-vsync = true
-resize-overlay = after-first
-resize-overlay-position = center
+window-vsync = false
+resize-overlay = never
 
-# Shell integration (recommended for enhanced features)
-shell-integration = detect
-shell-integration-features = cursor,sudo,title
+# Shell integration (disabled for faster startup)
+shell-integration = none
 
 # Window behavior
 quit-after-last-window-closed = true
 confirm-close-surface = false
 window-inherit-working-directory = true
 window-inherit-font-size = false
+gtk-single-instance = false
 
 # Terminal features
 link-url = true
-image-storage-limit = 320971520
+image-storage-limit = 32097152
 title-report = false
 
 # Advanced font rendering
