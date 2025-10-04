@@ -1,5 +1,6 @@
 { pkgs, ... }:
 with pkgs; [
+  bc
   zsh
   tmux
   neovim
