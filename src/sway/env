@@ -1,0 +1,10 @@
+# Sway Environment Configuration
+# Converted from Hyprland env.conf
+
+# Set environment variables for Wayland session
+exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
+exec hash dbus-update-activation-environment 2>/dev/null && \
+     dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK
+
+# Cursor and theme settings
+seat * xcursor_theme Adwaita 24
