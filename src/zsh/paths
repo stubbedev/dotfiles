@@ -21,7 +21,7 @@ STUBBE_PATHS=(
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
   if [ -d "$STUBBE_PATH" ] && [[ ! ":$PATH:" == *":$STUBBE_PATH:"* ]]; then
-    PATH="$PATH:$STUBBE_PATH"
+    PATH="$STUBBE_PATH:$PATH"
   fi
 done
 export PATH
