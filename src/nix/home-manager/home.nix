@@ -89,7 +89,7 @@ in {
     NIXOS_OZONE_WL = "1";
 
     # Editor and display
-    EDITOR = "${pkgs.neovim}/bin/nvim";
+    EDITOR = "$HOME/.local/bin/nvim";
     DISPLAY = ":0";
 
     # Paging and documentation

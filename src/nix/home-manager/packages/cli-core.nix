@@ -3,7 +3,6 @@ with pkgs; [
   bc
   zsh
   tmux
-  neovim
   starship
   fd
   eza

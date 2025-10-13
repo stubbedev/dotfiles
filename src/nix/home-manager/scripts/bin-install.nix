@@ -50,5 +50,21 @@
     rm -rf luajit
     echo "LuaJIT installed to $HOME/.local/bin"
   fi
+
+  if ! command -v nvim &> /dev/null || ! $HOME/.local/bin/nvim --version &> /dev/null; then
+    echo "Installing Neovim from source..."
+    cd /tmp
+    if [ -d "neovim" ]; then
+      rm -rf neovim
+    fi
+    git clone https://github.com/neovim/neovim.git > /dev/null 2>&1
+    cd neovim
+    git checkout stable > /dev/null 2>&1
+    make CMAKE_BUILD_TYPE=RelWithDebInfo -j$(${pkgs.coreutils}/bin/nproc) > /dev/null 2>&1
+    make CMAKE_INSTALL_PREFIX=$HOME/.local install > /dev/null 2>&1
+    cd ..
+    rm -rf neovim
+    echo "Neovim installed to $HOME/.local/bin"
+  fi
 ''
 
