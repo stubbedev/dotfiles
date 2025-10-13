@@ -1,14 +1,14 @@
 { config, pkgs, ... }:
 
 ''
-  ${pkgs.gh}/bin/gh extension install github/gh-copilot > /dev/null 2>&1
-  ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot > /dev/null 2>&1
-  ${pkgs.bun}/bin/bun install opencode-ai@latest --global > /dev/null 2>&1
+  ${pkgs.gh}/bin/gh extension install github/gh-copilot > /dev/null
+  ${pkgs.gh}/bin/gh extension upgrade github/gh-copilot > /dev/null
+  ${pkgs.bun}/bin/bun install opencode-ai@latest --global > /dev/null
 
   mkdir -p $HOME/.local/bin
 
   # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:$PATH"
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
@@ -23,11 +23,11 @@
     if [ -d "lua-5.1.5" ]; then
       rm -rf lua-5.1.5
     fi
-    curl -L https://www.lua.org/ftp/lua-5.1.5.tar.gz -o lua-5.1.5.tar.gz > /dev/null 2>&1
-    tar -xzf lua-5.1.5.tar.gz > /dev/null 2>&1
+    curl -L https://www.lua.org/ftp/lua-5.1.5.tar.gz -o lua-5.1.5.tar.gz > /dev/null
+    tar -xzf lua-5.1.5.tar.gz > /dev/null
     cd lua-5.1.5
-    make generic -j$(${pkgs.coreutils}/bin/nproc) > /dev/null 2>&1
-    make install INSTALL_TOP=$HOME/.local > /dev/null 2>&1
+    make generic -j$(${pkgs.coreutils}/bin/nproc) > /dev/null
+    make install INSTALL_TOP=$HOME/.local > /dev/null
     cd ..
     rm -rf lua-5.1.5 lua-5.1.5.tar.gz
     echo "Lua 5.1 installed to $HOME/.local/bin"
@@ -39,10 +39,10 @@
     if [ -d "luajit" ]; then
       rm -rf luajit
     fi
-    git clone https://luajit.org/git/luajit.git > /dev/null 2>&1
+    git clone https://luajit.org/git/luajit.git > /dev/null
     cd luajit
-    make -j$(${pkgs.coreutils}/bin/nproc) > /dev/null 2>&1
-    make install PREFIX=$HOME/.local > /dev/null 2>&1
+    make -j$(${pkgs.coreutils}/bin/nproc) > /dev/null
+    make install PREFIX=$HOME/.local > /dev/null
     # Remove symlink and rename binary directly to luajit
     rm -f $HOME/.local/bin/luajit
     mv $HOME/.local/bin/luajit-* $HOME/.local/bin/luajit
@@ -57,11 +57,10 @@
     if [ -d "neovim" ]; then
       rm -rf neovim
     fi
-    git clone https://github.com/neovim/neovim.git > /dev/null 2>&1
+    git clone --depth 1 https://github.com/neovim/neovim.git > /dev/null
     cd neovim
-    git checkout stable > /dev/null 2>&1
-    make CMAKE_BUILD_TYPE=RelWithDebInfo -j$(${pkgs.coreutils}/bin/nproc) > /dev/null 2>&1
-    make CMAKE_INSTALL_PREFIX=$HOME/.local install > /dev/null 2>&1
+    make CMAKE_BUILD_TYPE=RelWithDebInfo -j$(${pkgs.coreutils}/bin/nproc) > /dev/null
+    make CMAKE_INSTALL_PREFIX=$HOME/.local install > /dev/null
     cd ..
     rm -rf neovim
     echo "Neovim installed to $HOME/.local/bin"
