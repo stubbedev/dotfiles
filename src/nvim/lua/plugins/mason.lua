@@ -1,6 +1,7 @@
 return {
   {
     "mason-org/mason.nvim",
+    version = "^1.0.0",
     event = "LazyFile",
     cmd = "Mason",
     keys = { { "<leader>cm", "<cmd>Mason<cr>", desc = "Mason" } },
@@ -15,4 +16,8 @@ return {
       },
     },
   },
+  {
+    "mason-org/mason-lspconfig.nvim",
+    version = "^1.0.0",
+  }
 }
