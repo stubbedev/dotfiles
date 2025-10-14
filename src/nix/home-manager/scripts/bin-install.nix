@@ -68,8 +68,11 @@
     if [ -d "neovim" ]; then
       rm -rf neovim
     fi
+    echo "Fetching latest Neovim tag..."
+    LATEST_TAG=$(git ls-remote --tags --sort=-version:refname https://github.com/neovim/neovim.git | grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | cut -d'/' -f3)
+    echo "Using Neovim tag: $LATEST_TAG"
     echo "Cloning Neovim repository..."
-    git clone --depth 1 https://github.com/neovim/neovim.git > /dev/null 2>&1
+    git clone --depth 1 --branch "$LATEST_TAG" https://github.com/neovim/neovim.git > /dev/null 2>&1
     cd neovim
     echo "Building Neovim..."
     make CMAKE_BUILD_TYPE=RelWithDebInfo -j$(${pkgs.coreutils}/bin/nproc) > /dev/null 2>&1
