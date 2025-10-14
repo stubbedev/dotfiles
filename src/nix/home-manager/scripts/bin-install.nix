@@ -12,7 +12,7 @@
   mkdir -p $HOME/.local/bin
 
   # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:$PATH"
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
@@ -63,23 +63,63 @@
   fi
 
   if ! command -v nvim &> /dev/null || ! $HOME/.local/bin/nvim --version &> /dev/null; then
-    echo "Installing Neovim from source..."
+    echo "Installing Neovim from prebuilt tarball..."
     cd /tmp
-    if [ -d "neovim" ]; then
-      rm -rf neovim
+    
+    # Clean up any existing files
+    rm -rf nvim-linux64* neovim
+    
+    echo "Fetching latest Neovim release tag..."
+    LATEST_TAG=$(${pkgs.curl}/bin/curl -s https://api.github.com/repos/neovim/neovim/releases/latest | ${pkgs.jq}/bin/jq -r .tag_name)
+    echo "Using Neovim version: $LATEST_TAG"
+    
+    # Determine architecture and OS
+    ARCH=$(uname -m)
+    OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    
+    if [ "$OS" = "linux" ]; then
+      if [ "$ARCH" = "x86_64" ]; then
+        NVIM_ARCHIVE="nvim-linux-x86_64"
+      elif [ "$ARCH" = "aarch64" ]; then
+        NVIM_ARCHIVE="nvim-linux-arm64"
+      else
+        echo "Unsupported Linux architecture: $ARCH"
+        exit 1
+      fi
+    elif [ "$OS" = "darwin" ]; then
+      if [ "$ARCH" = "x86_64" ]; then
+        NVIM_ARCHIVE="nvim-macos-x86_64"
+      elif [ "$ARCH" = "arm64" ]; then
+        NVIM_ARCHIVE="nvim-macos-arm64"
+      else
+        echo "Unsupported macOS architecture: $ARCH"
+        exit 1
+      fi
+    else
+      echo "Unsupported operating system: $OS"
+      exit 1
     fi
-    echo "Fetching latest Neovim tag..."
-    LATEST_TAG=$(git ls-remote --tags --sort=-version:refname https://github.com/neovim/neovim.git | grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | cut -d'/' -f3)
-    echo "Using Neovim tag: $LATEST_TAG"
-    echo "Cloning Neovim repository..."
-    git clone --depth 1 --branch "$LATEST_TAG" https://github.com/neovim/neovim.git > /dev/null 2>&1
-    cd neovim
-    echo "Building Neovim..."
-    make CMAKE_BUILD_TYPE=RelWithDebInfo -j$(${pkgs.coreutils}/bin/nproc) > /dev/null 2>&1
-    echo "Installing Neovim..."
-    make CMAKE_INSTALL_PREFIX=$HOME/.local install > /dev/null 2>&1
-    cd ..
-    rm -rf neovim
+    
+    TARBALL_URL="https://github.com/neovim/neovim/releases/download/$LATEST_TAG/$NVIM_ARCHIVE.tar.gz"
+    echo "Downloading Neovim tarball from: $TARBALL_URL"
+    
+    ${pkgs.curl}/bin/curl -L "$TARBALL_URL" -o "$NVIM_ARCHIVE.tar.gz" > /dev/null 2>&1
+    
+    if [ ! -f "$NVIM_ARCHIVE.tar.gz" ]; then
+      echo "Failed to download Neovim tarball"
+      exit 1
+    fi
+    
+    echo "Extracting Neovim..."
+    ${pkgs.gnutar}/bin/tar -xzf "$NVIM_ARCHIVE.tar.gz" > /dev/null 2>&1
+    
+    echo "Installing Neovim to $HOME/.local..."
+    mkdir -p $HOME/.local
+    cp -r "$NVIM_ARCHIVE"/* $HOME/.local/
+    
+    # Clean up
+    rm -rf "$NVIM_ARCHIVE"* 
+    
     echo "Neovim installed to $HOME/.local/bin"
   fi
 ''
