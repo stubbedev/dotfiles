@@ -12,11 +12,7 @@ let
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
 
   # Optimized module imports with conditional loading
-  coreModules = homeLib.loadModulesFromDir ./programs;
-  serviceModules = homeLib.conditionalImports useHyprland
-    (homeLib.loadModulesFromDir ./services);
-
-  allModules = coreModules ++ serviceModules;
+  programs = homeLib.loadModulesFromDir ./programs;
 in {
   nixGL = {
     packages = nixGL.packages;
@@ -30,7 +26,7 @@ in {
   home.stateVersion = "25.05";
   home.packages = homePackages;
 
-  imports = allModules;
+  imports = programs;
 
   home.file = {
     ".zshrc".text = ''

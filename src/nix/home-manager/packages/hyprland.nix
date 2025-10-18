@@ -33,6 +33,7 @@ if useHyprland then
 
   # Desktop components
   waybar
+  ashell
   swaynotificationcenter
   rofi-wayland
 
