@@ -8,10 +8,8 @@ let
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
   useHyprland = enableHyprland == "true" || enableHyprland == true;
 
-  # Optimized package loading with error handling
+  # Optimized package loading with error handling and conditional hyprland support
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
-  hyprlandPackages = homeLib.conditionalPackages useHyprland
-    (homeLib.safeLoadPackagesFromDir ./hyprland args);
 
   # Optimized module imports with conditional loading
   coreModules = homeLib.loadModulesFromDir ./programs;
@@ -30,7 +28,7 @@ in {
   home.username = constants.user.name;
   home.homeDirectory = "/home/${constants.user.name}";
   home.stateVersion = "25.05";
-  home.packages = homePackages ++ hyprlandPackages;
+  home.packages = homePackages;
 
   imports = allModules;
 
