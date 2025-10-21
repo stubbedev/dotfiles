@@ -12,7 +12,7 @@
   mkdir -p $HOME/.local/bin
 
   # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:$PATH"
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:$HOME/.local/bin:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
@@ -65,18 +65,18 @@
   if ! command -v nvim &> /dev/null || ! $HOME/.local/bin/nvim --version &> /dev/null; then
     echo "Installing Neovim from prebuilt tarball..."
     cd /tmp
-    
+
     # Clean up any existing files
     rm -rf nvim-linux64* neovim
-    
+
     echo "Fetching latest Neovim release tag..."
     LATEST_TAG=$(${pkgs.curl}/bin/curl -s https://api.github.com/repos/neovim/neovim/releases/latest | ${pkgs.jq}/bin/jq -r .tag_name)
     echo "Using Neovim version: $LATEST_TAG"
-    
+
     # Determine architecture and OS
     ARCH=$(uname -m)
     OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-    
+
     if [ "$OS" = "linux" ]; then
       if [ "$ARCH" = "x86_64" ]; then
         NVIM_ARCHIVE="nvim-linux-x86_64"
