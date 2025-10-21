@@ -9,6 +9,7 @@ with pkgs; [
 
   # Bluetooth
   blueman
+  brightnessctl
 
   # Clipboard managers
   clipman
