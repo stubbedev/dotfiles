@@ -38,6 +38,7 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.ai.copilot" },
     { import = "plugins" },
   },
+  rocks = { enabled = false },
   defaults = {
     lazy = false,
     version = false,
