@@ -46,6 +46,53 @@
     echo "$lock_content" | ${pkgs.jq}/bin/jq --arg path "$binary_path" --arg version "$version" '. + {($path): $version}' > "$lock_file"
   }
 
+  safe_replace_binary() {
+    local source_path="$1"
+    local target_path="$2"
+    local temp_path="$target_path.tmp.$$"
+
+    # Copy to temporary file first
+    cp "$source_path" "$temp_path"
+    chmod +x "$temp_path"
+
+    # Atomic move - this works even if the target is busy
+    mv "$temp_path" "$target_path"
+  }
+
+  safe_install_to_local() {
+    local source_dir="$1"
+    local target_dir="$2"
+
+    # Create target directory if it doesn't exist
+    mkdir -p "$target_dir"
+
+    # Copy files, replacing binaries safely
+    find "$source_dir" -type f -executable | while read -r source_file; do
+      local relative_path="''${source_file#$source_dir/}"
+      local target_file="$target_dir/$relative_path"
+      local target_parent="$(dirname "$target_file")"
+
+      mkdir -p "$target_parent"
+      safe_replace_binary "$source_file" "$target_file"
+    done
+
+    # Copy non-executable files normally
+    find "$source_dir" -type f ! -executable | while read -r source_file; do
+      local relative_path="''${source_file#$source_dir/}"
+      local target_file="$target_dir/$relative_path"
+      local target_parent="$(dirname "$target_file")"
+
+      mkdir -p "$target_parent"
+      cp "$source_file" "$target_file"
+    done
+
+    # Copy directories
+    find "$source_dir" -type d | while read -r source_dir_path; do
+      local relative_path="''${source_dir_path#$source_dir/}"
+      [ -n "$relative_path" ] && mkdir -p "$target_dir/$relative_path"
+    done
+  }
+
   check_version_mismatch() {
     local binary_path="$1"
     local current_version
@@ -79,7 +126,10 @@
     echo "Building Lua 5.1.5..."
     make generic -j"$(${pkgs.coreutils}/bin/nproc)" > /dev/null 2>&1
     echo "Installing Lua 5.1.5..."
-    make install INSTALL_TOP="$hdir/.local" > /dev/null 2>&1
+    local install_tmp="$(mktemp -d)"
+    make install INSTALL_TOP="$install_tmp" > /dev/null 2>&1
+    safe_install_to_local "$install_tmp" "$hdir/.local"
+    rm -rf "$install_tmp"
     echo "Lua 5.1 installed to $hdir/.local/bin"
     cd
     rm -rf "$tmpdir"
@@ -96,9 +146,14 @@
     echo "Building LuaJIT..."
     make -j"$(${pkgs.coreutils}/bin/nproc)" > /dev/null 2>&1
     echo "Installing LuaJIT..."
-    make install PREFIX="$hdir/.local" > /dev/null 2>&1
-    rm -f "$hdir/.local/bin/luajit"
-    mv "$hdir/.local/bin/luajit-"* "$hdir/.local/bin/luajit"
+    local install_tmp="$(mktemp -d)"
+    make install PREFIX="$install_tmp" > /dev/null 2>&1
+    # Rename the versioned luajit binary to just luajit
+    if ls "$install_tmp/bin/luajit-"* > /dev/null 2>&1; then
+      mv "$install_tmp/bin/luajit-"* "$install_tmp/bin/luajit"
+    fi
+    safe_install_to_local "$install_tmp" "$hdir/.local"
+    rm -rf "$install_tmp"
     echo "LuaJIT installed to $hdir/.local/bin"
     cd
     rm -rf "$tmpdir"
@@ -146,8 +201,7 @@
     echo "Extracting Neovim..."
     ${pkgs.gnutar}/bin/tar -xzf "$nvim_archive.tar.gz" > /dev/null 2>&1
     echo "Installing Neovim to $HOME/.local..."
-    mkdir -p "$hdir/.local"
-    cp -r "$nvim_archive"/* "$hdir/.local/"
+    safe_install_to_local "$nvim_archive" "$hdir/.local"
     echo "Neovim installed to $hdir/.local/bin"
     cd
     rm -rf "$tmpdir"
