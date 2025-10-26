@@ -33,6 +33,9 @@ with pkgs; [
   hunspell
   gawk
 
+  # Nix linter
+  statix
+
   # Version control
   git
   lazygit
