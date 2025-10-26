@@ -14,7 +14,6 @@ return {
           enabled = false,
         }
       },
-      image = { enabled = false },
       dashboard = {
         preset = {
           header = [[
