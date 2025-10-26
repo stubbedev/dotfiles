@@ -3,6 +3,69 @@
 ''
   set -euo pipefail
   hdir="${config.home.homeDirectory}"
+  lock_file="$hdir/.local/post-install.lock.json"
+
+  read_lock_file() {
+    if [ -f "$lock_file" ]; then
+      cat "$lock_file"
+    else
+      echo "{}"
+    fi
+  }
+
+  get_binary_version() {
+    local binary_path="$1"
+    local version=""
+    if [ -x "$binary_path" ]; then
+      case "$(basename "$binary_path")" in
+        lua)
+          version="$("$binary_path" -v 2>&1 | head -n1 | grep -o 'Lua [0-9.]*' | cut -d' ' -f2 || echo "")"
+          ;;
+        luajit)
+          version="$("$binary_path" -v 2>&1 | head -n1 | grep -o 'LuaJIT [0-9.]*' | cut -d' ' -f2 || echo "")"
+          ;;
+        nvim)
+          version="$("$binary_path" --version 2>&1 | head -n1 | grep -o 'NVIM v[0-9.]*' | cut -d'v' -f2 || echo "")"
+          ;;
+        *)
+          version=""
+          ;;
+      esac
+    fi
+    echo "$version"
+  }
+
+  update_lock_file_entry() {
+    local binary_path="$1"
+    local version
+    version="$(get_binary_version "$binary_path")"
+
+    local lock_content
+    lock_content="$(read_lock_file)"
+
+    echo "$lock_content" | ${pkgs.jq}/bin/jq --arg path "$binary_path" --arg version "$version" '. + {($path): $version}' > "$lock_file"
+  }
+
+  check_version_mismatch() {
+    local binary_path="$1"
+    local current_version
+    current_version="$(get_binary_version "$binary_path")"
+
+    if [ -z "$current_version" ]; then
+      return 0
+    fi
+
+    local lock_content
+    lock_content="$(read_lock_file)"
+    local expected_version
+    expected_version="$(echo "$lock_content" | ${pkgs.jq}/bin/jq -r ".[\"$binary_path\"] // \"\"")"
+
+    if [ -z "$expected_version" ] || [ "$current_version" != "$expected_version" ]; then
+      return 0
+    fi
+
+    return 1
+  }
 
   install_lua() {
     local tmpdir
@@ -20,6 +83,7 @@
     echo "Lua 5.1 installed to $hdir/.local/bin"
     cd
     rm -rf "$tmpdir"
+    update_lock_file_entry "$hdir/.local/bin/lua"
   }
 
   install_luajit() {
@@ -38,6 +102,7 @@
     echo "LuaJIT installed to $hdir/.local/bin"
     cd
     rm -rf "$tmpdir"
+    update_lock_file_entry "$hdir/.local/bin/luajit"
   }
 
   install_nvim() {
@@ -86,6 +151,7 @@
     echo "Neovim installed to $hdir/.local/bin"
     cd
     rm -rf "$tmpdir"
+    update_lock_file_entry "$hdir/.local/bin/nvim"
   }
 
   echo "Installing gh-copilot extension..."
@@ -105,15 +171,15 @@
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
   export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
 
-  if [ ! -x "$hdir/.local/bin/lua" ] || ! "$hdir/.local/bin/lua" -v 2>&1 | grep -q "5.1" ; then
+  if [ ! -x "$hdir/.local/bin/lua" ] || check_version_mismatch "$hdir/.local/bin/lua" ; then
     install_lua
   fi
 
-  if [ ! -x "$hdir/.local/bin/luajit" ] || ! "$hdir/.local/bin/luajit" -v 2>&1 | grep -q "LuaJIT" ; then
+  if [ ! -x "$hdir/.local/bin/luajit" ] || check_version_mismatch "$hdir/.local/bin/luajit" ; then
     install_luajit
   fi
 
-  if [ ! -x "$hdir/.local/bin/nvim" ] || ! "$hdir/.local/bin/nvim" --version 2>&1 | grep -q "NVIM v" ; then
+  if [ ! -x "$hdir/.local/bin/nvim" ] || check_version_mismatch "$hdir/.local/bin/nvim" ; then
     install_nvim
   fi
 ''
