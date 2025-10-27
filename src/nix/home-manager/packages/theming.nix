@@ -5,9 +5,6 @@ with pkgs; [
   adwaita-icon-theme
   vimix-icon-theme
   rose-pine-gtk-theme
-  adwaita-qt
-  adwaita-qt6
-  libsForQt5.layer-shell-qt
   gtk4-layer-shell
 ]
 

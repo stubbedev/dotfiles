@@ -64,7 +64,7 @@ install_all_nix() {
 }
 
 install_nix() {
-  sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
+  curl -sSf -L https://install.lix.systems/lix | sh -s -- install
   conf_nix
   install_nix_home_manager
 }

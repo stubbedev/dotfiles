@@ -8,7 +8,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixGL = {
-      url = "github:guibou/nixGL";
+      url = "github:nix-community/nixGL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -24,6 +24,9 @@
             allowInsecure = true;
             allowInsecurePredicate = (_: true);
           };
+          overlays = [
+            inputs.nixGL.overlay
+          ];
         };
         extraSpecialArgs = inputs;
         modules = [ ./home.nix ];
