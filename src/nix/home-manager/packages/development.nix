@@ -13,8 +13,8 @@ with pkgs; [
   templ
   mongodb-tools
   mago
-  jetbrains.phpstorm
-  jetbrains.webstorm
-  jetbrains.pycharm-community-bin
+  #jetbrains.phpstorm
+  #jetbrains.webstorm
+  #jetbrains.pycharm-community-bin
 ]
 
