@@ -1,12 +1,9 @@
 { ... }: {
   programs.git = {
     enable = true;
-
-    settings = {
-      user = {
-        name = "Alexander Bugge Stage";
-        email = "alexander.bugge.stage@gmail.com";
-      };
+    userName = "Alexander Bugge Stage";
+    userEmail = "abs@stubbe.dev";
+    extraConfig = {
       core = {
         excludesfile = "~/.gitignore";
         editor = "nvim";
