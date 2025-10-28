@@ -76,7 +76,7 @@ in {
           inherit config pkgs constants;
         });
       customBinInstall = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
-        (import ./scripts/bin-install.nix { inherit config pkgs; });
+        (import ./scripts/bin-install.nix { inherit config pkgs constants; });
       customShellCompletions = lib.hm.dag.entryAfter [ "customBinInstall" ]
         (import ./scripts/shell-completions.nix {
           inherit config pkgs constants;
