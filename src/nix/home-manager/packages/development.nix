@@ -2,7 +2,7 @@
 with pkgs; [
   nodejs
   bun
-  yarn
+  yarn-berry
   deno
   volta
   zig
