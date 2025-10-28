@@ -514,7 +514,7 @@ if is_binary home-manager; then
         flatpak update
       fi
 
-      nix flake update ~/.stubbe/src/nix/home-manager
+      nix flake update --flake "$HOME/.stubbe/src/nix/home-manager"
       # Update nix channels
       echo "❄️  Updating nix channels..."
       nix-channel --update
