@@ -11,12 +11,13 @@ STUBBE_PATHS=(
   "$HOME/.config/composer/vendor/bin"
   "$HOME/.config/emacs/bin"
   "$HOME/.bun/bin"
+  "$HOME/.volta/bin"
   "$HOME/.cargo/bin"
   "$HOME/.deno/bin"
-  "$HOME/.nix-profile/bin"
   "$HOME/.go/bin"
   "$HOME/go/bin"
   "$HOME/bin"
+  "$HOME/.nix-profile/bin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
