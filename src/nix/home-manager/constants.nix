@@ -14,6 +14,9 @@
     # Target paths
     tmuxPlugins = "${config.home.homeDirectory}/.tmux/plugins";
     lazygitConfig = "${config.home.homeDirectory}/.config/lazygit";
+
+    customBinLock = "${config.home.homeDirectory}/.local/post-install.lock";
+    customBinDir = "${config.home.homeDirectory}/.local/bin";
   };
 
   # User information

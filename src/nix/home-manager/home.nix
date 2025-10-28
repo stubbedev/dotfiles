@@ -6,7 +6,7 @@ let
   # Environment-based feature flags with validation
   nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland = enableHyprland == "true" || enableHyprland == true;
+  useHyprland = enableHyprland == "true";
 
   # Optimized package loading with error handling and conditional hyprland support
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
@@ -15,37 +15,76 @@ let
   programs = homeLib.loadModulesFromDir ./programs;
 in {
   nixGL = {
-    packages = nixGL.packages;
+    inherit (nixGL) packages;
     defaultWrapper = if nixglWrapper != "" then nixglWrapper else "mesa";
   };
 
   targets.genericLinux.enable = true;
+  home = {
 
-  home.username = constants.user.name;
-  home.homeDirectory = "/home/${constants.user.name}";
-  home.stateVersion = "25.05";
-  home.packages = homePackages;
+    username = constants.user.name;
+    homeDirectory = "/home/${constants.user.name}";
+    stateVersion = "25.05";
+    packages = homePackages;
 
-  imports = programs;
+    file = {
+      ".zshrc".text = ''
+        if [[ -f "${constants.paths.zsh}/init" ]]; then
+          source ${constants.paths.zsh}/init
+        fi
 
-  home.file = {
-    ".zshrc".text = ''
-      if [[ -f "${constants.paths.zsh}/init" ]]; then
-        source ${constants.paths.zsh}/init
-      fi
+      '';
+      ".ideavimrc".source = ./../../ideavim/ideavimrc;
+      ".tmux.conf".source = ./../../tmux/tmux.conf;
 
-    '';
-    ".ideavimrc".source = ./../../ideavim/ideavimrc;
-    ".tmux.conf".source = ./../../tmux/tmux.conf;
-
-    # Theme files
-    ".icons/${constants.theme.iconTheme}" = {
-      source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
+      # Theme files
+      ".icons/${constants.theme.iconTheme}" = {
+        source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
+      };
+      ".themes/${constants.theme.gtkTheme}" = {
+        source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
+      };
     };
-    ".themes/${constants.theme.gtkTheme}" = {
-      source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
+
+    sessionVariables = {
+      # Nix configuration
+      NIXPKGS_ALLOW_UNFREE = "1";
+      NIXPKGS_ALLOW_INSECURE = "1";
+      NIXOS_OZONE_WL = "1";
+
+      # Editor and display
+      EDITOR = "$HOME/.local/bin/nvim";
+      DISPLAY = ":0";
+
+      # Paging and documentation
+      MANPAGER = "sh -c 'col -bx | bat -l man -p'";
+      MANROFFOPT = "-c";
+      PAGER = "${pkgs.more}/bin/more";
+
+      # Go configuration
+      GOROOT = "${config.home.homeDirectory}/.go";
+      GOPATH = "${config.home.homeDirectory}/go";
+
+      # Theme and custom variables
+      GTK_THEME = constants.theme.gtkTheme;
+      DEPLOYER_REMOTE_USER = "abs";
+    };
+
+    activation = {
+      customConfigCleanUp = lib.hm.dag.entryAfter [ "writeBoundary" ]
+        (import ./scripts/config-cleanup.nix {
+          inherit config pkgs constants;
+        });
+      customBinInstall = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
+        (import ./scripts/bin-install.nix { inherit config pkgs; });
+      customShellCompletions = lib.hm.dag.entryAfter [ "customBinInstall" ]
+        (import ./scripts/shell-completions.nix {
+          inherit config pkgs constants;
+        });
     };
   };
+
+  imports = programs;
 
   # XDG Config files 
   xdg.configFile = {
@@ -53,10 +92,14 @@ in {
     "ghostty".source = ./../../ghostty;
     "alacritty".source = ./../../alacritty;
     "rofi".source = ./../../rofi;
-    "btop/themes/catppuccin_frappe.theme".source = ./../../btop/themes/catppuccin_frappe.theme;
-    "btop/themes/catppuccin_latte.theme".source = ./../../btop/themes/catppuccin_latte.theme;
-    "btop/themes/catppuccin_macchiato.theme".source = ./../../btop/themes/catppuccin_macchiato.theme;
-    "btop/themes/catppuccin_mocha.theme".source = ./../../btop/themes/catppuccin_mocha.theme;
+    "btop/themes/catppuccin_frappe.theme".source =
+      ./../../btop/themes/catppuccin_frappe.theme;
+    "btop/themes/catppuccin_latte.theme".source =
+      ./../../btop/themes/catppuccin_latte.theme;
+    "btop/themes/catppuccin_macchiato.theme".source =
+      ./../../btop/themes/catppuccin_macchiato.theme;
+    "btop/themes/catppuccin_mocha.theme".source =
+      ./../../btop/themes/catppuccin_mocha.theme;
     "swaync".source = ./../../swaync;
     "sway".source = ./../../sway;
     "waybar".source = ./../../waybar;
@@ -75,40 +118,6 @@ in {
       PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
     '';
   };
-
-  home.sessionVariables = {
-    # Nix configuration
-    NIXPKGS_ALLOW_UNFREE = "1";
-    NIXPKGS_ALLOW_INSECURE = "1";
-    NIXOS_OZONE_WL = "1";
-
-    # Editor and display
-    EDITOR = "$HOME/.local/bin/nvim";
-    DISPLAY = ":0";
-
-    # Paging and documentation
-    MANPAGER = "sh -c 'col -bx | bat -l man -p'";
-    MANROFFOPT = "-c";
-    PAGER = "${pkgs.more}/bin/more";
-
-    # Go configuration
-    GOROOT = "${config.home.homeDirectory}/.go";
-    GOPATH = "${config.home.homeDirectory}/go";
-
-    # Theme and custom variables
-    GTK_THEME = constants.theme.gtkTheme;
-    DEPLOYER_REMOTE_USER = "abs";
-  };
-
-  home.activation.customConfigCleanUp =
-    lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (import ./scripts/config-cleanup.nix { inherit config pkgs constants; });
-  home.activation.customBinInstall =
-    lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
-    (import ./scripts/bin-install.nix { inherit config pkgs; });
-  home.activation.customShellCompletions =
-    lib.hm.dag.entryAfter [ "customBinInstall" ]
-    (import ./scripts/shell-completions.nix { inherit config pkgs constants; });
 
   systemd.user.services = {
     waybar-reload-on-power-profile = {

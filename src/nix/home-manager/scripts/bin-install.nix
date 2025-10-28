@@ -1,13 +1,12 @@
-{ config, pkgs, ... }:
+{ config, pkgs, constants, ... }:
 
 ''
   set -euo pipefail
   hdir="${config.home.homeDirectory}"
-  lock_file="$hdir/.local/post-install.lock.json"
 
   read_lock_file() {
-    if [ -f "$lock_file" ]; then
-      cat "$lock_file"
+    if [ -f "${constants.paths.customBinLock}" ]; then
+      cat "${constants.paths.customBinLock}"
     else
       echo "{}"
     fi
@@ -43,7 +42,7 @@
     local lock_content
     lock_content="$(read_lock_file)"
 
-    echo "$lock_content" | ${pkgs.jq}/bin/jq --arg path "$binary_path" --arg version "$version" '. + {($path): $version}' > "$lock_file"
+    echo "$lock_content" | ${pkgs.jq}/bin/jq --arg path "$binary_path" --arg version "$version" '. + {($path): $version}' > "${constants.paths.customBinLock}"
   }
 
   safe_replace_binary() {
@@ -130,10 +129,10 @@
     make install INSTALL_TOP="$install_tmp" > /dev/null 2>&1
     safe_install_to_local "$install_tmp" "$hdir/.local"
     rm -rf "$install_tmp"
-    echo "Lua 5.1 installed to $hdir/.local/bin"
+    echo "Lua 5.1 installed to ${constants.paths.customBinDir}"
     cd
     rm -rf "$tmpdir"
-    update_lock_file_entry "$hdir/.local/bin/lua"
+    update_lock_file_entry "${constants.paths.customBinDir}/lua"
   }
 
   install_luajit() {
@@ -154,10 +153,10 @@
     fi
     safe_install_to_local "$install_tmp" "$hdir/.local"
     rm -rf "$install_tmp"
-    echo "LuaJIT installed to $hdir/.local/bin"
+    echo "LuaJIT installed to ${constants.paths.customBinDir}"
     cd
     rm -rf "$tmpdir"
-    update_lock_file_entry "$hdir/.local/bin/luajit"
+    update_lock_file_entry "${constants.paths.customBinDir}/luajit"
   }
 
   install_nvim() {
@@ -202,10 +201,10 @@
     ${pkgs.gnutar}/bin/tar -xzf "$nvim_archive.tar.gz" > /dev/null 2>&1
     echo "Installing Neovim to $HOME/.local..."
     safe_install_to_local "$nvim_archive" "$hdir/.local"
-    echo "Neovim installed to $hdir/.local/bin"
+    echo "Neovim installed to ${constants.paths.customBinDir}"
     cd
     rm -rf "$tmpdir"
-    update_lock_file_entry "$hdir/.local/bin/nvim"
+    update_lock_file_entry "${constants.paths.customBinDir}/nvim"
   }
 
   echo "Installing gh-copilot extension..."
@@ -216,24 +215,24 @@
   "${pkgs.bun}/bin/bun" install opencode-ai@latest --global > /dev/null 2>&1
 
   echo "Creating local bin directory..."
-  mkdir -p "$hdir/.local/bin"
+  mkdir -p "${constants.paths.customBinDir}"
 
   # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:$hdir/.local/bin:$PATH"
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${constants.paths.customBinDir}:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
   export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
 
-  if [ ! -x "$hdir/.local/bin/lua" ] || check_version_mismatch "$hdir/.local/bin/lua" ; then
+  if [ ! -x "${constants.paths.customBinDir}/lua" ] || check_version_mismatch "${constants.paths.customBinDir}/lua" ; then
     install_lua
   fi
 
-  if [ ! -x "$hdir/.local/bin/luajit" ] || check_version_mismatch "$hdir/.local/bin/luajit" ; then
+  if [ ! -x "${constants.paths.customBinDir}/luajit" ] || check_version_mismatch "${constants.paths.customBinDir}/luajit" ; then
     install_luajit
   fi
 
-  if [ ! -x "$hdir/.local/bin/nvim" ] || check_version_mismatch "$hdir/.local/bin/nvim" ; then
+  if [ ! -x "${constants.paths.customBinDir}/nvim" ] || check_version_mismatch "${constants.paths.customBinDir}/nvim" ; then
     install_nvim
   fi
 ''
