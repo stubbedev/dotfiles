@@ -2,7 +2,7 @@
 { pkgs, config, ... }:
 let
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland = enableHyprland == "true" || enableHyprland == true;
+  useHyprland = enableHyprland == "true";
 in
 if useHyprland then
   with pkgs; [
