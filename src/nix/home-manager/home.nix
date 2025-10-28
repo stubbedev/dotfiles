@@ -135,16 +135,16 @@ in {
     };
   };
 
-  gtk = {
-    enable = useHyprland;
-    iconTheme = { name = constants.theme.iconTheme; };
-    theme = { name = constants.theme.gtkTheme; };
-  };
-
-  qt = {
-    enable = useHyprland;
-    platformTheme = { name = "gtk3"; };
-  };
+  # gtk = {
+  #   enable = useHyprland;
+  #   iconTheme = { name = constants.theme.iconTheme; };
+  #   theme = { name = constants.theme.gtkTheme; };
+  # };
+  #
+  # qt = {
+  #   enable = useHyprland;
+  #   platformTheme = { name = "gtk3"; };
+  # };
 
   programs.home-manager.enable = true;
 }
