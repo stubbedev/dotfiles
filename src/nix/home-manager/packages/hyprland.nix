@@ -35,7 +35,7 @@ if useHyprland then
   waybar
   ashell
   swaynotificationcenter
-  rofi-wayland
+  rofi
 
   # Portals
   xdg-desktop-portal
