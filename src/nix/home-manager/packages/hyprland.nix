@@ -36,6 +36,7 @@ if useHyprland then
   ashell
   swaynotificationcenter
   rofi
+  bemenu
 
   # Portals
   xdg-desktop-portal
