@@ -474,6 +474,10 @@ if is_binary home-manager; then
   function hm {
     if lspci | grep -qi nvidia >/dev/null; then
       export NIXGL_WRAPPER="nvidia"
+      # Detect Nvidia driver version and export it
+      if command -v nvidia-smi >/dev/null; then
+        export NVIDIA_VERSION="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits | head -1)"
+      fi
     else
       export NIXGL_WRAPPER="mesa"
     fi
