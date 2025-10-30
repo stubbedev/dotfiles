@@ -21,6 +21,8 @@
           config = {
             allowUnfree = true;
             allowUnfreePredicate = (_: true);
+            allowInsecure = true;
+            allowInsecurePredicate = (_: true);
           };
           overlays = [
             inputs.nixGL.overlay
