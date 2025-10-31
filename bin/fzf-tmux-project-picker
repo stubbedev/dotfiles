@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
   SELECTED=$1
 else
-  SELECTED=$(find ~/git -maxdepth 3 -mindepth 1 -type d -exec test -d '{}/.git' \; -print 2>/dev/null | fzf)
+  SELECTED=$(find ~ -maxdepth 5 -mindepth 1 -type d -exec test -d '{}/.git' \; -print 2>/dev/null | fzf)
 fi
 
 if [[ -z $SELECTED ]]; then
