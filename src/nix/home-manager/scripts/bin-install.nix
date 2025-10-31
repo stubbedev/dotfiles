@@ -207,6 +207,13 @@
     update_lock_file_entry "${constants.paths.customBinDir}/nvim"
   }
 
+  # Set up build environment with Nix packages
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${constants.paths.customBinDir}:$PATH"
+  export CC="${pkgs.gcc}/bin/gcc"
+  export CXX="${pkgs.gcc}/bin/g++"
+  export CPPFLAGS="-I${pkgs.readline.dev}/include"
+  export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
+
   echo "Installing rustup toolchain..."
   "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -220,12 +227,7 @@
   echo "Creating local bin directory..."
   mkdir -p "${constants.paths.customBinDir}"
 
-  # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${constants.paths.customBinDir}:$PATH"
-  export CC="${pkgs.gcc}/bin/gcc"
-  export CXX="${pkgs.gcc}/bin/g++"
-  export CPPFLAGS="-I${pkgs.readline.dev}/include"
-  export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
+
 
   if [ ! -x "${constants.paths.customBinDir}/lua" ] || check_version_mismatch "${constants.paths.customBinDir}/lua" ; then
     install_lua
