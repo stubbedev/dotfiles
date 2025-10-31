@@ -208,7 +208,7 @@
   }
 
   # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${constants.paths.customBinDir}:$PATH"
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${constants.paths.customBinDir}:${config.home.homeDirectory}/.cargo/bin:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
