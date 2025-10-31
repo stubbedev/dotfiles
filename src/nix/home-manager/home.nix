@@ -1,10 +1,9 @@
-{ config, lib, pkgs, nixGL, ... }@args:
+{ config, lib, pkgs, ... }@args:
 let
   homeLib = import ./lib.nix { inherit lib; };
   constants = import ./constants.nix { inherit config; };
 
   # Environment-based feature flags with validation
-  nixglWrapper = builtins.getEnv "NIXGL_WRAPPER";
   enableHyprland = builtins.getEnv "USE_HYPRLAND";
   useHyprland = enableHyprland == "true";
 
@@ -14,10 +13,6 @@ let
   # Optimized module imports with conditional loading
   programs = homeLib.loadModulesFromDir ./programs;
 in {
-  nixGL = {
-    inherit (nixGL) packages;
-    defaultWrapper = if nixglWrapper != "" then nixglWrapper else "mesa";
-  };
 
   targets.genericLinux.enable = true;
   home = {

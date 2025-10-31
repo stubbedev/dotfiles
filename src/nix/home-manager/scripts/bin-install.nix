@@ -207,6 +207,9 @@
     update_lock_file_entry "${constants.paths.customBinDir}/nvim"
   }
 
+  echo "Installing rustup toolchain..."
+  "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
   echo "Installing gh-copilot extension..."
   "${pkgs.gh}/bin/gh" extension install github/gh-copilot > /dev/null 2>&1
   echo "Upgrading gh-copilot extension..."

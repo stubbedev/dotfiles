@@ -7,10 +7,6 @@
       url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixGL = {
-      url = "github:nix-community/nixGL";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = { ... }@inputs: {
@@ -24,9 +20,6 @@
             allowInsecure = true;
             allowInsecurePredicate = (_: true);
           };
-          overlays = [
-            inputs.nixGL.overlay
-          ];
         };
         extraSpecialArgs = inputs;
         modules = [ ./home.nix ];

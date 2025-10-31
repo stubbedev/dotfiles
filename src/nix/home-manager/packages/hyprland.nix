@@ -6,10 +6,6 @@ let
 in
 if useHyprland then
   with pkgs; [
-  # Note: hyprland and hyprlock installed natively
-  # (config.lib.nixGL.wrap hyprland)
-  # hyprlock
-
   # Hyprland ecosystem
   hyprshot
   hyprlang
