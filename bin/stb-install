@@ -120,6 +120,10 @@ conf_nix() {
   if ! grep -Fxq "experimental-features = nix-command flakes" /etc/nix/nix.conf; then
     echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf >/dev/null
   fi
+  if grep -Eq "^trusted-users" /etc/nix/nix.conf; then
+    sudo sed -i '/^trusted-users/d' /etc/nix/nix.conf
+  fi
+  echo "trusted-users = root stubbe" | sudo tee -a /etc/nix/nix.conf >/dev/null
 }
 
 conf_nix_home_manager() {

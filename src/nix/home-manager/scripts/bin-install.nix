@@ -35,6 +35,9 @@
         nvim)
           version="$("$binary_path" --version 2>&1 | head -n1 | grep -o 'NVIM v[0-9.]*' | cut -d'v' -f2 || echo "")"
           ;;
+        alacritty)
+          version="$("$binary_path" --version 2>&1 | head -n1 | grep -o 'alacritty [0-9.]*' | cut -d' ' -f2 || echo "")"
+          ;;
         *)
           version=""
           ;;
@@ -216,16 +219,28 @@
     update_lock_file_entry "${constants.paths.customBinDir}/nvim"
   }
 
+  install_alacritty() {
+    echo "Installing Alacritty using cargo..."
+    eval "\"${config.home.homeDirectory}/.cargo/bin/cargo\" install alacritty --root \"$hdir/.local\" $REDIRECT_SUFFIX"
+    if [ -f "$hdir/.local/bin/alacritty" ]; then
+      echo "Alacritty installed to ${constants.paths.customBinDir}"
+      update_lock_file_entry "${constants.paths.customBinDir}/alacritty"
+    else
+      echo "Warning: Alacritty installation may have failed. Binary not found."
+    fi
+  }
+
   # Set up build environment with Nix packages
-  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${constants.paths.customBinDir}:${config.home.homeDirectory}/.cargo/bin:$PATH"
+  export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${pkgs.python3}/bin:${pkgs.scdoc}/bin:${constants.paths.customBinDir}:${config.home.homeDirectory}/.cargo/bin:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
-  export CPPFLAGS="-I${pkgs.readline.dev}/include"
-  export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
+  export CPPFLAGS="-I${pkgs.readline.dev}/include -I${pkgs.freetype.dev}/include/freetype2 -I${pkgs.fontconfig.dev}/include -I${pkgs.libxcb.dev}/include -I${pkgs.libxkbcommon.dev}/include"
+  export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib -L${pkgs.freetype}/lib -L${pkgs.fontconfig}/lib -L${pkgs.libxcb}/lib -L${pkgs.libxkbcommon}/lib"
+  export PKG_CONFIG_PATH="${pkgs.freetype}/lib/pkgconfig:${pkgs.fontconfig}/lib/pkgconfig:${pkgs.libxcb}/lib/pkgconfig:${pkgs.libxkbcommon}/lib/pkgconfig:$PKG_CONFIG_PATH"
 
   if [ ! -x "${config.home.homeDirectory}/.cargo/bin/cargo" ]; then
     echo "Installing rustup toolchain..."
-    "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
   fi
 
   echo "Installing opencode-ai globally..."
@@ -245,6 +260,12 @@
 
   if [ ! -x "${constants.paths.customBinDir}/nvim" ] || check_version_mismatch "${constants.paths.customBinDir}/nvim" ; then
     install_nvim
+  fi
+
+  if [ -x "${config.home.homeDirectory}/.cargo/bin/cargo" ]; then
+    if [ ! -x "${constants.paths.customBinDir}/alacritty" ] || check_version_mismatch "${constants.paths.customBinDir}/alacritty" ; then
+      install_alacritty
+    fi
   fi
 ''
 
