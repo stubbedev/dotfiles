@@ -35,9 +35,6 @@
         nvim)
           version="$("$binary_path" --version 2>&1 | head -n1 | grep -o 'NVIM v[0-9.]*' | cut -d'v' -f2 || echo "")"
           ;;
-        alacritty)
-          version="$("$binary_path" --version 2>&1 | head -n1 | grep -o 'alacritty [0-9.]*' | cut -d' ' -f2 || echo "")"
-          ;;
         *)
           version=""
           ;;
@@ -219,70 +216,12 @@
     update_lock_file_entry "${constants.paths.customBinDir}/nvim"
   }
 
-  install_alacritty() {
-    local real_binary="$hdir/.local/libexec/alacritty"
-    local cargo_binary="$hdir/.local/bin/alacritty"
-    local wrapper_path="${constants.paths.customBinDir}/alacritty"
-    
-    # Check if we need to install/update the binary
-    local need_install=false
-    if [ ! -f "$real_binary" ]; then
-      # Real binary doesn't exist, check if cargo binary exists
-      if [ -f "$cargo_binary" ]; then
-        # Check if it's the actual ELF binary (not a wrapper)
-        if file "$cargo_binary" 2>/dev/null | grep -q "ELF"; then
-          need_install=true
-        fi
-      else
-        # Need to install from cargo
-        echo "Installing Alacritty using cargo..."
-        eval "\"${config.home.homeDirectory}/.cargo/bin/cargo\" install alacritty --root \"$hdir/.local\" $REDIRECT_SUFFIX"
-        need_install=true
-      fi
-    fi
-    
-    # Move cargo binary to libexec if it exists and is an ELF binary
-    if [ -f "$cargo_binary" ] && [ ! -L "$cargo_binary" ]; then
-      if file "$cargo_binary" 2>/dev/null | grep -q "ELF"; then
-        mkdir -p "$(dirname "$real_binary")"
-        mv "$cargo_binary" "$real_binary"
-      fi
-    fi
-    
-    # Verify the real binary exists
-    if [ ! -f "$real_binary" ]; then
-      echo "Warning: Alacritty binary not found at $real_binary"
-      return
-    fi
-    
-    # Always create/update the wrapper script
-    {
-      echo "#!/usr/bin/env bash"
-      echo "# Wrapper for Alacritty to load Nix libraries"
-      echo "export LD_LIBRARY_PATH=\"${pkgs.freetype}/lib:${pkgs.fontconfig}/lib:${pkgs.xorg.libxcb}/lib:${pkgs.libxkbcommon}/lib''${LD_LIBRARY_PATH:+:}\$LD_LIBRARY_PATH\""
-      echo "exec \"$real_binary\" \"\$@\""
-    } > "$wrapper_path"
-    chmod +x "$wrapper_path"
-    
-    echo "Alacritty installed to ${constants.paths.customBinDir}"
-    update_lock_file_entry "${constants.paths.customBinDir}/alacritty"
-  }
-
   # Set up build environment with Nix packages
   export PATH="${pkgs.gcc}/bin:${pkgs.gnumake}/bin:${pkgs.git}/bin:${pkgs.curl}/bin:${pkgs.gnutar}/bin:${pkgs.gzip}/bin:${pkgs.coreutils}/bin:${pkgs.cmake}/bin:${pkgs.pkg-config}/bin:${pkgs.gettext}/bin:${pkgs.libtool}/bin:${pkgs.autoconf}/bin:${pkgs.automake}/bin:${pkgs.jq}/bin:${pkgs.python3}/bin:${pkgs.scdoc}/bin:${constants.paths.customBinDir}:${config.home.homeDirectory}/.cargo/bin:$PATH"
   export CC="${pkgs.gcc}/bin/gcc"
   export CXX="${pkgs.gcc}/bin/g++"
-  export CPPFLAGS="-I${pkgs.readline.dev}/include -I${pkgs.freetype.dev}/include/freetype2 -I${pkgs.fontconfig.dev}/include -I${pkgs.xorg.libxcb.dev}/include -I${pkgs.libxkbcommon.dev}/include"
-  export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib -L${pkgs.freetype}/lib -L${pkgs.fontconfig}/lib -L${pkgs.xorg.libxcb}/lib -L${pkgs.libxkbcommon}/lib"
-  OLD_PKG_CONFIG_PATH="''${PKG_CONFIG_PATH:-}"
-  PKG_CONFIG_PATH="${pkgs.freetype.dev}/lib/pkgconfig:${pkgs.fontconfig.dev}/lib/pkgconfig:${pkgs.xorg.libxcb.dev}/lib/pkgconfig:${pkgs.libxkbcommon.dev}/lib/pkgconfig"
-  [ -n "$OLD_PKG_CONFIG_PATH" ] && PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$OLD_PKG_CONFIG_PATH"
-  export PKG_CONFIG_PATH
-
-  if [ ! -x "${config.home.homeDirectory}/.cargo/bin/cargo" ]; then
-    echo "Installing rustup toolchain..."
-    "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-  fi
+  export CPPFLAGS="-I${pkgs.readline.dev}/include"
+  export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
 
   echo "Installing opencode-ai globally..."
   eval "\"${pkgs.bun}/bin/bun\" install opencode-ai@latest --global $REDIRECT_SUFFIX"
@@ -301,18 +240,6 @@
 
   if [ ! -x "${constants.paths.customBinDir}/nvim" ] || check_version_mismatch "${constants.paths.customBinDir}/nvim" ; then
     install_nvim
-  fi
-
-  if [ -x "${config.home.homeDirectory}/.cargo/bin/cargo" ]; then
-    # Check if binary exists in either location or if version changed
-    real_binary="${config.home.homeDirectory}/.local/libexec/alacritty"
-    cargo_binary="${config.home.homeDirectory}/.local/bin/alacritty"
-    if [ ! -x "${constants.paths.customBinDir}/alacritty" ] || \
-       [ ! -f "$real_binary" ] || \
-       ([ -f "$cargo_binary" ] && file "$cargo_binary" 2>/dev/null | grep -q "ELF") || \
-       check_version_mismatch "${constants.paths.customBinDir}/alacritty" ; then
-      install_alacritty
-    fi
   fi
 ''
 
