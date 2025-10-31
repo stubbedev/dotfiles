@@ -472,13 +472,25 @@ fi
 
 if is_binary home-manager; then
   function hm {
+    # Check for --debug flag in arguments
+    local debug_mode=false
+    local filtered_args=()
+    for arg in "$@"; do
+      if [[ "$arg" == "--debug" ]]; then
+        debug_mode=true
+        export BIN_INSTALL_DEBUG=1
+      else
+        filtered_args+=("$arg")
+      fi
+    done
+
     if is_binary hyprctl; then
       export USE_HYPRLAND=true
     else
       export USE_HYPRLAND=false
     fi
 
-    case "$1" in
+    case "${filtered_args[1]:-}" in
     "update" | "upgrade")
       echo "🔄 Starting system update process..."
 
@@ -514,16 +526,16 @@ if is_binary home-manager; then
       nix-channel --update
 
       # Run home-manager switch for upgrade
-      if [[ "$1" == "upgrade" ]]; then
+      if [[ "${filtered_args[1]}" == "upgrade" ]]; then
         echo "🏠 Applying home-manager configuration..."
-        home-manager switch --impure
+        home-manager switch --impure "${filtered_args[@]:1}"
         src_zsh
       fi
 
       echo "✅ Update process completed!"
       ;;
     "search")
-      local search_term="$2"
+      local search_term="${filtered_args[2]:-}"
 
       if [[ -z "$search_term" ]]; then
         if is_binary fzf; then
@@ -587,8 +599,13 @@ if is_binary home-manager; then
       fi
       ;;
     *)
-      home-manager "$@" --impure
+      home-manager "${filtered_args[@]}" --impure
       ;;
     esac
+    
+    # Unset debug flag after execution
+    if [[ "$debug_mode" == "true" ]]; then
+      unset BIN_INSTALL_DEBUG
+    fi
   }
 fi

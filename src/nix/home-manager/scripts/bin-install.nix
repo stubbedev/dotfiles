@@ -3,6 +3,15 @@
 ''
   set -euo pipefail
   hdir="${config.home.homeDirectory}"
+  
+  # Set redirect suffix based on debug flag
+  if [ -n "''${BIN_INSTALL_DEBUG:-}" ]; then
+    # Debug mode: don't redirect
+    REDIRECT_SUFFIX=""
+  else
+    # Normal mode: redirect to /dev/null
+    REDIRECT_SUFFIX="> /dev/null 2>&1"
+  fi
 
   read_lock_file() {
     if [ -f "${constants.paths.customBinLock}" ]; then
@@ -118,15 +127,15 @@
     tmpdir="$(mktemp -d)"
     cd "$tmpdir"
     echo "Downloading Lua 5.1.5..."
-    curl -L https://www.lua.org/ftp/lua-5.1.5.tar.gz -o lua-5.1.5.tar.gz > /dev/null 2>&1
+    eval "curl -L https://www.lua.org/ftp/lua-5.1.5.tar.gz -o lua-5.1.5.tar.gz $REDIRECT_SUFFIX"
     echo "Extracting Lua 5.1.5..."
-    tar -xzf lua-5.1.5.tar.gz > /dev/null 2>&1
+    eval "tar -xzf lua-5.1.5.tar.gz $REDIRECT_SUFFIX"
     cd lua-5.1.5
     echo "Building Lua 5.1.5..."
-    make generic -j"$(${pkgs.coreutils}/bin/nproc)" > /dev/null 2>&1
+    eval "make generic -j\"\$(${pkgs.coreutils}/bin/nproc)\" $REDIRECT_SUFFIX"
     echo "Installing Lua 5.1.5..."
     local install_tmp="$(mktemp -d)"
-    make install INSTALL_TOP="$install_tmp" > /dev/null 2>&1
+    eval "make install INSTALL_TOP=\"$install_tmp\" $REDIRECT_SUFFIX"
     safe_install_to_local "$install_tmp" "$hdir/.local"
     rm -rf "$install_tmp"
     echo "Lua 5.1 installed to ${constants.paths.customBinDir}"
@@ -140,13 +149,13 @@
     tmpdir="$(mktemp -d)"
     cd "$tmpdir"
     echo "Cloning LuaJIT repository..."
-    git clone https://luajit.org/git/luajit.git > /dev/null 2>&1
+    eval "git clone https://luajit.org/git/luajit.git $REDIRECT_SUFFIX"
     cd luajit
     echo "Building LuaJIT..."
-    make -j"$(${pkgs.coreutils}/bin/nproc)" > /dev/null 2>&1
+    eval "make -j\"\$(${pkgs.coreutils}/bin/nproc)\" $REDIRECT_SUFFIX"
     echo "Installing LuaJIT..."
     local install_tmp="$(mktemp -d)"
-    make install PREFIX="$install_tmp" > /dev/null 2>&1
+    eval "make install PREFIX=\"$install_tmp\" $REDIRECT_SUFFIX"
     # Rename the versioned luajit binary to just luajit
     if ls "$install_tmp/bin/luajit-"* > /dev/null 2>&1; then
       mv "$install_tmp/bin/luajit-"* "$install_tmp/bin/luajit"
@@ -192,13 +201,13 @@
     fi
     tarball_url="https://github.com/neovim/neovim/releases/download/$latest_tag/$nvim_archive.tar.gz"
     echo "Downloading Neovim tarball from: $tarball_url"
-    ${pkgs.curl}/bin/curl -L "$tarball_url" -o "$nvim_archive.tar.gz" > /dev/null 2>&1
+    eval "${pkgs.curl}/bin/curl -L \"$tarball_url\" -o \"$nvim_archive.tar.gz\" $REDIRECT_SUFFIX"
     if [ ! -f "$nvim_archive.tar.gz" ]; then
       echo "Failed to download Neovim tarball"
       exit 1
     fi
     echo "Extracting Neovim..."
-    ${pkgs.gnutar}/bin/tar -xzf "$nvim_archive.tar.gz" > /dev/null 2>&1
+    eval "${pkgs.gnutar}/bin/tar -xzf \"$nvim_archive.tar.gz\" $REDIRECT_SUFFIX"
     echo "Installing Neovim to $HOME/.local..."
     safe_install_to_local "$nvim_archive" "$hdir/.local"
     echo "Neovim installed to ${constants.paths.customBinDir}"
@@ -214,15 +223,17 @@
   export CPPFLAGS="-I${pkgs.readline.dev}/include"
   export LDFLAGS="-L${pkgs.readline}/lib -L${pkgs.ncurses}/lib"
 
-  echo "Installing rustup toolchain..."
-  "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  if [ ! -x "${config.home.homeDirectory}/.cargo/bin/cargo" ]; then
+    echo "Installing rustup toolchain..."
+    "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  fi
 
   echo "Installing gh-copilot extension..."
-  "${pkgs.gh}/bin/gh" extension install github/gh-copilot > /dev/null 2>&1
+  eval "\"${pkgs.gh}/bin/gh\" extension install github/gh-copilot $REDIRECT_SUFFIX"
   echo "Upgrading gh-copilot extension..."
-  "${pkgs.gh}/bin/gh" extension upgrade github/gh-copilot > /dev/null 2>&1
+  eval "\"${pkgs.gh}/bin/gh\" extension upgrade github/gh-copilot $REDIRECT_SUFFIX"
   echo "Installing opencode-ai globally..."
-  "${pkgs.bun}/bin/bun" install opencode-ai@latest --global > /dev/null 2>&1
+  eval "\"${pkgs.bun}/bin/bun\" install opencode-ai@latest --global $REDIRECT_SUFFIX"
 
   echo "Creating local bin directory..."
   mkdir -p "${constants.paths.customBinDir}"

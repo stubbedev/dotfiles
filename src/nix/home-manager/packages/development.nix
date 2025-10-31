@@ -6,7 +6,6 @@ with pkgs; [
   deno
   volta
   zig
-  rustup
   gopass
   gotools
   air
