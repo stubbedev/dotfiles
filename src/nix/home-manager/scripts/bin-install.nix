@@ -228,16 +228,11 @@
     "${pkgs.curl}/bin/curl" --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
   fi
 
-  echo "Installing gh-copilot extension..."
-  eval "\"${pkgs.gh}/bin/gh\" extension install github/gh-copilot $REDIRECT_SUFFIX"
-  echo "Upgrading gh-copilot extension..."
-  eval "\"${pkgs.gh}/bin/gh\" extension upgrade github/gh-copilot $REDIRECT_SUFFIX"
   echo "Installing opencode-ai globally..."
   eval "\"${pkgs.bun}/bin/bun\" install opencode-ai@latest --global $REDIRECT_SUFFIX"
 
   echo "Creating local bin directory..."
   mkdir -p "${constants.paths.customBinDir}"
-
 
 
   if [ ! -x "${constants.paths.customBinDir}/lua" ] || check_version_mismatch "${constants.paths.customBinDir}/lua" ; then
