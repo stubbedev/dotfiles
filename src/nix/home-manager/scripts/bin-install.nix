@@ -305,8 +305,8 @@
 
   if [ -x "${config.home.homeDirectory}/.cargo/bin/cargo" ]; then
     # Check if binary exists in either location or if version changed
-    local real_binary="${config.home.homeDirectory}/.local/libexec/alacritty"
-    local cargo_binary="${config.home.homeDirectory}/.local/bin/alacritty"
+    real_binary="${config.home.homeDirectory}/.local/libexec/alacritty"
+    cargo_binary="${config.home.homeDirectory}/.local/bin/alacritty"
     if [ ! -x "${constants.paths.customBinDir}/alacritty" ] || \
        [ ! -f "$real_binary" ] || \
        ([ -f "$cargo_binary" ] && file "$cargo_binary" 2>/dev/null | grep -q "ELF") || \
