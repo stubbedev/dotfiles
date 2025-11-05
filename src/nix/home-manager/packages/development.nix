@@ -5,7 +5,6 @@ with pkgs; [
   yarn
   deno
   volta
-  zig
   gopass
   gotools
   air
