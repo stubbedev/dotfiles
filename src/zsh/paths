@@ -18,6 +18,7 @@ STUBBE_PATHS=(
   "$HOME/go/bin"
   "$HOME/bin"
   "$HOME/.nix-profile/bin"
+  "/home/linuxbrew/.linuxbrew/bin"
 )
 
 for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
