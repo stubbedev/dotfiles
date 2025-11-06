@@ -17,4 +17,6 @@ with pkgs; [
   # Clipboard managers
   clipman
   cliphist
+
+  mailutils
 ]
