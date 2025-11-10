@@ -466,7 +466,7 @@ if is_binary fzf; then
       -t d \
       --max-depth 5 \
       --min-depth 1 \
-      --hidden 2>/dev/null | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | fzf)
+      --hidden 2>/dev/null | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print "~/" $0 }' | fzf)
     clear
   }
   function fzf-directory-picker {
