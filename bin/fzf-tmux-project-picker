@@ -8,7 +8,7 @@ else
     -t d \
     --max-depth 5 \
     --min-depth 1 \
-    --hidden 2>/dev/null | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print "~/" $0 }' | fzf)
+    --hidden 2>/dev/null | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | fzf)
 fi
 
 if [[ -z $SELECTED ]]; then
@@ -20,11 +20,11 @@ TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 TMUX_RUNNING=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $TMUX_RUNNING ]]; then
-  tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+  tmux new-session -ds "$TMUXCLIENTNAME" -c "$HOME/$SELECTED"
 fi
 
 if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-  tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+  tmux new-session -ds "$TMUXCLIENTNAME" -c "$HOME/$SELECTED"
 fi
 
 if [[ -n $TMUX ]]; then
