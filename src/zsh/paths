@@ -12,6 +12,7 @@ STUBBE_PATHS=(
   "$HOME/.config/emacs/bin"
   "$HOME/.bun/bin"
   "$HOME/.volta/bin"
+  "$HOME/.opencode/bin"
   "$HOME/.cargo/bin"
   "$HOME/.deno/bin"
   "$HOME/.go/bin"
