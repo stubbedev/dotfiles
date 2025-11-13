@@ -4,6 +4,7 @@ if [ -d "$HOME/.stubbe" ]; then
   STBDIR="$HOME/.stubbe/src/zsh"
   STBZSHSOURCES=(
     "paths"
+    "apaths"
     "sysfuncs"
     "manager"
     "funcs"

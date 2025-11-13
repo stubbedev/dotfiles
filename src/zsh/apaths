@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+# EXPAND LIST WITH DESIRED APPLICATION PATHS
+
+STUBBE_APP_PATHS=(
+  "$HOME/.local/share/applications"
+  "$HOME/.local/share/flatpak/exports/share"
+)
+
+for STUBBE_APP_PATH in "${STUBBE_APP_PATHS[@]}"; do
+  if [ -d "$STUBBE_APP_PATH" ] && [[ ! ":$XDG_DATA_DIRS:" == *":$STUBBE_APP_PATH:"* ]]; then
+    XDG_DATA_DIRS="$STUBBE_APP_PATH:$XDG_DATA_DIRS"
+  fi
+done
+export XDG_DATA_DIRS
