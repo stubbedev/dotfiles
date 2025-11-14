@@ -7,9 +7,10 @@
   "spacing": 4, // Gaps between modules (4px)
   // Choose the order of the modules
   "modules-left": [
-    "sway/workspaces",
     "hyprland/workspaces",
     "hyprland/submap",
+    "hyprland/window",
+    "sway/workspaces",
     "sway/mode",
     "sway/scratchpad"
   ],
@@ -71,6 +72,10 @@
       "focused": "<span> </span>",
       "urgent": "<span> </span>"
     }
+  },
+  "hyprland/window": {
+    "format": "{class}",
+    "max-length": 50
   },
   "hyprland/language": {
     "format": "{}",
