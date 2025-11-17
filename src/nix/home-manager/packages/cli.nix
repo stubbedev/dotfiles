@@ -66,4 +66,5 @@ with pkgs; [
 
   # Terminal file manager
   tabiew
+  neomutt
 ]
