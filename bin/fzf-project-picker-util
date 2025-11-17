@@ -1,0 +1,29 @@
+#!/usr/bin/env zsh
+
+INITIAL_QUERY="$*"
+FILTER_PATTERNS=(
+  "go/pkg"
+)
+AWK_FILTER=""
+for pattern in "${FILTER_PATTERNS[@]}"; do
+  # Escape double quotes and backslashes for awk
+  ESCAPED_PATTERN="${pattern//\\/\\\\}"
+  ESCAPED_PATTERN="${ESCAPED_PATTERN//\"/\\\"}"
+  if [[ -n "$AWK_FILTER" ]]; then
+    AWK_FILTER="$AWK_FILTER && "
+  fi
+  AWK_FILTER="$AWK_FILTER index(tolower(\$0), tolower(\"$ESCAPED_PATTERN\")) == 0"
+done
+
+FD_CMD="fd . \
+  --base-directory ~ \
+  -t d \
+  --max-depth 5 \
+  --min-depth 1 \
+  --hidden 2>/dev/null"
+
+if [[ -n "$AWK_FILTER" ]]; then
+  echo "$HOME/$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | awk "$AWK_FILTER" | fzf --query="$INITIAL_QUERY")"
+else
+  echo "$HOME/$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | fzf --query="$INITIAL_QUERY")"
+fi
