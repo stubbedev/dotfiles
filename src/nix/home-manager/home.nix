@@ -112,6 +112,7 @@ in {
     "environment.d/envvars.conf".text = ''
       PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
     '';
+    "neomutt/neomuttrc".source = ./../../neomutt/neomuttrc;
   };
 
   systemd.user.services = {
