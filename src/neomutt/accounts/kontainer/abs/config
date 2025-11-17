@@ -1,0 +1,25 @@
+set imap_user = "account2@gmail.com"
+set imap_pass = ""
+set smtp_url = "smtp://account2@smtp.gmail.com:587/"
+set smtp_pass = ""
+
+set from = "account2@gmail.com"
+set realname = "your name"
+
+set folder = "imaps://$imap_user@imap.gmail.com:993"
+set spoolfile = "+INBOX"
+set postponed = "+[Gmail]/Drafts"
+set record = "+[Gmail]/Sent"
+set trash = "+[Gmail]/Trash"
+
+# Be sure to `mkdir -p` the following paths
+set header_cache =~/.neomutt/com.gmail.account2/cache/headers
+set message_cachedir =~/.neomutt/com.gmail.account2/cache/bodies
+set certificate_file =~/.neomutt/com.gmail.account2/certificates
+
+set move = no
+set imap_keepalive = 900
+
+set sort = reverse-threads
+set sort_aux = last-date-received
+

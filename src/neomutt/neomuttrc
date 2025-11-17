@@ -33,3 +33,21 @@ color body		color4 default		(^|[[:space:]])/[^[:space:]]+/([[:space:]]|$)     # 
 color sidebar_flagged   color1 default    # Mailboxes with flagged mails are Red
 color sidebar_new       color10 default   # Mailboxes with new mail are Green
 
+# Default Account
+source "~/.config/neomutt/accounts/gmail/alexander.bugge.stage/config"
+
+# Folder Hooks
+folder-hook 'alexander.bugge.stage@gmail.com' 'source ~/.config/neomutt/accounts/gmail/alexander.bugge.stage/config'
+# folder-hook 'abs@kontainer.com' 'source ~/.config/neomutt/accounts/kontainer/abs/config'
+
+# Account Switching Macros
+macro index <f1> "<enter-command>unmailboxes *<enter><enter-command>source ~/.config/neomutt/accounts/gmail/alexander.bugge.stage/config<enter><sync-mailbox><change-folder>!<enter>"
+# macro index <f2> "<enter-command>unmailboxes *<enter><enter-command>source ~/.config/neomutt/accounts/kontainer/abs/config<enter><sync-mailbox><change-folder>!<enter>"
+
+# Mappings
+## Fetch mail
+bind index G imap-fetch-mail
+
+# General Settings
+set editor="nvim"
+
