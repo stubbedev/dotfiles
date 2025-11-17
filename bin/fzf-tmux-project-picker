@@ -11,11 +11,11 @@ TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 TMUX_RUNNING=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $TMUX_RUNNING ]]; then
-  tmux new-session -ds "$TMUXCLIENTNAME" -c "$HOME/$SELECTED"
+  tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
 fi
 
 if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-  tmux new-session -ds "$TMUXCLIENTNAME" -c "$HOME/$SELECTED"
+  tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
 fi
 
 if [[ -n $TMUX ]]; then
