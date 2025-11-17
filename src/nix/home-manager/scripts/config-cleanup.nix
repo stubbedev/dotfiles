@@ -20,6 +20,6 @@ in ''
   mkdir -p "${homeDir}/.config/btop"
   cat "${stubbeDir}/src/btop/btop.conf" > "${homeDir}/.config/btop/btop.conf"
   rm -rf "${homeDir}/.config/neomutt/accounts"
-  ln -sf "${homeDir}/.config/neomutt/accounts" "${homeDir}/.stubbe/src/neomutt/accounts"
+  ln -sf "${stubbeDir}/src/neomutt/accounts" "${homeDir}/.config/neomutt/accounts"
 ''
 
