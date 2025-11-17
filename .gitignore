@@ -8,4 +8,7 @@ src/nvim/lazyvim.json
 src/btop/btop.log
 src/btop/btop.conf
 src/neomutt/accounts/*/*/password.gpg
+src/neomutt/accounts/*/*/cache/bodies/*
+src/neomutt/accounts/*/*/cache/headers/*
+src/neomutt/accounts/*/*/cert/*
 # src/nix/home-manager/flake.lock
