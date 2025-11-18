@@ -34,7 +34,7 @@
   ],
   "custom/tmux": {
     "exec": "~/.config/waybar/scripts/tmux-status.sh",
-    "return-type": "json",
+    "return-type": "string",
     "format": "{}",
     "interval": 5,
     "markup": "pango"
