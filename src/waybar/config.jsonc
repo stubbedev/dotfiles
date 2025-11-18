@@ -9,7 +9,7 @@
   "modules-left": [
     "hyprland/workspaces",
     "hyprland/submap",
-    "hyprland/window",
+    // "hyprland/window",
     "sway/workspaces",
     "sway/mode",
     "sway/scratchpad"
@@ -29,8 +29,16 @@
     "clock",
     "idle_inhibitor",
     "tray",
-    "power-profiles-daemon"
+    "power-profiles-daemon",
+    "custom/tmux"
   ],
+  "custom/tmux": {
+    "exec": "~/.config/waybar/scripts/tmux-status.sh",
+    "return-type": "json",
+    "format": "{}",
+    "interval": 5,
+    "markup": "pango"
+  },
   // Modules configuration
   "sway/workspaces": {
     "disable-scroll": false,

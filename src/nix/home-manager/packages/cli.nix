@@ -66,5 +66,8 @@ with pkgs; [
 
   # Terminal file manager
   tabiew
+
+  # Mailing
   neomutt
+  msmtp
 ]
