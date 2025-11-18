@@ -4,9 +4,9 @@
 output=""
 while IFS=: read -r name windows attached; do
     if [ "$attached" -eq 1 ]; then
-        output+="<b>[ $name | $windows ]</b> "
+        output+=" [ $name:$windows] "
     else
-        output+="[ $name | $windows ] "
+        output+=" [ $name:$windows] "
     fi
 done < <(tmux list-sessions -F "#{session_name}:#{session_windows}:#{session_attached}" 2>/dev/null)
 
@@ -15,7 +15,7 @@ output="${output% }"
 
 # If no sessions, show nothing or a placeholder
 if [ -z "$output" ]; then
-    output=""
+  output="[   $(whoami)($(hostname)):0 ]"
 fi
 
 echo "$output"

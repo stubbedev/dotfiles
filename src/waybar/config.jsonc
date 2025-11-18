@@ -14,23 +14,25 @@
     "sway/mode",
     "sway/scratchpad"
   ],
-  "modules-center": [],
+  "modules-center": [
+    "custom/tmux"
+  ],
   "modules-right": [
-    "custom/tmux",
     "hyprland/language",
     "sway/language",
+    "mpd",
     "pulseaudio",
     // "bluetooth",
-    "network",
-    "cpu",
-    "memory",
-    "temperature",
+    // "network",
+    // "cpu",
+    // "memory",
+    // "temperature",
     "backlight",
     "battery",
     "clock",
-    "idle_inhibitor",
+    // "idle_inhibitor",
     "tray",
-    "power-profiles-daemon",
+    "power-profiles-daemon"
   ],
   "custom/tmux": {
     "exec": "~/.config/waybar/scripts/tmux-status.sh",
@@ -267,29 +269,5 @@
     },
     "on-click": "pavucontrol",
     "max-volume": 200
-  },
-  "custom/media": {
-    "format": "{icon} {}",
-    "return-type": "json",
-    "max-length": 40,
-    "format-icons": {
-      "spotify": "",
-      "default": "🎜"
-    },
-    "escape": true,
-    "exec": "$HOME/.config/waybar/mediaplayer.py 2> /dev/null" // Script in resources folder
-    // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
-  },
-  "custom/power": {
-    "format": "⏻ ",
-    "tooltip": false,
-    "menu": "on-click",
-    "menu-file": "$HOME/.config/waybar/power_menu.xml", // Menu file in resources folder
-    "menu-actions": {
-      "shutdown": "shutdown",
-      "reboot": "reboot",
-      "suspend": "systemctl suspend",
-      "hibernate": "systemctl hibernate"
-    }
   }
 }
