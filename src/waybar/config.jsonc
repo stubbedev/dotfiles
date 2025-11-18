@@ -16,6 +16,7 @@
   ],
   "modules-center": [],
   "modules-right": [
+    "custom/tmux",
     "hyprland/language",
     "sway/language",
     "pulseaudio",
@@ -30,7 +31,6 @@
     "idle_inhibitor",
     "tray",
     "power-profiles-daemon",
-    "custom/tmux"
   ],
   "custom/tmux": {
     "exec": "~/.config/waybar/scripts/tmux-status.sh",
