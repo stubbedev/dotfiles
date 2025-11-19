@@ -15,7 +15,7 @@ output="${output% }"
 
 # If no sessions, show nothing or a placeholder
 if [ -z "$output" ]; then
-  output=""
+  output=" "
 fi
 
 echo "$output"
