@@ -32,7 +32,7 @@ in {
           if [[ ! -x "$terminal_emulator" ]]; then
             terminal_emulator="$HOME/.cargo/bin/alacritty"
           fi
-          $terminal_emulator -e ${pkgs.neomutt}/bin/neomutt -F $HOME/.config/neomutt/neomuttrc
+          $terminal_emulator -e ${config.home.homeDirectory}/.nix-profile/bin/neomutt -F ${config.home.homeDirectory}/.config/neomutt/neomuttrc
         '';
         executable = true;
       };
