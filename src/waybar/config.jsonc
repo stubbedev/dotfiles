@@ -9,7 +9,7 @@
   "modules-left": [
     "hyprland/workspaces",
     "hyprland/submap",
-    // "hyprland/window",
+    "hyprland/window",
     "sway/workspaces",
     "sway/mode",
     "sway/scratchpad"
