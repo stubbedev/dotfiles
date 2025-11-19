@@ -39,6 +39,7 @@ in {
       ".themes/${constants.theme.gtkTheme}" = {
         source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       };
+      ".w3m".source = ./../../w3m;
     };
 
     sessionVariables = {

@@ -1,0 +1,20 @@
+# Display settings
+display_link_number 1
+display_link 1
+
+# Image display settings
+# Note: Images only work in terminals with image protocol support
+# (kitty, wezterm, ghostty, etc. - NOT alacritty)
+inline_img_protocol 4
+auto_image 1
+imgdisplay /usr/lib/w3m/w3mimgdisplay
+
+# Colors
+color 1
+
+# Character encoding
+display_charset UTF-8
+document_charset UTF-8
+
+# Misc settings
+confirm_qq 0
