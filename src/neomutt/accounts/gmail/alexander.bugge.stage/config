@@ -1,6 +1,6 @@
 set imap_user = "alexander.bugge.stage@gmail.com"
 set imap_pass = "`gpg --quiet --batch --decrypt ~/.config/neomutt/accounts/gmail/alexander.bugge.stage/password.gpg`"
-set smtp_url = "smtp://account1@smtp.gmail.com:587/"
+set smtp_url = "smtp://$imap_user@smtp.gmail.com:587/"
 set smtp_pass = "`gpg --quiet --batch --decrypt ~/.config/neomutt/accounts/gmail/alexander.bugge.stage/password.gpg`"
 
 
