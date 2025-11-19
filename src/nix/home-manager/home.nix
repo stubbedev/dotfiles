@@ -20,7 +20,6 @@ in {
         if [[ -f "${constants.paths.zsh}/init" ]]; then
           source ${constants.paths.zsh}/init
         fi
-
       '';
       ".ideavimrc".source = ./../../ideavim/ideavimrc;
       ".tmux.conf".source = ./../../tmux/tmux.conf;
@@ -37,13 +36,8 @@ in {
         executable = true;
       };
 
-      # Theme files
-      ".icons/${constants.theme.iconTheme}" = {
-        source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
-      };
-      ".themes/${constants.theme.gtkTheme}" = {
-        source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
-      };
+      ".icons/${constants.theme.iconTheme}".source  = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
+      ".themes/${constants.theme.gtkTheme}".source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
     };
 
@@ -87,7 +81,7 @@ in {
 
   imports = programs;
 
-  # XDG Config files 
+  # XDG Config files
   xdg.configFile = {
     "lazygit/config.yml".source = ./../../lazygit/config.yml;
     "ghostty".source = ./../../ghostty;

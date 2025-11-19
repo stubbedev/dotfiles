@@ -23,3 +23,7 @@ set imap_keepalive = 900
 
 set sort = reverse-threads
 set sort_aux = last-date-received
+
+# Only show INBOX in sidebar to count only inbox items
+unmailboxes *
+mailboxes +INBOX
