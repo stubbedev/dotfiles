@@ -48,7 +48,8 @@ macro index <f2> "<enter-command>unmailboxes *<enter><enter-command>source ~/.co
 ## Fetch mail
 bind index G imap-fetch-mail
 ## View HTML in w3m (with better rendering)
-bind attach,pager \cv view-mailcap
+bind attach \cv view-mailcap
+bind pager \cv view-attach
 
 # General Settings
 set editor="nvim"
