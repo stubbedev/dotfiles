@@ -113,6 +113,7 @@ in {
       PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
     '';
     "neomutt/neomuttrc".source = ./../../neomutt/neomuttrc;
+    "neomutt/mailcap".source = ./../../neomutt/mailcap;
   };
 
   systemd.user.services = {

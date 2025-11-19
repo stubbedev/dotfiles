@@ -70,4 +70,5 @@ with pkgs; [
   # Mailing
   neomutt
   msmtp
+  w3m
 ]

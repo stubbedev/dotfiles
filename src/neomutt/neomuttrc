@@ -51,3 +51,8 @@ bind index G imap-fetch-mail
 # General Settings
 set editor="nvim"
 
+# HTML rendering
+set mailcap_path = "~/.config/neomutt/mailcap"
+auto_view text/html
+alternative_order text/plain text/enriched text/html
+
