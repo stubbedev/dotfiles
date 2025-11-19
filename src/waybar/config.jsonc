@@ -47,6 +47,7 @@
     "return-type": "json",
     "format": "{}",
     "interval": 60,
+    "markup": "pango",
     "on-click": "alacritty -e neomutt"
   },
   // Modules configuration

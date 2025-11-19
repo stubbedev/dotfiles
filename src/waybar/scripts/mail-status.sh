@@ -83,7 +83,7 @@ if [ "$total_unread" -gt 0 ]; then
   tooltip="${tooltip%\\n}"
 
   # Output JSON
-  echo "{\"text\":\"$ICON_OPEN $total_unread\",\"tooltip\":\"$tooltip\",\"class\":\"unread\"}"
+  echo "{\"text\":\"$ICON_OPEN $total_unread \",\"tooltip\":\"$tooltip\",\"class\":\"unread\"}"
 else
   # Show nothing if no unread emails
   echo "{\"text\":\"\",\"tooltip\":\"No unread emails\",\"class\":\"empty\"}"
