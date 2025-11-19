@@ -4,7 +4,8 @@
 ACCOUNTS_DIR="$HOME/.config/neomutt/accounts"
 
 # Icons
-ICON_OPEN="🖂" # Open envelope (has unread)
+# ICON_OPEN="🖂" # Open envelope (has unread)
+ICON_OPEN="" # Open envelope (has unread)
 
 # Arrays to store account info
 declare -a accounts_with_unread

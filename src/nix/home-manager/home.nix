@@ -32,6 +32,14 @@ in {
       ".ideavimrc".source = ./../../ideavim/ideavimrc;
       ".tmux.conf".source = ./../../tmux/tmux.conf;
 
+      ".local/bin/waybar-open-mail" = {
+        text = ''
+          #!/usr/bin/env bash
+          ${pkgs.alacritty}/bin/alacritty -e ${pkgs.neomutt}/bin/neomutt 2&>/dev/null || $HOME/.cargo/bin/alacritty -e ${pkgs.neomutt}/bin/neomutt 2&>/dev/null
+        '';
+        executable = true;
+      };
+
       # Theme files
       ".icons/${constants.theme.iconTheme}" = {
         source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
