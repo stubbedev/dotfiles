@@ -18,6 +18,7 @@
     "custom/tmux"
   ],
   "modules-right": [
+    "custom/mail",
     "hyprland/language",
     "sway/language",
     "mpd",
@@ -40,6 +41,14 @@
     "format": "{}",
     "interval": 5,
     "markup": "pango"
+  },
+  "custom/mail": {
+    "exec": "~/.config/waybar/scripts/mail-status.sh",
+    "return-type": "string",
+    "format": "{}",
+    "interval": 60,
+    "tooltip-format": "Unread emails",
+    "on-click": "alacritty -e neomutt"
   },
   // Modules configuration
   "sway/workspaces": {
