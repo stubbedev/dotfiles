@@ -28,9 +28,9 @@ in {
       ".local/bin/waybar-open-mail" = {
         text = ''
           #!/usr/bin/env bash
-          terminal_emulator="${pkgs.alacritty}/bin/alacritty"
+          terminal_emulator="$HOME/.cargo/bin/alacritty"
           if [[ ! -x "$terminal_emulator" ]]; then
-            terminal_emulator="$HOME/.cargo/bin/alacritty"
+            terminal_emulator="${config.home.homeDirectory}/.nix-profile/bin/alacritty"
           fi
           $terminal_emulator -e ${config.home.homeDirectory}/.nix-profile/bin/neomutt -F ${config.home.homeDirectory}/.config/neomutt/neomuttrc
         '';
