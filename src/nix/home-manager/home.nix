@@ -3,14 +3,7 @@ let
   homeLib = import ./lib.nix { inherit lib; };
   constants = import ./constants.nix { inherit config; };
 
-  # Environment-based feature flags with validation
-  enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland = enableHyprland == "true";
-
-  # Optimized package loading with error handling and conditional hyprland support
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
-
-  # Optimized module imports with conditional loading
   programs = homeLib.loadModulesFromDir ./programs;
 in {
 
@@ -35,7 +28,11 @@ in {
       ".local/bin/waybar-open-mail" = {
         text = ''
           #!/usr/bin/env bash
-          ${pkgs.alacritty}/bin/alacritty -e ${pkgs.neomutt}/bin/neomutt 2&>/dev/null || $HOME/.cargo/bin/alacritty -e ${pkgs.neomutt}/bin/neomutt 2&>/dev/null
+          terminal_emulator="${pkgs.alacritty}/bin/alacritty"
+          if [[ ! -x "$terminal_emulator" ]]; then
+            terminal_emulator="$HOME/.cargo/bin/alacritty"
+          fi
+          $terminal_emulator -e ${pkgs.neomutt}/bin/neomutt -F $HOME/.config/neomutt/neomuttrc
         '';
         executable = true;
       };
