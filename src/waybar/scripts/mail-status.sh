@@ -4,10 +4,11 @@
 ACCOUNTS_DIR="$HOME/.config/neomutt/accounts"
 
 # Icons
-ICON_OPEN="🖂 "   # Open envelope (has unread)
+ICON_OPEN="🖂" # Open envelope (has unread)
 
-# Array to store account info
-declare -a accounts_output
+# Arrays to store account info
+declare -a accounts_with_unread
+declare -i total_unread=0
 
 # Function to count unread emails via IMAP using curl
 count_unread_imap() {
@@ -29,15 +30,18 @@ count_unread_imap() {
   [ -z "$password" ] && echo "0" && return
 
   # Query IMAP for unseen count using curl
+  # Use STATUS command to get the actual count of unseen messages
+  # Force LOGIN authentication to avoid GSSAPI/Kerberos issues with Exchange
   local result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
     --user "${imap_user}:${password}" \
-    -X "SEARCH UNSEEN" 2>/dev/null)
+    --login-options "AUTH=PLAIN" \
+    -X "STATUS INBOX (UNSEEN)" 2>/dev/null)
 
-  # Count the number of message IDs returned
+  # Count the number of unseen messages
   if [ -n "$result" ]; then
-    # Extract numbers after "* SEARCH" and count them
-    local count=$(echo "$result" | grep -oP '\* SEARCH \K.*' | wc -w)
-    echo "$count"
+    # Extract the number from "* STATUS INBOX (UNSEEN X)"
+    local count=$(echo "$result" | grep -oP 'UNSEEN \K\d+')
+    echo "${count:-0}"
   else
     echo "0"
   fi
@@ -62,17 +66,25 @@ for domain_dir in "$ACCOUNTS_DIR"/*; do
 
     # Only add to output if there are unread emails
     if [ "$unread" -gt 0 ]; then
-      accounts_output+=("$ICON_OPEN$account_name:$domain:$unread")
+      accounts_with_unread+=("$account_name:$domain ($unread)")
+      total_unread=$((total_unread + unread))
     fi
   done
 done
 
-# Output all accounts
-if [ ${#accounts_output[@]} -gt 0 ]; then
-  # Join array elements with space
-  printf "%s " "${accounts_output[@]}"
-  echo ""
+# Output in JSON format for Waybar
+if [ "$total_unread" -gt 0 ]; then
+  # Build tooltip text
+  tooltip=""
+  for account in "${accounts_with_unread[@]}"; do
+    tooltip="${tooltip}${account}\n"
+  done
+  # Remove trailing newline
+  tooltip="${tooltip%\\n}"
+
+  # Output JSON
+  echo "{\"text\":\"$ICON_OPEN $total_unread\",\"tooltip\":\"$tooltip\",\"class\":\"unread\"}"
 else
   # Show nothing if no unread emails
-  echo ""
+  echo "{\"text\":\"\",\"tooltip\":\"No unread emails\",\"class\":\"empty\"}"
 fi

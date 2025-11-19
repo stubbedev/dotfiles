@@ -39,15 +39,14 @@
     "exec": "~/.config/waybar/scripts/tmux-status.sh",
     "return-type": "string",
     "format": "{}",
-    "interval": 5,
+    "interval": 3,
     "markup": "pango"
   },
   "custom/mail": {
     "exec": "~/.config/waybar/scripts/mail-status.sh",
-    "return-type": "string",
+    "return-type": "json",
     "format": "{}",
     "interval": 60,
-    "tooltip-format": "Unread emails",
     "on-click": "alacritty -e neomutt"
   },
   // Modules configuration
