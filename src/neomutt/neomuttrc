@@ -33,7 +33,19 @@ color body		color4 default		(^|[[:space:]])/[^[:space:]]+/([[:space:]]|$)     # 
 color sidebar_flagged   color1 default    # Mailboxes with flagged mails are Red
 color sidebar_new       color10 default   # Mailboxes with new mail are Green
 
-# Default Account
+# Index Formatting
+set index_format = "%4C %Z %{%b %d} %-15.15L (%?l?%4l&%4c?) %s"
+
+# Sorting
+set sort = threads
+set sort_aux = reverse-last-date-received
+
+# General Settings
+set editor = "nvim"
+set pager_index_lines = 8
+set menu_scroll = yes
+
+ # Default Account
 source "~/.config/neomutt/accounts/kontainer/abs/config"
 
 # Folder Hooks
@@ -52,10 +64,10 @@ bind attach \cv view-mailcap
 bind pager \cv view-attachments
 
 # General Settings
-set editor="nvim"
+set editor = "nvim"
 
 # HTML rendering
 set mailcap_path = "~/.config/neomutt/mailcap"
-auto_view text/html
-alternative_order text/plain text/enriched text/html
+auto_view text/html text/plain
+alternative_order text/html text/plain text/enriched
 
