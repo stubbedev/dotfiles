@@ -226,6 +226,9 @@
   echo "Installing opencode-ai globally..."
   eval "\"${pkgs.bun}/bin/bun\" install opencode-ai@latest --global $REDIRECT_SUFFIX"
 
+  echo "Installing lazydocker globally..."
+  eval "\"${pkgs.go}/bin/go\" install github.com/jesseduffield/lazydocker@latest $REDIRECT_SUFFIX"
+
   echo "Creating local bin directory..."
   mkdir -p "${constants.paths.customBinDir}"
 

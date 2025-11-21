@@ -39,7 +39,6 @@ with pkgs; [
   # Version control
   git
   lazygit
-  lazydocker
   gh
 
   # Archive handling

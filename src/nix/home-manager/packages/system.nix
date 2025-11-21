@@ -19,4 +19,5 @@ with pkgs; [
   cliphist
 
   mailutils
+  aerc
 ]
