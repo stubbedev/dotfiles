@@ -21,7 +21,5 @@ in ''
   cat "${stubbeDir}/src/btop/btop.conf" > "${homeDir}/.config/btop/btop.conf"
   rm -rf "${homeDir}/.config/neomutt/accounts"
   ln -sf "${stubbeDir}/src/neomutt/accounts" "${homeDir}/.config/neomutt/accounts"
-  rm -rf "${homeDir}/.config/aerc/accounts"
-  ln -sf "${stubbeDir}/src/aerc/accounts" "${homeDir}/.config/aerc/accounts"
 ''
 
