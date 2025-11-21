@@ -53,8 +53,8 @@ folder-hook 'alexander.bugge.stage@gmail.com' 'source ~/.config/neomutt/accounts
 folder-hook 'abs@kontainer.com' 'source ~/.config/neomutt/accounts/kontainer/abs/config'
 
 # Account Switching Macros
-macro index <Esc>1 "<enter-command>unmailboxes *<enter><enter-command>source ~/.config/neomutt/accounts/gmail/alexander.bugge.stage/config<enter><sync-mailbox><change-folder>!<enter>"
-macro index <Esc>2 "<enter-command>unmailboxes *<enter><enter-command>source ~/.config/neomutt/accounts/kontainer/abs/config<enter><sync-mailbox><change-folder>!<enter>"
+macro index <Esc>1 "<enter-command>unmailboxes *<enter><enter-command>source ~/.config/neomutt/accounts/gmail/alexander.bugge.stage/config<enter><change-folder>!<enter><sync-mailbox>"
+macro index <Esc>2 "<enter-command>unmailboxes *<enter><enter-command>source ~/.config/neomutt/accounts/kontainer/abs/config<enter><change-folder>!<enter><sync-mailbox>"
 
 # Mappings
 ## Fetch mail
