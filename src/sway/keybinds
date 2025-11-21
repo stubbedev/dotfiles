@@ -4,7 +4,7 @@
 # LAUNCHERS
 bindsym $mod+Return exec alacritty || ghostty || kitty || foot || wezterm || gnome-terminal || x-terminal-emulator
 bindsym $mod+Shift+e exec nautilus || thunar || dolphin
-bindsym $mod+space exec rofi -drun-use-desktop-cache -show combi -combi-modes "drun" -modes combi
+bindsym $mod+space exec rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun
 bindsym $mod+Shift+space exec rofi -show combi -combi-modes "run" -modes combi
 bindsym $mod+Ctrl+space exec rofi -show combi -combi-modes "window" -modes combi
 bindsym Shift+Print exec grimshot save active - | wl-copy
