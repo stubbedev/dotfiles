@@ -36,7 +36,7 @@ in {
         executable = true;
       };
 
-      ".icons/${constants.theme.iconTheme}".source  = "${pkgs.vimix-icon-theme}/share/icons/Vimix-black-dark";
+      ".icons/${constants.theme.iconTheme}".source  = "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
       ".themes/${constants.theme.gtkTheme}".source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
     };
@@ -62,6 +62,7 @@ in {
 
       # Theme and custom variables
       GTK_THEME = constants.theme.gtkTheme;
+      GTK_THEME_VARIANT = "dark";
       DEPLOYER_REMOTE_USER = "abs";
     };
 
