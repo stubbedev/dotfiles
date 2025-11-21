@@ -115,9 +115,7 @@ in {
     '';
     "neomutt/neomuttrc".source = ./../../neomutt/neomuttrc;
     "neomutt/mailcap".source = ./../../neomutt/mailcap;
-    "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
-    "aerc/accounts.conf".source = ./../../aerc/accounts.conf;
-    "aerc/binds.conf".source = ./../../aerc/binds.conf;
+    "aerc".source = ./../../aerc;
   };
 
   systemd.user.services = {
