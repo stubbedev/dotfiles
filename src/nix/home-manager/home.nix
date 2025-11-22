@@ -77,6 +77,10 @@ in {
         (import ./scripts/shell-completions.nix {
           inherit config pkgs constants;
         });
+      aercAccountsConf = lib.hm.dag.entryAfter [ "writeBoundary" ]
+        (import ./scripts/aerc-accounts.nix {
+          inherit config pkgs constants;
+        });
     };
   };
 
@@ -116,7 +120,6 @@ in {
     "neomutt/neomuttrc".source = ./../../neomutt/neomuttrc;
     "neomutt/mailcap".source = ./../../neomutt/mailcap;
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
-    "aerc/accounts.conf".source = ./../../aerc/accounts.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
     "aerc/accounts".source = ./../../aerc/accounts;
   };
