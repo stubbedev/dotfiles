@@ -34,6 +34,7 @@ in ''
 
   # AERC Setup
   rm -rf "${homeDir}/.config/aerc/accounts"
+  mkdir -p "${homeDir}/.config/aerc"
   ln -s "${stubbeDir}/src/aerc/accounts" "${homeDir}/.config/aerc/accounts"
   rm -rf "${homeDir}/.config/aerc/accounts.conf"
   ln -s "${stubbeDir}/src/aerc/accounts.conf" "${homeDir}/.config/aerc/accounts.conf"
