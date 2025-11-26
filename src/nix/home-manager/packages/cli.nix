@@ -71,4 +71,6 @@ with pkgs; [
   msmtp
   w3m
   pandoc
+  elinks
+  lynx
 ]
