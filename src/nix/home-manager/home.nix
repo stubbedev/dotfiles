@@ -117,7 +117,7 @@ in {
     "neomutt/mailcap".source = ./../../neomutt/mailcap;
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
-    "aerc/stylesets".soruce = ./../../aerc/stylesets;
+    "aerc/stylesets".source = ./../../aerc/stylesets;
   };
 
   systemd.user.services = {
