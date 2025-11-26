@@ -33,8 +33,8 @@ in ''
   ln -sf "${stubbeDir}/src/neomutt/accounts" "${homeDir}/.config/neomutt/accounts"
 
   # AERC Setup
-  rm -rf "${homeDir}/.config/aerc/accounts"
   mkdir -p "${homeDir}/.config/aerc"
+  rm -rf "${homeDir}/.config/aerc/accounts"
   ln -s "${stubbeDir}/src/aerc/accounts" "${homeDir}/.config/aerc/accounts"
   rm -rf "${homeDir}/.config/aerc/accounts.conf"
   ln -s "${stubbeDir}/src/aerc/accounts.conf" "${homeDir}/.config/aerc/accounts.conf"
