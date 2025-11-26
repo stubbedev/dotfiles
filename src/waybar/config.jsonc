@@ -23,7 +23,7 @@
     "sway/language",
     "mpd",
     "pulseaudio",
-    // "bluetooth",
+    "bluetooth",
     // "network",
     // "cpu",
     // "memory",
