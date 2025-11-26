@@ -24,7 +24,7 @@ in {
       ".ideavimrc".source = ./../../ideavim/ideavimrc;
       ".tmux.conf".source = ./../../tmux/tmux.conf;
 
-      ".local/bin/waybar-open-mail" = {
+      ".local/bin/open-mail-neomutt" = {
         text = ''
           #!/usr/bin/env bash
           terminal_emulator="$HOME/.cargo/bin/alacritty"
