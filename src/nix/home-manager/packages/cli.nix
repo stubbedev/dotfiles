@@ -70,4 +70,5 @@ with pkgs; [
   neomutt
   msmtp
   w3m
+  pandoc
 ]
