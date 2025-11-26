@@ -73,4 +73,6 @@ with pkgs; [
   pandoc
   elinks
   lynx
+  chafa
+  catimg
 ]

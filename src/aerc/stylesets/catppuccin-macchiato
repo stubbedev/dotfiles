@@ -33,6 +33,8 @@ statusline_error.bold=true
 statusline_success.bold=true
 
 selector_focused.bg=#363a4f
+selector_focused.fg=#cad3f5
+selector_focused.bold=true
 
 completion_default.selected.bg=#363a4f
 
