@@ -24,14 +24,15 @@ in {
       ".ideavimrc".source = ./../../ideavim/ideavimrc;
       ".tmux.conf".source = ./../../tmux/tmux.conf;
 
-      ".local/bin/open-mail-neomutt" = {
+      ".local/bin/open-mail" = {
         text = ''
           #!/usr/bin/env bash
           terminal_emulator="$HOME/.cargo/bin/alacritty"
           if [[ ! -x "$terminal_emulator" ]]; then
             terminal_emulator="${config.home.homeDirectory}/.nix-profile/bin/alacritty"
           fi
-          $terminal_emulator -e ${config.home.homeDirectory}/.nix-profile/bin/neomutt -F ${config.home.homeDirectory}/.config/neomutt/neomuttrc
+          # $terminal_emulator -e ${config.home.homeDirectory}/.nix-profile/bin/neomutt -F ${config.home.homeDirectory}/.config/neomutt/neomuttrc
+          $terminal_emulator -e aerc
         '';
         executable = true;
       };

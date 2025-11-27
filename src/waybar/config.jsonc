@@ -48,7 +48,7 @@
     "format": "{}",
     "interval": 60,
     "markup": "pango",
-    "on-click": "~/.local/bin/open-mail-neomutt"
+    "on-click": "~/.local/bin/open-mail"
   },
   // Modules configuration
   "sway/workspaces": {
