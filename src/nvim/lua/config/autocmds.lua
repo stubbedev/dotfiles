@@ -3,3 +3,11 @@
 -- Add any additional autocmds here
 -- wrap and check for spell in text filetypes
 
+-- Disable diagnostics for .env files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "env",
+  callback = function()
+    vim.diagnostic.disable(0)
+  end,
+})
+
