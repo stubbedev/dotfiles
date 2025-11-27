@@ -2,7 +2,7 @@
 
 # aerc-whichkey.sh: Display aerc keybindings in fzf menu, whichkey-style
 
-CONFIG_FILE="$HOME/.stubbe/src/aerc/binds.conf"
+CONFIG_FILE="$HOME/Config/dotfiles/src/aerc/binds.conf"
 CONTEXT="messages"  # Default context; could be made dynamic if possible
 
 # Parse binds.conf for the given context
@@ -24,15 +24,15 @@ parse_binds() {
         if $in_context && [[ $line =~ ^([^=]+)=(.+) ]]; then
             key="${BASH_REMATCH[1]// /}"  # Remove spaces
             cmd="${BASH_REMATCH[2]}"
-            # Look for comment on previous line
-            if [[ $prev_line =~ ^#(.+) ]]; then
-                desc="${BASH_REMATCH[1]// /}"  # Remove leading/trailing spaces
+            # Check for inline comment
+            if [[ $cmd =~ (.+)#(.+) ]]; then
+                cmd="${BASH_REMATCH[1]}"
+                desc="${BASH_REMATCH[2]// /}"  # Remove leading/trailing spaces
             else
                 desc="No description"
             fi
             echo "$key : $desc"
         fi
-        prev_line="$line"
     done < "$CONFIG_FILE"
 }
 
