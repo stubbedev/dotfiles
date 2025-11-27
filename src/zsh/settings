@@ -90,4 +90,8 @@ if is_binary starship; then
       }
 fi
 
+if is_binary pyenv; then
+    eval "$(pyenv init -)"
+    eval "$(pyenv virtualenv-init -)"
+fi
 
