@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# aerc-whichkey.sh: Display aerc keybindings in fzf menu, whichkey-style
+
+CONFIG_FILE="$HOME/Config/dotfiles/src/aerc/binds.conf"
+CONTEXT="messages"
+
+# Parse binds.conf for the given context
+parse_binds() {
+    local in_context=false
+    while IFS= read -r line; do
+        # Check for context start
+        if [[ $line =~ ^\[([^\]]+)\] ]]; then
+            current_context="${BASH_REMATCH[1]}"
+            if [[ $current_context == "$CONTEXT" ]]; then
+                in_context=true
+            else
+                in_context=false
+            fi
+            continue
+        fi
+
+        # If in context and line is a bind
+        if $in_context && [[ $line =~ ^([^=]+)=(.+) ]]; then
+            key="${BASH_REMATCH[1]// /}"  # Remove spaces
+            cmd="${BASH_REMATCH[2]}"
+            # Check for inline comment
+            if [[ $cmd =~ (.+)#(.+) ]]; then
+                cmd="${BASH_REMATCH[1]}"
+                desc="${BASH_REMATCH[2]// /}"  # Remove leading/trailing spaces
+            else
+                desc="No description"
+            fi
+            echo "$key : $desc"
+        fi
+    done < "$CONFIG_FILE"
+}
+
+# Display in fzf
+parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=50% --border

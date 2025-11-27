@@ -3,7 +3,7 @@
 # aerc-whichkey.sh: Display aerc keybindings in fzf menu, whichkey-style
 
 CONFIG_FILE="$HOME/Config/dotfiles/src/aerc/binds.conf"
-CONTEXT="messages"  # Default context; could be made dynamic if possible
+CONTEXT="view"
 
 # Parse binds.conf for the given context
 parse_binds() {

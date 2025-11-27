@@ -7,6 +7,7 @@ STUBBE_PATHS=(
   "$HOME/.stubbe/bin/utils"
   "$HOME/.stubbe/src/go/bin"
   "$HOME/.stubbe/src/go/packages/bin"
+  "$HOME/.stubbe/src/aerc/scripts"
   "$HOME/.local/bin"
   "$HOME/.config/composer/vendor/bin"
   "$HOME/.config/emacs/bin"
