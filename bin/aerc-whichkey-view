@@ -27,14 +27,18 @@ parse_binds() {
             # Check for inline comment
             if [[ $cmd =~ (.+)#(.+) ]]; then
                 cmd="${BASH_REMATCH[1]}"
-                desc="${BASH_REMATCH[2]// /}"  # Remove leading/trailing spaces
+                desc="$(echo "${BASH_REMATCH[2]}" | sed 's/^ *//;s/ *$//')"
             else
                 desc="No description"
             fi
-            echo "$key : $desc"
+            echo "$key : $desc : $cmd"
         fi
     done < "$CONFIG_FILE"
 }
 
-# Display in fzf
-parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=100% --border
+# Display in fzf and send selected key to pane above
+selected=$(parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=100% --border --preview 'echo {} | cut -d: -f3')
+if [[ -n "$selected" ]]; then
+    key=$(echo "$selected" | cut -d: -f1 | sed 's/^ *//;s/ *$//')
+    tmux send-keys -t '{up-of}' "$key"
+fi
