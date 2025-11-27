@@ -37,7 +37,7 @@ parse_binds() {
 }
 
 # Display in fzf and send selected key to pane above
-selected=$(parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=100% --border --delimiter='|' --with-nth=1,2 --preview='echo {3}')
+selected=$(parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=100% --border --with-nth=1,2 --preview='echo {3}')
 if [[ -n "$selected" ]]; then
     key=$(echo "$selected" | cut -d: -f1 | sed 's/^ *//;s/ *$//')
     tmux send-keys -t '{up-of}' "$key"
