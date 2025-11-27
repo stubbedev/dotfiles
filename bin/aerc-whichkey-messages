@@ -37,4 +37,4 @@ parse_binds() {
 }
 
 # Display in fzf
-parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=50% --border
+parse_binds | fzf --prompt="Aerc Keybindings ($CONTEXT): " --height=100% --border
