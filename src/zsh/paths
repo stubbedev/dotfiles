@@ -18,6 +18,7 @@ STUBBE_PATHS=(
   "$HOME/.go/bin"
   "$HOME/go/bin"
   "$HOME/bin"
+  "$HOME/.pyenv/bin"
   "$HOME/.nix-profile/bin"
   "/home/linuxbrew/.linuxbrew/bin"
   "/sbin"
