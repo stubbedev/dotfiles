@@ -74,6 +74,7 @@ bindings = [
   # { key = "C", mods = "Control|Shift", mode = "Vi|~Search", action = "ReceiveChar" },
   { key = "C", mods = "Command", mode = "Vi|~Search", action = "ReceiveChar" },
   { key = "Insert", mods = "Shift", action = "ReceiveChar" },
+  { key = "Return", mods = "Shift", chars = "\n" }
 ]
 
 [selection]
