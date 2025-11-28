@@ -8,5 +8,7 @@ while ! systemctl is-active --quiet "$SERVICE"; do
 done
 
 # Send the signal to Waybar once
-pkill -SIGUSR2 waybar
+if pgrep -x waybar >/dev/null; then
+    pkill -SIGUSR2 waybar || true
+fi
 

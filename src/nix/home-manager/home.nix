@@ -124,11 +124,11 @@ in {
     waybar-reload-on-power-profile = {
       Unit = {
         Description = "Reload Waybar when power-profiles-daemon starts";
-        After = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" "power-profiles-daemon.service" ];
       };
       Install = { WantedBy = [ "default.target" ]; };
       Service = {
-        Type = "simple";
+        Type = "oneshot";
         ExecStart =
           "${constants.paths.hypr}/scripts/wait_for_power_profiles.sh";
         Restart = "no";
