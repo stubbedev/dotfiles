@@ -404,37 +404,6 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
 fi
 
-if is_binary nala; then
-  function npt {
-    case "$1" in
-    [iI] | [iI]nstall)
-      sudo nala install "${@:2}"
-      ;;
-    [uU] | [uU]pdate)
-      sudo nala update "${@:2}"
-      ;;
-    [uU]g | [uU]pgrade)
-      sudo nala upgrade "${@:2}"
-      ;;
-    [sS] | [sS]earch)
-      sudo nala search "${@:2}"
-      ;;
-    [rR] | [rR]emove)
-      sudo nala remove "${@:2}"
-      ;;
-    l | ls | list)
-      sudo nala list --installed
-      ;;
-    [hH] | [hH]elp)
-      nala --help
-      ;;
-    *)
-      sudo nala "${@}"
-      ;;
-    esac
-  }
-fi
-
 if is_binary bat; then
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
@@ -497,9 +466,7 @@ if is_binary home-manager; then
 
       # Update system packages
       echo "📦 Updating system packages..."
-      if is_binary nala; then
-        sudo nala update && sudo nala upgrade
-      elif is_binary pacman; then
+      if is_binary pacman; then
         sudo pacman -Syu
       elif is_binary apt; then
         sudo apt update && sudo apt upgrade
