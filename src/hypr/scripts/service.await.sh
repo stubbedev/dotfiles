@@ -1,6 +1,11 @@
 #!/bin/bash
 
-SERVICE="power-profiles-daemon.service"
+SERVICE="$1"
+
+# Exit early if no service name provided
+if [ -z "$SERVICE" ]; then
+    exit 1
+fi
 
 # Wait until the service is active
 while ! systemctl is-active --quiet "$SERVICE"; do
@@ -11,4 +16,3 @@ done
 if pgrep -x waybar >/dev/null; then
     pkill -SIGUSR2 waybar || true
 fi
-

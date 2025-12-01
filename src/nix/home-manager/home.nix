@@ -121,7 +121,7 @@ in {
   };
 
   systemd.user.services = {
-    waybar-reload-on-power-profile = {
+    await-powerprofile = {
       Unit = {
         Description = "Reload Waybar when power-profiles-daemon starts";
         After = [ "graphical-session.target" "power-profiles-daemon.service" ];
@@ -130,7 +130,20 @@ in {
       Service = {
         Type = "oneshot";
         ExecStart =
-          "${constants.paths.hypr}/scripts/wait_for_power_profiles.sh";
+          "${constants.paths.hypr}/scripts/service.await.sh power-profiles-daemon.service";
+        Restart = "no";
+      };
+    };
+    await-bluetooth = {
+      Unit = {
+        Description = "Reload Waybar when bluetooth starts";
+        After = [ "graphical-session.target" "bluetooth.service" ];
+      };
+      Install = { WantedBy = [ "default.target" ]; };
+      Service = {
+        Type = "oneshot";
+        ExecStart =
+          "${constants.paths.hypr}/scripts/service.await.sh bluetooth.service";
         Restart = "no";
       };
     };
