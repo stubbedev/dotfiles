@@ -431,11 +431,17 @@ fi
 
 if is_binary fzf; then
   function fzf-project-picker {
-    cd "$(fzf-project-picker-util "$@")"
+    SELECTED_DIR="$(fzf-project-picker-util "$@")"
+    if [[ -n "$SELECTED_DIR" ]]; then
+      cd "$SELECTED_DIR"
+    fi
     clear
   }
   function fzf-directory-picker {
-    cd "$(fzf-directory-picker-util "$@")"
+    SELECTED_DIR="$(fzf-directory-picker-util "$@")"
+    if [[ -n "SELECTED_DIR" ]]; then
+      cd "$SELECTED_DIR"
+    fi
     clear
   }
 fi

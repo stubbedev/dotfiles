@@ -23,7 +23,13 @@ FD_CMD="fd . \
   --hidden 2>/dev/null"
 
 if [[ -n "$AWK_FILTER" ]]; then
-  echo "$HOME/$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | awk "$AWK_FILTER" | fzf --query="$INITIAL_QUERY")"
+  SELECTED_PATH="$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | awk "$AWK_FILTER" | fzf --query="$INITIAL_QUERY")"
 else
-  echo "$HOME/$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | fzf --query="$INITIAL_QUERY")"
+  SELECTED_PATH="$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | fzf --query="$INITIAL_QUERY")"
+fi
+
+if [[ -n "$SELECTED_PATH" ]]; then
+  echo "$HOME/$SELECTED_PATH"
+else
+  echo ""
 fi
