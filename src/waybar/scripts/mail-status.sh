@@ -5,8 +5,8 @@ ACCOUNTS_DIR="$HOME/.config/aerc/accounts"
 ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 
 # Icons
-ICON_OPEN="🖂" # Open envelope (has unread)
-# ICON_OPEN="" # Open envelope (has unread)
+# ICON_OPEN="🖂" # Open envelope (has unread)
+ICON_OPEN="" # Open envelope (has unread)
 
 # Arrays to store account info
 declare -a accounts_with_unread
