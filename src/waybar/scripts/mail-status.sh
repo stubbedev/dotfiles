@@ -1,33 +1,75 @@
 #!/usr/bin/env bash
 
-# Base directory for neomutt accounts
-ACCOUNTS_DIR="$HOME/.config/neomutt/accounts"
+# Base directory for aerc accounts
+ACCOUNTS_DIR="$HOME/.config/aerc/accounts"
+ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 
 # Icons
-# ICON_OPEN="🖂" # Open envelope (has unread)
-ICON_OPEN="" # Open envelope (has unread)
+ICON_OPEN="🖂" # Open envelope (has unread)
+# ICON_OPEN="" # Open envelope (has unread)
 
 # Arrays to store account info
 declare -a accounts_with_unread
 declare -i total_unread=0
 
+# Function to parse aerc accounts.conf and extract account info
+parse_aerc_account() {
+  local account_name="$1"
+  local in_section=0
+  local source="" source_cred_cmd=""
+
+  while IFS= read -r line; do
+    # Check if we're entering the target account section
+    if [[ "$line" =~ ^\[([^\]]+)\] ]]; then
+      if [ "${BASH_REMATCH[1]}" = "$account_name" ]; then
+        in_section=1
+      else
+        in_section=0
+      fi
+      continue
+    fi
+
+    # Parse fields if we're in the right section
+    if [ $in_section -eq 1 ]; then
+      if [[ "$line" =~ ^source=(.+)$ ]]; then
+        source="${BASH_REMATCH[1]}"
+      elif [[ "$line" =~ ^source-cred-cmd=(.+)$ ]]; then
+        source_cred_cmd="${BASH_REMATCH[1]}"
+      fi
+    fi
+  done <"$ACCOUNTS_CONF"
+
+  echo "$source|$source_cred_cmd"
+}
+
 # Function to count unread emails via IMAP using curl
 count_unread_imap() {
-  local config_file="$1"
+  local account_name="$1"
 
-  # Parse config file
-  local imap_user=$(grep 'set imap_user' "$config_file" | sed -E 's/.*"([^"]+)".*/\1/')
-  local imap_pass_cmd=$(grep 'set imap_pass' "$config_file" | sed -E 's/.*`([^`]+)`.*/\1/')
-  local folder=$(grep 'set folder' "$config_file" | sed -E 's/.*"imaps?:\/\/[^@]+@([^:\/]+):?([0-9]*)\/?".*/\1:\2/')
+  # Parse account configuration
+  local account_info=$(parse_aerc_account "$account_name")
+  local source=$(echo "$account_info" | cut -d'|' -f1)
+  local source_cred_cmd=$(echo "$account_info" | cut -d'|' -f2)
 
-  [ -z "$imap_user" ] || [ -z "$imap_pass_cmd" ] || [ -z "$folder" ] && echo "0" && return
+  [ -z "$source" ] || [ -z "$source_cred_cmd" ] && echo "0" && return
 
-  local server=$(echo "$folder" | cut -d: -f1)
-  local port=$(echo "$folder" | cut -d: -f2)
-  [ -z "$port" ] && port=993
+  # Parse IMAP URL: imaps://user@domain@server:port
+  # Format: imaps://abs@kontainer.com@ex.konformit.com:993
+  local url_stripped="${source#imaps://}"
+  local imap_user="${url_stripped%%@*}"    # Get first part before @
+  local rest="${url_stripped#*@}"          # Remove first part
+  local email_domain="${rest%%@*}"         # Get second part before @
+  imap_user="${imap_user}@${email_domain}" # Combine user@domain
+  local server_port="${rest#*@}"           # Get server:port
+  local server="${server_port%%:*}"
+  local port="${server_port##*:}"
+  [ "$port" = "$server" ] && port=993
+
+  # Expand tilde in credential command
+  source_cred_cmd="${source_cred_cmd/#\~/$HOME}"
 
   # Get password
-  local password=$(eval "$imap_pass_cmd" 2>/dev/null)
+  local password=$(eval "$source_cred_cmd" 2>/dev/null)
   [ -z "$password" ] && echo "0" && return
 
   # Query IMAP for unseen count using curl
@@ -48,30 +90,21 @@ count_unread_imap() {
   fi
 }
 
-# Loop through all account domains and names
-for domain_dir in "$ACCOUNTS_DIR"/*; do
-  [ -d "$domain_dir" ] || continue
-
-  domain=$(basename "$domain_dir")
-
-  for account_dir in "$domain_dir"/*; do
-    [ -d "$account_dir" ] || continue
-
-    account_name=$(basename "$account_dir")
-    config_file="$account_dir/config"
-
-    [ -f "$config_file" ] || continue
+# Read account names from accounts.conf
+while IFS= read -r line; do
+  if [[ "$line" =~ ^\[([^\]]+)\] ]]; then
+    account_name="${BASH_REMATCH[1]}"
 
     # Count unread emails via IMAP
-    unread=$(count_unread_imap "$config_file" 2>/dev/null || echo 0)
+    unread=$(count_unread_imap "$account_name" 2>/dev/null || echo 0)
 
     # Only add to output if there are unread emails
     if [ "$unread" -gt 0 ]; then
-      accounts_with_unread+=("$account_name:$domain ($unread)")
+      accounts_with_unread+=("$account_name ($unread)")
       total_unread=$((total_unread + unread))
     fi
-  done
-done
+  fi
+done <"$ACCOUNTS_CONF"
 
 # Output in JSON format for Waybar
 if [ "$total_unread" -gt 0 ]; then
