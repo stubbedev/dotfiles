@@ -125,8 +125,8 @@ get_unseen_uids() {
     --login-options "AUTH=PLAIN" \
     -X "SEARCH UNSEEN" 2>/dev/null)
 
-  # Extract UIDs from "* SEARCH uid1 uid2 uid3..."
-  echo "$result" | grep -oP '\* SEARCH \K.*' | tr ' ' '\n' | grep -E '^[0-9]+$'
+  # Extract UIDs from "* SEARCH uid1 uid2 uid3..." (remove \r\n)
+  echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' '\n' | grep -E '^[0-9]+$'
 }
 
 # Function to fetch email headers (PEEK to not mark as read)
@@ -137,12 +137,11 @@ fetch_email_headers() {
   local password="$4"
   local uid="$5"
 
-  # Use BODY.PEEK to fetch without marking as read
+  # Fetch the email using UID (this doesn't mark as read by default with curl)
   local result
-  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX;UID=${uid};SECTION=HEADER" \
+  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX;UID=${uid}" \
     --user "${user}:${password}" \
-    --login-options "AUTH=PLAIN" \
-    --request "FETCH ${uid} (BODY.PEEK[HEADER] BODY.PEEK[TEXT]<0.500>)" 2>/dev/null)
+    --login-options "AUTH=PLAIN" 2>/dev/null)
 
   echo "$result"
 }
@@ -152,19 +151,15 @@ parse_email_info() {
   local headers="$1"
   local subject=""
   local sender=""
-  local body_preview=""
-  local in_body=0
-  local body_char_count=0
-  local max_body_chars=200
+  local date=""
 
   while IFS= read -r line; do
     # Remove carriage return
     line="${line%$'\r'}"
 
-    # Check if we've reached the body
-    if [ -z "$line" ] && [ $in_body -eq 0 ]; then
-      in_body=1
-      continue
+    # Check if we've reached the body (stop parsing)
+    if [ -z "$line" ]; then
+      break
     fi
 
     # Extract subject (handle multi-line headers)
@@ -179,31 +174,9 @@ parse_email_info() {
       sender="${BASH_REMATCH[1]}"
     fi
 
-    # Get body preview (up to max_body_chars characters)
-    if [ $in_body -eq 1 ] && [ $body_char_count -lt $max_body_chars ]; then
-      # Skip empty lines at start of body
-      if [ -z "$body_preview" ] && [ -z "$line" ]; then
-        continue
-      fi
-
-      # Skip HTML tags and common MIME markers
-      if [[ "$line" =~ ^[[:space:]]*\<.*\>[[:space:]]*$ ]] ||
-        [[ "$line" =~ ^Content-Type: ]] ||
-        [[ "$line" =~ ^Content-Transfer-Encoding: ]] ||
-        [[ "$line" =~ ^--.*--$ ]]; then
-        continue
-      fi
-
-      if [ -n "$line" ]; then
-        local remaining=$((max_body_chars - body_char_count))
-        if [ ${#line} -gt $remaining ]; then
-          body_preview="${body_preview}${line:0:$remaining}"
-          body_char_count=$max_body_chars
-        else
-          body_preview="${body_preview}${line} "
-          body_char_count=$((body_char_count + ${#line} + 1))
-        fi
-      fi
+    # Extract date
+    if [[ "$line" =~ ^Date:\ (.+)$ ]]; then
+      date="${BASH_REMATCH[1]}"
     fi
   done <<<"$headers"
 
@@ -215,10 +188,7 @@ parse_email_info() {
     subject=$(echo "$subject" | perl -CS -MEncode -ne 'print decode("MIME-Header", $_)' 2>/dev/null || echo "$subject")
   fi
 
-  # Clean up body preview
-  body_preview=$(echo "$body_preview" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-  echo "${subject}|${sender}|${body_preview}"
+  echo "${subject}|${sender}|${date}"
 }
 
 # Function to check account in background
@@ -342,34 +312,24 @@ if [ "$total_new_emails" -gt 0 ]; then
           email_info=$(parse_email_info "$headers")
           subject=$(echo "$email_info" | cut -d'|' -f1)
           sender=$(echo "$email_info" | cut -d'|' -f2)
-          body_preview=$(echo "$email_info" | cut -d'|' -f3-)
-
-          # Truncate subject if too long
-          if [ ${#subject} -gt 60 ]; then
-            subject="${subject:0:57}..."
-          fi
-
-          # Body is already truncated to 200 chars in parse_email_info
-          # Add ellipsis if it looks truncated
-          if [ ${#body_preview} -ge 200 ]; then
-            body_preview="${body_preview}..."
-          fi
+          date=$(echo "$email_info" | cut -d'|' -f3)
 
           # Default values if parsing failed
           subject="${subject:-No Subject}"
           sender="${sender:-Unknown Sender}"
-          body_preview="${body_preview:-}"
+          date="${date:-}"
 
-          # Send notification
-          if [ -n "$body_preview" ]; then
-            notify-send -u normal -i mail-unread \
-              "${email}: ${subject}" \
-              "From: ${sender}\n\n${body_preview}"
-          else
-            notify-send -u normal -i mail-unread \
-              "${email}: ${subject}" \
-              "From: ${sender}"
+          # Format the notification body with sender and date
+          notification_body="From: ${sender}"
+          if [ -n "$date" ]; then
+            notification_body="${notification_body}\nDate: ${date}"
           fi
+          notification_body="${notification_body}\nTo: ${email}"
+
+          # Send notification with just subject as title (no actions/copy button)
+          notify-send -u normal -i mail-unread -a "mail-notification" \
+            "${subject}" \
+            "${notification_body}"
 
           # Mark UID as seen locally (does NOT mark as read on server)
           echo "$uid" >>"$seen_file"
