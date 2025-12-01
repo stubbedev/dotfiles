@@ -46,7 +46,7 @@
     "exec": "~/.config/waybar/scripts/mail-status.sh",
     "return-type": "json",
     "format": "{}",
-    "interval": 60,
+    "interval": 30,
     "markup": "pango",
     "on-click": "~/.local/bin/open-mail"
   },
