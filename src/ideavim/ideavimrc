@@ -523,3 +523,4 @@ nnoremap <silent> <C-q> :call CycleMacroRegister()<CR>
 " None, yet.  Possible conflicts: ctrl -6befhjklorsvw
 nmap s <Action>(flash.search)
 xmap s <Action>(flash.search)
+nmap K :action com.github.vsuhanov.fastpeek.peek<CR>
