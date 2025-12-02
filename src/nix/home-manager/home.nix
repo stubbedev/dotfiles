@@ -124,7 +124,7 @@ in {
     await-powerprofile = {
       Unit = {
         Description = "Reload Waybar when power-profiles-daemon starts";
-        After = [ "graphical-session.target" "power-profiles-daemon.service" ];
+        After = [ "default.target" "power-profiles-daemon.service" ];
       };
       Install = { WantedBy = [ "default.target" ]; };
       Service = {
@@ -137,7 +137,7 @@ in {
     await-bluetooth = {
       Unit = {
         Description = "Reload Waybar when bluetooth starts";
-        After = [ "graphical-session.target" "bluetooth.service" ];
+        After = [ "default.target" "bluetooth.service" ];
       };
       Install = { WantedBy = [ "default.target" ]; };
       Service = {

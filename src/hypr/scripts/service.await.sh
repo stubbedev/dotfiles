@@ -7,8 +7,14 @@ if [ -z "$SERVICE" ]; then
     exit 1
 fi
 
-# Wait until the service is active
-while ! systemctl is-active --quiet "$SERVICE"; do
+# Wait until the service is active (check both user and system services)
+while true; do
+    if systemctl --user is-active --quiet "$SERVICE" 2>/dev/null; then
+        break
+    fi
+    if systemctl --system is-active --quiet "$SERVICE" 2>/dev/null; then
+        break
+    fi
     sleep 5
 done
 
