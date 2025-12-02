@@ -24,8 +24,6 @@ set notimeout
 set undolevels=10000
 " Disable line wrap
 set nowrap
-" Share clipboard with system (yank/paste uses system clipboard)
-set clipboard+=unnamed,unnamedplus
 
 " Neovim settings that differ from Vim
 " https://neovim.io/doc/user/diff.html
@@ -568,4 +566,4 @@ sethandler <S-L> a:vim
 sethandler <Esc> a:vim
 nmap s <Action>(flash.search)
 xmap s <Action>(flash.search)
-nmap K :action com.github.vsuhanov.fastpeek.peek<CR>
+" nmap K :action com.github.vsuhanov.fastpeek.peek<CR>
