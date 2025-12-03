@@ -3,10 +3,9 @@
 # Base directory for aerc accounts
 ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 STATE_FILE="/tmp/mail-status-$USER.state"
-SEEN_UIDS_DIR="/tmp/mail-status-uids-$USER"
+LAST_CHECK_FILE="/tmp/mail-status-lastcheck-$USER"
 
 # Icons
-# ICON_OPEN="🖂" # Open envelope (has unread)
 ICON_OPEN="" # Open envelope (has unread)
 
 # Arrays to store account info
@@ -14,15 +13,20 @@ declare -a accounts_with_unread
 declare -i total_unread=0
 declare -A current_counts
 declare -A previous_counts
+declare -A last_check_times
 
-# Create directory for tracking seen UIDs
-mkdir -p "$SEEN_UIDS_DIR"
-
-# Load previous state
+# Load previous state (unread counts)
 if [ -f "$STATE_FILE" ]; then
   while IFS='=' read -r account count; do
     previous_counts["$account"]="$count"
   done <"$STATE_FILE"
+fi
+
+# Load last check times
+if [ -f "$LAST_CHECK_FILE" ]; then
+  while IFS='=' read -r account timestamp; do
+    last_check_times["$account"]="$timestamp"
+  done <"$LAST_CHECK_FILE"
 fi
 
 # Function to parse aerc accounts.conf and extract account info
@@ -112,18 +116,28 @@ count_unread_imap() {
   fi
 }
 
-# Function to get unseen email UIDs
-get_unseen_uids() {
+# Function to get new unseen emails since last check
+get_new_unseen_emails() {
   local server="$1"
   local port="$2"
   local user="$3"
   local password="$4"
+  local since_date="$5"  # Format: "1-Jan-2025"
 
   local result
-  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
-    --user "${user}:${password}" \
-    --login-options "AUTH=PLAIN" \
-    -X "SEARCH UNSEEN" 2>/dev/null)
+  if [ -n "$since_date" ]; then
+    # Search for emails that are UNSEEN and SINCE the last check date
+    result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
+      --user "${user}:${password}" \
+      --login-options "AUTH=PLAIN" \
+      -X "SEARCH UNSEEN SINCE ${since_date}" 2>/dev/null)
+  else
+    # First run: just get all unseen (but don't notify for them)
+    result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
+      --user "${user}:${password}" \
+      --login-options "AUTH=PLAIN" \
+      -X "SEARCH UNSEEN" 2>/dev/null)
+  fi
 
   # Extract UIDs from "* SEARCH uid1 uid2 uid3..." (remove \r\n)
   echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' '\n' | grep -E '^[0-9]+$'
@@ -137,9 +151,9 @@ fetch_email_headers() {
   local password="$4"
   local uid="$5"
 
-  # Fetch the email using UID (this doesn't mark as read by default with curl)
+  # Fetch the entire email but we'll only parse headers
   local result
-  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX;UID=${uid}" \
+  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX;UID=${uid}/;SECTION=HEADER" \
     --user "${user}:${password}" \
     --login-options "AUTH=PLAIN" 2>/dev/null)
 
@@ -152,36 +166,71 @@ parse_email_info() {
   local subject=""
   local sender=""
   local date=""
+  local in_headers=0
+  local current_field=""
 
   while IFS= read -r line; do
     # Remove carriage return
     line="${line%$'\r'}"
+    
+    # Skip IMAP protocol lines (starting with * or containing only braces/parens)
+    if [[ "$line" =~ ^\*.*FETCH ]] || [[ "$line" =~ ^[\)\}\{].*$ ]]; then
+      continue
+    fi
+    
+    # Skip lines that look like IMAP size indicators
+    if [[ "$line" =~ ^\{[0-9]+\}$ ]]; then
+      in_headers=1
+      continue
+    fi
 
-    # Check if we've reached the body (stop parsing)
-    if [ -z "$line" ]; then
+    # Check if we've reached the body (empty line after headers)
+    if [ -z "$line" ] && [ $in_headers -eq 1 ]; then
       break
     fi
 
-    # Extract subject (handle multi-line headers)
-    if [[ "$line" =~ ^Subject:\ (.+)$ ]]; then
-      subject="${BASH_REMATCH[1]}"
-    elif [ -n "$subject" ] && [[ "$line" =~ ^[[:space:]]+(.+)$ ]]; then
-      subject="${subject} ${BASH_REMATCH[1]}"
-    fi
-
-    # Extract sender
-    if [[ "$line" =~ ^From:\ (.+)$ ]]; then
-      sender="${BASH_REMATCH[1]}"
-    fi
-
-    # Extract date
-    if [[ "$line" =~ ^Date:\ (.+)$ ]]; then
-      date="${BASH_REMATCH[1]}"
+    # Check if this is a new header field (starts with non-whitespace followed by colon)
+    if [[ "$line" =~ ^([A-Za-z-]+):[[:space:]]*(.*)$ ]]; then
+      in_headers=1
+      current_field="${BASH_REMATCH[1]}"
+      local value="${BASH_REMATCH[2]}"
+      
+      case "$current_field" in
+        Subject)
+          subject="$value"
+          ;;
+        From)
+          sender="$value"
+          ;;
+        Date)
+          date="$value"
+          ;;
+      esac
+    # Handle continuation lines (only for the current field we're tracking)
+    elif [ -n "$current_field" ] && [[ "$line" =~ ^[[:space:]]+(.+)$ ]]; then
+      local continuation="${BASH_REMATCH[1]}"
+      case "$current_field" in
+        Subject)
+          subject="${subject} ${continuation}"
+          ;;
+        From)
+          sender="${sender} ${continuation}"
+          ;;
+        Date)
+          date="${date} ${continuation}"
+          ;;
+      esac
+    else
+      # Not a header line we recognize, reset current field
+      current_field=""
     fi
   done <<<"$headers"
 
   # Clean up subject - remove extra whitespace
   subject=$(echo "$subject" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  
+  # Clean up sender
+  sender=$(echo "$sender" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
   # Decode MIME encoded subjects
   if [[ "$subject" =~ =\?.*\?= ]]; then
@@ -278,7 +327,10 @@ for account_name in "${!current_counts[@]}"; do
   echo "$account_name=${current_counts[$account_name]}" >>"$STATE_FILE"
 done
 
-# Send notification for each new email
+# Get current timestamp for this check
+current_time=$(date +%s)
+
+# Send notification for new emails
 if [ "$total_new_emails" -gt 0 ]; then
   for account_name in "${!new_emails_per_account[@]}"; do
     email="${email_addresses[$account_name]}"
@@ -287,59 +339,60 @@ if [ "$total_new_emails" -gt 0 ]; then
     user="${account_users[$account_name]}"
     password="${account_passwords[$account_name]}"
 
-    # Get UIDs of unseen emails
-    seen_file="${SEEN_UIDS_DIR}/${account_name}.seen"
+    # Get the last check time for this account
+    last_check="${last_check_times[$account_name]:-0}"
+    
+    # Convert last check timestamp to IMAP date format (DD-Mon-YYYY)
+    # If this is the first check, don't send notifications (only initialize)
+    if [ "$last_check" -gt 0 ]; then
+      since_date=$(date -d "@$last_check" +"%d-%b-%Y")
+      
+      # Get UIDs of emails that are both unseen AND received since last check
+      mapfile -t new_email_uids < <(get_new_unseen_emails "$server" "$port" "$user" "$password" "$since_date")
 
-    # Load previously seen UIDs
-    declare -A seen_uids
-    if [ -f "$seen_file" ]; then
-      while IFS= read -r uid; do
-        seen_uids["$uid"]=1
-      done <"$seen_file"
-    fi
+      # Send notification for each new email
+      for uid in "${new_email_uids[@]}"; do
+        if [ -n "$uid" ]; then
+          # Fetch email headers
+          headers=$(fetch_email_headers "$server" "$port" "$user" "$password" "$uid")
 
-    # Get current unseen UIDs
-    mapfile -t unseen_uids < <(get_unseen_uids "$server" "$port" "$user" "$password")
+          if [ -n "$headers" ]; then
+            # Parse email info
+            email_info=$(parse_email_info "$headers")
+            subject=$(echo "$email_info" | cut -d'|' -f1)
+            sender=$(echo "$email_info" | cut -d'|' -f2)
+            date=$(echo "$email_info" | cut -d'|' -f3)
 
-    # Send notification for each new (previously unseen) email
-    for uid in "${unseen_uids[@]}"; do
-      if [ -z "${seen_uids[$uid]}" ] && [ -n "$uid" ]; then
-        # Fetch email headers and body preview (PEEK to not mark as read)
-        headers=$(fetch_email_headers "$server" "$port" "$user" "$password" "$uid")
+            # Default values if parsing failed
+            subject="${subject:-No Subject}"
+            sender="${sender:-Unknown Sender}"
+            date="${date:-}"
 
-        if [ -n "$headers" ]; then
-          # Parse email info
-          email_info=$(parse_email_info "$headers")
-          subject=$(echo "$email_info" | cut -d'|' -f1)
-          sender=$(echo "$email_info" | cut -d'|' -f2)
-          date=$(echo "$email_info" | cut -d'|' -f3)
+            # Format the notification body with sender and date
+            notification_body="From: ${sender}"
+            if [ -n "$date" ]; then
+              notification_body="${notification_body}
+Date: ${date}"
+            fi
+            notification_body="${notification_body}
+To: ${email}"
 
-          # Default values if parsing failed
-          subject="${subject:-No Subject}"
-          sender="${sender:-Unknown Sender}"
-          date="${date:-}"
-
-          # Format the notification body with sender and date
-          notification_body="From: ${sender}"
-          if [ -n "$date" ]; then
-            notification_body="${notification_body}\nDate: ${date}"
+            # Send notification
+            notify-send -u normal -i mail-unread -a "mail-notification" \
+              "${subject}" \
+              "${notification_body}"
           fi
-          notification_body="${notification_body}\nTo: ${email}"
-
-          # Send notification with just subject as title (no actions/copy button)
-          notify-send -u normal -i mail-unread -a "mail-notification" \
-            "${subject}" \
-            "${notification_body}"
-
-          # Mark UID as seen locally (does NOT mark as read on server)
-          echo "$uid" >>"$seen_file"
         fi
-      fi
-    done
-
-    unset seen_uids
+      done
+    fi
   done
 fi
+
+# Save current check times for next run
+>"$LAST_CHECK_FILE"
+for account_name in "${!current_counts[@]}"; do
+  echo "$account_name=${current_time}" >>"$LAST_CHECK_FILE"
+done
 
 # Output in JSON format for Waybar
 if [ "$total_unread" -gt 0 ]; then
