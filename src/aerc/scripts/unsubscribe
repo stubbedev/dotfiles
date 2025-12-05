@@ -9,55 +9,55 @@ email=$(cat)
 unsub_header=$(echo "$email" | grep -i "^List-Unsubscribe:" | head -1)
 
 if [ -z "$unsub_header" ]; then
-    echo "Error: No List-Unsubscribe header found"
-    exit 1
+  echo "Error: No List-Unsubscribe header found"
+  exit 1
 fi
 
 # Extract URL (handles both <URL> and plain URL formats)
 url=$(echo "$unsub_header" | grep -oP 'https?://[^>,\s]+' | head -1)
 
 if [ -z "$url" ]; then
-    # Try extracting mailto link
-    mailto=$(echo "$unsub_header" | grep -oP 'mailto:[^>,\s]+' | head -1)
-    if [ -n "$mailto" ]; then
-        echo "Found mailto unsubscribe: $mailto"
-        echo "Opening in aerc compose..."
-        aerc "$mailto"
-        exit 0
-    fi
-    echo "Error: No valid unsubscribe URL or mailto found"
-    exit 1
+  # Try extracting mailto link
+  mailto=$(echo "$unsub_header" | grep -oP 'mailto:[^>,\s]+' | head -1)
+  if [ -n "$mailto" ]; then
+    echo "Found mailto unsubscribe: $mailto"
+    echo "Opening in aerc compose..."
+    aerc "$mailto"
+    exit 0
+  fi
+  echo "Error: No valid unsubscribe URL or mailto found"
+  exit 1
 fi
 
 # Check for List-Unsubscribe-Post header (RFC 8058 - one-click unsubscribe)
 unsub_post=$(echo "$email" | grep -i "^List-Unsubscribe-Post:" | head -1)
 
 if [ -n "$unsub_post" ]; then
-    # RFC 8058: POST with List-Unsubscribe=One-Click
-    echo "Processing one-click unsubscribe..."
-    response=$(curl -sS -X POST -d "List-Unsubscribe=One-Click" "$url" -w "\n%{http_code}" -o /dev/null)
-    http_code=$(echo "$response" | tail -n1)
-    
-    if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
-        echo "✓ Successfully unsubscribed"
-        exit 0
-    else
-        echo "Warning: Unsubscribe request returned HTTP $http_code"
-        echo "URL: $url"
-        exit 1
-    fi
+  # RFC 8058: POST with List-Unsubscribe=One-Click
+  echo "Processing one-click unsubscribe..."
+  response=$(curl -sS -X POST -d "List-Unsubscribe=One-Click" "$url" -w "\n%{http_code}" -o /dev/null)
+  http_code=$(echo "$response" | tail -n1)
+
+  if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+    echo "✓ Successfully unsubscribed"
+    exit 0
+  else
+    echo "Warning: Unsubscribe request returned HTTP $http_code"
+    echo "URL: $url"
+    exit 1
+  fi
 else
-    # Standard GET-based unsubscribe
-    echo "Processing unsubscribe request..."
-    response=$(curl -sS -L "$url" -w "\n%{http_code}" -o /dev/null)
-    http_code=$(echo "$response" | tail -n1)
-    
-    if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
-        echo "✓ Successfully unsubscribed"
-        exit 0
-    else
-        echo "Warning: Unsubscribe request returned HTTP $http_code"
-        echo "URL: $url"
-        exit 1
-    fi
+  # Standard GET-based unsubscribe
+  echo "Processing unsubscribe request..."
+  response=$(curl -sS -L "$url" -w "\n%{http_code}" -o /dev/null)
+  http_code=$(echo "$response" | tail -n1)
+
+  if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+    echo "✓ Successfully unsubscribed"
+    exit 0
+  else
+    echo "Warning: Unsubscribe request returned HTTP $http_code"
+    echo "URL: $url"
+    exit 1
+  fi
 fi
