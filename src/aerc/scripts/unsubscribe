@@ -1,5 +1,5 @@
 #!/bin/bash
-# Extract and open List-Unsubscribe URL from email
+# Extract and process List-Unsubscribe from email
 # Bypasses DKIM validation issues in aerc
 
 # Read email from stdin
@@ -9,7 +9,7 @@ email=$(cat)
 unsub_header=$(echo "$email" | grep -i "^List-Unsubscribe:" | head -1)
 
 if [ -z "$unsub_header" ]; then
-    echo "No List-Unsubscribe header found"
+    echo "Error: No List-Unsubscribe header found"
     exit 1
 fi
 
@@ -25,20 +25,39 @@ if [ -z "$url" ]; then
         aerc "$mailto"
         exit 0
     fi
-    echo "No valid unsubscribe URL or mailto found"
+    echo "Error: No valid unsubscribe URL or mailto found"
     exit 1
 fi
 
-echo "Found unsubscribe URL: $url"
-echo "Opening in browser..."
+# Check for List-Unsubscribe-Post header (RFC 8058 - one-click unsubscribe)
+unsub_post=$(echo "$email" | grep -i "^List-Unsubscribe-Post:" | head -1)
 
-# Open URL in default browser
-if command -v xdg-open &> /dev/null; then
-    xdg-open "$url"
-elif command -v firefox &> /dev/null; then
-    firefox "$url" &
-elif command -v chromium &> /dev/null; then
-    chromium "$url" &
+if [ -n "$unsub_post" ]; then
+    # RFC 8058: POST with List-Unsubscribe=One-Click
+    echo "Processing one-click unsubscribe..."
+    response=$(curl -sS -X POST -d "List-Unsubscribe=One-Click" "$url" -w "\n%{http_code}" -o /dev/null)
+    http_code=$(echo "$response" | tail -n1)
+    
+    if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+        echo "✓ Successfully unsubscribed"
+        exit 0
+    else
+        echo "Warning: Unsubscribe request returned HTTP $http_code"
+        echo "URL: $url"
+        exit 1
+    fi
 else
-    echo "Could not open browser. Please visit: $url"
+    # Standard GET-based unsubscribe
+    echo "Processing unsubscribe request..."
+    response=$(curl -sS -L "$url" -w "\n%{http_code}" -o /dev/null)
+    http_code=$(echo "$response" | tail -n1)
+    
+    if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+        echo "✓ Successfully unsubscribed"
+        exit 0
+    else
+        echo "Warning: Unsubscribe request returned HTTP $http_code"
+        echo "URL: $url"
+        exit 1
+    fi
 fi
