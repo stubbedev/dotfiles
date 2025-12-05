@@ -36,6 +36,7 @@ in {
         '';
         executable = true;
       };
+      ".local/bin/unsubscribe-mail".source = ./../../aerc/scripts/unsubscribe;
 
       ".icons/${constants.theme.iconTheme}".source  = "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
       ".themes/${constants.theme.gtkTheme}".source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
