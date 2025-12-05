@@ -1,0 +1,44 @@
+#!/bin/bash
+# Extract and open List-Unsubscribe URL from email
+# Bypasses DKIM validation issues in aerc
+
+# Read email from stdin
+email=$(cat)
+
+# Extract List-Unsubscribe header
+unsub_header=$(echo "$email" | grep -i "^List-Unsubscribe:" | head -1)
+
+if [ -z "$unsub_header" ]; then
+    echo "No List-Unsubscribe header found"
+    exit 1
+fi
+
+# Extract URL (handles both <URL> and plain URL formats)
+url=$(echo "$unsub_header" | grep -oP 'https?://[^>,\s]+' | head -1)
+
+if [ -z "$url" ]; then
+    # Try extracting mailto link
+    mailto=$(echo "$unsub_header" | grep -oP 'mailto:[^>,\s]+' | head -1)
+    if [ -n "$mailto" ]; then
+        echo "Found mailto unsubscribe: $mailto"
+        echo "Opening in aerc compose..."
+        aerc "$mailto"
+        exit 0
+    fi
+    echo "No valid unsubscribe URL or mailto found"
+    exit 1
+fi
+
+echo "Found unsubscribe URL: $url"
+echo "Opening in browser..."
+
+# Open URL in default browser
+if command -v xdg-open &> /dev/null; then
+    xdg-open "$url"
+elif command -v firefox &> /dev/null; then
+    firefox "$url" &
+elif command -v chromium &> /dev/null; then
+    chromium "$url" &
+else
+    echo "Could not open browser. Please visit: $url"
+fi
