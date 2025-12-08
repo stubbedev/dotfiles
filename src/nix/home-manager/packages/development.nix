@@ -10,6 +10,7 @@ with pkgs; [
   air
   templ
   mongodb-tools
+  mongosh
   mago
   jetbrains-toolbox
   jetbrains.phpstorm
