@@ -12,4 +12,6 @@ src/neomutt/accounts/*/*/cache/bodies/*
 src/neomutt/accounts/*/*/cache/headers/*
 src/neomutt/accounts/*/*/cert/*
 src/aerc/accounts/*/*/password.gpg
+src/vpn/*/password.gpg
+src/vpn/*/config
 # src/nix/home-manager/flake.lock

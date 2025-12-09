@@ -68,6 +68,78 @@
   # Cleaner way to handle feature-based module loading
   conditionalImports = condition: modules: if condition then modules else [ ];
 
+  # Load VPN scripts from src/vpn/*/script.sh and create bin files
+  # Returns attrset for home.file that maps VPN scripts to ~/.local/bin
+  loadVpnScripts = vpnDir:
+    let
+      # Get all VPN provider directories
+      vpnProviders = lib.filterAttrs (name: type: type == "directory")
+        (builtins.readDir vpnDir);
+      
+      # For each provider, create entries for connect/disconnect/status scripts
+      createScriptEntries = providerName:
+        let
+          providerPath = vpnDir + "/${providerName}";
+          scripts = [ "connect" "disconnect" "status" ];
+          
+          createEntry = scriptName:
+            let
+              scriptPath = providerPath + "/${scriptName}.sh";
+              binName = ".local/bin/${providerName}-vpn-${scriptName}";
+            in
+              if builtins.pathExists scriptPath then
+                { name = binName; value.source = scriptPath; }
+              else
+                null;
+          
+          entries = map createEntry scripts;
+        in
+          builtins.filter (x: x != null) entries;
+      
+      allEntries = lib.flatten (map createScriptEntries (lib.attrNames vpnProviders));
+    in
+      builtins.listToAttrs allEntries;
+
+  # Load VPN config files from src/vpn/*/get-password.sh and config
+  # Returns attrset for xdg.configFile
+  loadVpnConfigs = vpnDir:
+    let
+      vpnProviders = lib.filterAttrs (name: type: type == "directory")
+        (builtins.readDir vpnDir);
+      
+      createConfigEntries = providerName:
+        let
+          providerPath = vpnDir + "/${providerName}";
+          getPasswordPath = providerPath + "/get-password.sh";
+          configPath = providerPath + "/config";
+          
+          passwordEntry = 
+            if builtins.pathExists getPasswordPath then
+              {
+                name = "vpn/${providerName}/get-password.sh";
+                value = {
+                  source = getPasswordPath;
+                  executable = true;
+                };
+              }
+            else
+              null;
+          
+          configEntry =
+            if builtins.pathExists configPath then
+              {
+                name = "vpn/${providerName}/config";
+                value.source = configPath;
+              }
+            else
+              null;
+        in
+          builtins.filter (x: x != null) [ passwordEntry configEntry ];
+      
+      allEntries = lib.flatten (map createConfigEntries (lib.attrNames vpnProviders));
+    in
+      builtins.listToAttrs allEntries;
+
   # New utility: Load packages by category with conditional loading
   # Supports feature-based package filtering
   loadPackagesByCategory = dir: args: features:

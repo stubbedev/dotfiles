@@ -5,6 +5,10 @@ let
 
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
   programs = homeLib.loadModulesFromDir ./programs;
+  
+  # Load VPN scripts dynamically
+  vpnScripts = homeLib.loadVpnScripts ./../../vpn;
+  vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
 in {
 
   targets.genericLinux.enable = true;
@@ -41,7 +45,7 @@ in {
       ".icons/${constants.theme.iconTheme}".source  = "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
       ".themes/${constants.theme.gtkTheme}".source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
-    };
+    } // vpnScripts;
 
     sessionVariables = {
       # Nix configuration
@@ -119,7 +123,7 @@ in {
     "neomutt/mailcap".source = ./../../neomutt/mailcap;
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
-  };
+  } // vpnConfigs;
 
   systemd.user.services = {
     await-powerprofile = {
