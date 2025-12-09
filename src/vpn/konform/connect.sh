@@ -59,21 +59,22 @@ else
         exit 1
     fi
     
-    # Create the VPN connection
+    # Create the VPN connection and save to system
     nmcli connection add \
         type vpn \
         con-name "$VPN_NAME" \
         ifname -- \
+        connection.permissions "" \
         vpn-type openconnect \
         -- \
-        vpn.data "gateway=$VPN_GATEWAY,protocol=gp" \
-        vpn.secrets "password=$PASSWORD" \
-        +vpn.data "username=$VPN_USERNAME"
-    
-    # Store password persistently
-    nmcli connection modify "$VPN_NAME" vpn.data "password-flags=0"
+        vpn.data "gateway=$VPN_GATEWAY,protocol=gp,username=$VPN_USERNAME" \
+        vpn.secrets "password=$PASSWORD"
     
     echo "VPN connection created. Connecting..."
     nmcli connection up "$VPN_NAME"
+    exit $?
 fi
+
+# Connection exists, just bring it up
+nmcli connection up "$VPN_NAME"
 

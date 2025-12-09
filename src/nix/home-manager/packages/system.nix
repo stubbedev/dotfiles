@@ -1,8 +1,7 @@
 # System services and utilities
 { pkgs, ... }:
 with pkgs; [
-  # Network management
-  networkmanager
+  # Network management (using system NetworkManager, only adding applet and plugin)
   networkmanagerapplet
   networkmanager-openconnect
 
