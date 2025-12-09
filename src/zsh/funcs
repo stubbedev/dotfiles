@@ -474,6 +474,9 @@ if is_binary home-manager; then
       echo "🔐 Requesting elevated privileges..."
       sudo -v
 
+      # Disable job control messages
+      setopt local_options no_notify no_monitor
+
       # Keep sudo alive in background
       (while true; do
         sudo -n true
@@ -597,13 +600,13 @@ if is_binary home-manager; then
               ;;
             "pacman")
               local packages=$(echo "$log_content" | grep "^upgrading\|^installing" | wc -l)
-              if [[ "$packages" -gt 0 ]]; then
+              if [[ -n "$packages" && "$packages" -gt 0 ]]; then
                 echo -e "  \033[90m└─\033[0m Updated $packages package(s)"
               fi
               ;;
             "snap")
               local refreshed=$(echo "$log_content" | grep -v "^All snaps up to date" | grep -c "refreshed" || echo "0")
-              if [[ "$refreshed" -gt 0 ]]; then
+              if [[ -n "$refreshed" && "$refreshed" -gt 0 ]]; then
                 echo -e "  \033[90m└─\033[0m Refreshed $refreshed snap(s)"
               else
                 echo -e "  \033[90m└─\033[0m All snaps up to date"
@@ -619,7 +622,7 @@ if is_binary home-manager; then
               ;;
             "nix")
               local updated=$(echo "$log_content" | grep "Updated input" | wc -l)
-              if [[ "$updated" -gt 0 ]]; then
+              if [[ -n "$updated" && "$updated" -gt 0 ]]; then
                 echo -e "  \033[90m└─\033[0m Updated $updated input(s)"
               fi
               ;;
