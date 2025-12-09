@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 
+# Only run plugin management in interactive TTY sessions
+if [[ ! -o interactive ]] || [[ ! -t 0 ]]; then
+  return 0
+fi
+
 if ! is_file "$STBDIR/update_flag"; then
   date -d "+1 days" +%s >"$STBDIR/update_flag"
 fi
