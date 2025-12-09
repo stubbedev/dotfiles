@@ -470,34 +470,78 @@ if is_binary home-manager; then
     "update" | "upgrade")
       echo "🔄 Starting system update process..."
 
-      # Update system packages
-      echo "📦 Updating system packages..."
+      # Request sudo access upfront
+      echo "🔐 Requesting elevated privileges..."
+      sudo -v
+
+      # Keep sudo alive in background
+      (while true; do
+        sudo -n true
+        sleep 60
+      done) 2>/dev/null &
+      local sudo_keepalive_pid=$!
+
+      # Run parallel updates for different package managers
+      local pids=()
+
+      # Update system packages in background
       if is_binary pacman; then
-        sudo pacman -Syu
+        (
+          echo "📦 Updating system packages (pacman)..."
+          sudo pacman -Syu --noconfirm
+        ) &
+        pids+=($!)
       elif is_binary apt; then
-        sudo apt update && sudo apt upgrade
+        (
+          echo "📦 Updating system packages (apt)..."
+          sudo apt update && sudo apt upgrade -y
+        ) &
+        pids+=($!)
       elif is_binary dnf; then
-        sudo dnf update && sudo dnf upgrade
+        (
+          echo "📦 Updating system packages (dnf)..."
+          sudo dnf update -y && sudo dnf upgrade -y
+        ) &
+        pids+=($!)
       else
         echo "⚠️  No native package manager found"
       fi
 
-      # Update snaps if installed
+      # Update snaps if installed in background
       if is_binary snap; then
-        echo "📱 Updating snap packages..."
-        sudo snap refresh
+        (
+          echo "📱 Updating snap packages..."
+          sudo snap refresh
+        ) &
+        pids+=($!)
       fi
 
-      # Update flatpaks if installed
+      # Update flatpaks if installed in background
       if is_binary flatpak; then
-        echo "📦 Updating flatpak packages..."
-        flatpak update
+        (
+          echo "📦 Updating flatpak packages..."
+          flatpak update -y
+        ) &
+        pids+=($!)
       fi
 
-      nix flake update --flake "$HOME/.stubbe/src/nix/home-manager"
-      # Update nix channels
-      echo "❄️  Updating nix channels..."
-      nix-channel --update
+      # Update nix flake and channels in background
+      (
+        echo "❄️  Updating nix flake..."
+        nix flake update --flake "$HOME/.stubbe/src/nix/home-manager"
+        echo "❄️  Updating nix channels..."
+        nix-channel --update
+      ) &
+      pids+=($!)
+
+      # Wait for all background updates to complete
+      echo "⏳ Waiting for all updates to complete..."
+      for pid in "${pids[@]}"; do
+        wait "$pid"
+      done
+
+      # Kill the sudo keep-alive process
+      kill "$sudo_keepalive_pid" 2>/dev/null
 
       # Run home-manager switch for upgrade
       if [[ "${filtered_args[1]}" == "upgrade" ]]; then
@@ -576,7 +620,7 @@ if is_binary home-manager; then
       home-manager "${filtered_args[@]}" --impure
       ;;
     esac
-    
+
     # Unset debug flag after execution
     if [[ "$debug_mode" == "true" ]]; then
       unset BIN_INSTALL_DEBUG
