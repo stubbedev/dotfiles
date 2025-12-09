@@ -17,7 +17,7 @@ fi
 
 function source_github_plugins() {
   # Disable job control to suppress background job messages
-  set +m
+  setopt local_options no_notify no_monitor
 
   local -a args=("$@")
   local parent_dir=${args[-1]}
@@ -84,7 +84,7 @@ function source_github_plugins() {
 
   # Wait for all jobs to finish
   for pid in $pids; do
-    wait $pid
+    wait "$pid" 2>/dev/null
   done
 
   # Output only status messages (ADDING/CHECKING/UPDATING), filter out everything else
@@ -112,7 +112,4 @@ function source_github_plugins() {
   done
 
   rm -rf "$tmpdir"
-
-  # Re-enable job control
-  set -m
 }

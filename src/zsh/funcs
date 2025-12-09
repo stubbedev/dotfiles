@@ -546,14 +546,17 @@ if is_binary home-manager; then
       echo "⏳ Waiting for all updates to complete..."
       echo ""
       for pid in "${pids[@]}"; do
-        wait "$pid"
+        wait "$pid" 2>/dev/null
       done
 
       # Kill the sudo keep-alive process and wait for it
       if [[ -n "$sudo_keepalive_pid" ]]; then
-        kill "$sudo_keepalive_pid" 2>/dev/null
+        kill -9 "$sudo_keepalive_pid" 2>/dev/null
         wait "$sudo_keepalive_pid" 2>/dev/null
       fi
+
+      # Disown any remaining jobs from this function
+      disown 2>/dev/null
 
       # Display results in unified format
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
