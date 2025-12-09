@@ -600,13 +600,15 @@ if is_binary home-manager; then
               ;;
             "pacman")
               local packages=$(echo "$log_content" | grep "^upgrading\|^installing" | wc -l)
-              if [[ -n "$packages" && "$packages" -gt 0 ]]; then
+              packages=${packages:-0}
+              if [[ "$packages" != "0" ]]; then
                 echo -e "  \033[90m└─\033[0m Updated $packages package(s)"
               fi
               ;;
             "snap")
-              local refreshed=$(echo "$log_content" | grep -v "^All snaps up to date" | grep -c "refreshed" || echo "0")
-              if [[ -n "$refreshed" && "$refreshed" -gt 0 ]]; then
+              local refreshed=$(echo "$log_content" | grep -v "^All snaps up to date" | grep -c "refreshed")
+              refreshed=${refreshed:-0}
+              if [[ "$refreshed" != "0" ]]; then
                 echo -e "  \033[90m└─\033[0m Refreshed $refreshed snap(s)"
               else
                 echo -e "  \033[90m└─\033[0m All snaps up to date"
@@ -614,7 +616,8 @@ if is_binary home-manager; then
               ;;
             "flatpak")
               local updates=$(echo "$log_content" | grep -oP '(?<=Updating: )\d+' | head -1)
-              if [[ -n "$updates" && "$updates" -gt 0 ]]; then
+              updates=${updates:-0}
+              if [[ "$updates" != "0" ]]; then
                 echo -e "  \033[90m└─\033[0m Updated $updates package(s)"
               else
                 echo -e "  \033[90m└─\033[0m No updates available"
@@ -622,7 +625,8 @@ if is_binary home-manager; then
               ;;
             "nix")
               local updated=$(echo "$log_content" | grep "Updated input" | wc -l)
-              if [[ -n "$updated" && "$updated" -gt 0 ]]; then
+              updated=${updated:-0}
+              if [[ "$updated" != "0" ]]; then
                 echo -e "  \033[90m└─\033[0m Updated $updated input(s)"
               fi
               ;;
