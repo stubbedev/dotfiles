@@ -1,4 +1,8 @@
 #!/usr/bin/env zsh
+
+# Clean up any zombie jobs from previous sessions
+disown 2>/dev/null
+
 if [ -d "$HOME/.stubbe" ]; then
   touch "$HOME/.zsh_history"
   STBDIR="$HOME/.stubbe/src/zsh"

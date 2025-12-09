@@ -92,6 +92,9 @@ function source_github_plugins() {
     wait "$pid" 2>/dev/null
   done
 
+  # Disown any remaining jobs to prevent them from staying in job table
+  disown 2>/dev/null
+
   # Output only status messages (ADDING/CHECKING/UPDATING), filter out everything else
   for tmp in $tmpfiles; do
     if [[ -f "$tmp" ]]; then

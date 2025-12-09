@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 
+# Only run plugin management in interactive TTY sessions
+if [[ ! -o interactive ]] || [[ ! -t 0 ]]; then
+  return 0
+fi
+
 # SHELL THEME
 if ! is_binary $(which starship); then
   curl -sS https://starship.rs/install.sh | sh

@@ -600,8 +600,12 @@ if is_binary home-manager; then
           "apt")
             local upgraded=$(echo "$log_content" | grep -oP '\d+(?= upgraded)' | head -1)
             local installed=$(echo "$log_content" | grep -oP '\d+(?= newly installed)' | head -1)
-            if [[ -n "$upgraded" || -n "$installed" ]]; then
-              echo -e "  \033[90m└─\033[0m Upgraded: ${upgraded:-0}, Installed: ${installed:-0}"
+            upgraded=${upgraded:-0}
+            installed=${installed:-0}
+            if [[ "$upgraded" != "0" || "$installed" != "0" ]]; then
+              echo -e "  \033[90m└─\033[0m Upgraded: $upgraded, Installed: $installed"
+            else
+              echo -e "  \033[90m└─\033[0m All packages up to date"
             fi
             ;;
           "pacman")
