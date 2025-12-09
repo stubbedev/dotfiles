@@ -54,6 +54,5 @@ function is_elevated_shell {
 }
 
 function src_zsh {
-  is_file "$HOME/.zcompdump" && rm -rf "$HOME/.zcompdump"
   is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
 }

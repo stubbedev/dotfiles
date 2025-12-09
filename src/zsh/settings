@@ -73,7 +73,9 @@ if is_binary fzf; then
     bindkey -s "^[F" "fzf-project-picker^M"
     bindkey -s "^[d" "fzf-tmux-session-picker^M"
     bindkey -s "^[D" "fzf-directory-picker^M"
-    source <(fzf --zsh)
+    # Load fzf shell integration (but don't let it bind TAB, we use fzf-tab instead)
+    # We'll load it without completion bindings
+    source <(fzf --zsh | grep -v "bindkey '^I'")
     export FZF_CTRL_T_OPTS="
       --walker-skip .git,node_modules,target
       --preview '[[ -f {} ]] && bat -n --color=always {} || ls -lhA --color=always {}'

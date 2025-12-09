@@ -7,8 +7,6 @@ let
   else
     "${homeDir}/.stubbe";
 in ''
-  rm -f ${homeDir}/.zcompdump > /dev/null 2>&1
-
   # NEOVIM Setup
   rm -rf "${homeDir}/.config/nvim"
   ln -sf "${stubbeDir}/src/nvim" "${homeDir}/.config/nvim"
@@ -37,5 +35,35 @@ in ''
   rm -rf "${homeDir}/.config/aerc/accounts.conf"
   ln -s "${stubbeDir}/src/aerc/accounts.conf" "${homeDir}/.config/aerc/accounts.conf"
   chmod 600 "${stubbeDir}/src/aerc/accounts.conf"
+
+  # ZSH Completion Cache Regeneration
+  echo "Regenerating zsh completion cache..."
+  rm -f "${homeDir}/.zcompdump" "${homeDir}/.zcompdump.zwc"
+  ${pkgs.zsh}/bin/zsh <<'ZSHEOF'
+    export HOME='${homeDir}'
+    STBDIR='${stubbeDir}/src/zsh'
+
+    fpath=(
+      '${stubbeDir}/src/zsh/fpaths.default.d'
+      '${stubbeDir}/src/zsh/fpaths.d'
+      '${homeDir}/.nix-profile/share/zsh/site-functions'
+      $fpath
+    )
+
+    [ -f "$STBDIR/paths" ] && source "$STBDIR/paths"
+    [ -f "$STBDIR/apaths" ] && source "$STBDIR/apaths"
+    [ -f "$STBDIR/sysfuncs" ] && source "$STBDIR/sysfuncs"
+    [ -f "$STBDIR/manager" ] && source "$STBDIR/manager"
+    [ -f "$STBDIR/funcs" ] && source "$STBDIR/funcs"
+
+    (( ! $+commands[uv] )) && function uv() { : }
+    (( ! $+commands[volta] )) && function volta() { : }
+    (( ! $+commands[gh] )) && function gh() { : }
+
+    autoload -Uz compinit
+    compinit -d '${homeDir}/.zcompdump'
+
+    echo "✓ Zsh completion cache regenerated"
+ZSHEOF
 ''
 

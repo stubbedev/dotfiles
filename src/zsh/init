@@ -6,32 +6,40 @@ disown 2>/dev/null
 if [ -d "$HOME/.stubbe" ]; then
   touch "$HOME/.zsh_history"
   STBDIR="$HOME/.stubbe/src/zsh"
-  STBZSHSOURCES=(
+
+  # Files to source BEFORE compinit (must define functions that have completions)
+  STBZSHSOURCES_PRE=(
     "paths"
+    "fpaths"
     "apaths"
     "sysfuncs"
     "manager"
     "funcs"
+  )
+
+  # Files to source AFTER compinit
+  STBZSHSOURCES_POST=(
     "aliases"
     "secrets"
     "plugins"
     "settings"
   )
-  # Source fpaths first to set fpath before compinit
-  if [ -f "$STBDIR/fpaths" ]; then
-    source "$STBDIR/fpaths"
-  fi
+
+  # Source files that define functions BEFORE compinit
+  for SZP in "${STBZSHSOURCES_PRE[@]}"; do
+    if [ -f "$STBDIR/$SZP" ]; then
+      source "$STBDIR/$SZP"
+    fi
+  done
 
   autoload -Uz compinit
   zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
-  if [[ ! -f $zcompdump || $zcompdump -ot ~/.zshrc ]]; then
-    compinit -C
-  else
+  if [[ -f $zcompdump ]]; then
     compinit -C -d "$zcompdump"
   fi
 
-  # Source remaining files (excluding fpaths which was already sourced)
-  for SZP in "${STBZSHSOURCES[@]}"; do
+  # Source remaining files AFTER compinit
+  for SZP in "${STBZSHSOURCES_POST[@]}"; do
     if [ -f "$STBDIR/$SZP" ]; then
       source "$STBDIR/$SZP"
     fi

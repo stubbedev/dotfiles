@@ -72,14 +72,14 @@ in {
     };
 
     activation = {
-      customConfigCleanUp = lib.hm.dag.entryAfter [ "writeBoundary" ]
-        (import ./scripts/config-cleanup.nix {
-          inherit config pkgs constants;
-        });
-      customBinInstall = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
+      customBinInstall = lib.hm.dag.entryAfter [ "writeBoundary" ]
         (import ./scripts/bin-install.nix { inherit config pkgs constants; });
       customShellCompletions = lib.hm.dag.entryAfter [ "customBinInstall" ]
         (import ./scripts/shell-completions.nix {
+          inherit config pkgs constants;
+        });
+      customConfigCleanUp = lib.hm.dag.entryAfter [ "customShellCompletions" ]
+        (import ./scripts/config-cleanup.nix {
           inherit config pkgs constants;
         });
     };
