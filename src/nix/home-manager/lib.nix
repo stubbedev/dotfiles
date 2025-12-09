@@ -100,45 +100,33 @@
     in
       builtins.listToAttrs allEntries;
 
-  # Load VPN config files from src/vpn/*/get-password.sh and config
+  # Load VPN config files from src/vpn/*/get-password.sh
   # Returns attrset for xdg.configFile
+  # Note: config and password.gpg files are created by setup scripts in ~/.config/vpn/<provider>/
   loadVpnConfigs = vpnDir:
     let
       vpnProviders = lib.filterAttrs (name: type: type == "directory")
         (builtins.readDir vpnDir);
       
-      createConfigEntries = providerName:
+      createConfigEntry = providerName:
         let
           providerPath = vpnDir + "/${providerName}";
           getPasswordPath = providerPath + "/get-password.sh";
-          configPath = providerPath + "/config";
-          
-          passwordEntry = 
-            if builtins.pathExists getPasswordPath then
-              {
-                name = "vpn/${providerName}/get-password.sh";
-                value = {
-                  source = getPasswordPath;
-                  executable = true;
-                };
-              }
-            else
-              null;
-          
-          configEntry =
-            if builtins.pathExists configPath then
-              {
-                name = "vpn/${providerName}/config";
-                value.source = configPath;
-              }
-            else
-              null;
         in
-          builtins.filter (x: x != null) [ passwordEntry configEntry ];
+          if builtins.pathExists getPasswordPath then
+            {
+              name = "vpn/${providerName}/get-password.sh";
+              value = {
+                source = getPasswordPath;
+                executable = true;
+              };
+            }
+          else
+            null;
       
-      allEntries = lib.flatten (map createConfigEntries (lib.attrNames vpnProviders));
+      entries = map createConfigEntry (lib.attrNames vpnProviders);
     in
-      builtins.listToAttrs allEntries;
+      builtins.listToAttrs (builtins.filter (x: x != null) entries);
 
   # New utility: Load packages by category with conditional loading
   # Supports feature-based package filtering

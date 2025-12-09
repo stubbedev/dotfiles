@@ -2,9 +2,17 @@
 
 # Check VPN status
 
-# Determine provider name from script location
+# Determine provider name from script location or name
 SCRIPT_NAME="$(basename "$0")"
-PROVIDER_NAME="${SCRIPT_NAME%-vpn-status}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# If running from source directory (status.sh), use directory name
+# If running as deployed binary (provider-vpn-status), extract from name
+if [[ "$SCRIPT_NAME" == "status.sh" ]]; then
+    PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
+else
+    PROVIDER_NAME="${SCRIPT_NAME%-vpn-status}"
+fi
 
 VPN_NAME="${PROVIDER_NAME}-vpn"
 

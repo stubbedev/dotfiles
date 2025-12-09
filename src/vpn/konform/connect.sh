@@ -3,9 +3,17 @@
 # VPN Connection Script for NetworkManager
 # Reads configuration from config file
 
-# Determine provider name from script location
+# Determine provider name from script location or name
 SCRIPT_NAME="$(basename "$0")"
-PROVIDER_NAME="${SCRIPT_NAME%-vpn-connect}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# If running from source directory (connect.sh), use directory name
+# If running as deployed binary (provider-vpn-connect), extract from name
+if [[ "$SCRIPT_NAME" == "connect.sh" ]]; then
+    PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
+else
+    PROVIDER_NAME="${SCRIPT_NAME%-vpn-connect}"
+fi
 
 VPN_NAME="${PROVIDER_NAME}-vpn"
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"

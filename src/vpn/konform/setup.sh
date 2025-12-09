@@ -3,9 +3,10 @@
 # One-time setup script for VPN
 # This creates the config file with VPN details
 
-SCRIPT_DIR="$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
-CONFIG_FILE="$SCRIPT_DIR/config"
+CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
+CONFIG_FILE="$CONFIG_DIR/config"
 
 echo "=== $PROVIDER_NAME VPN Setup ==="
 echo ""
@@ -26,7 +27,10 @@ if [ -z "$username" ]; then
 fi
 
 echo ""
-echo "Creating configuration file..."
+echo "Creating configuration directory and file..."
+
+# Create config directory if it doesn't exist
+mkdir -p "$CONFIG_DIR"
 
 # Create config file
 cat > "$CONFIG_FILE" << EOF
