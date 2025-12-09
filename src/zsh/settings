@@ -66,6 +66,7 @@ bindkey -s "^[A" "tmux-lazy-docker^M"
 bindkey -s "^[t" "tmux-new-session^M"
 bindkey -s "^[g" "tmux-lazy-git^M"
 bindkey -s "^[a" "tmux-system-monitor^M"
+bindkey -s "^[h" "tmux-opencode^M"
 
 if is_binary fzf; then
     bindkey -s "^[f" "fzf-tmux-project-picker^M"

@@ -1,0 +1,20 @@
+#!/usr/bin/env zsh
+
+function toggle_opencode {
+  if command -v opencode &>/dev/null; then
+    if [[ -z "$TMUX" ]]; then
+      opencode
+    else
+      opencode
+      OPENCODE_ALIVE=""
+      local OPENCODE_ALIVE
+      if [[ -z "${OPENCODE_ALIVE}" ]]; then
+        tmux kill-pane || exit 0
+      fi
+    fi
+  else
+    exit 0
+  fi
+}
+
+toggle_opencode
