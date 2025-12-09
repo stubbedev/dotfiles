@@ -1,2 +1,3 @@
 #!/bin/sh
-gpg --quiet --batch --decrypt ~/.config/vpn/konform/password.gpg | tr -d ' \n'
+SCRIPT_DIR="$(dirname "$0")"
+gpg --quiet --batch --decrypt "$SCRIPT_DIR/password.gpg" | tr -d ' \n'
