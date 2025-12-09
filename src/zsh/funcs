@@ -488,26 +488,26 @@ if is_binary home-manager; then
       local pids=()
       local temp_dir=$(mktemp -d)
       local update_jobs=()
-      
+
       # Update system packages in background
       if is_binary pacman; then
         (
-          sudo pacman -Syu --noconfirm > "$temp_dir/pacman.log" 2>&1
-          echo $? > "$temp_dir/pacman.status"
+          sudo pacman -Syu --noconfirm >"$temp_dir/pacman.log" 2>&1
+          echo $? >"$temp_dir/pacman.status"
         ) &
         pids+=($!)
         update_jobs+=("pacman")
       elif is_binary apt; then
         (
-          sudo apt update > "$temp_dir/apt.log" 2>&1 && sudo apt upgrade -y >> "$temp_dir/apt.log" 2>&1
-          echo $? > "$temp_dir/apt.status"
+          sudo apt update >"$temp_dir/apt.log" 2>&1 && sudo apt upgrade -y >>"$temp_dir/apt.log" 2>&1
+          echo $? >"$temp_dir/apt.status"
         ) &
         pids+=($!)
         update_jobs+=("apt")
       elif is_binary dnf; then
         (
-          sudo dnf update -y > "$temp_dir/dnf.log" 2>&1 && sudo dnf upgrade -y >> "$temp_dir/dnf.log" 2>&1
-          echo $? > "$temp_dir/dnf.status"
+          sudo dnf update -y >"$temp_dir/dnf.log" 2>&1 && sudo dnf upgrade -y >>"$temp_dir/dnf.log" 2>&1
+          echo $? >"$temp_dir/dnf.status"
         ) &
         pids+=($!)
         update_jobs+=("dnf")
@@ -516,8 +516,8 @@ if is_binary home-manager; then
       # Update snaps if installed in background
       if is_binary snap; then
         (
-          sudo snap refresh > "$temp_dir/snap.log" 2>&1
-          echo $? > "$temp_dir/snap.status"
+          sudo snap refresh >"$temp_dir/snap.log" 2>&1
+          echo $? >"$temp_dir/snap.status"
         ) &
         pids+=($!)
         update_jobs+=("snap")
@@ -526,8 +526,8 @@ if is_binary home-manager; then
       # Update flatpaks if installed in background
       if is_binary flatpak; then
         (
-          flatpak update -y > "$temp_dir/flatpak.log" 2>&1
-          echo $? > "$temp_dir/flatpak.status"
+          flatpak update -y >"$temp_dir/flatpak.log" 2>&1
+          echo $? >"$temp_dir/flatpak.status"
         ) &
         pids+=($!)
         update_jobs+=("flatpak")
@@ -535,9 +535,9 @@ if is_binary home-manager; then
 
       # Update nix flake and channels in background
       (
-        nix flake update --flake "$HOME/.stubbe/src/nix/home-manager" > "$temp_dir/nix.log" 2>&1
-        nix-channel --update >> "$temp_dir/nix.log" 2>&1
-        echo $? > "$temp_dir/nix.status"
+        nix flake update --flake "$HOME/.stubbe/src/nix/home-manager" >"$temp_dir/nix.log" 2>&1
+        nix-channel --update >>"$temp_dir/nix.log" 2>&1
+        echo $? >"$temp_dir/nix.status"
       ) &
       pids+=($!)
       update_jobs+=("nix")
@@ -549,89 +549,92 @@ if is_binary home-manager; then
         wait "$pid"
       done
 
-      # Kill the sudo keep-alive process
-      kill "$sudo_keepalive_pid" 2>/dev/null
+      # Kill the sudo keep-alive process and wait for it
+      if [[ -n "$sudo_keepalive_pid" ]]; then
+        kill "$sudo_keepalive_pid" 2>/dev/null
+        wait "$sudo_keepalive_pid" 2>/dev/null
+      fi
 
       # Display results in unified format
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       echo -e "\033[1;36m📊 Update Summary\033[0m"
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       echo ""
-      
+
       for job in "${update_jobs[@]}"; do
         local status_file="$temp_dir/$job.status"
         local log_file="$temp_dir/$job.log"
         local status_code=0
-        
+
         if [[ -f "$status_file" ]]; then
           status_code=$(cat "$status_file")
         fi
-        
+
         # Format job name with emoji
         local job_display=""
         case "$job" in
-          "pacman") job_display="📦 Pacman" ;;
-          "apt") job_display="📦 APT" ;;
-          "dnf") job_display="📦 DNF" ;;
-          "snap") job_display="📱 Snap" ;;
-          "flatpak") job_display="📦 Flatpak" ;;
-          "nix") job_display="❄️  Nix" ;;
+        "pacman") job_display="📦 Pacman" ;;
+        "apt") job_display="📦 APT" ;;
+        "dnf") job_display="📦 DNF" ;;
+        "snap") job_display="📱 Snap" ;;
+        "flatpak") job_display="📦 Flatpak" ;;
+        "nix") job_display="❄️  Nix" ;;
         esac
-        
+
         # Display status with color
         if [[ "$status_code" -eq 0 ]]; then
           echo -e "\033[1;32m✓\033[0m $job_display"
         else
           echo -e "\033[1;31m✗\033[0m $job_display \033[31m(exit code: $status_code)\033[0m"
         fi
-        
+
         # Display relevant log output (last few lines or errors)
         if [[ -f "$log_file" ]]; then
           local log_content=$(cat "$log_file")
-          
+
           # Show summary based on package manager
           case "$job" in
-            "apt")
-              local upgraded=$(echo "$log_content" | grep -oP '\d+(?= upgraded)' | head -1)
-              local installed=$(echo "$log_content" | grep -oP '\d+(?= newly installed)' | head -1)
-              if [[ -n "$upgraded" || -n "$installed" ]]; then
-                echo -e "  \033[90m└─\033[0m Upgraded: ${upgraded:-0}, Installed: ${installed:-0}"
-              fi
-              ;;
-            "pacman")
-              local packages=$(echo "$log_content" | grep "^upgrading\|^installing" | wc -l)
-              packages=${packages:-0}
-              if [[ "$packages" != "0" ]]; then
-                echo -e "  \033[90m└─\033[0m Updated $packages package(s)"
-              fi
-              ;;
-            "snap")
-              local refreshed=$(echo "$log_content" | grep -v "^All snaps up to date" | grep -c "refreshed")
-              refreshed=${refreshed:-0}
-              if [[ "$refreshed" != "0" ]]; then
-                echo -e "  \033[90m└─\033[0m Refreshed $refreshed snap(s)"
-              else
-                echo -e "  \033[90m└─\033[0m All snaps up to date"
-              fi
-              ;;
-            "flatpak")
-              local updates=$(echo "$log_content" | grep -oP '(?<=Updating: )\d+' | head -1)
-              updates=${updates:-0}
-              if [[ "$updates" != "0" ]]; then
-                echo -e "  \033[90m└─\033[0m Updated $updates package(s)"
-              else
-                echo -e "  \033[90m└─\033[0m No updates available"
-              fi
-              ;;
-            "nix")
-              local updated=$(echo "$log_content" | grep "Updated input" | wc -l)
-              updated=${updated:-0}
-              if [[ "$updated" != "0" ]]; then
-                echo -e "  \033[90m└─\033[0m Updated $updated input(s)"
-              fi
-              ;;
+          "apt")
+            local upgraded=$(echo "$log_content" | grep -oP '\d+(?= upgraded)' | head -1)
+            local installed=$(echo "$log_content" | grep -oP '\d+(?= newly installed)' | head -1)
+            if [[ -n "$upgraded" || -n "$installed" ]]; then
+              echo -e "  \033[90m└─\033[0m Upgraded: ${upgraded:-0}, Installed: ${installed:-0}"
+            fi
+            ;;
+          "pacman")
+            local packages=$(echo "$log_content" | grep "^upgrading\|^installing" | wc -l)
+            packages=${packages:-0}
+            if [[ "$packages" != "0" ]]; then
+              echo -e "  \033[90m└─\033[0m Updated $packages package(s)"
+            fi
+            ;;
+          "snap")
+            local refreshed=$(echo "$log_content" | grep -v "^All snaps up to date" | grep -c "refreshed")
+            refreshed=${refreshed:-0}
+            if [[ "$refreshed" != "0" ]]; then
+              echo -e "  \033[90m└─\033[0m Refreshed $refreshed snap(s)"
+            else
+              echo -e "  \033[90m└─\033[0m All snaps up to date"
+            fi
+            ;;
+          "flatpak")
+            local updates=$(echo "$log_content" | grep -oP '(?<=Updating: )\d+' | head -1)
+            updates=${updates:-0}
+            if [[ "$updates" != "0" ]]; then
+              echo -e "  \033[90m└─\033[0m Updated $updates package(s)"
+            else
+              echo -e "  \033[90m└─\033[0m No updates available"
+            fi
+            ;;
+          "nix")
+            local updated=$(echo "$log_content" | grep "Updated input" | wc -l)
+            updated=${updated:-0}
+            if [[ "$updated" != "0" ]]; then
+              echo -e "  \033[90m└─\033[0m Updated $updated input(s)"
+            fi
+            ;;
           esac
-          
+
           # Show errors if status was non-zero
           if [[ "$status_code" -ne 0 ]]; then
             echo -e "  \033[90m└─\033[0m \033[31mError details:\033[0m"
@@ -640,11 +643,11 @@ if is_binary home-manager; then
         fi
         echo ""
       done
-      
+
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       echo -e "\033[90mFull logs available at: $temp_dir\033[0m"
       echo ""
-      
+
       # Run home-manager switch for upgrade
       if [[ "${filtered_args[1]}" == "upgrade" ]]; then
         echo "🏠 Applying home-manager configuration..."
