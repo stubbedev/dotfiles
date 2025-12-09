@@ -35,7 +35,6 @@ in {
           if [[ ! -x "$terminal_emulator" ]]; then
             terminal_emulator="${config.home.homeDirectory}/.nix-profile/bin/alacritty"
           fi
-          # $terminal_emulator -e ${config.home.homeDirectory}/.nix-profile/bin/neomutt -F ${config.home.homeDirectory}/.config/neomutt/neomuttrc
           $terminal_emulator -e aerc
         '';
         executable = true;
@@ -119,8 +118,6 @@ in {
     "environment.d/envvars.conf".text = ''
       PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
     '';
-    "neomutt/neomuttrc".source = ./../../neomutt/neomuttrc;
-    "neomutt/mailcap".source = ./../../neomutt/mailcap;
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
   } // vpnConfigs;

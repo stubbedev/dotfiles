@@ -67,7 +67,6 @@ with pkgs; [
   tabiew
 
   # Mailing
-  neomutt
   msmtp
   w3m
   pandoc

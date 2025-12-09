@@ -28,10 +28,6 @@ in ''
   mkdir -p "${homeDir}/.config/btop"
   cat "${stubbeDir}/src/btop/btop.conf" > "${homeDir}/.config/btop/btop.conf"
 
-  # NEOMUTT Setup
-  rm -rf "${homeDir}/.config/neomutt/accounts"
-  ln -sf "${stubbeDir}/src/neomutt/accounts" "${homeDir}/.config/neomutt/accounts"
-
   # AERC Setup
   mkdir -p "${homeDir}/.config/aerc"
   rm -rf "${homeDir}/.config/aerc/stylesets"
