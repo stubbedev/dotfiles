@@ -10,7 +10,7 @@ with pkgs; [
   chafa
   viu
   ueberzugpp
-  libreoffice
+  libreoffice-fresh
   ghostscript
 ]
 

@@ -151,4 +151,14 @@ in {
   };
 
   programs.home-manager.enable = true;
+
+  nix = {
+    package = pkgs.nix;
+    settings = {
+      # Prefer binary caches to avoid compilation
+      substituters = [
+        "https://cache.nixos.org"
+      ];
+    };
+  };
 }

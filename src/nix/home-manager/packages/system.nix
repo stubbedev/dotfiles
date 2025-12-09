@@ -5,7 +5,6 @@ with pkgs; [
   networkmanager
   networkmanagerapplet
   networkmanager-openconnect
-  globalprotect-openconnect
 
   # Bluetooth
   blueman
