@@ -295,6 +295,46 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
     git diff $current_branch..$remote_branch --color
   }
+
+  function gcd {
+    in_git_repo || return 1
+
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
+    fi
+
+    local current_branch=$(git branch --show-current)
+    local git_branches=$(git branch --all | awk '{print $1}')
+    local target_branch=$(echo -e $git_branches |
+      fzf --prompt="(Enter: select target branch for diff)> " \
+        --query="$initial_query" \
+        --select-1 \
+        --exit-0 \
+        --print-query \
+        --no-info \
+        --height=5 |
+      tail -n1)
+
+    if [[ -z "$target_branch" ]]; then
+      return 0
+    fi
+
+    # Clean branch names for filename (remove remotes/origin/ prefix and special chars)
+    local clean_current=$(echo "$current_branch" | sed 's/remotes\/origin\///' | sed 's/\//-/g')
+    local clean_target=$(echo "$target_branch" | sed 's/remotes\/origin\///' | sed 's/\//-/g')
+    local patch_file="${clean_current}--${clean_target}.diff"
+
+    git diff $current_branch..$target_branch >"$patch_file"
+
+    if [[ -f "$patch_file" ]]; then
+      echo "✅ Patch file created: $patch_file"
+    else
+      echo "❌ Failed to create patch file"
+      return 1
+    fi
+  }
+
   function gst {
     in_git_repo || return 1
 
