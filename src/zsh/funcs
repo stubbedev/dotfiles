@@ -298,6 +298,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
   function gst {
     in_git_repo || return 1
 
+    echo ""
     git status --short
   }
   function gg {
