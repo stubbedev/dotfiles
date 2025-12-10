@@ -56,14 +56,8 @@ in ''
     [ -f "$STBDIR/manager" ] && source "$STBDIR/manager"
     [ -f "$STBDIR/funcs" ] && source "$STBDIR/funcs"
 
-    (( ! $+commands[uv] )) && function uv() { : }
-    (( ! $+commands[volta] )) && function volta() { : }
-    (( ! $+commands[gh] )) && function gh() { : }
-
     autoload -Uz compinit
     compinit -d '${homeDir}/.zcompdump'
-
-    echo "✓ Zsh completion cache regenerated"
-ZSHEOF
+  ZSHEOF
 ''
 
