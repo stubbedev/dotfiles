@@ -5,6 +5,7 @@ function toggle_opencode {
     if [[ -z "$TMUX" ]]; then
       opencode
     else
+      tmux renamew "opencode"
       opencode
       OPENCODE_ALIVE=""
       local OPENCODE_ALIVE
