@@ -729,7 +729,42 @@ if is_binary home-manager; then
       fi
       ;;
     *)
-      home-manager "${filtered_args[@]}" --impure
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo -e "\033[1;34m🏠 Home Manager\033[0m"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
+
+      # Stream and format home-manager output in real-time
+      home-manager "${filtered_args[@]}" --impure 2>&1 | while IFS= read -r line; do
+        if [[ "$line" =~ "building" ]]; then
+          echo -e "\033[1;36m🔨 Building:\033[0m ${line#*building}"
+        elif [[ "$line" =~ "Activating" ]]; then
+          echo -e "\033[1;32m✓ Activating:\033[0m ${line#*Activating}"
+        elif [[ "$line" =~ "Starting Home Manager activation" ]]; then
+          echo -e "\033[1;34m🏠 Starting Home Manager activation\033[0m"
+        elif [[ "$line" =~ "creating" ]]; then
+          echo -e "\033[90m  └─\033[0m Creating: ${line#*creating}"
+        elif [[ "$line" =~ "reloading" ]]; then
+          echo -e "\033[90m  └─\033[0m Reloading: ${line#*reloading}"
+        elif [[ "$line" =~ "error:" ]] || [[ "$line" =~ "warning:" ]]; then
+          echo -e "\033[31m⚠️ $line\033[0m"
+        elif [[ -n "$line" ]]; then
+          # Print other non-empty lines with subtle formatting
+          echo -e "\033[90m  $line\033[0m"
+        fi
+      done
+
+      local hm_exit_code=${pipestatus[1]}
+
+      echo ""
+      if [[ $hm_exit_code -eq 0 ]]; then
+        echo -e "\033[1;32m✅ Home Manager configuration applied successfully!\033[0m"
+      else
+        echo -e "\033[1;31m❌ Home Manager failed with exit code: $hm_exit_code\033[0m"
+      fi
+      echo ""
+
+      return $hm_exit_code
       ;;
     esac
 
