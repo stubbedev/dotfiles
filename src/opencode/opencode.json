@@ -4,6 +4,7 @@
   "autoupdate": true,
   "keybinds": {
     "leader": "ctrl+space",
-    "command_list": "alt+space"
+    "command_list": "alt+space",
+    "app_exit": "ctrl+c,ctrl+d,<leader>q"
   }
 }
