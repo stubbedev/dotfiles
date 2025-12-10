@@ -4,6 +4,7 @@
   "autoupdate": true,
   "keybinds": {
     "leader": "ctrl+space",
-    "command_list": "ctrl+p,alt+space"
+    "command_list": "ctrl+p,alt+space",
+    "quit": "leader,q"
   }
 }
