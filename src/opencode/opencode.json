@@ -5,6 +5,6 @@
   "keybinds": {
     "leader": "ctrl+space",
     "command_list": "ctrl+p,alt+space",
-    "quit": "leader,q"
+    "app_exit": "<leader>q"
   }
 }
