@@ -7,10 +7,10 @@ _hm() {
   local -a commands
   commands=(
     # Custom hm function commands
-    'update:Update system packages and nix channels'
     'upgrade:Update system packages, nix channels, and apply home-manager configuration'
+    'update:Update system packages and nix channels'
     'search:Search for nix packages'
-    
+
     # Home Manager commands
     'help:Print help message'
     'edit:Open the home configuration in $VISUAL or $EDITOR'
