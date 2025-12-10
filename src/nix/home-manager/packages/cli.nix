@@ -65,6 +65,7 @@ with pkgs; [
 
   # Terminal file manager
   tabiew
+  nushell
 
   # Mailing
   msmtp
