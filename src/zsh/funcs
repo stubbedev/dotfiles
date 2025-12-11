@@ -509,11 +509,19 @@ if is_binary home-manager; then
 
     case "${filtered_args[1]:-}" in
     "update" | "upgrade")
+      if [[ "$debug_mode" == "true" ]]; then
+        echo "DEBUG: Starting update/upgrade process"
+      fi
+
       echo "🔄 Starting system update process..."
 
       # Request sudo access upfront
       echo "🔐 Requesting elevated privileges..."
       sudo -v
+
+      if [[ "$debug_mode" == "true" ]]; then
+        echo "DEBUG: sudo privileges obtained"
+      fi
 
       # Disable job control messages
       setopt local_options no_notify no_monitor
@@ -583,16 +591,37 @@ if is_binary home-manager; then
       pids+=($!)
       update_jobs+=("nix")
 
-      # Wait for all background updates to complete
+      # Wait for all background updates to complete with timeout
       echo "⏳ Waiting for all updates to complete..."
       echo ""
+
+      if [[ "$debug_mode" == "true" ]]; then
+        echo "DEBUG: Waiting for ${#pids[@]} background processes: ${pids[@]}"
+      fi
+
+      # Wait for each process with a reasonable timeout
       for pid in "${pids[@]}"; do
+        local wait_count=0
+        local max_wait=300 # 5 minutes timeout per job
+        while kill -0 "$pid" 2>/dev/null; do
+          sleep 1
+          ((wait_count++))
+          if [[ $wait_count -ge $max_wait ]]; then
+            echo -e "\033[33m⚠️  Warning: Process $pid timed out after 5 minutes, killing...\033[0m"
+            kill -9 "$pid" 2>/dev/null
+            break
+          fi
+        done
         wait "$pid" 2>/dev/null
       done
 
+      if [[ "$debug_mode" == "true" ]]; then
+        echo "DEBUG: All background processes completed"
+      fi
+
       # Kill the sudo keep-alive process and wait for it
       if [[ -n "$sudo_keepalive_pid" ]]; then
-        kill -9 "$sudo_keepalive_pid" 2>/dev/null
+        kill "$sudo_keepalive_pid" 2>/dev/null
         wait "$sudo_keepalive_pid" 2>/dev/null
       fi
 
@@ -620,7 +649,7 @@ if is_binary home-manager; then
         "pacman") job_display="📦 Pacman" ;;
         "apt") job_display="📦 APT" ;;
         "dnf") job_display="📦 DNF" ;;
-        "snap") job_display="📱 Snap" ;;
+        "snap") job_display="📦 Snap" ;;
         "flatpak") job_display="📦 Flatpak" ;;
         "nix") job_display="❄️  Nix" ;;
         esac
@@ -698,41 +727,46 @@ if is_binary home-manager; then
 
       # Run home-manager switch for upgrade
       if [[ "${filtered_args[1]}" == "upgrade" ]]; then
+        if [[ "$debug_mode" == "true" ]]; then
+          echo "DEBUG: Starting home-manager switch"
+        fi
+
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo -e "\033[1;34m🏠 Home Manager\033[0m"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
 
         # Stream and format home-manager output in real-time
-        home-manager switch --impure "${filtered_args[@]:1}" 2>&1 | while IFS= read -r line; do
+        # Use stdbuf to disable buffering which can cause hangs
+        stdbuf -oL -eL home-manager switch --impure "${filtered_args[@]:1}" 2>&1 | while IFS= read -r line; do
           if [[ "$line" =~ "building" ]]; then
             echo -e "\033[1;36m🔨 Building:\033[0m ${line#*building}"
           elif [[ "$line" =~ "Activating" ]]; then
             echo -e "\033[1;32m✓ Activating:\033[0m ${line#*Activating}"
           elif [[ "$line" =~ "Starting Home Manager activation" ]]; then
-            echo -e "\033[1;34m🏠 Starting Home Manager activation\033[0m"
+            echo -e "\033[1;34m🏠Starting Home Manager activation\033[0m"
           elif [[ "$line" =~ "creating" ]]; then
             echo -e "\033[90m  └─\033[0m Creating: ${line#*creating}"
           elif [[ "$line" =~ "reloading" ]]; then
             echo -e "\033[90m  └─\033[0m Reloading: ${line#*reloading}"
           elif [[ "$line" =~ "error:" ]]; then
-            echo -e "\033[31m⚠️$line\033[0m"
+            echo -e "\033[31m✕ \033[0m Error: ${line#*error}"
           elif [[ "$line" =~ "warning:" ]]; then
-            echo -e "\033[33m⚠️$line\033[0m"
+            echo -e "\033[33m! \033[0m Warning: ${line#*warning}"
           elif [[ -n "$line" ]]; then
             # Print other non-empty lines with subtle formatting
             echo -e "\033[90m  $line\033[0m"
           fi
         done
 
-        local hm_exit_code=${pipestatus[1]}
+        local hm_exit_code=${pipestatus[1]:-0}
 
         echo ""
         if [[ $hm_exit_code -eq 0 ]]; then
-          echo -e "\033[1;32m✅ Home Manager configuration applied successfully!\033[0m"
+          echo -e "\033[1;32m✓ Home Manager configuration applied successfully!\033[0m"
           src_zsh
         else
-          echo -e "\033[1;31m❌ Home Manager failed with exit code: $hm_exit_code\033[0m"
+          echo -e "\033[1;31m✕ Home Manager failed with exit code: $hm_exit_code\033[0m"
         fi
         echo ""
 
@@ -812,35 +846,38 @@ if is_binary home-manager; then
       echo ""
 
       # Stream and format home-manager output in real-time
-      home-manager "${filtered_args[@]}" --impure 2>&1 | while IFS= read -r line; do
+      # Use stdbuf to disable buffering which can cause hangs
+      stdbuf -oL -eL home-manager "${filtered_args[@]}" --impure 2>&1 | while IFS= read -r line; do
         if [[ "$line" =~ "building" ]]; then
           echo -e "\033[1;36m🔨 Building:\033[0m ${line#*building}"
         elif [[ "$line" =~ "Activating" ]]; then
           echo -e "\033[1;32m✓ Activating:\033[0m ${line#*Activating}"
         elif [[ "$line" =~ "Starting Home Manager activation" ]]; then
-          echo -e "\033[1;34m🏠 Starting Home Manager activation\033[0m"
+          echo -e "\033[1;34m🏠Starting Home Manager activation\033[0m"
         elif [[ "$line" =~ "creating" ]]; then
           echo -e "\033[90m  └─\033[0m Creating: ${line#*creating}"
         elif [[ "$line" =~ "reloading" ]]; then
           echo -e "\033[90m  └─\033[0m Reloading: ${line#*reloading}"
         elif [[ "$line" =~ "error:" ]]; then
-          echo -e "\033[31m⚠️$line\033[0m"
+          echo -e "\033[31m✕ \033[0m Error: ${line#*error}"
         elif [[ "$line" =~ "warning:" ]]; then
-          echo -e "\033[33m⚠️$line\033[0m"
+          echo -e "\033[33m! \033[0m Warning: ${line#*warning}"
         elif [[ -n "$line" ]]; then
           # Print other non-empty lines with subtle formatting
           echo -e "\033[90m  $line\033[0m"
         fi
       done
 
-      local hm_exit_code=${pipestatus[1]}
+      local hm_exit_code=${pipestatus[1]:-0}
 
       echo ""
       if [[ $hm_exit_code -eq 0 ]]; then
-        echo -e "\033[1;32m✅ Home Manager configuration applied successfully!\033[0m"
+        echo -e "\033[1;32m✓ Home Manager configuration applied successfully!\033[0m"
+        src_zsh
       else
-        echo -e "\033[1;31m❌ Home Manager failed with exit code: $hm_exit_code\033[0m"
+        echo -e "\033[1;31m✕ Home Manager failed with exit code: $hm_exit_code\033[0m"
       fi
+
       echo ""
 
       return $hm_exit_code
