@@ -750,9 +750,9 @@ if is_binary home-manager; then
           elif [[ "$line" =~ "reloading" ]]; then
             echo -e "\033[90m  └─\033[0m Reloading: ${line#*reloading}"
           elif [[ "$line" =~ "error:" ]]; then
-            echo -e "\033[31m✕ \033[0m Error: ${line#*error}"
+            echo -e "\033[31m✕ Error:\033[0m ${line#*error}"
           elif [[ "$line" =~ "warning:" ]]; then
-            echo -e "\033[33m! \033[0m Warning: ${line#*warning}"
+            echo -e "\033[33m! Warning:\033[0m ${line#*warning}"
           elif [[ -n "$line" ]]; then
             # Print other non-empty lines with subtle formatting
             echo -e "\033[90m  $line\033[0m"
@@ -859,9 +859,9 @@ if is_binary home-manager; then
         elif [[ "$line" =~ "reloading" ]]; then
           echo -e "\033[90m  └─\033[0m Reloading: ${line#*reloading}"
         elif [[ "$line" =~ "error:" ]]; then
-          echo -e "\033[31m✕ \033[0m Error: ${line#*error}"
+          echo -e "\033[31m✕ Error:\033[0m ${line#*error}"
         elif [[ "$line" =~ "warning:" ]]; then
-          echo -e "\033[33m! \033[0m Warning: ${line#*warning}"
+          echo -e "\033[33m! Warning:\033[0m ${line#*warning}"
         elif [[ -n "$line" ]]; then
           # Print other non-empty lines with subtle formatting
           echo -e "\033[90m  $line\033[0m"
