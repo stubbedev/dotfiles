@@ -3,7 +3,6 @@
 # Base directory for aerc accounts
 ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 STATE_FILE="/tmp/mail-status-$USER.state"
-LAST_CHECK_FILE="/tmp/mail-status-lastcheck-$USER"
 
 # Icons
 ICON_OPEN="" # Open envelope (has unread)
@@ -13,7 +12,6 @@ declare -a accounts_with_unread
 declare -i total_unread=0
 declare -A current_counts
 declare -A previous_counts
-declare -A last_check_times
 
 # Load previous state (unread counts)
 if [ -f "$STATE_FILE" ]; then
@@ -122,25 +120,32 @@ get_new_unseen_emails() {
   local port="$2"
   local user="$3"
   local password="$4"
-  local since_date="$5"  # Format: "1-Jan-2025"
+  local prev_count="$5"
+  local current_count="$6"
 
-  local result
-  if [ -n "$since_date" ]; then
-    # Search for emails that are UNSEEN and SINCE the last check date
-    result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
-      --user "${user}:${password}" \
-      --login-options "AUTH=PLAIN" \
-      -X "SEARCH UNSEEN SINCE ${since_date}" 2>/dev/null)
-  else
-    # First run: just get all unseen (but don't notify for them)
-    result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
-      --user "${user}:${password}" \
-      --login-options "AUTH=PLAIN" \
-      -X "SEARCH UNSEEN" 2>/dev/null)
+  # Calculate how many new emails we should fetch
+  local new_count=$((current_count - prev_count))
+
+  if [ "$new_count" -le 0 ]; then
+    return
   fi
 
+  # Get all unseen emails sorted by arrival date (most recent first)
+  # Then take only the newest ones that represent the new emails
+  local result
+  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
+    --user "${user}:${password}" \
+    --login-options "AUTH=PLAIN" \
+    -X "SEARCH UNSEEN" 2>/dev/null)
+
   # Extract UIDs from "* SEARCH uid1 uid2 uid3..." (remove \r\n)
-  echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' '\n' | grep -E '^[0-9]+$'
+  # The UIDs are returned in ascending order (oldest first)
+  # We want the last N UIDs (newest emails)
+  local all_uids
+  all_uids=$(echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' '\n' | grep -E '^[0-9]+$')
+
+  # Take only the last N UIDs (the newest ones)
+  echo "$all_uids" | tail -n "$new_count"
 }
 
 # Function to fetch email headers (PEEK to not mark as read)
@@ -172,12 +177,12 @@ parse_email_info() {
   while IFS= read -r line; do
     # Remove carriage return
     line="${line%$'\r'}"
-    
+
     # Skip IMAP protocol lines (starting with * or containing only braces/parens)
     if [[ "$line" =~ ^\*.*FETCH ]] || [[ "$line" =~ ^[\)\}\{].*$ ]]; then
       continue
     fi
-    
+
     # Skip lines that look like IMAP size indicators
     if [[ "$line" =~ ^\{[0-9]+\}$ ]]; then
       in_headers=1
@@ -194,31 +199,31 @@ parse_email_info() {
       in_headers=1
       current_field="${BASH_REMATCH[1]}"
       local value="${BASH_REMATCH[2]}"
-      
+
       case "$current_field" in
-        Subject)
-          subject="$value"
-          ;;
-        From)
-          sender="$value"
-          ;;
-        Date)
-          date="$value"
-          ;;
+      Subject)
+        subject="$value"
+        ;;
+      From)
+        sender="$value"
+        ;;
+      Date)
+        date="$value"
+        ;;
       esac
     # Handle continuation lines (only for the current field we're tracking)
     elif [ -n "$current_field" ] && [[ "$line" =~ ^[[:space:]]+(.+)$ ]]; then
       local continuation="${BASH_REMATCH[1]}"
       case "$current_field" in
-        Subject)
-          subject="${subject} ${continuation}"
-          ;;
-        From)
-          sender="${sender} ${continuation}"
-          ;;
-        Date)
-          date="${date} ${continuation}"
-          ;;
+      Subject)
+        subject="${subject} ${continuation}"
+        ;;
+      From)
+        sender="${sender} ${continuation}"
+        ;;
+      Date)
+        date="${date} ${continuation}"
+        ;;
       esac
     else
       # Not a header line we recognize, reset current field
@@ -228,7 +233,7 @@ parse_email_info() {
 
   # Clean up subject - remove extra whitespace
   subject=$(echo "$subject" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  
+
   # Clean up sender
   sender=$(echo "$sender" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
@@ -327,9 +332,6 @@ for account_name in "${!current_counts[@]}"; do
   echo "$account_name=${current_counts[$account_name]}" >>"$STATE_FILE"
 done
 
-# Get current timestamp for this check
-current_time=$(date +%s)
-
 # Send notification for new emails
 if [ "$total_new_emails" -gt 0 ]; then
   for account_name in "${!new_emails_per_account[@]}"; do
@@ -339,16 +341,14 @@ if [ "$total_new_emails" -gt 0 ]; then
     user="${account_users[$account_name]}"
     password="${account_passwords[$account_name]}"
 
-    # Get the last check time for this account
-    last_check="${last_check_times[$account_name]:-0}"
-    
-    # Convert last check timestamp to IMAP date format (DD-Mon-YYYY)
-    # If this is the first check, don't send notifications (only initialize)
-    if [ "$last_check" -gt 0 ]; then
-      since_date=$(date -d "@$last_check" +"%d-%b-%Y")
-      
-      # Get UIDs of emails that are both unseen AND received since last check
-      mapfile -t new_email_uids < <(get_new_unseen_emails "$server" "$port" "$user" "$password" "$since_date")
+    # Get the previous count for this account
+    prev_count="${previous_counts[$account_name]:-0}"
+    current_count="${current_counts[$account_name]}"
+
+    # Only send notifications if we had a previous state (not first run)
+    if [ "${previous_counts[$account_name]+isset}" ]; then
+      # Get UIDs of the newest unseen emails (the ones that are new since last check)
+      mapfile -t new_email_uids < <(get_new_unseen_emails "$server" "$port" "$user" "$password" "$prev_count" "$current_count")
 
       # Send notification for each new email
       for uid in "${new_email_uids[@]}"; do
@@ -387,12 +387,6 @@ To: ${email}"
     fi
   done
 fi
-
-# Save current check times for next run
->"$LAST_CHECK_FILE"
-for account_name in "${!current_counts[@]}"; do
-  echo "$account_name=${current_time}" >>"$LAST_CHECK_FILE"
-done
 
 # Output in JSON format for Waybar
 if [ "$total_unread" -gt 0 ]; then
