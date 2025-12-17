@@ -68,6 +68,7 @@ with pkgs; [
   nushell
   glow
   gum
+  goaccess
 
   # Mailing
   msmtp
