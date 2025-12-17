@@ -5,26 +5,19 @@ ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 STATE_FILE="/tmp/mail-status-$USER.state"
 
 # Icons
-ICON_OPEN="" # Open envelope (has unread)
+ICON_OPEN="" # Open envelope (has unread)
 
 # Arrays to store account info
 declare -a accounts_with_unread
 declare -i total_unread=0
 declare -A current_counts
-declare -A previous_counts
+declare -A previous_uids
 
-# Load previous state (unread counts)
+# Load previous state (UIDs of unread emails)
 if [ -f "$STATE_FILE" ]; then
-  while IFS='=' read -r account count; do
-    previous_counts["$account"]="$count"
+  while IFS='=' read -r account uids; do
+    previous_uids["$account"]="$uids"
   done <"$STATE_FILE"
-fi
-
-# Load last check times
-if [ -f "$LAST_CHECK_FILE" ]; then
-  while IFS='=' read -r account timestamp; do
-    last_check_times["$account"]="$timestamp"
-  done <"$LAST_CHECK_FILE"
 fi
 
 # Function to parse aerc accounts.conf and extract account info
@@ -73,7 +66,7 @@ count_unread_imap() {
   local from
   from=$(echo "$account_info" | cut -d'|' -f3)
 
-  [ -z "$source" ] || [ -z "$source_cred_cmd" ] && echo "0|" && return
+  [ -z "$source" ] || [ -z "$source_cred_cmd" ] && echo "0||" && return
 
   # Parse IMAP URL: imaps://user@domain@server:port
   # Format: imaps://abs@kontainer.com@ex.konformit.com:993
@@ -93,59 +86,46 @@ count_unread_imap() {
   # Get password
   local password
   password=$(eval "$source_cred_cmd" 2>/dev/null)
-  [ -z "$password" ] && echo "0|$from" && return
+  [ -z "$password" ] && echo "0||$from" && return
 
-  # Query IMAP for unseen count using curl
-  # Reduced timeout to 5 seconds for faster response
+  # Get all unseen email UIDs
   local result
-  result=$(timeout 5 curl -s --url "imaps://${server}:${port}/INBOX" \
+  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
     --user "${imap_user}:${password}" \
     --login-options "AUTH=PLAIN" \
-    -X "STATUS INBOX (UNSEEN)" 2>/dev/null)
+    -X "SEARCH UNSEEN" 2>/dev/null)
 
-  # Count the number of unseen messages
-  if [ -n "$result" ]; then
-    # Extract the number from "* STATUS INBOX (UNSEEN X)"
-    local count
-    count=$(echo "$result" | grep -oP 'UNSEEN \K\d+')
-    echo "${count:-0}|$from|${server}|${port}|${imap_user}|${password}"
-  else
-    echo "0|$from|${server}|${port}|${imap_user}|${password}"
+  # Extract UIDs from "* SEARCH uid1 uid2 uid3..."
+  local uids
+  uids=$(echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' ',' | sed 's/,$//')
+  
+  # Count the UIDs
+  local count=0
+  if [ -n "$uids" ]; then
+    count=$(echo "$uids" | tr ',' '\n' | wc -l)
   fi
+
+  echo "${count}|${uids}|$from|${server}|${port}|${imap_user}|${password}"
 }
 
 # Function to get new unseen emails since last check
 get_new_unseen_emails() {
-  local server="$1"
-  local port="$2"
-  local user="$3"
-  local password="$4"
-  local prev_count="$5"
-  local current_count="$6"
+  local current_uids="$1"
+  local prev_uids="$2"
 
-  # Calculate how many new emails we should fetch
-  local new_count=$((current_count - prev_count))
-
-  if [ "$new_count" -le 0 ]; then
+  # If no previous UIDs, don't return anything (first run)
+  if [ -z "$prev_uids" ]; then
+    return
+  fi
+  
+  # If no current UIDs, no new emails
+  if [ -z "$current_uids" ]; then
     return
   fi
 
-  # Get all unseen emails sorted by arrival date (most recent first)
-  # Then take only the newest ones that represent the new emails
-  local result
-  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
-    --user "${user}:${password}" \
-    --login-options "AUTH=PLAIN" \
-    -X "SEARCH UNSEEN" 2>/dev/null)
-
-  # Extract UIDs from "* SEARCH uid1 uid2 uid3..." (remove \r\n)
-  # The UIDs are returned in ascending order (oldest first)
-  # We want the last N UIDs (newest emails)
-  local all_uids
-  all_uids=$(echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' '\n' | grep -E '^[0-9]+$')
-
-  # Take only the last N UIDs (the newest ones)
-  echo "$all_uids" | tail -n "$new_count"
+  # Convert comma-separated to newline-separated and find new UIDs
+  # New UIDs are those in current_uids but not in prev_uids
+  comm -13 <(echo "$prev_uids" | tr ',' '\n' | sort -n) <(echo "$current_uids" | tr ',' '\n' | sort -n)
 }
 
 # Function to fetch email headers (PEEK to not mark as read)
@@ -248,14 +228,15 @@ parse_email_info() {
 # Function to check account in background
 check_account() {
   local account_name="$1"
-  local result=$(count_unread_imap "$account_name" 2>/dev/null || echo "0|||||")
+  local result=$(count_unread_imap "$account_name" 2>/dev/null || echo "0|||||||")
   local unread=$(echo "$result" | cut -d'|' -f1)
-  local from=$(echo "$result" | cut -d'|' -f2)
-  local server=$(echo "$result" | cut -d'|' -f3)
-  local port=$(echo "$result" | cut -d'|' -f4)
-  local user=$(echo "$result" | cut -d'|' -f5)
-  local password=$(echo "$result" | cut -d'|' -f6)
-  echo "$account_name:$unread:$from:$server:$port:$user:$password"
+  local uids=$(echo "$result" | cut -d'|' -f2)
+  local from=$(echo "$result" | cut -d'|' -f3)
+  local server=$(echo "$result" | cut -d'|' -f4)
+  local port=$(echo "$result" | cut -d'|' -f5)
+  local user=$(echo "$result" | cut -d'|' -f6)
+  local password=$(echo "$result" | cut -d'|' -f7)
+  echo "$account_name:$unread:$uids:$from:$server:$port:$user:$password"
 }
 
 # Collect all account names
@@ -288,6 +269,7 @@ declare -A account_servers
 declare -A account_ports
 declare -A account_users
 declare -A account_passwords
+declare -A current_uids_map
 total_new_emails=0
 
 for temp_file in "${temp_files[@]}"; do
@@ -297,13 +279,15 @@ for temp_file in "${temp_files[@]}"; do
 
     account_name=$(echo "$result" | cut -d':' -f1)
     unread=$(echo "$result" | cut -d':' -f2)
-    from=$(echo "$result" | cut -d':' -f3)
-    server=$(echo "$result" | cut -d':' -f4)
-    port=$(echo "$result" | cut -d':' -f5)
-    user=$(echo "$result" | cut -d':' -f6)
-    password=$(echo "$result" | cut -d':' -f7-)
+    uids=$(echo "$result" | cut -d':' -f3)
+    from=$(echo "$result" | cut -d':' -f4)
+    server=$(echo "$result" | cut -d':' -f5)
+    port=$(echo "$result" | cut -d':' -f6)
+    user=$(echo "$result" | cut -d':' -f7)
+    password=$(echo "$result" | cut -d':' -f8-)
 
     current_counts["$account_name"]="$unread"
+    current_uids_map["$account_name"]="$uids"
     email_addresses["$account_name"]="$from"
     account_servers["$account_name"]="$server"
     account_ports["$account_name"]="$port"
@@ -315,21 +299,22 @@ for temp_file in "${temp_files[@]}"; do
       accounts_with_unread+=("$from ($unread)")
       total_unread=$((total_unread + unread))
 
-      # Check if this is a new email (count increased)
-      prev_count="${previous_counts[$account_name]:-0}"
-      if [ "$unread" -gt "$prev_count" ]; then
-        new_count=$((unread - prev_count))
-        new_emails_per_account["$account_name"]="$new_count"
-        total_new_emails=$((total_new_emails + new_count))
+      # Check for new UIDs
+      prev_uids="${previous_uids[$account_name]:-}"
+      new_uids=$(get_new_unseen_emails "$uids" "$prev_uids")
+      if [ -n "$new_uids" ]; then
+        new_uid_count=$(echo "$new_uids" | wc -l)
+        new_emails_per_account["$account_name"]="$new_uid_count"
+        total_new_emails=$((total_new_emails + new_uid_count))
       fi
     fi
   fi
 done
 
-# Save current state for next run
+# Save current state for next run (save UIDs instead of counts)
 >"$STATE_FILE"
-for account_name in "${!current_counts[@]}"; do
-  echo "$account_name=${current_counts[$account_name]}" >>"$STATE_FILE"
+for account_name in "${!current_uids_map[@]}"; do
+  echo "$account_name=${current_uids_map[$account_name]}" >>"$STATE_FILE"
 done
 
 # Send notification for new emails
@@ -341,50 +326,47 @@ if [ "$total_new_emails" -gt 0 ]; then
     user="${account_users[$account_name]}"
     password="${account_passwords[$account_name]}"
 
-    # Get the previous count for this account
-    prev_count="${previous_counts[$account_name]:-0}"
-    current_count="${current_counts[$account_name]}"
+    # Get the current and previous UIDs
+    current_uids="${current_uids_map[$account_name]}"
+    prev_uids="${previous_uids[$account_name]:-}"
+    
+    # Get UIDs of the new unseen emails
+    mapfile -t new_email_uids < <(get_new_unseen_emails "$current_uids" "$prev_uids")
 
-    # Only send notifications if we had a previous state (not first run)
-    if [ "${previous_counts[$account_name]+isset}" ]; then
-      # Get UIDs of the newest unseen emails (the ones that are new since last check)
-      mapfile -t new_email_uids < <(get_new_unseen_emails "$server" "$port" "$user" "$password" "$prev_count" "$current_count")
+    # Send notification for each new email
+    for uid in "${new_email_uids[@]}"; do
+      if [ -n "$uid" ]; then
+        # Fetch email headers
+        headers=$(fetch_email_headers "$server" "$port" "$user" "$password" "$uid")
 
-      # Send notification for each new email
-      for uid in "${new_email_uids[@]}"; do
-        if [ -n "$uid" ]; then
-          # Fetch email headers
-          headers=$(fetch_email_headers "$server" "$port" "$user" "$password" "$uid")
+        if [ -n "$headers" ]; then
+          # Parse email info
+          email_info=$(parse_email_info "$headers")
+          subject=$(echo "$email_info" | cut -d'|' -f1)
+          sender=$(echo "$email_info" | cut -d'|' -f2)
+          date=$(echo "$email_info" | cut -d'|' -f3)
 
-          if [ -n "$headers" ]; then
-            # Parse email info
-            email_info=$(parse_email_info "$headers")
-            subject=$(echo "$email_info" | cut -d'|' -f1)
-            sender=$(echo "$email_info" | cut -d'|' -f2)
-            date=$(echo "$email_info" | cut -d'|' -f3)
+          # Default values if parsing failed
+          subject="${subject:-No Subject}"
+          sender="${sender:-Unknown Sender}"
+          date="${date:-}"
 
-            # Default values if parsing failed
-            subject="${subject:-No Subject}"
-            sender="${sender:-Unknown Sender}"
-            date="${date:-}"
-
-            # Format the notification body with sender and date
-            notification_body="From: ${sender}"
-            if [ -n "$date" ]; then
-              notification_body="${notification_body}
-Date: ${date}"
-            fi
+          # Format the notification body with sender and date
+          notification_body="From: ${sender}"
+          if [ -n "$date" ]; then
             notification_body="${notification_body}
+Date: ${date}"
+          fi
+          notification_body="${notification_body}
 To: ${email}"
 
-            # Send notification
-            notify-send -u normal -i mail-unread -a "mail-notification" \
-              "${subject}" \
-              "${notification_body}"
-          fi
+          # Send notification
+          notify-send -u normal -i mail-unread -a "mail-notification" \
+            "${subject}" \
+            "${notification_body}"
         fi
-      done
-    fi
+      fi
+    done
   done
 fi
 
