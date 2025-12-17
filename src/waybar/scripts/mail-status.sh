@@ -98,7 +98,7 @@ count_unread_imap() {
   # Extract UIDs from "* SEARCH uid1 uid2 uid3..."
   local uids
   uids=$(echo "$result" | tr -d '\r' | grep -oP '\* SEARCH \K.*' | tr ' ' ',' | sed 's/,$//')
-  
+
   # Count the UIDs
   local count=0
   if [ -n "$uids" ]; then
@@ -117,7 +117,7 @@ get_new_unseen_emails() {
   if [ -z "$prev_uids" ]; then
     return
   fi
-  
+
   # If no current UIDs, no new emails
   if [ -z "$current_uids" ]; then
     return
@@ -329,7 +329,7 @@ if [ "$total_new_emails" -gt 0 ]; then
     # Get the current and previous UIDs
     current_uids="${current_uids_map[$account_name]}"
     prev_uids="${previous_uids[$account_name]:-}"
-    
+
     # Get UIDs of the new unseen emails
     mapfile -t new_email_uids < <(get_new_unseen_emails "$current_uids" "$prev_uids")
 
