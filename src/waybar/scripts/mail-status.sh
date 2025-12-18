@@ -5,8 +5,8 @@ ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 STATE_FILE="/tmp/mail-status-$USER.state"
 
 # Icons
-ICON_OPEN="" # Open envelope (has unread)
-ICON_CLOSED=""
+ICON_OPEN=" " # Open envelope (has unread)
+ICON_CLOSED=" "
 
 # Arrays to store account info
 declare -a accounts_with_unread
@@ -385,5 +385,5 @@ if [ "$total_unread" -gt 0 ]; then
   echo "{\"text\":\"$ICON_CLOSED $total_unread \",\"tooltip\":\"$tooltip\",\"class\":\"mail-status\"}"
 else
   # Show nothing if no unread emails
-  echo "{\"text\":\"$ICON_OPEN\",\"tooltip\":\"No unread emails\",\"class\":\"mail-status\"}"
+  echo "{\"text\":\"$ICON_OPEN \",\"tooltip\":\"No unread emails\",\"class\":\"mail-status\"}"
 fi
