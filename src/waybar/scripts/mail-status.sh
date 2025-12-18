@@ -5,8 +5,8 @@ ACCOUNTS_CONF="$HOME/.config/aerc/accounts.conf"
 STATE_FILE="/tmp/mail-status-$USER.state"
 
 # Icons
-ICON_OPEN=" " # Open envelope (has unread)
-ICON_CLOSED=" "
+ICON_OPEN="󰛮 " # Open envelope (has unread)
+ICON_CLOSED="󰶍 "
 
 # Arrays to store account info
 declare -a accounts_with_unread
