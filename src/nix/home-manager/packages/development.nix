@@ -13,8 +13,5 @@ with pkgs; [
   mongosh
   mago
   jetbrains-toolbox
-  jetbrains.phpstorm
-  jetbrains.webstorm
-  jetbrains.pycharm-community-bin
 ]
 
