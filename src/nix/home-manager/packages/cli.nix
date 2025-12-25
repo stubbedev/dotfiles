@@ -26,6 +26,7 @@ with pkgs; [
 
   # Data processing
   jq
+  yq
   jless
 
   # Text processing
