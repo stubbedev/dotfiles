@@ -117,6 +117,7 @@ in {
     "hypr".source = ./../../hypr;
     "foot".source = ./../../foot;
     "opencode/opencode.json".source = ./../../opencode/opencode.json;
+    "opencode/AGENTS.md".source = ./../../opencode/AGENTS.md;
     "opencode/themes/catppuccin-mocha.json".source =
       ./../../opencode/catppuccin-mocha.json;
 
