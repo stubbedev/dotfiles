@@ -10,6 +10,7 @@
         excludesfile = "~/.gitignore";
         editor = "nvim";
       };
+      init.defaultBranch = "master";
       push.autoSetupRemote = true;
       advice.setUpstreamFailure = false;
     };
