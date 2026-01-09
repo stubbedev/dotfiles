@@ -15,6 +15,7 @@ with pkgs; [
   ripgrep
   tree-sitter
   zoxide
+  just
 
   # System monitoring
   htop
