@@ -19,18 +19,17 @@ The structure is as follows:
 ```tree
 .stubbe/
 ├── bin/
-│   ├── scripts/
-│   ├── utils/
-│   ├── fzf-tmux-project-picker*
-│   ├── fzf-tmux-session-picker*
-│   ├── install-funcs*
-│   ├── stb*
-│   ├── stb-install*
-│   ├── tmux-lazy-docker*
-│   ├── tmux-lazy-git*
-│   ├── tmux-new-session*
-│   ├── tmux-new-temp-session*
-│   └── tmux-system-monitor*
+│   ├── fzf-directory-picker-util*
+│   ├── fzf-project-picker-util*
+│   ├── fzf-tmux-project-picker*
+│   ├── fzf-tmux-session-picker*
+│   ├── stb*
+│   ├── stb-install*
+│   ├── tmux-lazy-docker*
+│   ├── tmux-lazy-git*
+│   ├── tmux-new-session*
+│   ├── tmux-opencode*
+│   └── tmux-system-monitor*
 ├── src/
 │   ├── alacritty/
 │   ├── btop/
