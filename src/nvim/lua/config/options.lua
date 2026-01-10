@@ -11,7 +11,8 @@ vim.opt.mouse = ""
 -- * the name of a detector function like `lsp` or `cwd`
 -- * a pattern or array of patterns like `.git` or `lua`.
 -- * a function with signature `function(buf) -> string|string[]`
-vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
+-- Prioritize .git over lsp to prevent subdirectory flake.nix from changing root
+vim.g.root_spec = { ".git", "lsp", "cwd" }
 vim.treesitter.language.register("html", { "html", "vue", "tmpl" })
 vim.treesitter.language.register("templ", { "templ", "tmpl" })
 

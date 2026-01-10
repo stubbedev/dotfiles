@@ -118,6 +118,7 @@ return {
               newfile = '',
             }
           })
+          table.insert(lualineX, { require("opencode").statusline })
           local lualineC = {}
           require("lualine").setup({
             sections = {
