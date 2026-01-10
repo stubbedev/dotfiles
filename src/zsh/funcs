@@ -651,7 +651,7 @@ if is_binary home-manager; then
         "dnf") job_display="📦 DNF" ;;
         "snap") job_display="📦 Snap" ;;
         "flatpak") job_display="📦 Flatpak" ;;
-        "nix") job_display="❄️  Nix" ;;
+        "nix") job_display="📦 Nix" ;;
         esac
 
         # Display status with color
