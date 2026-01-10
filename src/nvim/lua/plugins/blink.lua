@@ -34,6 +34,9 @@ return {
       },
       sources = {
         default = { "lsp", "buffer", "snippets", "path" },
+        per_filetype = {
+          opencode_input = { "path" }, -- Only enable path completions for OpenCode input
+        },
       },
     },
   }
