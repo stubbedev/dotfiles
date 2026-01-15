@@ -92,6 +92,11 @@ in {
         (import ./scripts/config-cleanup.nix {
           inherit config pkgs constants;
         });
+      
+      # Restart PipeWire after audio config changes
+      restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+        $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
+      '';
     };
   };
 
@@ -131,6 +136,19 @@ in {
     '';
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
+    
+    # PipeWire audio configuration for USB docks with KVM switches
+    "pipewire/pipewire.conf.d/99-usb-dock.conf".source =
+      ./../../pipewire/pipewire.conf.d/99-usb-dock.conf;
+    "pipewire/pipewire-pulse.conf.d/99-usb-dock.conf".source =
+      ./../../pipewire/pipewire-pulse.conf.d/99-usb-dock.conf;
+    
+    # PulseAudio client config for flatpak apps (prevents audio popping)
+    "pulse/client.conf".source = ./../../pipewire/pulse-client.conf;
+    
+    # WirePlumber ALSA configuration for USB dock stability
+    "wireplumber/main.lua.d/51-alsa-usb-dock.lua".source =
+      ./../../wireplumber/main.lua.d/51-alsa-usb-dock.lua;
   } // vpnConfigs;
 
   systemd.user.services = {

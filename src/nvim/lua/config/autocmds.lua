@@ -32,7 +32,7 @@ local function parse_phpstorm_config()
     end
   end
 
-  -- Check watcherTasks.xml for file watchers with immediateSync
+  -- Check watcherTasks.xml for enabled file watchers (run all enabled ones as save actions)
   local wt_xml = idea_dir .. '/watcherTasks.xml'
   if vim.fn.filereadable(wt_xml) == 1 then
     local lines = vim.fn.readfile(wt_xml)
@@ -40,14 +40,11 @@ local function parse_phpstorm_config()
     for task in content:gmatch('<TaskOptions[^>]*>(.-)</TaskOptions>') do
       local enabled = task:find('<option name="isEnabled" value="true"')
       if enabled then
-        local immediate = task:find('<option name="immediateSync" value="true"')
-        if immediate then
-          local program = task:match('<option name="program" value="([^"]*)"')
-          local args = task:match('<option name="arguments" value="([^"]*)"') or ''
-          local wd = task:match('<option name="workingDir" value="([^"]*)"') or vim.fn.getcwd()
-          if program then
-            table.insert(actions, {program = program, args = args:gsub('$FileRelativePath$', '%'), wd = wd})
-          end
+        local program = task:match('<option name="program" value="([^"]*)"')
+        local args = task:match('<option name="arguments" value="([^"]*)"') or ''
+        local wd = task:match('<option name="workingDir" value="([^"]*)"') or vim.fn.getcwd()
+        if program then
+          table.insert(actions, {program = program, args = args:gsub('$FileDirRelativeToProjectRoot$/$FileName$', '%'), wd = wd})
         end
       end
     end
@@ -57,13 +54,30 @@ local function parse_phpstorm_config()
 end
 
 -- Run PHPStorm configured actions on save for PHP files
-vim.api.nvim_create_autocmd("BufWritePre", {
+vim.api.nvim_create_autocmd("BufWritePost", {
   pattern = "*.php",
   callback = function()
     local actions = parse_phpstorm_config()
+    local needs_reload = false
     for _, a in ipairs(actions) do
-      local cmd = string.format('cd %s && %s %s', vim.fn.shellescape(a.wd), a.program, a.args:gsub('%%', vim.fn.expand('%')))
-      vim.fn.system(cmd)
+      local cmd = string.format('cd %s && %s %s', vim.fn.shellescape(a.wd), a.program, a.args:gsub('%%', vim.fn.expand('%:p')))
+      if a.program:find('pint') or a.program:find('cs.fixer') or a.program:find('phpcbf') or a.program:find('action-helper') then
+        -- Run formatters and helpers synchronously, then reload buffer
+        vim.fn.system(cmd)
+        needs_reload = true
+      else
+        -- Run analysis tools asynchronously
+        vim.fn.jobstart(cmd, {
+          on_exit = function(_, code)
+            if code ~= 0 then
+              vim.notify(a.program .. " found issues", vim.log.levels.WARN)
+            end
+          end,
+        })
+      end
+    end
+    if needs_reload then
+      vim.cmd('edit!')
     end
   end,
 })
