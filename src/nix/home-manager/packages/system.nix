@@ -25,4 +25,12 @@ with pkgs; [
   # Mail (TUI, no GPU needed)
   mailutils
   aerc
+
+  # Keyring management (for automatic password management)
+  # Note: Uses system-installed GNOME Keyring and KDE Wallet from Fedora
+  libsecret  # Provides secret-tool command
+
+  # Cursor and icon themes
+  vimix-cursors
+  vimix-icon-theme
 ]

@@ -1,12 +1,25 @@
 # Hyprland compositor and related tools
-{ pkgs, config, hyprland-guiutils, ... }:
+{ pkgs, config, hyprland-guiutils, systemInfo, ... }:
 let
-  inherit (config.lib.nixGL) wrap;
+  wrap = config.lib.nixGL.wrap;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
-in
-with pkgs; [
-  # Hyprland compositor (wrapped for non-NixOS GPU access)
-  (wrap hyprland)
+
+  # Create custom Hyprland wrapper with GBM backend path fix for non-NixOS
+  # This is needed because Nix's mesa-libgbm doesn't include GBM backends
+  hyprland-wrapped = pkgs.writeShellScriptBin "hyprland" ''
+    # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
+    # Auto-detected: ${
+      if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
+    }
+    export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
+    export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
+
+    # Call the nixGL-wrapped Hyprland
+    exec ${wrap pkgs.hyprland}/bin/hyprland "$@"
+  '';
+in with pkgs; [
+  # Custom wrapped Hyprland with GBM path fix
+  hyprland-wrapped
   (wrap hyprlock)
 
   # Hyprland GUI utilities (from flake input)

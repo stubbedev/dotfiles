@@ -3,14 +3,15 @@ let
   homeLib = import ./lib.nix { inherit lib; };
   constants = import ./constants.nix { inherit config; };
 
-  homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
+  homePackages = homeLib.safeLoadPackagesFromDir ./packages
+    (args // { inherit systemInfo; });
   programs = homeLib.loadModulesFromDir ./programs;
 
   # Load VPN scripts dynamically
   vpnScripts = homeLib.loadVpnScripts ./../../vpn;
   vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
 
-  # Auto-detect NVIDIA GPU by checking if the driver is loaded
+  # Auto-detect system information
   hasNvidia = builtins.pathExists /proc/driver/nvidia/version;
 
   # Detect OS distribution
@@ -21,13 +22,10 @@ let
     "";
   isFedora = builtins.match ".*ID=fedora.*" osReleaseContent != null;
 
-  # Determine driver library paths based on OS
-  driverPaths = if isFedora then {
-    libgl = "/usr/lib64/dri";
-    gbm = "/usr/lib64/gbm";
-  } else {
-    libgl = "/usr/lib/dri";
-    gbm = "/usr/lib/gbm";
+  # System-specific library paths
+  systemInfo = {
+    inherit hasNvidia isFedora;
+    libPath = if isFedora then "lib64" else "lib";
   };
 in {
 
@@ -35,7 +33,7 @@ in {
     enable = true;
     nixGL = {
       packages = pkgs.nixgl;
-      defaultWrapper = if hasNvidia then "nvidia" else "mesa";
+      defaultWrapper = if systemInfo.hasNvidia then "nvidia" else "mesa";
     };
   };
   home = {
@@ -78,7 +76,7 @@ in {
       ".local/bin/unsubscribe-mail".source = ./../../aerc/scripts/unsubscribe;
 
       ".icons/${constants.theme.iconTheme}".source =
-        "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
+        "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
       ".themes/${constants.theme.gtkTheme}".source =
         "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
@@ -120,6 +118,10 @@ in {
         (import ./scripts/config-cleanup.nix {
           inherit config pkgs constants;
         });
+
+      # System checks - verifies system configuration and provides helpful warnings
+      systemChecks = lib.hm.dag.entryAfter [ "writeBoundary" ]
+        (import ./scripts/system-checks.nix { inherit config pkgs lib; });
 
       # Restart PipeWire after audio config changes
       restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
@@ -167,16 +169,15 @@ in {
         env = XDG_CURRENT_DESKTOP,Hyprland
         env = XDG_SESSION_TYPE,wayland
         env = XDG_SESSION_DESKTOP,Hyprland
-        env = XCURSOR_THEME,Adwaita
-        env = GTK_CURSORS,Adwaita
+        env = XCURSOR_THEME,Vimix-cursors
         env = XCURSOR_SIZE,24
         env = GTK_THEME,Adwaita-dark
         env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
 
         # GPU driver configuration (auto-detected: ${
-          if hasNvidia then "NVIDIA" else "Mesa"
+          if systemInfo.hasNvidia then "NVIDIA" else "Mesa"
         })
-        ${lib.optionalString hasNvidia ''
+        ${lib.optionalString systemInfo.hasNvidia ''
           env = __GLX_VENDOR_LIBRARY_NAME,nvidia
           env = LIBVA_DRIVER_NAME,nvidia
         ''}
