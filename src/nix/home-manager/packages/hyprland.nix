@@ -1,5 +1,5 @@
 # Hyprland compositor and related tools
-{ pkgs, config, hyprland-guiutils, systemInfo, ... }:
+{ pkgs, config, hyprland-guiutils, hy3, systemInfo, ... }:
 let
   inherit (config.lib.nixGL) wrap;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
@@ -18,11 +18,19 @@ let
     exec ${wrap pkgs.hyprland}/bin/hyprland "$@"
   '';
 
+  # Create hyprctl wrapper (doesn't need GPU wrapping, it's just a control CLI)
+  hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
+    # hyprctl doesn't need GPU wrapping, call it directly
+    exec ${pkgs.hyprland}/bin/hyprctl "$@"
+  '';
 
 in with pkgs; [
   # Custom wrapped Hyprland with GBM path fix
   hyprland-wrapped
-  
+
+  # Hyprctl (Hyprland control CLI)
+  hyprctl-wrapped
+
   # Hyprlock with nixGL wrapper
   (wrap hyprlock)
 

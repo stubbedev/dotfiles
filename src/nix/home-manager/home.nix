@@ -77,6 +77,8 @@ in {
 
       ".icons/${constants.theme.iconTheme}".source =
         "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
+      ".icons/Vimix-cursors".source =
+        "${pkgs.vimix-cursors}/share/icons/Vimix-cursors";
       ".themes/${constants.theme.gtkTheme}".source =
         "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
@@ -188,6 +190,20 @@ in {
           env = __GLX_VENDOR_LIBRARY_NAME,nvidia
           env = LIBVA_DRIVER_NAME,nvidia
         ''}
+      '';
+    };
+    
+    # Generate dynamic Hyprland plugins configuration
+    "hypr/plugins.conf" = {
+      text = 
+        let
+          # Build hy3 against the system's hyprland package to avoid rebuilding hyprland
+          hy3-plugin = args.hy3.packages.${pkgs.system}.hy3.override {
+            hyprland = pkgs.hyprland.dev;
+          };
+        in ''
+        # Hyprland plugins loaded from Nix
+        plugin = ${hy3-plugin}/lib/libhy3.so
       '';
     };
     "opencode/opencode.json".source = ./../../opencode/opencode.json;
