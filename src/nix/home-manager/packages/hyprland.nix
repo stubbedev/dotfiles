@@ -1,7 +1,7 @@
 # Hyprland compositor and related tools
 { pkgs, config, hyprland-guiutils, systemInfo, ... }:
 let
-  wrap = config.lib.nixGL.wrap;
+  inherit (config.lib.nixGL) wrap;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
 
   # Create custom Hyprland wrapper with GBM backend path fix for non-NixOS
@@ -17,9 +17,13 @@ let
     # Call the nixGL-wrapped Hyprland
     exec ${wrap pkgs.hyprland}/bin/hyprland "$@"
   '';
+
+
 in with pkgs; [
   # Custom wrapped Hyprland with GBM path fix
   hyprland-wrapped
+  
+  # Hyprlock with nixGL wrapper
   (wrap hyprlock)
 
   # Hyprland GUI utilities (from flake input)

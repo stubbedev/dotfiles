@@ -118,8 +118,17 @@ in {
         (import ./scripts/config-cleanup.nix {
           inherit config pkgs constants;
         });
+      # Setup PAM wrappers for Nix on non-NixOS (interactive, prompts for sudo if needed)
+      setupPamWrappers = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
+        (import ./scripts/setup-pam-wrappers.nix { inherit config pkgs lib; });
+      # Setup hyprlock PAM configuration
+      setupHyprlockPam = lib.hm.dag.entryAfter [ "setupPamWrappers" ]
+        (import ./scripts/setup-hyprlock-pam.nix { inherit config pkgs lib; });
+      # Setup SDDM session entry for Hyprland
+      setupSddmSession = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
+        (import ./scripts/setup-sddm-session.nix { inherit config pkgs lib; });
       # System checks - verifies system configuration and provides helpful warnings
-      systemChecks = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
+      systemChecks = lib.hm.dag.entryAfter [ "setupSddmSession" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
       # Restart PipeWire after audio config changes
       restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
