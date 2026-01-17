@@ -80,7 +80,7 @@ in {
       ".themes/${constants.theme.gtkTheme}".source =
         "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
-    } // vpnScripts;
+    };
 
     sessionVariables = {
       # Nix configuration
@@ -89,7 +89,7 @@ in {
       NIXOS_OZONE_WL = "1";
 
       # Editor and display
-      EDITOR = "$HOME/.local/bin/nvim";
+      EDITOR = "${config.home.homeDirectory}/.local/bin/nvim";
       DISPLAY = ":0";
 
       # Paging and documentation
@@ -118,14 +118,12 @@ in {
         (import ./scripts/config-cleanup.nix {
           inherit config pkgs constants;
         });
-
       # System checks - verifies system configuration and provides helpful warnings
-      systemChecks = lib.hm.dag.entryAfter [ "writeBoundary" ]
+      systemChecks = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
-
       # Restart PipeWire after audio config changes
       restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-        $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
+        ${pkgs.systemd}/bin/systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
       '';
     };
   };
