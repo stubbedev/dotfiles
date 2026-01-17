@@ -75,13 +75,6 @@ install_nix_home_manager() {
   fi
 
   export NIXPKGS_ALLOW_UNFREE=1
-
-  if is_binary hyprctl; then
-    export USE_HYPRLAND=true
-  else
-    export USE_HYPRLAND=false
-  fi
-
   rm -rf "$HOME/.config/home-manager"
   /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
   /nix/var/nix/profiles/default/bin/nix-channel --update

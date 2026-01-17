@@ -1,40 +1,48 @@
 # Hyprland compositor and related tools
-{ pkgs, config, ... }:
+{ pkgs, config, hyprland-guiutils, ... }:
 let
-  enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland = enableHyprland == "true";
+  inherit (config.lib.nixGL) wrap;
+  guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
 in
-if useHyprland then
-  with pkgs; [
+with pkgs; [
+  # Hyprland compositor (wrapped for non-NixOS GPU access)
+  (wrap hyprland)
+  (wrap hyprlock)
+
+  # Hyprland GUI utilities (from flake input)
+  (wrap guiutils)
+
   # Hyprland ecosystem
-  hyprshot
+  (wrap hyprshot)
   hyprlang
   hyprkeys
   hypridle
-  hyprpaper
+  (wrap hyprpaper)
   hyprsunset
-  hyprpicker
+  (wrap hyprpicker)
   hyprcursor
   hyprpolkitagent
   hyprutils
   hyprprop
-  hyprsysteminfo
+  (wrap hyprsysteminfo)
   hyprwayland-scanner
 
   # Wayland tools
   wlprop
   wayland-scanner
   wayland-utils
-  xwayland
+  (wrap xwayland)
 
-  # Desktop components
-  waybar
-  ashell
-  swaynotificationcenter
-  rofi
-  bemenu
+  # Desktop components (GUI apps need wrapping)
+  (wrap waybar)
+  (wrap ashell)
+  (wrap swaynotificationcenter)
+  (wrap rofi)
+  (wrap bemenu)
 
   # Portals
+  hyprwire
+  hyprland-protocols
   xdg-desktop-portal
   xdg-desktop-portal-hyprland
   xdg-desktop-portal-wlr
@@ -42,5 +50,3 @@ if useHyprland then
   # Clipboard
   wl-clip-persist
 ]
-else
-  []

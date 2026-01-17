@@ -5,13 +5,39 @@ let
 
   homePackages = homeLib.safeLoadPackagesFromDir ./packages args;
   programs = homeLib.loadModulesFromDir ./programs;
-  
+
   # Load VPN scripts dynamically
   vpnScripts = homeLib.loadVpnScripts ./../../vpn;
   vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
+
+  # Auto-detect NVIDIA GPU by checking if the driver is loaded
+  hasNvidia = builtins.pathExists /proc/driver/nvidia/version;
+
+  # Detect OS distribution
+  osReleasePath = /etc/os-release;
+  osReleaseContent = if builtins.pathExists osReleasePath then
+    builtins.readFile osReleasePath
+  else
+    "";
+  isFedora = builtins.match ".*ID=fedora.*" osReleaseContent != null;
+
+  # Determine driver library paths based on OS
+  driverPaths = if isFedora then {
+    libgl = "/usr/lib64/dri";
+    gbm = "/usr/lib64/gbm";
+  } else {
+    libgl = "/usr/lib/dri";
+    gbm = "/usr/lib/gbm";
+  };
 in {
 
-  targets.genericLinux.enable = true;
+  targets.genericLinux = {
+    enable = true;
+    nixGL = {
+      packages = pkgs.nixgl;
+      defaultWrapper = if hasNvidia then "nvidia" else "mesa";
+    };
+  };
   home = {
 
     username = constants.user.name;
@@ -51,8 +77,10 @@ in {
       };
       ".local/bin/unsubscribe-mail".source = ./../../aerc/scripts/unsubscribe;
 
-      ".icons/${constants.theme.iconTheme}".source  = "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
-      ".themes/${constants.theme.gtkTheme}".source = "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
+      ".icons/${constants.theme.iconTheme}".source =
+        "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
+      ".themes/${constants.theme.gtkTheme}".source =
+        "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
     } // vpnScripts;
 
@@ -92,7 +120,7 @@ in {
         (import ./scripts/config-cleanup.nix {
           inherit config pkgs constants;
         });
-      
+
       # Restart PipeWire after audio config changes
       restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
         $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
@@ -119,8 +147,41 @@ in {
     "swaync".source = ./../../swaync;
     "sway".source = ./../../sway;
     "waybar".source = ./../../waybar;
-    "hypr".source = ./../../hypr;
-    "foot".source = ./../../foot;
+
+    # Copy individual hypr config files (not as a directory to allow overriding env.conf)
+    "hypr/hypridle.conf".source = ./../../hypr/hypridle.conf;
+    "hypr/hyprland.conf".source = ./../../hypr/hyprland.conf;
+    "hypr/hyprlock.conf".source = ./../../hypr/hyprlock.conf;
+    "hypr/hyprpaper.conf".source = ./../../hypr/hyprpaper.conf;
+    "hypr/hyprsunset.conf".source = ./../../hypr/hyprsunset.conf;
+    "hypr/keybinds.conf".source = ./../../hypr/keybinds.conf;
+    "hypr/monitors.conf".source = ./../../hypr/monitors.conf;
+    "hypr/settings.conf".source = ./../../hypr/settings.conf;
+    "hypr/theme.conf".source = ./../../hypr/theme.conf;
+    "hypr/windowrule.conf".source = ./../../hypr/windowrule.conf;
+    "hypr/scripts".source = ./../../hypr/scripts;
+
+    # Generate dynamic Hyprland env.conf based on system detection
+    "hypr/env.conf" = {
+      text = ''
+        env = XDG_CURRENT_DESKTOP,Hyprland
+        env = XDG_SESSION_TYPE,wayland
+        env = XDG_SESSION_DESKTOP,Hyprland
+        env = XCURSOR_THEME,Adwaita
+        env = GTK_CURSORS,Adwaita
+        env = XCURSOR_SIZE,24
+        env = GTK_THEME,Adwaita-dark
+        env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+        # GPU driver configuration (auto-detected: ${
+          if hasNvidia then "NVIDIA" else "Mesa"
+        })
+        ${lib.optionalString hasNvidia ''
+          env = __GLX_VENDOR_LIBRARY_NAME,nvidia
+          env = LIBVA_DRIVER_NAME,nvidia
+        ''}
+      '';
+    };
     "opencode/opencode.json".source = ./../../opencode/opencode.json;
     "opencode/AGENTS.md".source = ./../../opencode/AGENTS.md;
     "opencode/themes/catppuccin-mocha.json".source =
@@ -136,16 +197,16 @@ in {
     '';
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
-    
+
     # PipeWire audio configuration for USB docks with KVM switches
     "pipewire/pipewire.conf.d/99-usb-dock.conf".source =
       ./../../pipewire/pipewire.conf.d/99-usb-dock.conf;
     "pipewire/pipewire-pulse.conf.d/99-usb-dock.conf".source =
       ./../../pipewire/pipewire-pulse.conf.d/99-usb-dock.conf;
-    
+
     # PulseAudio client config for flatpak apps (prevents audio popping)
     "pulse/client.conf".source = ./../../pipewire/pulse-client.conf;
-    
+
     # WirePlumber ALSA configuration for USB dock stability
     "wireplumber/main.lua.d/51-alsa-usb-dock.lua".source =
       ./../../wireplumber/main.lua.d/51-alsa-usb-dock.lua;
@@ -186,8 +247,11 @@ in {
     package = pkgs.nix;
     settings = {
       # Prefer binary caches to avoid compilation
-      substituters = [
-        "https://cache.nixos.org"
+      substituters =
+        [ "https://cache.nixos.org" "https://nix-community.cachix.org" ];
+      trusted-public-keys = [
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       ];
     };
   };

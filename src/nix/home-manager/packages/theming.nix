@@ -1,4 +1,5 @@
-{ pkgs, ... }:
+# Fonts, icons, and themes (no wrapping needed - these are data/assets)
+{ pkgs, config, ... }:
 with pkgs; [
   nerd-fonts.jetbrains-mono
   font-awesome

@@ -1,17 +1,29 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
+let
+  wrap = config.lib.nixGL.wrap;
+in
 with pkgs; [
+  # JavaScript/TypeScript runtimes (CLI tools)
   nodejs
   bun
   yarn
   deno
   volta
+
+  # Go tools (CLI)
   gopass
   gotools
   air
   templ
+
+  # Database tools (CLI)
   mongodb-tools
   mongosh
+
+  # PHP tools (CLI)
   mago
-  jetbrains-toolbox
+
+  # IDE toolbox (GUI app)
+  (wrap jetbrains-toolbox)
 ]
 
