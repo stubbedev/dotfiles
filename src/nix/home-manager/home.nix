@@ -181,8 +181,13 @@ in {
         env = XDG_SESSION_DESKTOP,Hyprland
         env = XCURSOR_THEME,Vimix-cursors
         env = XCURSOR_SIZE,24
-        env = GTK_THEME,Adwaita-dark
         env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+        # Force dark mode for all applications
+        env = GTK_THEME,Adwaita-dark
+        env = QT_QPA_PLATFORMTHEME,qt5ct
+        env = QT_STYLE_OVERRIDE,Adwaita-Dark
+        env = COLOR_SCHEME,prefer-dark
 
         # GPU driver configuration (auto-detected: ${
           if systemInfo.hasNvidia then "NVIDIA" else "Mesa"
