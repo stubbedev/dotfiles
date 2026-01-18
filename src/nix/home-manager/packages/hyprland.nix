@@ -27,6 +27,24 @@ let
     fi
   '';
 
+  start-hyprland-wrapped = pkgs.writeShellScriptBin "start-hyprland" ''
+    # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
+    # Auto-detected: ${
+      if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
+    }
+    export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
+    export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
+
+    # Detect GPU at runtime and use appropriate nixGL wrapper
+    if [ -f /proc/driver/nvidia/version ]; then
+      # NVIDIA GPU detected - find the actual nixGL binary
+      NIXGL_BIN=$(ls ${nixGLPackages.nixGLNvidia}/bin/nixGLNvidia* 2>/dev/null | head -1)
+      exec "$NIXGL_BIN" ${hyprlandPkg}/bin/start-hyprland "$@"
+    else
+      # Use Mesa (Intel/AMD)
+      exec ${nixGLPackages.nixGLIntel}/bin/nixGLIntel ${hyprlandPkg}/bin/start-hyprland "$@"
+    fi
+  '';
   # Create hyprctl wrapper with automatic instance signature detection
   hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
     # Auto-detect Hyprland instance signature if not set
@@ -44,6 +62,9 @@ in with pkgs; [
 
   # Hyprctl (Hyprland control CLI)
   hyprctl-wrapped
+
+  # Hyprland Start Binary
+  start-hyprland-wrapped
 
   # Hyprlock with nixGL wrapper
   (wrap hyprlock)
