@@ -30,9 +30,7 @@ let
 in {
   targets.genericLinux = {
     enable = true;
-    nixGL = {
-      packages = pkgs.nixgl;
-    };
+    nixGL = { packages = pkgs.nixgl; };
   };
   home = {
 
@@ -80,6 +78,22 @@ in {
       ".themes/${constants.theme.gtkTheme}".source =
         "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
+
+      # Flatpak overrides for dark mode theming
+      # Note: Qt/KDE flatpaks may have poor contrast because they use the Breeze
+      # theme from their runtime, which may be different from your system theme.
+      # For better appearance, consider using native packages for Qt apps.
+      ".local/share/flatpak/overrides/global".text = ''
+        [Context]
+        filesystems=xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;xdg-config/kdeglobals:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro
+
+        [Environment]
+        GTK_THEME=Adwaita-dark
+        QT_QPA_PLATFORMTHEME=kde
+        QT_STYLE=breeze
+        COLOR_SCHEME=prefer-dark
+        GDK_BACKEND=wayland
+      '';
     };
 
     sessionVariables = {
@@ -180,6 +194,9 @@ in {
         env = XCURSOR_SIZE,24
         env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
 
+        # Ensure Nix portals are found before system ones
+        env = XDG_DATA_DIRS,$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:/usr/local/share:/usr/share
+
         # Force Wayland backend for GTK apps
         env = GDK_BACKEND,wayland
 
@@ -222,6 +239,15 @@ in {
       default=hyprland;gtk;wlr;kde;
     '';
 
+    # Configure Hyprland portal to use proper GPU acceleration for share picker
+    "xdg-desktop-portal-hyprland/hyprland.conf".text = ''
+      [screencast]
+      max_fps = 60
+      exec_before = 
+      exec_after = 
+      chooser_type = simple
+    '';
+
     "environment.d/envvars.conf".text = ''
       PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
     '';
@@ -243,6 +269,21 @@ in {
   } // vpnConfigs;
 
   systemd.user.services = {
+    xdg-desktop-portal-hyprland = {
+      Unit = {
+        Description = "Portal service (Hyprland implementation)";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+      };
+      Service = {
+        Type = "dbus";
+        BusName = "org.freedesktop.impl.portal.desktop.hyprland";
+        ExecStart =
+          "${pkgs.xdg-desktop-portal-hyprland}/libexec/xdg-desktop-portal-hyprland";
+        Restart = "on-failure";
+      };
+    };
+
     await-powerprofile = {
       Unit = {
         Description = "Reload Waybar when power-profiles-daemon starts";

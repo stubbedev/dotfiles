@@ -110,6 +110,8 @@ in with pkgs; [
   wayland-scanner
   wayland-utils
   (wrap xwayland)
+  (wrap slurp)  # Screen area selection tool for screensharing picker
+  (wrap grim)   # Screenshot utility (works with slurp)
 
   # Desktop components (GUI apps need wrapping)
   (wrap waybar)
