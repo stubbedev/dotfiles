@@ -7,7 +7,7 @@ let
     [Desktop Entry]
     Name=Hyprland (Nix)
     Comment=Hyprland Wayland Compositor from Nix/Home Manager
-    Exec=${config.home.homeDirectory}/.nix-profile/bin/hyprland
+    Exec=systemd-cat --identifier=hyprland ${config.home.homeDirectory}/.nix-profile/bin/hyprland
     Type=Application
     DesktopNames=Hyprland
   '';
