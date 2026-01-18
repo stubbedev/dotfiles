@@ -239,15 +239,6 @@ in {
       default=hyprland;gtk;wlr;kde;
     '';
 
-    # Configure Hyprland portal to use proper GPU acceleration for share picker
-    "xdg-desktop-portal-hyprland/hyprland.conf".text = ''
-      [screencast]
-      max_fps = 60
-      exec_before = 
-      exec_after = 
-      chooser_type = simple
-    '';
-
     "environment.d/envvars.conf".text = ''
       PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
     '';
@@ -259,6 +250,31 @@ in {
       ./../../pipewire/pipewire.conf.d/99-usb-dock.conf;
     "pipewire/pipewire-pulse.conf.d/99-usb-dock.conf".source =
       ./../../pipewire/pipewire-pulse.conf.d/99-usb-dock.conf;
+
+    # Low-latency PipeWire configuration for screen sharing and camera
+    "pipewire/pipewire.conf.d/10-screenshare-optimize.conf".text = ''
+      # Low-latency configuration for screen sharing, camera, and microphone
+      # This is loaded before 99-usb-dock.conf but stream-specific settings take precedence
+
+      # Stream-specific properties for screen capture
+      stream.properties = {
+          # Lower latency for screen capture
+          node.latency = 512/48000  # ~10ms for screen sharing
+      }
+
+      # Camera/Video specific optimizations
+      context.modules = [
+          {   name = libpipewire-module-rt
+              args = {
+                  nice.level   = -11
+                  rt.prio      = 88
+                  rt.time.soft = -1
+                  rt.time.hard = -1
+              }
+              flags = [ ifexists nofail ]
+          }
+      ]
+    '';
 
     # PulseAudio client config for flatpak apps (prevents audio popping)
     "pulse/client.conf".source = ./../../pipewire/pulse-client.conf;
