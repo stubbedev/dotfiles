@@ -27,23 +27,13 @@ let
     fi
   '';
 
+  # Create start-hyprland wrapper that uses our wrapped hyprland
+  # The watchdog monitors the wrapped hyprland process
   start-hyprland-wrapped = pkgs.writeShellScriptBin "start-hyprland" ''
-    # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
-    # Auto-detected: ${
-      if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
-    }
-    export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
-    export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
-
-    # Detect GPU at runtime and use appropriate nixGL wrapper
-    if [ -f /proc/driver/nvidia/version ]; then
-      # NVIDIA GPU detected - find the actual nixGL binary
-      NIXGL_BIN=$(ls ${nixGLPackages.nixGLNvidia}/bin/nixGLNvidia* 2>/dev/null | head -1)
-      exec "$NIXGL_BIN" ${hyprlandPkg}/bin/start-hyprland "$@"
-    else
-      # Use Mesa (Intel/AMD)
-      exec ${nixGLPackages.nixGLIntel}/bin/nixGLIntel ${hyprlandPkg}/bin/start-hyprland "$@"
-    fi
+    # Add our wrapped Hyprland to PATH so start-hyprland can find it
+    export PATH="${hyprland-wrapped}/bin:$PATH"
+    # Use the official start-hyprland watchdog
+    exec ${hyprlandPkg}/bin/start-hyprland "$@"
   '';
   # Create hyprctl wrapper with automatic instance signature detection
   hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
@@ -56,9 +46,17 @@ let
     exec ${hyprlandPkg}/bin/hyprctl "$@"
   '';
 
+  # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
+  # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
+  hyprland-both-cases = pkgs.runCommand "hyprland-both-cases" {} ''
+    mkdir -p $out/bin
+    ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/hyprland
+    ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/Hyprland
+  '';
+
 in with pkgs; [
-  # Custom wrapped Hyprland with GBM path fix
-  hyprland-wrapped
+  # Custom wrapped Hyprland with GBM path fix (provides both hyprland and Hyprland)
+  hyprland-both-cases
 
   # Hyprctl (Hyprland control CLI)
   hyprctl-wrapped
