@@ -27,9 +27,14 @@ let
     fi
   '';
 
-  # Create hyprctl wrapper (doesn't need GPU wrapping, it's just a control CLI)
+  # Create hyprctl wrapper with automatic instance signature detection
   hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
-    # hyprctl doesn't need GPU wrapping, call it directly
+    # Auto-detect Hyprland instance signature if not set
+    if [ -z "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
+      export HYPRLAND_INSTANCE_SIGNATURE=$(ls -t /run/user/$(id -u)/hypr/ 2>/dev/null | grep -v "unknown" | head -1)
+    fi
+
+    # Call hyprctl
     exec ${hyprlandPkg}/bin/hyprctl "$@"
   '';
 

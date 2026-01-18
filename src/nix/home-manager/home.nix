@@ -128,10 +128,10 @@ in {
       setupHyprlockPam = lib.hm.dag.entryAfter [ "setupPamWrappers" ]
         (import ./scripts/setup-hyprlock-pam.nix { inherit config pkgs lib; });
       # Setup SDDM session entry for Hyprland
-      setupSddmSession = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
+      setupHyprSession = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
         (import ./scripts/setup-sddm-session.nix { inherit config pkgs lib; });
       # System checks - verifies system configuration and provides helpful warnings
-      systemChecks = lib.hm.dag.entryAfter [ "setupSddmSession" ]
+      systemChecks = lib.hm.dag.entryAfter [ "setupHyprSession" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
       # Restart PipeWire after audio config changes
       restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
