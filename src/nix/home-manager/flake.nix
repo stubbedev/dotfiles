@@ -4,13 +4,21 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     nixgl.url = "github:nix-community/nixGL";
+
+    # Use official Hyprland flake for better plugin compatibility
+    # Use v0.53.0 which is the latest stable release
+    hyprland.url =
+      "git+https://github.com/hyprwm/Hyprland?ref=v0.53.0&submodules=1";
+
     hyprland-guiutils = {
       url = "github:hyprwm/hyprland-guiutils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     hy3 = {
-      url = "github:outfoxxed/hy3?ref=hl0.52.0";
-      # Use the hl0.52.0 tag which should work with hyprland 0.52.1
+      url =
+        "github:outfoxxed/hy3?ref=hl0.53.0"; # Use hl0.53.0 tag to match Hyprland v0.53.0
+      inputs.hyprland.follows =
+        "hyprland"; # Use the same hyprland as our main input
     };
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";

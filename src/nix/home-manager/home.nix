@@ -197,10 +197,8 @@ in {
     "hypr/plugins.conf" = {
       text = 
         let
-          # Build hy3 against the system's hyprland package to avoid rebuilding hyprland
-          hy3-plugin = args.hy3.packages.${pkgs.system}.hy3.override {
-            hyprland = pkgs.hyprland.dev;
-          };
+          # hy3 is already built against the correct hyprland from the flake
+          hy3-plugin = args.hy3.packages.${pkgs.system}.hy3;
         in ''
         # Hyprland plugins loaded from Nix
         plugin = ${hy3-plugin}/lib/libhy3.so

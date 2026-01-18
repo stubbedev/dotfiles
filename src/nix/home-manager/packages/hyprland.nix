@@ -1,8 +1,9 @@
 # Hyprland compositor and related tools
-{ pkgs, config, hyprland-guiutils, hy3, systemInfo, ... }:
+{ pkgs, config, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
 let
   inherit (config.lib.nixGL) wrap;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
+  hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
 
   # Create custom Hyprland wrapper with GBM backend path fix for non-NixOS
   # This is needed because Nix's mesa-libgbm doesn't include GBM backends
@@ -14,14 +15,14 @@ let
     export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
     export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
 
-    # Call the nixGL-wrapped Hyprland
-    exec ${wrap pkgs.hyprland}/bin/hyprland "$@"
+    # Call the nixGL-wrapped Hyprland from official flake
+    exec ${wrap hyprlandPkg}/bin/hyprland "$@"
   '';
 
   # Create hyprctl wrapper (doesn't need GPU wrapping, it's just a control CLI)
   hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
     # hyprctl doesn't need GPU wrapping, call it directly
-    exec ${pkgs.hyprland}/bin/hyprctl "$@"
+    exec ${hyprlandPkg}/bin/hyprctl "$@"
   '';
 
 in with pkgs; [
