@@ -48,10 +48,30 @@ let
 
   # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
   # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
-  hyprland-both-cases = pkgs.runCommand "hyprland-both-cases" {} ''
+  hyprland-both-cases = pkgs.runCommand "hyprland-both-cases" { } ''
     mkdir -p $out/bin
     ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/hyprland
     ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/Hyprland
+  '';
+
+  # Create swaync wrapper that auto-detects the correct Wayland display
+  swaync-wrapped = pkgs.writeShellScriptBin "swaync" ''
+    # Auto-detect the correct Wayland display socket
+    if [ -z "$WAYLAND_DISPLAY" ] || [ ! -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+      # Find the most recent wayland-* socket
+      for socket in $(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v ".lock"); do
+        if [ -S "$socket" ]; then
+          export WAYLAND_DISPLAY=$(basename "$socket")
+          break
+        fi
+      done
+    fi
+
+    # Ensure GDK uses Wayland backend
+    export GDK_BACKEND=wayland
+
+    # Run swaync
+    exec ${pkgs.swaynotificationcenter}/bin/swaync "$@"
   '';
 
 in with pkgs; [
@@ -94,7 +114,7 @@ in with pkgs; [
   # Desktop components (GUI apps need wrapping)
   (wrap waybar)
   (wrap ashell)
-  (wrap swaynotificationcenter)
+  swaync-wrapped # Custom wrapper with Wayland display auto-detection
   (wrap rofi)
   (wrap bemenu)
 

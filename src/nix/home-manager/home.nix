@@ -28,20 +28,17 @@ let
     libPath = if isFedora then "lib64" else "lib";
   };
 in {
-
   targets.genericLinux = {
     enable = true;
     nixGL = {
       packages = pkgs.nixgl;
-      # Don't set defaultWrapper - we handle GPU detection in hyprland wrapper
-      defaultWrapper = "mesa";  # Fallback, but hyprland wrapper overrides this
     };
   };
   home = {
 
     username = constants.user.name;
     homeDirectory = "/home/${constants.user.name}";
-    stateVersion = "25.05";
+    stateVersion = "25.11";
     packages = homePackages;
 
     file = {
@@ -183,11 +180,17 @@ in {
         env = XCURSOR_SIZE,24
         env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
 
+        # Force Wayland backend for GTK apps
+        env = GDK_BACKEND,wayland
+
         # Force dark mode for all applications
         env = GTK_THEME,Adwaita-dark
-        env = QT_QPA_PLATFORMTHEME,qt5ct
-        env = QT_STYLE_OVERRIDE,Adwaita-Dark
+        env = QT_QPA_PLATFORMTHEME,kde
+        env = QT_STYLE_OVERRIDE,Breeze
         env = COLOR_SCHEME,prefer-dark
+
+        # Electron apps (VSCode, Discord, etc.) - force dark mode
+        env = ELECTRON_OZONE_PLATFORM_HINT,auto
 
         # GPU driver configuration (auto-detected: ${
           if systemInfo.hasNvidia then "NVIDIA" else "Mesa"
@@ -198,14 +201,13 @@ in {
         ''}
       '';
     };
-    
+
     # Generate dynamic Hyprland plugins configuration
     "hypr/plugins.conf" = {
-      text = 
-        let
-          # hy3 is already built against the correct hyprland from the flake
-          hy3-plugin = args.hy3.packages.${pkgs.system}.hy3;
-        in ''
+      text = let
+        # hy3 is already built against the correct hyprland from the flake
+        hy3-plugin = args.hy3.packages.${pkgs.system}.hy3;
+      in ''
         # Hyprland plugins loaded from Nix
         plugin = ${hy3-plugin}/lib/libhy3.so
       '';
