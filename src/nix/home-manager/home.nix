@@ -33,7 +33,8 @@ in {
     enable = true;
     nixGL = {
       packages = pkgs.nixgl;
-      defaultWrapper = if systemInfo.hasNvidia then "nvidia" else "mesa";
+      # Don't set defaultWrapper - we handle GPU detection in hyprland wrapper
+      defaultWrapper = "mesa";  # Fallback, but hyprland wrapper overrides this
     };
   };
   home = {
