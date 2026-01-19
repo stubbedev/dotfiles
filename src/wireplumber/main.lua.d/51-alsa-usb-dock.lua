@@ -16,6 +16,8 @@ table.insert(alsa_monitor.rules, {
     ["session.suspend-timeout-seconds"] = 0,  -- Disable suspend (0 = never suspend)
     ["api.alsa.use-chmap"] = false,  -- Disable channel mapping for USB devices
     ["audio.rate"] = 48000,  -- Force 48kHz to avoid resampling
+    ["node.pause-on-idle"] = false,  -- Don't pause when idle (prevents pops)
+    ["audio.no-dsp"] = true,  -- Skip DSP processing to reduce latency spikes
   },
 })
 
