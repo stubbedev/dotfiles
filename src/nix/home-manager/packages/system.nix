@@ -1,18 +1,18 @@
 # System services and utilities
 { pkgs, config, ... }:
 let
-  wrap = config.lib.nixGL.wrap;
+  inherit (config.lib.nixGL) wrap;
 in
 with pkgs; [
   # Terminal emulator (GPU accelerated)
   (wrap alacritty)
 
   # Network management (GUI applets)
-  (wrap networkmanagerapplet)
+  networkmanagerapplet
   networkmanager-openconnect
 
   # Bluetooth (GUI)
-  (wrap blueman)
+  blueman
 
   # Monitor Brightness (CLI tools)
   brightnessctl
