@@ -3,10 +3,11 @@
   gtk = {
     enable = true;
     
-    theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
-    };
+    # Don't set theme - let GTK4 use default with dark preference
+    # theme = {
+    #   name = "Adwaita";
+    #   package = pkgs.adwaita-icon-theme;
+    # };
     
     iconTheme = {
       name = "Vimix-dark";

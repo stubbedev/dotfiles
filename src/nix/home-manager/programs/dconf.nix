@@ -4,7 +4,7 @@
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
-      gtk-theme = "Adwaita-dark";
+      gtk-theme = "Adwaita";
       icon-theme = "Vimix-dark";
       cursor-theme = "Vimix-cursors";
     };

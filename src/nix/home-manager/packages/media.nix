@@ -20,8 +20,8 @@ with pkgs; [
   (wrap viu)
   (wrap ueberzugpp)
 
-  # Audio control
-  (wrap pavucontrol)
+  # Audio control (no GL needed)
+  pavucontrol
 
   # Office suite (GUI app)
   (wrap libreoffice-fresh)

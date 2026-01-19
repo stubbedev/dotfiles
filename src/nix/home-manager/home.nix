@@ -75,6 +75,12 @@ in {
         "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
       ".icons/Vimix-cursors".source =
         "${pkgs.vimix-cursors}/share/icons/Vimix-cursors";
+      
+      # Also symlink to .local/share/icons for better compatibility
+      ".local/share/icons/Vimix-dark".source =
+        "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
+      ".local/share/icons/Vimix-cursors".source =
+        "${pkgs.vimix-cursors}/share/icons/Vimix-cursors";
       ".themes/${constants.theme.gtkTheme}".source =
         "${pkgs.rose-pine-gtk-theme}/share/themes/rose-pine";
       ".w3m".source = ./../../w3m;
@@ -116,7 +122,9 @@ in {
       GOPATH = "${config.home.homeDirectory}/go";
 
       # Theme and custom variables
-      GTK_THEME = constants.theme.gtkTheme;
+      # NOTE: GTK_THEME is NOT set here because GTK4 apps crash with it
+      # GTK3 apps use the theme from ~/.config/gtk-3.0/settings.ini
+      # GTK4 apps use the color-scheme preference (prefer-dark) from dconf
       GTK_THEME_VARIANT = "dark";
       DEPLOYER_REMOTE_USER = "abs";
     };
@@ -201,7 +209,7 @@ in {
         env = GDK_BACKEND,wayland
 
         # Force dark mode for all applications
-        env = GTK_THEME,Adwaita-dark
+        # Don't set GTK_THEME for GTK4 apps - they use color-scheme preference
         env = QT_QPA_PLATFORMTHEME,kde
         env = QT_STYLE_OVERRIDE,Breeze
         env = COLOR_SCHEME,prefer-dark
