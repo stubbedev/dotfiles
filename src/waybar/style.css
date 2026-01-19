@@ -1,5 +1,10 @@
 /* @import "mocha.css" */
 
+/* Fix for GTK3 menu flickering - disable animations on popup menus */
+menu {
+    animation: none;
+}
+
 @define-color rosewater #f5e0dc;
 @define-color flamingo #f2cdcd;
 @define-color pink #f5c2e7;

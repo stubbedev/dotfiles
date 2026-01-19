@@ -41,20 +41,19 @@ PipeWire's PulseAudio compatibility layer configuration.
 
 ### `pulse-client.conf`
 
-PulseAudio client configuration for flatpak applications.
+PulseAudio client configuration file for PipeWire compatibility layer.
 
-**Purpose:** Fixes audio popping in flatpak apps that use PipeWire's PulseAudio compatibility layer.
+**Purpose:** Placeholder file to prevent PulseAudio client errors. Kept minimal because PipeWire's PulseAudio compatibility layer does NOT support most traditional PulseAudio `client.conf` options.
 
 **Deployed to:**
-- `~/.config/pulse/client.conf` (global default for all flatpaks)
+- `~/.config/pulse/client.conf` (system-wide)
+- Can be symlinked to `~/.var/app/APP_ID/config/pulse/client.conf` for flatpak apps
 
-**Settings:**
-- Fragment size: 21ms
-- Buffer size: 42ms
-- Sample rate: 48000 Hz (fixed)
-- Timer-based scheduling: disabled
+**Important:** All actual audio configuration (buffer sizes, sample rates, latency) is done in PipeWire configuration files, not here:
+- Use `pipewire.conf.d/99-usb-dock.conf` for core PipeWire settings
+- Use `pipewire-pulse.conf.d/99-usb-dock.conf` for PulseAudio compatibility layer settings
 
-**Note:** Individual flatpak apps can override this by placing their own `client.conf` in `~/.var/app/APP_ID/config/pulse/client.conf`
+**Note:** Options like `default-fragment-size-msec`, `default-buffer-size-msec`, `default-sample-rate`, etc. are **not supported** by PipeWire and will cause warnings if included.
 
 ## WirePlumber Configuration
 

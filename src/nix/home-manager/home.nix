@@ -126,6 +126,10 @@ in {
       # GTK3 apps use the theme from ~/.config/gtk-3.0/settings.ini
       # GTK4 apps use the color-scheme preference (prefer-dark) from dconf
       GTK_THEME_VARIANT = "dark";
+      
+      # Fix GTK3 menu flickering in waybar (disable portal for menu handling)
+      GTK_USE_PORTAL = "0";
+      
       DEPLOYER_REMOTE_USER = "abs";
     };
 
