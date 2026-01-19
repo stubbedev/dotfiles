@@ -1,40 +1,128 @@
 # Hyprland compositor and related tools
-{ pkgs, config, ... }:
+{ pkgs, config, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
 let
-  enableHyprland = builtins.getEnv "USE_HYPRLAND";
-  useHyprland = enableHyprland == "true";
-in
-if useHyprland then
-  with pkgs; [
+  inherit (config.lib.nixGL) wrap;
+  guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
+  hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
+  nixGLPackages = config.targets.genericLinux.nixGL.packages;
+
+  # Create custom Hyprland wrapper with runtime GPU detection
+  # This is needed because Nix's mesa-libgbm doesn't include GBM backends
+  hyprland-wrapped = pkgs.writeShellScriptBin "hyprland" ''
+    # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
+    # Auto-detected: ${
+      if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
+    }
+    export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
+    export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
+
+    # Detect GPU at runtime and use appropriate nixGL wrapper
+    if [ -f /proc/driver/nvidia/version ]; then
+      # NVIDIA GPU detected - find the actual nixGL binary
+      NIXGL_BIN=$(ls ${nixGLPackages.nixGLNvidia}/bin/nixGLNvidia* 2>/dev/null | head -1)
+      exec "$NIXGL_BIN" ${hyprlandPkg}/bin/hyprland "$@"
+    else
+      # Use Mesa (Intel/AMD)
+      exec ${nixGLPackages.nixGLIntel}/bin/nixGLIntel ${hyprlandPkg}/bin/hyprland "$@"
+    fi
+  '';
+
+  # Create start-hyprland wrapper that uses our wrapped hyprland
+  # The watchdog monitors the wrapped hyprland process
+  start-hyprland-wrapped = pkgs.writeShellScriptBin "start-hyprland" ''
+    # Add our wrapped Hyprland to PATH so start-hyprland can find it
+    export PATH="${hyprland-wrapped}/bin:$PATH"
+    # Use the official start-hyprland watchdog
+    exec ${hyprlandPkg}/bin/start-hyprland "$@"
+  '';
+  # Create hyprctl wrapper with automatic instance signature detection
+  hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
+    # Auto-detect Hyprland instance signature if not set
+    if [ -z "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
+      export HYPRLAND_INSTANCE_SIGNATURE=$(ls -t /run/user/$(id -u)/hypr/ 2>/dev/null | grep -v "unknown" | head -1)
+    fi
+
+    # Call hyprctl
+    exec ${hyprlandPkg}/bin/hyprctl "$@"
+  '';
+
+  # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
+  # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
+  hyprland-both-cases = pkgs.runCommand "hyprland-both-cases" { } ''
+    mkdir -p $out/bin
+    ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/hyprland
+    ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/Hyprland
+  '';
+
+  # Create swaync wrapper that auto-detects the correct Wayland display
+  swaync-wrapped = pkgs.writeShellScriptBin "swaync" ''
+    # Auto-detect the correct Wayland display socket
+    if [ -z "$WAYLAND_DISPLAY" ] || [ ! -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+      # Find the most recent wayland-* socket
+      for socket in $(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v ".lock"); do
+        if [ -S "$socket" ]; then
+          export WAYLAND_DISPLAY=$(basename "$socket")
+          break
+        fi
+      done
+    fi
+
+    # Ensure GDK uses Wayland backend
+    export GDK_BACKEND=wayland
+
+    # Run swaync
+    exec ${pkgs.swaynotificationcenter}/bin/swaync "$@"
+  '';
+
+in with pkgs; [
+  # Custom wrapped Hyprland with GBM path fix (provides both hyprland and Hyprland)
+  hyprland-both-cases
+
+  # Hyprctl (Hyprland control CLI)
+  hyprctl-wrapped
+
+  # Hyprland Start Binary
+  start-hyprland-wrapped
+
+  # Hyprlock with nixGL wrapper
+  (wrap hyprlock)
+
+  # Hyprland GUI utilities (from flake input)
+  (wrap guiutils)
+
   # Hyprland ecosystem
-  hyprshot
+  (wrap hyprshot)
   hyprlang
   hyprkeys
   hypridle
-  hyprpaper
+  (wrap hyprpaper)
   hyprsunset
-  hyprpicker
+  (wrap hyprpicker)
   hyprcursor
   hyprpolkitagent
   hyprutils
   hyprprop
-  hyprsysteminfo
+  (wrap hyprsysteminfo)
   hyprwayland-scanner
 
   # Wayland tools
   wlprop
   wayland-scanner
   wayland-utils
-  xwayland
+  (wrap xwayland)
+  (wrap slurp)  # Screen area selection tool for screensharing picker
+  (wrap grim)   # Screenshot utility (works with slurp)
 
-  # Desktop components
-  waybar
-  ashell
-  swaynotificationcenter
-  rofi
-  bemenu
+  # Desktop components (GUI apps need wrapping)
+  (wrap waybar)
+  (wrap ashell)
+  swaync-wrapped # Custom wrapper with Wayland display auto-detection
+  (wrap rofi)
+  (wrap bemenu)
 
   # Portals
+  hyprwire
+  hyprland-protocols
   xdg-desktop-portal
   xdg-desktop-portal-hyprland
   xdg-desktop-portal-wlr
@@ -42,5 +130,3 @@ if useHyprland then
   # Clipboard
   wl-clip-persist
 ]
-else
-  []

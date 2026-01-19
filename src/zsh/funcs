@@ -501,12 +501,6 @@ if is_binary home-manager; then
       fi
     done
 
-    if is_binary hyprctl; then
-      export USE_HYPRLAND=true
-    else
-      export USE_HYPRLAND=false
-    fi
-
     case "${filtered_args[1]:-}" in
     "update" | "upgrade")
       if [[ "$debug_mode" == "true" ]]; then

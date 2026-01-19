@@ -1,16 +1,29 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
+let
+  wrap = config.lib.nixGL.wrap;
+in
 with pkgs; [
+  # Image processing (CLI tools, no wrapping needed)
   imagemagick
   pngquant
   exiftool
   dcraw
   libraw
   librsvg
-  ffmpeg-full
-  chafa
-  viu
-  ueberzugpp
-  libreoffice-fresh
   ghostscript
+
+  # Video/media (ffmpeg uses GPU acceleration)
+  (wrap ffmpeg-full)
+
+  # Terminal image viewers (some use GPU)
+  chafa
+  (wrap viu)
+  (wrap ueberzugpp)
+
+  # Audio control
+  (wrap pavucontrol)
+
+  # Office suite (GUI app)
+  (wrap libreoffice-fresh)
 ]
 
