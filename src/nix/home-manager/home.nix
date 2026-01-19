@@ -290,6 +290,24 @@ in {
     # WirePlumber ALSA configuration for USB dock stability
     "wireplumber/main.lua.d/51-alsa-usb-dock.lua".source =
       ./../../wireplumber/main.lua.d/51-alsa-usb-dock.lua;
+
+    # GPG agent configuration
+    "gnupg/gpg-agent.conf".text = ''
+      # Use pinentry-gnome3 for password prompts (Wayland compatible)
+      # pinentry-gnome3 integrates with gnome-keyring to remember passphrases
+      pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
+      
+      # Cache passwords for maximum time to avoid repeated prompts during session
+      # 1 year = 31536000 seconds
+      default-cache-ttl 31536000
+      max-cache-ttl 31536000
+      
+      # Allow preset passphrases
+      allow-preset-passphrase
+      
+      # SSH support is handled by gnome-keyring instead
+      # enable-ssh-support
+    '';
   } // vpnConfigs;
 
   systemd.user.services = {
