@@ -122,8 +122,8 @@ nmap <leader>bp <Action>(PinActiveEditorTab)
 " Close All Unpinned Buffers
 nmap <leader>bP <Action>(CloseAllUnpinnedEditors)
 " Escape and Clear hlsearch
-nmap <esc> :nohlsearch<CR>
-nmap <leader>ur :nohlsearch<CR>
+nnoremap <esc> :nohlsearch<CR>
+nnoremap <leader>ur :nohlsearch<CR>
 " Keywordprg
 nmap <leader>K :help<space><C-r><C-w><CR>
 " Add Comment Below
