@@ -127,8 +127,8 @@ in {
       # GTK4 apps use the color-scheme preference (prefer-dark) from dconf
       GTK_THEME_VARIANT = "dark";
       
-      # Fix GTK3 menu flickering in waybar (disable portal for menu handling)
-      GTK_USE_PORTAL = "0";
+      # NOTE: GTK_USE_PORTAL is set in Hyprland's env.conf instead of here
+      # to avoid breaking KDE Plasma which requires portals to function
       
       DEPLOYER_REMOTE_USER = "abs";
     };
@@ -211,6 +211,9 @@ in {
 
         # Force Wayland backend for GTK apps
         env = GDK_BACKEND,wayland
+
+        # Fix GTK3 menu flickering in waybar (disable portal for menu handling in Hyprland)
+        env = GTK_USE_PORTAL,0
 
         # Force dark mode for all applications
         # Don't set GTK_THEME for GTK4 apps - they use color-scheme preference
