@@ -6,9 +6,10 @@ let
   hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
   nixGLPackages = config.targets.genericLinux.nixGL.packages;
 
-  # Create custom Hyprland wrapper with runtime GPU detection
+  # Create custom Hyprland wrapper with build-time GPU detection
   # This is needed because Nix's mesa-libgbm doesn't include GBM backends
-  hyprland-wrapped = pkgs.writeShellScriptBin "hyprland" ''
+  # The nixGL wrapper is pre-selected in systemInfo based on GPU detection
+  hyprland-wrapped = pkgs.writeShellScriptBin "hyprland" (''
     # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
     # Auto-detected: ${
       if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
@@ -16,16 +17,16 @@ let
     export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
     export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
 
-    # Detect GPU at runtime and use appropriate nixGL wrapper
-    if [ -f /proc/driver/nvidia/version ]; then
-      # NVIDIA GPU detected - find the actual nixGL binary
-      NIXGL_BIN=$(ls ${nixGLPackages.nixGLNvidia}/bin/nixGLNvidia* 2>/dev/null | head -1)
-      exec "$NIXGL_BIN" ${hyprlandPkg}/bin/hyprland "$@"
-    else
-      # Use Mesa (Intel/AMD)
-      exec ${nixGLPackages.nixGLIntel}/bin/nixGLIntel ${hyprlandPkg}/bin/hyprland "$@"
-    fi
-  '';
+    # GPU detected at build time: ${if systemInfo.hasNvidia then "NVIDIA" else "Intel/Mesa"}
+    # Using wrapper: ${systemInfo.nixGLWrapper}
+  '' + (if systemInfo.hasNvidia then ''
+    # NVIDIA: Find the versioned binary (e.g., nixGLNvidia-560.35.03)
+    NIXGL_BIN=$(ls ${systemInfo.nixGLWrapper}/bin/nixGLNvidia* 2>/dev/null | head -1)
+    exec "$NIXGL_BIN" ${hyprlandPkg}/bin/hyprland "$@"
+  '' else ''
+    # Intel/AMD: Use nixGLIntel directly
+    exec ${systemInfo.nixGLWrapper}/bin/nixGLIntel ${hyprlandPkg}/bin/hyprland "$@"
+  ''));
 
   # Create start-hyprland wrapper that uses our wrapped hyprland
   # The watchdog monitors the wrapped hyprland process

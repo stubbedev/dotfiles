@@ -22,10 +22,14 @@ let
     "";
   isFedora = builtins.match ".*ID=fedora.*" osReleaseContent != null;
 
-  # System-specific library paths
+  # System-specific library paths and nixGL wrapper selection
   systemInfo = {
     inherit hasNvidia isFedora;
     libPath = if isFedora then "lib64" else "lib";
+    # Select the appropriate nixGL wrapper based on GPU detection
+    nixGLWrapper = if hasNvidia 
+      then pkgs.nixgl.nixGLNvidia
+      else pkgs.nixgl.nixGLIntel;
   };
 in {
   targets.genericLinux = {
