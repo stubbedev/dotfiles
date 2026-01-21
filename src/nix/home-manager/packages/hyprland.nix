@@ -46,9 +46,25 @@ let
   # HYPRLAND_INSTANCE_SIGNATURE values (e.g., in tmux sessions or long-running terminals)
   hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
     # Auto-detect the current active Hyprland instance
-    # Find the most recent directory with a valid lock file
-    CURRENT_INSTANCE=$(ls -t /run/user/$(id -u)/hypr/*/hyprland.lock 2>/dev/null | head -1 | xargs dirname 2>/dev/null | xargs basename 2>/dev/null)
-    
+    # Prefer instances with a listening control socket
+    CURRENT_INSTANCE=""
+
+    for lockfile in $(ls -t /run/user/$(id -u)/hypr/*/hyprland.lock 2>/dev/null); do
+      instance_dir=$(dirname "$lockfile")
+      instance_name=$(basename "$instance_dir")
+      socket_path="$instance_dir/.socket.sock"
+
+      if [ -S "$socket_path" ] && ss -xl | grep -q "$socket_path"; then
+        CURRENT_INSTANCE="$instance_name"
+        break
+      fi
+    done
+
+    # Fallback to newest lock file if no listening socket found
+    if [ -z "$CURRENT_INSTANCE" ]; then
+      CURRENT_INSTANCE=$(ls -t /run/user/$(id -u)/hypr/*/hyprland.lock 2>/dev/null | head -1 | xargs dirname 2>/dev/null | xargs basename 2>/dev/null)
+    fi
+
     if [ -n "$CURRENT_INSTANCE" ]; then
       export HYPRLAND_INSTANCE_SIGNATURE="$CURRENT_INSTANCE"
     fi
