@@ -34,6 +34,10 @@ let
     # Add our wrapped Hyprland to PATH so start-hyprland can find it
     export PATH="${hyprland-wrapped}/bin:$PATH"
     
+    # Ensure we have the Hyprland binary available (both cases)
+    # start-hyprland looks for "Hyprland" with capital H
+    export PATH="${hyprland-both-cases}/bin:$PATH"
+    
     # Use the official start-hyprland watchdog
     exec ${hyprlandPkg}/bin/start-hyprland "$@"
   '';

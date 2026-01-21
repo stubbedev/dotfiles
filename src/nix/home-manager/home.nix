@@ -302,6 +302,10 @@ in {
     "wireplumber/main.lua.d/51-alsa-usb-dock.lua".source =
       ./../../wireplumber/main.lua.d/51-alsa-usb-dock.lua;
 
+    # WirePlumber configuration to enable HDMI/DisplayPort audio
+    "wireplumber/main.lua.d/50-enable-hdmi-audio.lua".source =
+      ./../../wireplumber/main.lua.d/50-enable-hdmi-audio.lua;
+
     # GPG agent configuration
     "gnupg/gpg-agent.conf".text = ''
       # Use pinentry-gnome3 for password prompts (Wayland compatible)
