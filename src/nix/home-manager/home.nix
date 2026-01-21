@@ -157,8 +157,11 @@ in {
       # Setup SDDM session entry for Hyprland
       setupHyprSession = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
         (import ./scripts/setup-sddm-session.nix { inherit config pkgs lib; });
+      # Install icon/cursor themes for snap apps
+      setupSnapThemes = lib.hm.dag.entryAfter [ "setupHyprSession" ]
+        (import ./scripts/setup-snap-themes.nix { inherit config pkgs lib; });
       # System checks - verifies system configuration and provides helpful warnings
-      systemChecks = lib.hm.dag.entryAfter [ "setupHyprSession" ]
+      systemChecks = lib.hm.dag.entryAfter [ "setupSnapThemes" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
       # Restart PipeWire after audio config changes
       restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
