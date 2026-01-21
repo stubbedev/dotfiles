@@ -1,12 +1,16 @@
 { pkgs, ... }: {
-  qt = {
-    enable = true;
-    platformTheme.name = "kde";
-    style = {
-      name = "Breeze";
-      package = pkgs.kdePackages.breeze;
-    };
-  };
+  # Disabled to prevent global QT_STYLE_OVERRIDE export which breaks KDE Plasma login
+  # QT settings are configured per-environment:
+  # - Hyprland: QT vars set in env.conf
+  # - KDE Plasma: uses system Qt settings
+  # qt = {
+  #   enable = true;
+  #   platformTheme.name = "kde";
+  #   style = {
+  #     name = "Breeze";
+  #     package = pkgs.kdePackages.breeze;
+  #   };
+  # };
 
   # Create kdeglobals config to force Breeze Dark color scheme for KDE apps
   xdg.configFile."kdeglobals" = {
