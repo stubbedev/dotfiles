@@ -1,2 +1,2 @@
 #!/bin/sh
-gpg --quiet --batch --decrypt ~/.config/aerc/accounts/kontainer/abs/password.gpg | tr -d ' \n'
+secret-tool lookup service aerc account kontainer/abs | tr -d ' \n'

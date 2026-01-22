@@ -2,4 +2,5 @@
 
 echo "Setting New Password:"
 read -srp "Password: " password
-echo "$password" | gpg --symmetric --cipher-algo AES256 -o "$(pwd)/password.gpg"
+printf '%s' "$password" | secret-tool store --label="aerc gmail alexander.bugge.stage" service aerc account gmail/alexander.bugge.stage
+unset password
