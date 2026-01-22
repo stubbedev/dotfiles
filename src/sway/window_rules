@@ -1,4 +1,0 @@
-# Sway Window Rules
-# Converted from Hyprland windowrule.conf
-
-for_window [app_id="pavucontrol"] floating enable

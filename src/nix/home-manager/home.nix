@@ -12,7 +12,7 @@ let
   vpnScripts = homeLib.loadVpnScripts ./../../vpn;
 
   # Auto-detect system information
-  hasNvidia = builtins.pathExists /proc/driver/nvidia/version;
+  hasNvidia = builtins.pathExists (builtins.toPath "/proc/driver/nvidia/version");
 
   # Detect OS distribution
   osReleasePath = /etc/os-release;
@@ -184,7 +184,6 @@ in {
   # XDG Config files
   xdg.configFile = {
     "lazygit/config.yml".source = ./../../lazygit/config.yml;
-    "ghostty".source = ./../../ghostty;
     "alacritty".source = ./../../alacritty;
     "rofi".source = ./../../rofi;
     "btop/themes/catppuccin_frappe.theme".source =
@@ -196,7 +195,6 @@ in {
     "btop/themes/catppuccin_mocha.theme".source =
       ./../../btop/themes/catppuccin_mocha.theme;
     "swaync".source = ./../../swaync;
-    "sway".source = ./../../sway;
     "waybar/config.jsonc" = {
       source = ./../../waybar/config.jsonc;
       force = true;

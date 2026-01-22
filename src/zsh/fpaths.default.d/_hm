@@ -59,7 +59,7 @@ _hm() {
   )
 
   _arguments -C \
-    $global_opts \
+    "$global_opts" \
     '1: :->command' \
     '*:: :->args' \
     && return 0

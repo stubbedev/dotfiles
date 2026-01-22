@@ -34,9 +34,9 @@
       # Works with both proprietary and Open kernel modules
       nvidiaVersion =
         let
-          nvidiaVersionPath = /proc/driver/nvidia/version;
+          nvidiaVersionPath = "/proc/driver/nvidia/version";
         in
-        if builtins.pathExists nvidiaVersionPath then
+        if builtins.pathExists (builtins.toPath nvidiaVersionPath) then
           let
             data = builtins.readFile nvidiaVersionPath;
             # Match version after "x86_64" (works for Open Kernel Module)
@@ -80,4 +80,3 @@
         };
     };
 }
-

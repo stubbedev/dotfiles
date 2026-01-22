@@ -1,8 +1,0 @@
-# Sway Theme Configuration
-# Based on Hyprland settings
-
-# Basic appearance
-client.focused          $mauve $base $text $mauve $mauve
-client.focused_inactive  $crust $base $text $crust $crust
-client.unfocused         $crust $base $text $crust $crust
-client.urgent            $red $base $text $red $red
