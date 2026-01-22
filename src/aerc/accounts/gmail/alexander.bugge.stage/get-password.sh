@@ -1,2 +1,2 @@
 #!/bin/sh
-gpg --quiet --batch --decrypt ~/.config/aerc/accounts/gmail/alexander.bugge.stage/password.gpg | tr -d ' \n'
+secret-tool lookup service aerc account gmail/alexander.bugge.stage | tr -d ' \n'
