@@ -31,6 +31,34 @@ let
   # Create start-hyprland wrapper that uses our wrapped hyprland
   # The watchdog monitors the wrapped hyprland process
   start-hyprland-wrapped = pkgs.writeShellScriptBin "start-hyprland" ''
+    # Ensure session PATH includes user and flatpak bins
+    desired_paths=(
+      "$HOME/.cargo/bin"
+      "$HOME/.nix-profile/bin"
+      "$HOME/.local/bin"
+      "$HOME/.local/share/flatpak/exports/bin"
+      "/var/lib/flatpak/exports/bin"
+      "/usr/local/bin"
+      "/usr/bin"
+      "/bin"
+    )
+    prefix_paths=""
+    for desired_path in "${desired_paths[@]}"; do
+      case ":$PATH:" in
+        *":${desired_path}:"*) ;;
+        *)
+          if [ -z "$prefix_paths" ]; then
+            prefix_paths="$desired_path"
+          else
+            prefix_paths="$prefix_paths:$desired_path"
+          fi
+          ;;
+      esac
+    done
+    if [ -n "$prefix_paths" ]; then
+      export PATH="$prefix_paths:$PATH"
+    fi
+
     # Add our wrapped Hyprland to PATH so start-hyprland can find it
     export PATH="${hyprland-wrapped}/bin:$PATH"
     
