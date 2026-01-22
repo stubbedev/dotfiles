@@ -43,7 +43,7 @@ let
       "/bin"
     )
     prefix_paths=""
-    for desired_path in "${desired_paths[@]}"; do
+    for desired_path in "''${desired_paths[@]}"; do
       case ":$PATH:" in
         *":${desired_path}:"*) ;;
         *)
