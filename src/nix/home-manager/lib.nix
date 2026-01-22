@@ -68,20 +68,18 @@
   # Cleaner way to handle feature-based module loading
   conditionalImports = condition: modules: if condition then modules else [ ];
 
-  # Load VPN scripts from src/vpn/*/script.sh and create bin files
+  # Load VPN scripts from src/vpn/<provider>/{connect,disconnect,status}.sh
   # Returns attrset for home.file that maps VPN scripts to ~/.local/bin
   loadVpnScripts = vpnDir:
     let
-      # Get all VPN provider directories
       vpnProviders = lib.filterAttrs (name: type: type == "directory")
         (builtins.readDir vpnDir);
-      
-      # For each provider, create entries for connect/disconnect/status scripts
+
       createScriptEntries = providerName:
         let
           providerPath = vpnDir + "/${providerName}";
           scripts = [ "connect" "disconnect" "status" ];
-          
+
           createEntry = scriptName:
             let
               scriptPath = providerPath + "/${scriptName}.sh";
@@ -91,11 +89,11 @@
                 { name = binName; value.source = scriptPath; }
               else
                 null;
-          
+
           entries = map createEntry scripts;
         in
           builtins.filter (x: x != null) entries;
-      
+
       allEntries = lib.flatten (map createScriptEntries (lib.attrNames vpnProviders));
     in
       builtins.listToAttrs allEntries;
@@ -156,4 +154,3 @@
       packageLists = map loadCategoryPackages categoryNames;
     in lib.flatten packageLists;
 }
-
