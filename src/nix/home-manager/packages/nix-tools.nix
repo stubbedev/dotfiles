@@ -5,5 +5,7 @@ with pkgs; [
   pass
   age
   cachix
+  nixd
+  nixdoc
 ]
 
