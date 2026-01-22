@@ -8,7 +8,6 @@ let
   programs = homeLib.loadModulesFromDir ./programs;
 
   # Load VPN scripts dynamically
-  vpnScripts = homeLib.loadVpnScripts ./../../vpn;
   vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
 
   # Auto-detect system information
@@ -125,6 +124,10 @@ in {
       EDITOR = "${config.home.homeDirectory}/.local/bin/nvim";
       DISPLAY = ":0";
 
+      # Desktop entries (Flatpak + Nix)
+      XDG_DATA_DIRS = lib.mkForce
+        "${config.home.homeDirectory}/.local/share/flatpak/exports/share:${config.home.homeDirectory}/.nix-profile/share:/nix/var/nix/profiles/default/share:/var/lib/flatpak/exports/share:/usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop:$XDG_DATA_DIRS";
+
       # Paging and documentation
       MANPAGER = "sh -c 'col -bx | bat -l man -p'";
       MANROFFOPT = "-c";
@@ -220,10 +223,7 @@ in {
         env = XDG_SESSION_DESKTOP,Hyprland
         env = XCURSOR_THEME,Vimix-cursors
         env = XCURSOR_SIZE,24
-        env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:$HOME/.local/share/flatpak/exports/bin:/var/lib/flatpak/exports/bin:/usr/local/bin:/usr/bin:/bin
-
-        # Ensure Nix portals are found before system ones
-        env = XDG_DATA_DIRS,$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:/usr/local/share:/usr/share
+        # PATH and XDG_DATA_DIRS are set by Home Manager session variables
 
         # Force Wayland backend for GTK apps
         env = GDK_BACKEND,wayland
@@ -270,9 +270,6 @@ in {
       default=hyprland;gtk;wlr;kde;
     '';
 
-    "environment.d/envvars.conf".text = ''
-      PATH="${config.home.homeDirectory}/.nix-profile/bin:$PATH"
-    '';
     "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
     "aerc/binds.conf".source = ./../../aerc/binds.conf;
 

@@ -4,7 +4,6 @@ let
   inherit (config.lib.nixGL) wrap;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
   hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
-  nixGLPackages = config.targets.genericLinux.nixGL.packages;
 
   # Create custom Hyprland wrapper with build-time GPU detection
   # This is needed because Nix's mesa-libgbm doesn't include GBM backends
@@ -45,7 +44,7 @@ let
     prefix_paths=""
     for desired_path in "''${desired_paths[@]}"; do
       case ":$PATH:" in
-        *":${desired_path}:"*) ;;
+        *":''${desired_path}:"*) ;;
         *)
           if [ -z "$prefix_paths" ]; then
             prefix_paths="$desired_path"
@@ -57,6 +56,36 @@ let
     done
     if [ -n "$prefix_paths" ]; then
       export PATH="$prefix_paths:$PATH"
+    fi
+
+    # Ensure XDG_DATA_DIRS includes Flatpak/Nix desktop entries
+    desired_data_dirs=(
+      "$HOME/.local/share/flatpak/exports/share"
+      "$HOME/.nix-profile/share"
+      "/nix/var/nix/profiles/default/share"
+      "/var/lib/flatpak/exports/share"
+      "/usr/local/share"
+      "/usr/share"
+    )
+    prefix_data_dirs=""
+    for desired_dir in "''${desired_data_dirs[@]}"; do
+      case ":$XDG_DATA_DIRS:" in
+        *":''${desired_dir}:"*) ;;
+        *)
+          if [ -z "$prefix_data_dirs" ]; then
+            prefix_data_dirs="$desired_dir"
+          else
+            prefix_data_dirs="$prefix_data_dirs:$desired_dir"
+          fi
+          ;;
+      esac
+    done
+    if [ -n "$prefix_data_dirs" ]; then
+      if [ -n "$XDG_DATA_DIRS" ]; then
+        export XDG_DATA_DIRS="$prefix_data_dirs:$XDG_DATA_DIRS"
+      else
+        export XDG_DATA_DIRS="$prefix_data_dirs"
+      fi
     fi
 
     # Add our wrapped Hyprland to PATH so start-hyprland can find it
