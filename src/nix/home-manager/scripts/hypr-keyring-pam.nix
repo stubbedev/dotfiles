@@ -29,7 +29,7 @@ let
     fi
 
     missingFiles=()
-    for file in "${pamFiles[@]}"; do
+    for file in "''${pamFiles[@]}"; do
       if [ ! -f "$file" ]; then
         continue
       fi
@@ -43,13 +43,13 @@ let
       fi
     done
 
-    if [ "${#missingFiles[@]}" -eq 0 ]; then
+    if [ "''${#missingFiles[@]}" -eq 0 ]; then
       exit 0
     fi
 
     echo ""
     echo "Missing GNOME Keyring PAM lines in:"
-    for file in "${missingFiles[@]}"; do
+    for file in "''${missingFiles[@]}"; do
       echo "  - $file"
     done
     echo ""
@@ -57,7 +57,7 @@ let
     echo
 
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-      for file in "${missingFiles[@]}"; do
+      for file in "''${missingFiles[@]}"; do
         grep -qF "$authLine" "$file" || printf '%s\n' "$authLine" | $SUDO tee -a "$file" > /dev/null
         grep -qF "$sessionLine" "$file" || printf '%s\n' "$sessionLine" | $SUDO tee -a "$file" > /dev/null
       done
