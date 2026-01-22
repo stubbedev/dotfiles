@@ -11,7 +11,7 @@ else
   PROVIDER_NAME="${SCRIPT_NAME%-vpn-status}"
 fi
 
-PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.pid"
+PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 
 is_running() {
   if [ -f "$PID_FILE" ]; then

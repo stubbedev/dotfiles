@@ -11,7 +11,7 @@ else
   PROVIDER_NAME="${SCRIPT_NAME%-vpn-disconnect}"
 fi
 
-PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.pid"
+PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 PKILL_BIN="$(command -v pkill || true)"
 
 run_as_root() {
@@ -20,14 +20,22 @@ run_as_root() {
     return
   fi
 
-  if command -v pkexec >/dev/null 2>&1; then
-    pkexec --disable-internal-agent "$@"
-  elif command -v sudo >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1; then
     sudo -E "$@"
-  else
-    echo "This action requires privileges; install pkexec (polkit) or sudo" >&2
-    exit 1
+    return
   fi
+
+  if command -v pkexec >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    pkexec env \
+      DISPLAY="${DISPLAY:-:0}" \
+      XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
+      DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
+      "$@"
+    return
+  fi
+
+  echo "This action requires privileges; install sudo or pkexec (polkit)" >&2
+  exit 1
 }
 
 if [ -z "$PKILL_BIN" ]; then

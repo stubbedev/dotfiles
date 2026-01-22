@@ -52,11 +52,13 @@
     "on-click": "~/.local/bin/open-mail"
   },
   "custom/konform-vpn": {
-    "exec": "~/.config/waybar/scripts/konform-vpn.sh status",
+    "exec": "~/.local/bin/konform-vpn-waybar status",
     "return-type": "json",
     "format": "{}",
-    "interval": 5,
-    "on-click": "~/.config/waybar/scripts/konform-vpn.sh toggle"
+    "interval": 3,
+    "on-click": "~/.local/bin/konform-vpn-waybar toggle",
+    "on-click-right": "~/.local/bin/konform-vpn-waybar status",
+    "on-click-middle": "~/.local/bin/konform-vpn-waybar disconnect"
   },
   // Modules configuration
   "sway/workspaces": {

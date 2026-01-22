@@ -7,8 +7,9 @@ let
     (args // { inherit systemInfo; });
   programs = homeLib.loadModulesFromDir ./programs;
 
-  # Load VPN scripts dynamically
+  # Load VPN scripts/config dynamically
   vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
+  vpnScripts = homeLib.loadVpnScripts ./../../vpn;
 
   # Auto-detect system information
   hasNvidia = builtins.pathExists /proc/driver/nvidia/version;
@@ -70,6 +71,10 @@ in {
         '';
         executable = true;
       };
+      ".local/bin/konform-vpn-waybar" = {
+        source = ./../../vpn/konform/waybar.sh;
+        executable = true;
+      };
       ".local/bin/unsubscribe-mail".source = ./../../aerc/scripts/unsubscribe;
 
       ".icons/${constants.theme.iconTheme}".source =
@@ -101,7 +106,7 @@ in {
         COLOR_SCHEME=prefer-dark
         GDK_BACKEND=wayland
       '';
-    };
+    } // vpnScripts;
 
     sessionVariables = {
       # Nix configuration
@@ -192,19 +197,23 @@ in {
       ./../../btop/themes/catppuccin_mocha.theme;
     "swaync".source = ./../../swaync;
     "sway".source = ./../../sway;
-    "waybar/config.jsonc".source = ./../../waybar/config.jsonc;
-    "waybar/style.css".source = ./../../waybar/style.css;
+    "waybar/config.jsonc" = {
+      source = ./../../waybar/config.jsonc;
+      force = true;
+    };
+    "waybar/style.css" = {
+      source = ./../../waybar/style.css;
+      force = true;
+    };
     "waybar/scripts/mail-status.sh" = {
       source = ./../../waybar/scripts/mail-status.sh;
       executable = true;
+      force = true;
     };
     "waybar/scripts/tmux-status.sh" = {
       source = ./../../waybar/scripts/tmux-status.sh;
       executable = true;
-    };
-    "waybar/scripts/konform-vpn.sh" = {
-      source = ./../../vpn/konform/waybar.sh;
-      executable = true;
+      force = true;
     };
 
     # Copy individual hypr config files (not as a directory to allow overriding env.conf)
