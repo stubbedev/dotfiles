@@ -166,8 +166,11 @@ in {
       # Setup hyprlock PAM configuration
       setupHyprlockPam = lib.hm.dag.entryAfter [ "setupPamWrappers" ]
         (import ./scripts/setup-hyprlock-pam.nix { inherit config pkgs lib; });
+      # Setup GNOME Keyring PAM integration
+      setupHyprKeyringPam = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
+        (import ./scripts/hypr-keyring-pam.nix { inherit pkgs; });
       # Setup SDDM session entry for Hyprland
-      setupHyprSession = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
+      setupHyprSession = lib.hm.dag.entryAfter [ "setupHyprKeyringPam" ]
         (import ./scripts/setup-sddm-session.nix { inherit config pkgs lib; });
       # Install icon/cursor themes for snap apps
       setupSnapThemes = lib.hm.dag.entryAfter [ "setupHyprSession" ]
