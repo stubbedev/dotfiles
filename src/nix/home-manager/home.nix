@@ -27,9 +27,8 @@ let
     inherit hasNvidia isFedora;
     libPath = if isFedora then "lib64" else "lib";
     # Select the appropriate nixGL wrapper based on GPU detection
-    nixGLWrapper = if hasNvidia 
-      then pkgs.nixgl.nixGLNvidia
-      else pkgs.nixgl.nixGLIntel;
+    nixGLWrapper =
+      if hasNvidia then pkgs.nixgl.nixGLNvidia else pkgs.nixgl.nixGLIntel;
   };
 in {
   targets.genericLinux = {
@@ -42,6 +41,16 @@ in {
     homeDirectory = "/home/${constants.user.name}";
     stateVersion = "25.11";
     packages = homePackages;
+    sessionPath = [
+      "$HOME/.cargo/bin"
+      "$HOME/.nix-profile/bin"
+      "$HOME/.local/bin"
+      "$HOME/.local/share/flatpak/exports/bin"
+      "/var/lib/flatpak/exports/bin"
+      "/usr/local/bin"
+      "/usr/bin"
+      "/bin"
+    ];
 
     file = {
       ".zshrc".text = ''
@@ -79,7 +88,7 @@ in {
         "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
       ".icons/Vimix-cursors".source =
         "${pkgs.vimix-cursors}/share/icons/Vimix-cursors";
-      
+
       # Also symlink to .local/share/icons for better compatibility
       ".local/share/icons/Vimix-dark".source =
         "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
@@ -130,10 +139,10 @@ in {
       # GTK3 apps use the theme from ~/.config/gtk-3.0/settings.ini
       # GTK4 apps use the color-scheme preference (prefer-dark) from dconf
       GTK_THEME_VARIANT = "dark";
-      
+
       # NOTE: GTK_USE_PORTAL is set in Hyprland's env.conf instead of here
       # to avoid breaking KDE Plasma which requires portals to function
-      
+
       DEPLOYER_REMOTE_USER = "abs";
     };
 
@@ -211,7 +220,7 @@ in {
         env = XDG_SESSION_DESKTOP,Hyprland
         env = XCURSOR_THEME,Vimix-cursors
         env = XCURSOR_SIZE,24
-        env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+        env = PATH,$HOME/.cargo/bin:$HOME/.nix-profile/bin:$HOME/.local/bin:$HOME/.local/share/flatpak/exports/bin:/var/lib/flatpak/exports/bin:/usr/local/bin:/usr/bin:/bin
 
         # Ensure Nix portals are found before system ones
         env = XDG_DATA_DIRS,$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:/usr/local/share:/usr/share
@@ -314,15 +323,15 @@ in {
       # Use pinentry-gnome3 for password prompts (Wayland compatible)
       # pinentry-gnome3 integrates with gnome-keyring to remember passphrases
       pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
-      
+
       # Cache passwords for maximum time to avoid repeated prompts during session
       # 1 year = 31536000 seconds
       default-cache-ttl 31536000
       max-cache-ttl 31536000
-      
+
       # Allow preset passphrases
       allow-preset-passphrase
-      
+
       # SSH support is handled by gnome-keyring instead
       # enable-ssh-support
     '';
