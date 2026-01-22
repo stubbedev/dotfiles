@@ -82,6 +82,40 @@ in {
         executable = true;
       };
       ".local/bin/unsubscribe-mail".source = ./../../aerc/scripts/unsubscribe;
+      ".local/bin/setup-gp-nmcli" = {
+        text = ''
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          VPN_NAME="vpn.konform.com"
+          GATEWAY="vpn.konform.com"
+
+          if nmcli connection show "$VPN_NAME" >/dev/null 2>&1; then
+            echo "Connection '$VPN_NAME' already exists."
+            exit 1
+          fi
+
+          read -rp "Username for ''${VPN_NAME}: " VPN_USER
+          read -rsp "Password for ''${VPN_NAME}: " VPN_PASS
+          echo
+
+          nmcli connection add \
+            type vpn \
+            con-name "$VPN_NAME" \
+            ifname -- \
+            vpn-type openconnect \
+            vpn.data "gateway=''${GATEWAY},protocol=gp" \
+            vpn.user "$VPN_USER"
+
+          nmcli connection modify "$VPN_NAME" vpn.secrets "password=$VPN_PASS"
+
+          nmcli connection modify "$VPN_NAME" connection.autoconnect no
+
+          echo "Created VPN '""''${VPN_NAME}""' (autoconnect disabled)."
+          echo "Connect with: nmcli connection up \"''${VPN_NAME}\""
+        '';
+        executable = true;
+      };
 
       ".icons/${constants.theme.iconTheme}".source =
         "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";

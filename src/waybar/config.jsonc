@@ -19,6 +19,7 @@
   ],
   "modules-right": [
     "custom/mail",
+    "custom/konform-vpn",
     "hyprland/language",
     "sway/language",
     "mpd",
@@ -49,6 +50,13 @@
     "interval": 30,
     "markup": "pango",
     "on-click": "~/.local/bin/open-mail"
+  },
+  "custom/konform-vpn": {
+    "exec": "~/.config/waybar/scripts/konform-vpn.sh status",
+    "return-type": "json",
+    "format": "{}",
+    "interval": 5,
+    "on-click": "~/.config/waybar/scripts/konform-vpn.sh toggle"
   },
   // Modules configuration
   "sway/workspaces": {

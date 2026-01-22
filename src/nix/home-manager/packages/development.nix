@@ -23,6 +23,6 @@ in with pkgs; [
 
   # IDE toolbox (GUI app)
   (wrap jetbrains-toolbox)
-  gpclient
+  networkmanager-openconnect
+  openconnect
 ]
-

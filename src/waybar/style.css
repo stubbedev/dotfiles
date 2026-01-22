@@ -200,6 +200,25 @@ label:focus {
     min-width: 100px;
 }
 
+#custom-konform-vpn {
+    padding: 0 10px;
+}
+
+#custom-konform-vpn.connected {
+    background-color: @green;
+    color: @base;
+}
+
+#custom-konform-vpn.disconnected {
+    background-color: @surface0;
+    color: @subtext0;
+}
+
+#custom-konform-vpn.error {
+    background-color: @red;
+    color: @base;
+}
+
 #custom-media.custom-spotify {
     background-color: @teal;
     color: @base;
@@ -242,4 +261,3 @@ label:focus {
 #privacy {
     padding: 0;
 }
-
