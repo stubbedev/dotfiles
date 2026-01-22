@@ -192,8 +192,20 @@ in {
       ./../../btop/themes/catppuccin_mocha.theme;
     "swaync".source = ./../../swaync;
     "sway".source = ./../../sway;
-    "waybar".source = ./../../waybar;
-    "waybar/scripts/konform-vpn.sh".source = ./../../vpn/konform/waybar.sh;
+    "waybar/config.jsonc".source = ./../../waybar/config.jsonc;
+    "waybar/style.css".source = ./../../waybar/style.css;
+    "waybar/scripts/mail-status.sh" = {
+      source = ./../../waybar/scripts/mail-status.sh;
+      executable = true;
+    };
+    "waybar/scripts/tmux-status.sh" = {
+      source = ./../../waybar/scripts/tmux-status.sh;
+      executable = true;
+    };
+    "waybar/scripts/konform-vpn.sh" = {
+      source = ./../../vpn/konform/waybar.sh;
+      executable = true;
+    };
 
     # Copy individual hypr config files (not as a directory to allow overriding env.conf)
     "hypr/hypridle.conf".source = ./../../hypr/hypridle.conf;
