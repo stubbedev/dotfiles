@@ -193,6 +193,7 @@ in {
     "swaync".source = ./../../swaync;
     "sway".source = ./../../sway;
     "waybar".source = ./../../waybar;
+    "waybar/scripts/konform-vpn.sh".source = ./../../vpn/konform/waybar.sh;
 
     # Copy individual hypr config files (not as a directory to allow overriding env.conf)
     "hypr/hypridle.conf".source = ./../../hypr/hypridle.conf;

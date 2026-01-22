@@ -1,80 +1,94 @@
 #!/usr/bin/env bash
 
-# VPN Connection Script for NetworkManager
-# Reads configuration from config file
+set -euo pipefail
 
-# Determine provider name from script location or name
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# If running from source directory (connect.sh), use directory name
-# If running as deployed binary (provider-vpn-connect), extract from name
 if [[ "$SCRIPT_NAME" == "connect.sh" ]]; then
-    PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
+  PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
 else
-    PROVIDER_NAME="${SCRIPT_NAME%-vpn-connect}"
+  PROVIDER_NAME="${SCRIPT_NAME%-vpn-connect}"
 fi
 
-VPN_NAME="${PROVIDER_NAME}-vpn"
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
 PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.pid"
+LOG_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.log"
+OPENCONNECT_BIN="$(command -v openconnect || true)"
 
-# Load configuration
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: Configuration file not found at $CONFIG_FILE"
-    echo "Please run the setup script first:"
-    echo "  cd ~/git/dotfiles/src/vpn/$PROVIDER_NAME && ./setup.sh"
+run_as_root() {
+  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    "$@"
+    return
+  fi
+
+  if command -v pkexec >/dev/null 2>&1; then
+    pkexec --disable-internal-agent "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo -E "$@"
+  else
+    echo "This action requires privileges; install pkexec (polkit) or sudo" >&2
     exit 1
+  fi
+}
+
+is_running() {
+  if [ -f "$PID_FILE" ]; then
+    local pid
+    pid=$(cat "$PID_FILE" 2>/dev/null || true)
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+if [ -z "$OPENCONNECT_BIN" ]; then
+  echo "openconnect is not available in PATH" >&2
+  exit 1
 fi
 
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Error: Configuration file not found at $CONFIG_FILE" >&2
+  echo "Run: cd ~/git/dotfiles/src/vpn/$PROVIDER_NAME && ./setup.sh" >&2
+  exit 1
+fi
+
+# shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-# Validate configuration
-if [ -z "$VPN_GATEWAY" ] || [ -z "$VPN_USERNAME" ]; then
-    echo "Error: Invalid configuration in $CONFIG_FILE"
-    echo "Please run the setup script again."
-    exit 1
+if [ -z "${VPN_GATEWAY:-}" ] || [ -z "${VPN_USERNAME:-}" ]; then
+  echo "Error: Invalid configuration in $CONFIG_FILE" >&2
+  exit 1
 fi
 
-# Check if the connection already exists
-if nmcli connection show "$VPN_NAME" &> /dev/null; then
-    echo "VPN connection '$VPN_NAME' already exists."
-    echo "Connecting..."
-    nmcli connection up "$VPN_NAME"
-else
-    echo "Creating VPN connection '$VPN_NAME'..."
-    
-    # Get password from GPG
-    if [ ! -f "$PASSWORD_SCRIPT" ]; then
-        echo "Error: Password script not found at $PASSWORD_SCRIPT"
-        echo "Please run the set-password.sh script first."
-        exit 1
-    fi
-    
-    PASSWORD=$("$PASSWORD_SCRIPT")
-    
-    if [ -z "$PASSWORD" ]; then
-        echo "Error: Failed to retrieve password"
-        exit 1
-    fi
-    
-    # Create the VPN connection and save to system
-    nmcli connection add \
-        type vpn \
-        con-name "$VPN_NAME" \
-        ifname -- \
-        connection.permissions "" \
-        vpn-type openconnect \
-        -- \
-        vpn.data "gateway=$VPN_GATEWAY,protocol=gp,username=$VPN_USERNAME" \
-        vpn.secrets "password=$PASSWORD"
-    
-    echo "VPN connection created. Connecting..."
-    nmcli connection up "$VPN_NAME"
-    exit $?
+if [ ! -x "$PASSWORD_SCRIPT" ]; then
+  echo "Error: Password script not found at $PASSWORD_SCRIPT" >&2
+  echo "Run: $SCRIPT_DIR/set-password.sh" >&2
+  exit 1
 fi
 
-# Connection exists, just bring it up
-nmcli connection up "$VPN_NAME"
+if is_running; then
+  echo "${PROVIDER_NAME} VPN already running (pid $(cat "$PID_FILE"))"
+  exit 0
+fi
 
+password=$("$PASSWORD_SCRIPT")
+
+if [ -z "$password" ]; then
+  echo "Failed to retrieve password from secret service" >&2
+  exit 1
+fi
+
+printf '%s\n' "$password" | run_as_root "$OPENCONNECT_BIN" \
+  --protocol=gp \
+  --user "$VPN_USERNAME" \
+  --passwd-on-stdin \
+  --pid-file "$PID_FILE" \
+  --logfile "$LOG_FILE" \
+  --background \
+  "$VPN_GATEWAY"
+
+echo "${PROVIDER_NAME} VPN connecting via openconnect (pid file: $PID_FILE)"

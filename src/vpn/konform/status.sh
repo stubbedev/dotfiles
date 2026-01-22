@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
 
-# Check VPN status
+set -euo pipefail
 
-# Determine provider name from script location or name
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# If running from source directory (status.sh), use directory name
-# If running as deployed binary (provider-vpn-status), extract from name
 if [[ "$SCRIPT_NAME" == "status.sh" ]]; then
-    PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
+  PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
 else
-    PROVIDER_NAME="${SCRIPT_NAME%-vpn-status}"
+  PROVIDER_NAME="${SCRIPT_NAME%-vpn-status}"
 fi
 
-VPN_NAME="${PROVIDER_NAME}-vpn"
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.pid"
 
-if nmcli connection show --active | grep -q "$VPN_NAME"; then
-    echo "VPN Status: Connected"
-    nmcli connection show "$VPN_NAME" | grep -E "(VPN|IP4|IP6)"
+is_running() {
+  if [ -f "$PID_FILE" ]; then
+    local pid
+    pid=$(cat "$PID_FILE" 2>/dev/null || true)
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+if is_running; then
+  echo "${PROVIDER_NAME} VPN: Connected"
+  echo "pid: $(cat "$PID_FILE")"
 else
-    echo "VPN Status: Disconnected"
+  echo "${PROVIDER_NAME} VPN: Disconnected"
 fi

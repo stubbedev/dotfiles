@@ -7,37 +7,9 @@ CONFIG_FILE="$CONFIG_DIR/config"
 PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
 PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.pid"
 LOG_FILE="${XDG_RUNTIME_DIR:-/tmp}/openconnect-${PROVIDER_NAME}.log"
+CONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-connect"
+DISCONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-disconnect"
 TERMINAL="${TERMINAL:-alacritty}"
-OPENCONNECT_BIN="$(command -v openconnect || true)"
-PKILL_BIN="$(command -v pkill || true)"
-
-require_tools() {
-  if [ -z "$OPENCONNECT_BIN" ]; then
-    echo "openconnect is not available in PATH" >&2
-    exit 1
-  fi
-
-  if [ -z "$PKILL_BIN" ]; then
-    echo "pkill is not available in PATH" >&2
-    exit 1
-  fi
-}
-
-run_as_root() {
-  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
-    "$@"
-    return
-  fi
-
-  if command -v pkexec >/dev/null 2>&1; then
-    pkexec --disable-internal-agent "$@"
-  elif command -v sudo >/dev/null 2>&1; then
-    sudo -E "$@"
-  else
-    echo "This action requires privileges; install pkexec (polkit) or sudo" >&2
-    exit 1
-  fi
-}
 
 load_config() {
   if [ ! -f "$CONFIG_FILE" ]; then
@@ -60,7 +32,6 @@ is_running() {
       return 0
     fi
   fi
-
   return 1
 }
 
@@ -85,51 +56,29 @@ status() {
 }
 
 connect() {
-  require_tools
-
   if ! load_config; then
-    echo "Missing VPN config at $CONFIG_FILE"
+    echo "Missing VPN config at $CONFIG_FILE" >&2
     exit 1
   fi
 
   if [ ! -x "$PASSWORD_SCRIPT" ]; then
-    echo "Missing password script at $PASSWORD_SCRIPT"
+    echo "Missing password script at $PASSWORD_SCRIPT" >&2
     exit 1
   fi
 
-  local password
-  password=$("$PASSWORD_SCRIPT")
-
-  if [ -z "$password" ]; then
-    echo "Failed to read VPN password from GPG"
-    exit 1
-  fi
-
-  printf '%s\n' "$password" | run_as_root "$OPENCONNECT_BIN" \
-    --protocol=gp \
-    --user "$VPN_USERNAME" \
-    --passwd-on-stdin \
-    --pid-file "$PID_FILE" \
-    --logfile "$LOG_FILE" \
-    --background \
-    "$VPN_GATEWAY"
+  # Launch via terminal to allow password/privilege prompts if needed
+  "$TERMINAL" -e bash -lc "${CONNECT_SCRIPT@Q}"
 }
 
 disconnect() {
-  require_tools
-
-  if [ -f "$PID_FILE" ]; then
-    run_as_root "$PKILL_BIN" -F "$PID_FILE" || true
-  else
-    run_as_root "$PKILL_BIN" -f "openconnect.*${PROVIDER_NAME}" || true
-  fi
+  "$TERMINAL" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
 }
 
 toggle() {
   if is_running; then
-    "$TERMINAL" -e bash -lc "${0@Q} disconnect"
+    disconnect
   else
-    "$TERMINAL" -e bash -lc "${0@Q} connect"
+    connect
   fi
 }
 
