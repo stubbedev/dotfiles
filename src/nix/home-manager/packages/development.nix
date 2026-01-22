@@ -1,8 +1,6 @@
 { pkgs, config, ... }:
-let
-  wrap = config.lib.nixGL.wrap;
-in
-with pkgs; [
+let inherit (config.lib.nixGL) wrap;
+in with pkgs; [
   # JavaScript/TypeScript runtimes (CLI tools)
   nodejs
   bun
@@ -25,5 +23,6 @@ with pkgs; [
 
   # IDE toolbox (GUI app)
   (wrap jetbrains-toolbox)
+  gpclient
 ]
 
