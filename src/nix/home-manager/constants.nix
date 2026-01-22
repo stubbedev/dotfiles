@@ -10,6 +10,7 @@
     zsh = "${config.home.homeDirectory}/.stubbe/src/zsh";
     nvim = "${config.home.homeDirectory}/.stubbe/src/nvim";
     hypr = "${config.home.homeDirectory}/.stubbe/src/hypr";
+    term = "${config.home.homeDirectory}/.nix-profile/bin/alacritty";
 
     # Target paths
     tmuxPlugins = "${config.home.homeDirectory}/.tmux/plugins";

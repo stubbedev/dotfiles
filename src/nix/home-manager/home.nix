@@ -62,21 +62,10 @@ in {
 
       ".local/bin/open-mail" = {
         text = ''
-          #!/usr/bin/env bash
-
-          # Find terminal emulator
-          terminal_emulator="$HOME/.cargo/bin/alacritty"
-          if [[ ! -x "$terminal_emulator" ]]; then
-            terminal_emulator="${config.home.homeDirectory}/.nix-profile/bin/alacritty"
-          fi
-
-          # Check if Hyprland is active and hyprctl is available
           if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
-            # Use hyprctl dispatch exec to launch in the current workspace
-            hyprctl dispatch exec "$terminal_emulator -e aerc"
+            hyprctl dispatch exec "${constants.paths.term} -e aerc"
           else
-            # Launch normally
-            $terminal_emulator -e aerc
+            ${constants.paths.term} -e aerc
           fi
         '';
         executable = true;
