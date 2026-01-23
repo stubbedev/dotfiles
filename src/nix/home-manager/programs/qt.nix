@@ -111,7 +111,8 @@ let
     inactiveBlend=161,169,177
     inactiveForeground=161,169,177
   '';
-in {
+in
+{
   # Disabled to prevent global QT_STYLE_OVERRIDE export which breaks KDE Plasma login
   # QT settings are configured per-environment:
   # - Hyprland: QT vars set in env.conf
