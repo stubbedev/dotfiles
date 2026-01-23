@@ -159,7 +159,7 @@
       },
       "original": {
         "owner": "outfoxxed",
-        "ref": "hl0.53.0",
+        "ref": "refs/tags/hl0.53.0",
         "repo": "hy3",
         "type": "github"
       }
@@ -270,7 +270,7 @@
       "locked": {
         "lastModified": 1767021696,
         "narHash": "sha256-1jZK7hqNhQRqhj+2eb/JvnBoARxUgoVXKLSwp2RPmNQ=",
-        "ref": "v0.53.0",
+        "ref": "refs/tags/v0.53.0",
         "rev": "ea444c35bb23b6e34505ab6753e069de7801cc25",
         "revCount": 6756,
         "submodules": true,
@@ -278,7 +278,7 @@
         "url": "https://github.com/hyprwm/Hyprland"
       },
       "original": {
-        "ref": "v0.53.0",
+        "ref": "refs/tags/v0.53.0",
         "submodules": true,
         "type": "git",
         "url": "https://github.com/hyprwm/Hyprland"

@@ -5,18 +5,20 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     nixgl.url = "github:nix-community/nixGL";
 
-    # Use official Hyprland flake for better plugin compatibility
-    # Use v0.53.0 which is the latest stable release
+    # Use official Hyprland flake for better plugin compatibility.
+    # Use v0.53.0 tag explicitly (refs/tags/…) so Nix does not look for a
+    # non-existent branch named v0.53.0 when updating the flake input.
     hyprland.url =
-      "git+https://github.com/hyprwm/Hyprland?ref=v0.53.0&submodules=1";
+      "git+https://github.com/hyprwm/Hyprland?ref=refs/tags/v0.53.0&submodules=1";
 
     hyprland-guiutils = {
       url = "github:hyprwm/hyprland-guiutils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     hy3 = {
-      url =
-        "github:outfoxxed/hy3?ref=hl0.53.0"; # Use hl0.53.0 tag to match Hyprland v0.53.0
+      # Use hl0.53.0 tag (hyprland compatibility release). Point at tag ref to
+      # avoid Nix searching for a branch named hl0.53.0.
+      url = "github:outfoxxed/hy3?ref=refs/tags/hl0.53.0";
       inputs.hyprland.follows =
         "hyprland"; # Use the same hyprland as our main input
     };
