@@ -12,14 +12,16 @@ let
   vpnScripts = homeLib.loadVpnScripts ./../../vpn;
 
   # Auto-detect system information
-  hasNvidia = builtins.pathExists (builtins.toPath "/proc/driver/nvidia/version");
+  hasNvidia =
+    builtins.pathExists (homeLib.toPath "/proc/driver/nvidia/version");
 
   # Detect OS distribution
   osReleasePath = /etc/os-release;
-  osReleaseContent = if builtins.pathExists osReleasePath then
-    builtins.readFile osReleasePath
-  else
-    "";
+  osReleaseContent =
+    if builtins.pathExists osReleasePath then
+      builtins.readFile osReleasePath
+    else
+      "";
   isFedora = builtins.match ".*ID=fedora.*" osReleaseContent != null;
 
   # System-specific library paths and nixGL wrapper selection
@@ -30,7 +32,8 @@ let
     nixGLWrapper =
       if hasNvidia then pkgs.nixgl.nixGLNvidia else pkgs.nixgl.nixGLIntel;
   };
-in {
+in
+{
   targets.genericLinux = {
     enable = true;
     nixGL = { packages = pkgs.nixgl; };
@@ -132,13 +135,8 @@ in {
       GOPATH = "${config.home.homeDirectory}/go";
 
       # Theme and custom variables
-      # NOTE: GTK_THEME is NOT set here because GTK4 apps crash with it
-      # GTK3 apps use the theme from ~/.config/gtk-3.0/settings.ini
-      # GTK4 apps use the color-scheme preference (prefer-dark) from dconf
       GTK_THEME_VARIANT = "dark";
 
-      # NOTE: GTK_USE_PORTAL is set in Hyprland's env.conf instead of here
-      # to avoid breaking KDE Plasma which requires portals to function
 
       DEPLOYER_REMOTE_USER = "abs";
     };
@@ -172,10 +170,6 @@ in {
       # System checks - verifies system configuration and provides helpful warnings
       systemChecks = lib.hm.dag.entryAfter [ "setupSnapThemes" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
-      # Restart PipeWire after audio config changes
-      restartPipewire = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-        ${pkgs.systemd}/bin/systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
-      '';
     };
   };
 
@@ -264,13 +258,15 @@ in {
 
     # Generate dynamic Hyprland plugins configuration
     "hypr/plugins.conf" = {
-      text = let
-        # hy3 is already built against the correct hyprland from the flake
-        hy3-plugin = args.hy3.packages.${pkgs.system}.hy3;
-      in ''
-        # Hyprland plugins loaded from Nix
-        plugin = ${hy3-plugin}/lib/libhy3.so
-      '';
+      text =
+        let
+          # hy3 is already built against the correct hyprland from the flake
+          hy3-plugin = args.hy3.packages.${pkgs.system}.hy3;
+        in
+        ''
+          # Hyprland plugins loaded from Nix
+          plugin = ${hy3-plugin}/lib/libhy3.so
+        '';
     };
     "opencode/opencode.json".source = ./../../opencode/opencode.json;
     "opencode/AGENTS.md".source = ./../../opencode/AGENTS.md;
