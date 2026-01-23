@@ -14,6 +14,23 @@ fi
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 PKILL_BIN="$(command -v pkill || true)"
 
+is_running() {
+  if [ -f "$PID_FILE" ]; then
+    local pid
+    pid=$(cat "$PID_FILE" 2>/dev/null || true)
+    if [ -n "$pid" ]; then
+      if kill -0 "$pid" 2>/dev/null; then
+        return 0
+      fi
+
+      if [ -d "/proc/$pid" ]; then
+        return 0
+      fi
+    fi
+  fi
+  return 1
+}
+
 run_as_root() {
   if [ "${EUID:-$(id -u)}" -eq 0 ]; then
     "$@"
@@ -43,12 +60,16 @@ if [ -z "$PKILL_BIN" ]; then
   exit 1
 fi
 
-if [ -f "$PID_FILE" ]; then
+if is_running; then
   run_as_root "$PKILL_BIN" -F "$PID_FILE" || true
-  rm -f "$PID_FILE"
-  echo "${PROVIDER_NAME} VPN disconnected"
 else
-  # Fallback match
   run_as_root "$PKILL_BIN" -f "openconnect.*${PROVIDER_NAME}" || true
-  echo "${PROVIDER_NAME} VPN not running"
 fi
+
+if is_running; then
+  echo "${PROVIDER_NAME} VPN still running (pid $(cat "$PID_FILE" 2>/dev/null || true))"
+  exit 1
+fi
+
+rm -f "$PID_FILE"
+echo "${PROVIDER_NAME} VPN disconnected"

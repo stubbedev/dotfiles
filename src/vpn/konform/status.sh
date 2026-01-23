@@ -17,8 +17,14 @@ is_running() {
   if [ -f "$PID_FILE" ]; then
     local pid
     pid=$(cat "$PID_FILE" 2>/dev/null || true)
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-      return 0
+    if [ -n "$pid" ]; then
+      if kill -0 "$pid" 2>/dev/null; then
+        return 0
+      fi
+
+      if [ -d "/proc/$pid" ]; then
+        return 0
+      fi
     fi
   fi
   return 1
