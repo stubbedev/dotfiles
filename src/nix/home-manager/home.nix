@@ -97,7 +97,7 @@ in {
       # For better appearance, consider using native packages for Qt apps.
       ".local/share/flatpak/overrides/global".text = ''
         [Context]
-        filesystems=xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;xdg-config/kdeglobals:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro
+        filesystems=xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro
 
         [Environment]
         GTK_THEME=Adwaita-dark
