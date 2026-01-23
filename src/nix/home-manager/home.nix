@@ -327,6 +327,10 @@ in {
     "wireplumber/main.lua.d/50-enable-hdmi-audio.lua".source =
       ./../../wireplumber/main.lua.d/50-enable-hdmi-audio.lua;
 
+    # WirePlumber configuration to stop Bluetooth auto profile switching
+    "wireplumber/main.lua.d/60-disable-bt-autoswitch.lua".source =
+      ./../../wireplumber/main.lua.d/60-disable-bt-autoswitch.lua;
+
     # GPG agent configuration
     "gnupg/gpg-agent.conf".text = ''
       # Use pinentry-gnome3 for password prompts (Wayland compatible)
