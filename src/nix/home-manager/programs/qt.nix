@@ -1,4 +1,117 @@
-{ pkgs, ... }: {
+{ pkgs, lib, ... }:
+let
+  kdeglobalsText = ''
+    [General]
+    ColorScheme=BreezeDark
+    Name=Breeze Dark
+
+    [ColorEffects:Disabled]
+    Color=56,56,56
+    ColorAmount=0
+    ColorEffect=0
+    ContrastAmount=0.65
+    ContrastEffect=1
+    IntensityAmount=0.1
+    IntensityEffect=2
+
+    [ColorEffects:Inactive]
+    ChangeSelectionColor=true
+    Color=112,111,110
+    ColorAmount=0.025
+    ColorEffect=2
+    ContrastAmount=0.1
+    ContrastEffect=2
+    Enable=false
+    IntensityAmount=0
+    IntensityEffect=0
+
+    [Colors:Button]
+    BackgroundAlternate=30,87,116
+    BackgroundNormal=49,54,59
+    DecorationFocus=61,174,233
+    DecorationHover=61,174,233
+    ForegroundActive=61,174,233
+    ForegroundInactive=161,169,177
+    ForegroundLink=29,153,243
+    ForegroundNegative=218,68,83
+    ForegroundNeutral=246,116,0
+    ForegroundNormal=252,252,252
+    ForegroundPositive=39,174,96
+    ForegroundVisited=155,89,182
+
+    [Colors:Selection]
+    BackgroundAlternate=30,87,116
+    BackgroundNormal=61,174,233
+    DecorationFocus=61,174,233
+    DecorationHover=61,174,233
+    ForegroundActive=252,252,252
+    ForegroundInactive=161,169,177
+    ForegroundLink=253,188,75
+    ForegroundNegative=176,55,69
+    ForegroundNeutral=198,92,0
+    ForegroundNormal=252,252,252
+    ForegroundPositive=23,104,57
+    ForegroundVisited=155,89,182
+
+    [Colors:Tooltip]
+    BackgroundAlternate=49,54,59
+    BackgroundNormal=49,54,59
+    DecorationFocus=61,174,233
+    DecorationHover=61,174,233
+    ForegroundActive=61,174,233
+    ForegroundInactive=161,169,177
+    ForegroundLink=29,153,243
+    ForegroundNegative=218,68,83
+    ForegroundNeutral=246,116,0
+    ForegroundNormal=252,252,252
+    ForegroundPositive=39,174,96
+    ForegroundVisited=155,89,182
+
+    [Colors:View]
+    BackgroundAlternate=35,38,41
+    BackgroundNormal=27,30,32
+    DecorationFocus=61,174,233
+    DecorationHover=61,174,233
+    ForegroundActive=61,174,233
+    ForegroundInactive=161,169,177
+    ForegroundLink=29,153,243
+    ForegroundNegative=218,68,83
+    ForegroundNeutral=246,116,0
+    ForegroundNormal=252,252,252
+    ForegroundPositive=39,174,96
+    ForegroundVisited=155,89,182
+
+    [Colors:Window]
+    BackgroundAlternate=49,54,59
+    BackgroundNormal=42,46,50
+    DecorationFocus=61,174,233
+    DecorationHover=61,174,233
+    ForegroundActive=61,174,233
+    ForegroundInactive=161,169,177
+    ForegroundLink=29,153,243
+    ForegroundNegative=218,68,83
+    ForegroundNeutral=246,116,0
+    ForegroundNormal=252,252,252
+    ForegroundPositive=39,174,96
+    ForegroundVisited=155,89,182
+
+    [Icons]
+    Theme=breeze-dark
+
+    [KDE]
+    ColorScheme=BreezeDark
+    LookAndFeelPackage=org.kde.breezedark.desktop
+    widgetStyle=Breeze
+
+    [WM]
+    activeBackground=49,54,59
+    activeBlend=252,252,252
+    activeForeground=252,252,252
+    inactiveBackground=42,46,50
+    inactiveBlend=161,169,177
+    inactiveForeground=161,169,177
+  '';
+in {
   # Disabled to prevent global QT_STYLE_OVERRIDE export which breaks KDE Plasma login
   # QT settings are configured per-environment:
   # - Hyprland: QT vars set in env.conf
@@ -12,119 +125,12 @@
   #   };
   # };
 
-  # Create kdeglobals config to force Breeze Dark color scheme for KDE apps
-  xdg.configFile."kdeglobals" = {
-    force = true;
-    text = ''
-      [General]
-      ColorScheme=BreezeDark
-      Name=Breeze Dark
-
-      [ColorEffects:Disabled]
-      Color=56,56,56
-      ColorAmount=0
-      ColorEffect=0
-      ContrastAmount=0.65
-      ContrastEffect=1
-      IntensityAmount=0.1
-      IntensityEffect=2
-
-      [ColorEffects:Inactive]
-      ChangeSelectionColor=true
-      Color=112,111,110
-      ColorAmount=0.025
-      ColorEffect=2
-      ContrastAmount=0.1
-      ContrastEffect=2
-      Enable=false
-      IntensityAmount=0
-      IntensityEffect=0
-
-      [Colors:Button]
-      BackgroundAlternate=30,87,116
-      BackgroundNormal=49,54,59
-      DecorationFocus=61,174,233
-      DecorationHover=61,174,233
-      ForegroundActive=61,174,233
-      ForegroundInactive=161,169,177
-      ForegroundLink=29,153,243
-      ForegroundNegative=218,68,83
-      ForegroundNeutral=246,116,0
-      ForegroundNormal=252,252,252
-      ForegroundPositive=39,174,96
-      ForegroundVisited=155,89,182
-
-      [Colors:Selection]
-      BackgroundAlternate=30,87,116
-      BackgroundNormal=61,174,233
-      DecorationFocus=61,174,233
-      DecorationHover=61,174,233
-      ForegroundActive=252,252,252
-      ForegroundInactive=161,169,177
-      ForegroundLink=253,188,75
-      ForegroundNegative=176,55,69
-      ForegroundNeutral=198,92,0
-      ForegroundNormal=252,252,252
-      ForegroundPositive=23,104,57
-      ForegroundVisited=155,89,182
-
-      [Colors:Tooltip]
-      BackgroundAlternate=49,54,59
-      BackgroundNormal=49,54,59
-      DecorationFocus=61,174,233
-      DecorationHover=61,174,233
-      ForegroundActive=61,174,233
-      ForegroundInactive=161,169,177
-      ForegroundLink=29,153,243
-      ForegroundNegative=218,68,83
-      ForegroundNeutral=246,116,0
-      ForegroundNormal=252,252,252
-      ForegroundPositive=39,174,96
-      ForegroundVisited=155,89,182
-
-      [Colors:View]
-      BackgroundAlternate=35,38,41
-      BackgroundNormal=27,30,32
-      DecorationFocus=61,174,233
-      DecorationHover=61,174,233
-      ForegroundActive=61,174,233
-      ForegroundInactive=161,169,177
-      ForegroundLink=29,153,243
-      ForegroundNegative=218,68,83
-      ForegroundNeutral=246,116,0
-      ForegroundNormal=252,252,252
-      ForegroundPositive=39,174,96
-      ForegroundVisited=155,89,182
-
-      [Colors:Window]
-      BackgroundAlternate=49,54,59
-      BackgroundNormal=42,46,50
-      DecorationFocus=61,174,233
-      DecorationHover=61,174,233
-      ForegroundActive=61,174,233
-      ForegroundInactive=161,169,177
-      ForegroundLink=29,153,243
-      ForegroundNegative=218,68,83
-      ForegroundNeutral=246,116,0
-      ForegroundNormal=252,252,252
-      ForegroundPositive=39,174,96
-      ForegroundVisited=155,89,182
-
-      [Icons]
-      Theme=breeze-dark
-
-      [KDE]
-      ColorScheme=BreezeDark
-      LookAndFeelPackage=org.kde.breezedark.desktop
-      widgetStyle=Breeze
-
-      [WM]
-      activeBackground=49,54,59
-      activeBlend=252,252,252
-      activeForeground=252,252,252
-      inactiveBackground=42,46,50
-      inactiveBlend=161,169,177
-      inactiveForeground=161,169,177
-    '';
-  };
+  # Create kdeglobals as a regular file (avoids symlink issues with Flatpak)
+  home.activation.kdeglobals = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "$HOME/.config"
+    rm -f "$HOME/.config/kdeglobals"
+    cat > "$HOME/.config/kdeglobals" <<'EOF'
+    ${kdeglobalsText}
+    EOF
+  '';
 }
