@@ -10,6 +10,24 @@ CONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-connect"
 DISCONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-disconnect"
 TERMINAL="${TERMINAL:-alacritty}"
 
+iface_name() {
+  local raw="oc-${PROVIDER_NAME}"
+  printf '%s' "${raw:0:15}"
+}
+
+IFACE_NAME="$(iface_name)"
+
+interface_up() {
+  if [ -d "/sys/class/net/$IFACE_NAME" ]; then
+    local state
+    state=$(cat "/sys/class/net/$IFACE_NAME/operstate" 2>/dev/null || true)
+    if [ "$state" = "up" ] || [ "$state" = "unknown" ]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 load_config() {
   if [ ! -f "$CONFIG_FILE" ]; then
     return 1
@@ -27,8 +45,18 @@ is_running() {
   if [ -f "$PID_FILE" ]; then
     local pid
     pid=$(cat "$PID_FILE" 2>/dev/null || true)
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-      return 0
+    if [ -n "$pid" ]; then
+      if kill -0 "$pid" 2>/dev/null; then
+        if interface_up; then
+          return 0
+        fi
+      fi
+
+      if [ -d "/proc/$pid" ]; then
+        if interface_up; then
+          return 0
+        fi
+      fi
     fi
   fi
   return 1
@@ -66,11 +94,39 @@ connect() {
   fi
 
   # Launch via terminal to allow password/privilege prompts if needed
-  "$TERMINAL" -e bash -lc "${CONNECT_SCRIPT@Q}"
+  local title="VPN: ${PROVIDER_NAME}"
+  case "$TERMINAL" in
+    alacritty)
+      alacritty --class vpn-prompt --title "$title" -e bash -lc "${CONNECT_SCRIPT@Q}"
+      ;;
+    kitty)
+      kitty --class vpn-prompt --title "$title" -e bash -lc "${CONNECT_SCRIPT@Q}"
+      ;;
+    foot)
+      foot -a vpn-prompt -T "$title" -e bash -lc "${CONNECT_SCRIPT@Q}"
+      ;;
+    *)
+      "$TERMINAL" -e bash -lc "${CONNECT_SCRIPT@Q}"
+      ;;
+  esac
 }
 
 disconnect() {
-  "$TERMINAL" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
+  local title="VPN: ${PROVIDER_NAME}"
+  case "$TERMINAL" in
+    alacritty)
+      alacritty --class vpn-prompt --title "$title" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
+      ;;
+    kitty)
+      kitty --class vpn-prompt --title "$title" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
+      ;;
+    foot)
+      foot -a vpn-prompt -T "$title" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
+      ;;
+    *)
+      "$TERMINAL" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
+      ;;
+  esac
 }
 
 toggle() {

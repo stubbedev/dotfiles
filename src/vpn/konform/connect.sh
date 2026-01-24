@@ -18,6 +18,13 @@ PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pi
 LOG_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.log"
 OPENCONNECT_BIN="$(command -v openconnect || true)"
 
+iface_name() {
+  local raw="oc-${PROVIDER_NAME}"
+  printf '%s' "${raw:0:15}"
+}
+
+IFACE_NAME="$(iface_name)"
+
 run_as_root() {
   if [ "${EUID:-$(id -u)}" -eq 0 ]; then
     "$@"
@@ -94,6 +101,7 @@ printf '%s\n' "$password" | run_as_root "$OPENCONNECT_BIN" \
   --protocol=gp \
   --user "$VPN_USERNAME" \
   --passwd-on-stdin \
+  --interface "$IFACE_NAME" \
   --pid-file "$PID_FILE" \
   --syslog \
   --background \

@@ -19,7 +19,6 @@
   ],
   "modules-right": [
     "custom/mail",
-    "custom/konform-vpn",
     "hyprland/language",
     "sway/language",
     "mpd",
@@ -34,6 +33,7 @@
     "clock",
     // "idle_inhibitor",
     "tray",
+    "custom/konform-vpn",
     "power-profiles-daemon"
   ],
   "custom/tmux": {
