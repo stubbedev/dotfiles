@@ -8,30 +8,20 @@
   // Choose the order of the modules
   "modules-left": [
     "hyprland/workspaces",
-    "hyprland/submap",
-    "hyprland/window",
-    "sway/workspaces",
-    "sway/mode",
-    "sway/scratchpad"
+    "hyprland/submap"
   ],
   "modules-center": [
+    "custom/mail",
     "custom/tmux"
   ],
   "modules-right": [
-    "custom/mail",
     "hyprland/language",
-    "sway/language",
     "mpd",
     "pulseaudio",
     "bluetooth",
-    // "network",
-    // "cpu",
-    // "memory",
-    // "temperature",
     "backlight",
     "battery",
     "clock",
-    // "idle_inhibitor",
     "tray",
     "custom/konform-vpn",
     "power-profiles-daemon"
@@ -56,31 +46,7 @@
     "return-type": "json",
     "format": "{}",
     "interval": 3,
-    "on-click": "~/.local/bin/konform-vpn-waybar toggle",
-    "on-click-right": "~/.local/bin/konform-vpn-waybar status",
-    "on-click-middle": "~/.local/bin/konform-vpn-waybar disconnect"
-  },
-  // Modules configuration
-  "sway/workspaces": {
-    "disable-scroll": false,
-    "all-outputs": false,
-    "warp-on-scroll": true,
-    "format": "{name}",
-    "format-icons": {
-      "1": "<span foreground='#89B4FA'> </span>",
-      "2": "<span foreground='#F0C6C6'> </span>",
-      "3": "<span foreground='#DDB6F2'> </span>",
-      "4": "<span foreground='#F5BDE6'> </span>",
-      "5": "<span foreground='#F28D8C'> </span>",
-      "6": "<span foreground='#E8A2A1'> </span>",
-      "7": "<span foreground='#F8BD96'> </span>",
-      "8": "<span foreground='#FAE3B0'> </span>",
-      "9": "<span foreground='#A6D189'> </span>",
-      "10": "<span foreground='#81C8BE'> </span>",
-      "default": "<span> </span>",
-      "focused": "<span> </span>",
-      "urgent": "<span> </span>"
-    }
+    "on-click": "~/.local/bin/konform-vpn-waybar toggle"
   },
   "hyprland/workspaces": {
     "format": "{name} {icon}",
@@ -121,9 +87,6 @@
       "unlocked": ""
     }
   },
-  "sway/mode": {
-    "format": "<span style=\"italic\">{}</span>"
-  },
   "bluetooth": {
     "format": " {status}",
     "format-connected": " {device_alias}",
@@ -138,16 +101,6 @@
   "hyprland/submap": {
     "format": " ",
     "tooltip": false
-  },
-  "sway/scratchpad": {
-    "format": "{icon} {count}",
-    "show-empty": false,
-    "format-icons": [
-      "",
-      ""
-    ],
-    "tooltip": true,
-    "tooltip-format": "{app}: {title}"
   },
   "mpd": {
     "format": "{stateIcon} {consumeIcon}{randomIcon}{repeatIcon}{singleIcon}{artist} - {album} - {title} ({elapsedTime:%M:%S}/{totalTime:%M:%S}) ⸨{songPosition}|{queueLength}⸩ {volume}% ",
