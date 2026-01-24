@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ lib, ... }:
 
 let
   # Define all system checks here
@@ -22,8 +22,9 @@ let
     let
       solutionsList =
         lib.concatMapStringsSep "\n" (sol: formatSolution sol.idx sol)
-        (lib.imap1 (idx: sol: sol // { inherit idx; }) solutions);
-    in ''
+          (lib.imap1 (idx: sol: sol // { inherit idx; }) solutions);
+    in
+    ''
       echo ""
       echo "${divider}"
       echo "⚠️  ${title}"
@@ -42,7 +43,8 @@ let
   # Process each check - evaluate at Nix time, emit message if needed
   processCheck = check:
     let checkPassed = builtins.pathExists check.path;
-    in if !checkPassed && check.failureMessage != null then
+    in
+    if !checkPassed && check.failureMessage != null then
       formatMessage check.failureMessage
     else if checkPassed && check.successMessage != null then
       ''echo "✓ ${check.successMessage}"''
@@ -52,4 +54,5 @@ let
   # Filter out empty strings and join
   checkScripts = lib.filter (s: s != "") (map processCheck checks);
 
-in lib.concatStringsSep "\n" checkScripts
+in
+lib.concatStringsSep "\n" checkScripts

@@ -14,15 +14,24 @@ polkit.addRule(function(action, subject) {
     var allowed = [
       "/usr/bin/openconnect",
       "${config.home.homeDirectory}/.nix-profile/bin/openconnect",
+      "/bin/pkill",
       "/usr/bin/pkill",
       "${config.home.homeDirectory}/.nix-profile/bin/pkill",
+      "/bin/setsid",
       "/usr/bin/setsid",
       "${config.home.homeDirectory}/.nix-profile/bin/setsid"
     ];
-    if ((program && allowed.indexOf(program) !== -1) ||
-        (commandLine && (commandLine.indexOf(allowed[1]) == 0 ||
-          commandLine.indexOf(allowed[3]) == 0 ||
-          commandLine.indexOf(allowed[5]) == 0))) {
+    var cmdAllowed = function(cmdline) {
+      if (!cmdline) return false;
+      for (var i = 0; i < allowed.length; i++) {
+        if (cmdline.indexOf(allowed[i]) == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if ((program && allowed.indexOf(program) !== -1) || cmdAllowed(commandLine)) {
       return polkit.Result.YES;
     }
   }

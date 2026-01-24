@@ -28,9 +28,10 @@
     };
   };
 
-  outputs = { ... }@inputs:
+  outputs = inputs:
     let
       system = "x86_64-linux";
+      homeLib = import ./lib.nix { inherit (inputs.nixpkgs) lib; };
 
       # Auto-detect NVIDIA driver version from /proc
       # Works with both proprietary and Open kernel modules
@@ -38,7 +39,7 @@
         let
           nvidiaVersionPath = "/proc/driver/nvidia/version";
         in
-        if builtins.pathExists (builtins.toPath nvidiaVersionPath) then
+        if builtins.pathExists (homeLib.toPath nvidiaVersionPath) then
           let
             data = builtins.readFile nvidiaVersionPath;
             # Match version after "x86_64" (works for Open Kernel Module)
@@ -60,7 +61,7 @@
             pkgs = final;
             enable32bits = isIntelX86Platform;
             enableIntelX86Extensions = isIntelX86Platform;
-          } // (if nvidiaVersion != null then { nvidiaVersion = nvidiaVersion; } else {});
+          } // (if nvidiaVersion != null then { inherit nvidiaVersion; } else {});
         in {
           nixgl = import "${inputs.nixgl}/default.nix" nixglArgs;
         };
@@ -71,9 +72,9 @@
             inherit system;
             config = {
               allowUnfree = true;
-              allowUnfreePredicate = (_: true);
+              allowUnfreePredicate = _ : true;
               allowInsecure = true;
-              allowInsecurePredicate = (_: true);
+              allowInsecurePredicate = _ : true;
             };
             overlays = [ nixglOverlay ];
           };

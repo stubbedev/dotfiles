@@ -17,7 +17,9 @@ let
     name = "setup-sddm-session";
     preCheck = ''
       if [ -f "${desktopPath}" ]; then
-        exit 0
+        if grep -Fxq "Exec=${config.home.homeDirectory}/.nix-profile/bin/start-hyprland" "${desktopPath}"; then
+          exit 0
+        fi
       fi
     '';
     promptTitle = "⚠️  SDDM Hyprland session entry missing";

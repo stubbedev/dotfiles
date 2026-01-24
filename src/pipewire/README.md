@@ -1,5 +1,20 @@
 # PipeWire Configuration
 
+<!--toc:start-->
+- [PipeWire Configuration](#pipewire-configuration)
+  - [Files](#files)
+    - [`pipewire.conf.d/99-usb-dock.conf`](#pipewireconfd99-usb-dockconf)
+    - [`pipewire-pulse.conf.d/99-usb-dock.conf`](#pipewire-pulseconfd99-usb-dockconf)
+    - [`pulse-client.conf`](#pulse-clientconf)
+  - [WirePlumber Configuration](#wireplumber-configuration)
+    - [`../wireplumber/main.lua.d/51-alsa-usb-dock.lua`](#wireplumbermainluad51-alsa-usb-docklua)
+  - [Applying Changes](#applying-changes)
+  - [Troubleshooting](#troubleshooting)
+    - [Check current settings](#check-current-settings)
+    - [List audio devices](#list-audio-devices)
+    - [Check if USB autosuspend is disabled (should be -1)](#check-if-usb-autosuspend-is-disabled-should-be-1)
+<!--toc:end-->
+
 This directory contains PipeWire audio configuration optimized for various hardware setups.
 
 ## Files
