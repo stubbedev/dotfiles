@@ -4,7 +4,7 @@ let
 
   # Auto-detect system information
   hasNvidia =
-    builtins.pathExists (builtins.toPath "/proc/driver/nvidia/version");
+    builtins.pathExists (homeLib.toPath "/proc/driver/nvidia/version");
 
   # Detect OS distribution
   osReleasePath = /etc/os-release;
@@ -174,64 +174,68 @@ in
         (import ./scripts/setup-snap-themes.nix {
           inherit config pkgs lib homeLib;
         });
-      # System checks - verifies system configuration and provides helpful warnings
-      systemChecks = lib.hm.dag.entryAfter [ "setupSnapThemes" ]
-        (import ./scripts/system-checks.nix { inherit config pkgs lib; });
       # Polkit rule for passwordless VPN pkexec usage
-      setupVpnPolkit = lib.hm.dag.entryAfter [ "systemChecks" ]
+      setupVpnPolkit = lib.hm.dag.entryAfter [ "setupSnapThemes" ]
         (import ./scripts/setup-vpn-polkit.nix {
           inherit config pkgs lib homeLib;
         });
+      # System checks - verifies system configuration and provides helpful warnings
+      systemChecks = lib.hm.dag.entryAfter [ "setupVpnPolkit" ]
+        (import ./scripts/system-checks.nix { inherit config pkgs lib; });
     };
   };
 
   imports = programs;
 
   # XDG Config files
-  xdg.configFile = {
-    "lazygit/config.yml".source = ./../../lazygit/config.yml;
-    "alacritty".source = ./../../alacritty;
-    "rofi".source = ./../../rofi;
-    "btop/themes/catppuccin_frappe.theme".source =
-      ./../../btop/themes/catppuccin_frappe.theme;
-    "btop/themes/catppuccin_latte.theme".source =
-      ./../../btop/themes/catppuccin_latte.theme;
-    "btop/themes/catppuccin_macchiato.theme".source =
-      ./../../btop/themes/catppuccin_macchiato.theme;
-    "btop/themes/catppuccin_mocha.theme".source =
-      ./../../btop/themes/catppuccin_mocha.theme;
-    "swaync".source = ./../../swaync;
-    "waybar/config.jsonc" = {
-      source = ./../../waybar/config.jsonc;
-      force = true;
-    };
-    "waybar/style.css" = {
-      source = ./../../waybar/style.css;
-      force = true;
-    };
-    "waybar/scripts/mail-status.sh" = {
-      source = ./../../waybar/scripts/mail-status.sh;
-      executable = true;
-      force = true;
-    };
-    "waybar/scripts/tmux-status.sh" = {
-      source = ./../../waybar/scripts/tmux-status.sh;
-      executable = true;
-      force = true;
-    };
+  xdg.configFile = homeLib.xdgSources [
+    "lazygit/config.yml"
+    "alacritty"
+    "rofi"
+    "btop/themes/catppuccin_frappe.theme"
+    "btop/themes/catppuccin_latte.theme"
+    "btop/themes/catppuccin_macchiato.theme"
+    "btop/themes/catppuccin_mocha.theme"
+    "swaync"
+    "waybar"
 
     # Copy individual hypr config files (not as a directory to allow overriding env.conf)
-    "hypr/hypridle.conf".source = ./../../hypr/hypridle.conf;
-    "hypr/hyprland.conf".source = ./../../hypr/hyprland.conf;
-    "hypr/hyprlock.conf".source = ./../../hypr/hyprlock.conf;
-    "hypr/hyprpaper.conf".source = ./../../hypr/hyprpaper.conf;
-    "hypr/hyprsunset.conf".source = ./../../hypr/hyprsunset.conf;
-    "hypr/keybinds.conf".source = ./../../hypr/keybinds.conf;
-    "hypr/monitors.conf".source = ./../../hypr/monitors.conf;
-    "hypr/settings.conf".source = ./../../hypr/settings.conf;
-    "hypr/theme.conf".source = ./../../hypr/theme.conf;
-    "hypr/windowrule.conf".source = ./../../hypr/windowrule.conf;
-    "hypr/scripts".source = ./../../hypr/scripts;
+    "hypr/hypridle.conf"
+    "hypr/hyprland.conf"
+    "hypr/hyprlock.conf"
+    "hypr/hyprpaper.conf"
+    "hypr/hyprsunset.conf"
+    "hypr/keybinds.conf"
+    "hypr/monitors.conf"
+    "hypr/settings.conf"
+    "hypr/theme.conf"
+    "hypr/windowrule.conf"
+    "hypr/scripts"
+
+    "opencode/opencode.json"
+    "opencode/AGENTS.md"
+    "opencode/themes/catppuccin-mocha.json"
+
+    "aerc/aerc.conf"
+    "aerc/binds.conf"
+
+    # PipeWire audio configuration for USB docks with KVM switches
+    "pipewire/pipewire.conf.d/99-usb-dock.conf"
+    "pipewire/pipewire-pulse.conf.d/99-usb-dock.conf"
+    # Low-latency PipeWire configuration for screen sharing and camera
+    "pipewire/pipewire.conf.d/10-screenshare-optimize.conf"
+
+    # WirePlumber ALSA configuration for USB dock stability
+    "wireplumber/main.lua.d/51-alsa-usb-dock.lua"
+
+    # WirePlumber configuration to enable HDMI/DisplayPort audio
+    "wireplumber/main.lua.d/50-enable-hdmi-audio.lua"
+
+    # WirePlumber configuration to stop Bluetooth auto profile switching
+    "wireplumber/main.lua.d/60-disable-bt-autoswitch.lua"
+
+    "xdg-desktop-portal/portals.conf"
+  ] // {
 
     # Generate dynamic Hyprland env.conf based on system detection
     "hypr/env.conf" = {
@@ -280,60 +284,6 @@ in
           plugin = ${hy3-plugin}/lib/libhy3.so
         '';
     };
-    "opencode/opencode.json".source = ./../../opencode/opencode.json;
-    "opencode/AGENTS.md".source = ./../../opencode/AGENTS.md;
-    "opencode/themes/catppuccin-mocha.json".source =
-      ./../../opencode/catppuccin-mocha.json;
-
-    "xdg-desktop-portal/portals.conf".text = ''
-      [preferred]
-      default=hyprland;gtk;wlr;kde;
-    '';
-
-    "aerc/aerc.conf".source = ./../../aerc/aerc.conf;
-    "aerc/binds.conf".source = ./../../aerc/binds.conf;
-
-    # PipeWire audio configuration for USB docks with KVM switches
-    "pipewire/pipewire.conf.d/99-usb-dock.conf".source =
-      ./../../pipewire/pipewire.conf.d/99-usb-dock.conf;
-    "pipewire/pipewire-pulse.conf.d/99-usb-dock.conf".source =
-      ./../../pipewire/pipewire-pulse.conf.d/99-usb-dock.conf;
-    # Low-latency PipeWire configuration for screen sharing and camera
-    "pipewire/pipewire.conf.d/10-screenshare-optimize.conf".source =
-      ./../../pipewire/pipewire.conf.d/10-screenshare-optimize.conf;
-
-    # PulseAudio client config for flatpak apps (prevents audio popping)
-    "pulse/client.conf".source = ./../../pipewire/pulse-client.conf;
-
-    # WirePlumber ALSA configuration for USB dock stability
-    "wireplumber/main.lua.d/51-alsa-usb-dock.lua".source =
-      ./../../wireplumber/main.lua.d/51-alsa-usb-dock.lua;
-
-    # WirePlumber configuration to enable HDMI/DisplayPort audio
-    "wireplumber/main.lua.d/50-enable-hdmi-audio.lua".source =
-      ./../../wireplumber/main.lua.d/50-enable-hdmi-audio.lua;
-
-    # WirePlumber configuration to stop Bluetooth auto profile switching
-    "wireplumber/main.lua.d/60-disable-bt-autoswitch.lua".source =
-      ./../../wireplumber/main.lua.d/60-disable-bt-autoswitch.lua;
-
-    # GPG agent configuration
-    "gnupg/gpg-agent.conf".text = ''
-      # Use pinentry-gnome3 for password prompts (Wayland compatible)
-      # pinentry-gnome3 integrates with gnome-keyring to remember passphrases
-      pinentry-program ${pkgs.pinentry-gnome3}/bin/pinentry-gnome3
-
-      # Cache passwords for maximum time to avoid repeated prompts during session
-      # 1 year = 31536000 seconds
-      default-cache-ttl 31536000
-      max-cache-ttl 31536000
-
-      # Allow preset passphrases
-      allow-preset-passphrase
-
-      # SSH support is handled by gnome-keyring instead
-      # enable-ssh-support
-    '';
   } // vpnConfigs;
 
   systemd.user.services = {

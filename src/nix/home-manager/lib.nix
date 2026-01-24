@@ -2,7 +2,8 @@
 
 rec {
   gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo; };
-  inherit (gfxLib) gfx gfxWith gfxName gfxNameWith gfxExe gfxNameExe gfxList gfxExec;
+  inherit (gfxLib)
+    gfx gfxWith gfxName gfxNameWith gfxExe gfxNameExe gfxList gfxExec;
   # Common function to get .nix files from a directory
   # More efficient than the original implementation using lib.mapAttrsToList
   getNixFiles = dir:
@@ -13,8 +14,26 @@ rec {
   # More efficient path construction using concatenation
   pathJoin = dir: name: dir + "/${name}";
 
-  toPath = path: /. + path;
+  toPath = path:
+    if builtins.isPath path then
+      path
+    else
+      let
+        pathString = toString path;
+      in
+      if lib.hasPrefix "/" pathString then
+        /. + pathString
+      else
+        ./. + pathString;
 
+  xdgSource = path:
+    let
+      baseDir = ./../..;
+      fullPath = toPath (toString baseDir + "/${path}");
+    in
+    { "${path}".source = fullPath; };
+
+  xdgSources = paths: lib.foldl' (acc: path: acc // xdgSource path) { } paths;
 
   # Load all .nix files from a directory and return their contents as a list
   # Optimized to use lib.mapAttrsToList instead of manual iteration
@@ -42,8 +61,16 @@ rec {
     in
     map (name: dir + "/${name}") (lib.attrNames nixFiles);
 
-  sudoPromptScript = { pkgs, name, preCheck ? "", promptTitle, promptBody
-    , promptQuestion, actionScript, skipMessage ? "Skipped." }:
+  sudoPromptScript =
+    { pkgs
+    , name
+    , preCheck ? ""
+    , promptTitle
+    , promptBody
+    , promptQuestion
+    , actionScript
+    , skipMessage ? "Skipped."
+    }:
     pkgs.writeShellScript name ''
       set -e
 

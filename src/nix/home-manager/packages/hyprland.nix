@@ -1,19 +1,31 @@
 # Hyprland compositor and related tools
 { pkgs, homeLib, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
 let
+  lib = pkgs.lib;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
   hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
+
+  gbmPaths = lib.unique [
+    "/usr/lib64/gbm"
+    "/usr/lib/gbm"
+    "/run/opengl-driver/lib/gbm"
+    "/run/opengl-driver-32/lib/gbm"
+  ];
+
+  driPaths = lib.unique [
+    "/usr/lib64/dri"
+    "/usr/lib/dri"
+    "/run/opengl-driver/lib/dri"
+    "/run/opengl-driver-32/lib/dri"
+  ];
 
   # Create custom Hyprland wrapper with build-time GPU detection
   # This is needed because Nix's mesa-libgbm doesn't include GBM backends
   # The nixGL wrapper is pre-selected in systemInfo based on GPU detection
   hyprland-wrapped = homeLib.gfxNameWith "hyprland" ''
     # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
-    # Auto-detected: ${
-      if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
-    }
-    export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
-    export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
+    export GBM_BACKENDS_PATH=${lib.concatStringsSep ":" gbmPaths}
+    export LIBGL_DRIVERS_PATH=${lib.concatStringsSep ":" driPaths}
   ''
     hyprlandPkg;
 
