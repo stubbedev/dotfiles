@@ -66,15 +66,15 @@ status() {
   local text class tooltip
 
   if ! load_config; then
-    text=" VPN"
+    text="󰫜"
     class="error"
     tooltip="VPN config missing: ${CONFIG_FILE}"
   elif is_running; then
-    text=" VPN"
+    text="󰦝"
     class="connected"
     tooltip="${PROVIDER_NAME} VPN connected"
   else
-    text=" VPN"
+    text="󱦚"
     class="disconnected"
     tooltip="${PROVIDER_NAME} VPN disconnected"
   fi
