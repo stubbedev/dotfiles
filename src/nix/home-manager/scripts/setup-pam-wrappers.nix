@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, homeLib, ... }:
 
 let
   wrapperPath = "/run/wrappers/bin/unix_chkpwd";
@@ -21,59 +21,35 @@ let
     WantedBy=sysinit.target
   '';
 
-  setupScript = pkgs.writeShellScript "setup-pam-wrappers" ''
-    set -e
-
-    # Find sudo in common locations
-    SUDO=""
-    for path in /usr/bin/sudo /bin/sudo /run/wrappers/bin/sudo; do
-      if [ -x "$path" ]; then
-        SUDO="$path"
-        break
+  setupScript = homeLib.sudoPromptScript {
+    inherit pkgs;
+    name = "setup-pam-wrappers";
+    preCheck = ''
+      if [ -e "${wrapperPath}" ]; then
+        exit 0
       fi
-    done
 
-    if [ -z "$SUDO" ]; then
-      echo "Error: sudo not found. Please install sudo or run manually."
-      exit 1
-    fi
-
-    # Check if wrapper exists
-    if [ -e "${wrapperPath}" ]; then
-      exit 0
-    fi
-
-    # Check if service is installed
-    if [ -f "${servicePath}" ]; then
-      echo "Service exists but wrapper missing, starting service..."
-      $SUDO systemctl start nix-pam-wrappers.service
-      exit 0
-    fi
-
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "⚠️  Nix PAM wrapper setup required for hyprlock authentication"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "This will install a systemd service to enable password authentication"
-    echo "for hyprlock. The service will persist across reboots."
-    echo ""
-    read -p "Install nix-pam-wrappers.service? [Y/n] " -n 1 -r
-    echo
-
-    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+      if [ -f "${servicePath}" ]; then
+        echo "Service exists but wrapper missing, starting service..."
+        $SUDO systemctl start nix-pam-wrappers.service
+        exit 0
+      fi
+    '';
+    promptTitle = "⚠️  Nix PAM wrapper setup required for hyprlock authentication";
+    promptBody = ''
+      echo "This will install a systemd service to enable password authentication"
+      echo "for hyprlock. The service will persist across reboots."
+    '';
+    promptQuestion = "Install nix-pam-wrappers.service?";
+    actionScript = ''
       echo "${serviceContent}" | $SUDO tee "${servicePath}" > /dev/null
       $SUDO systemctl daemon-reload
       $SUDO systemctl enable --now nix-pam-wrappers.service
       echo ""
       echo "✓ Service installed and started successfully!"
-    else
-      echo ""
-      echo "Skipped. You can install it later by running:"
-      echo "  home-manager switch --flake . --impure"
-    fi
-    echo ""
-  '';
+    '';
+    skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
+  };
 
 in ''
   ${setupScript}

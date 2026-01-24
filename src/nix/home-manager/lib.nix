@@ -42,6 +42,45 @@ rec {
     in
     map (name: dir + "/${name}") (lib.attrNames nixFiles);
 
+  sudoPromptScript = { pkgs, name, preCheck ? "", promptTitle, promptBody
+    , promptQuestion, actionScript, skipMessage ? "Skipped." }:
+    pkgs.writeShellScript name ''
+      set -e
+
+      # Find sudo in common locations
+      SUDO=""
+      for path in /usr/bin/sudo /bin/sudo /run/wrappers/bin/sudo; do
+        if [ -x "$path" ]; then
+          SUDO="$path"
+          break
+        fi
+      done
+
+      if [ -z "$SUDO" ]; then
+        echo "Error: sudo not found. Please install sudo or run manually."
+        exit 1
+      fi
+
+      ${preCheck}
+
+      echo ""
+      echo "--------------------------------------------------------------------"
+      echo "${promptTitle}"
+      echo "--------------------------------------------------------------------"
+      echo ""
+      ${promptBody}
+      read -p "${promptQuestion} [Y/n] " -n 1 -r
+      echo
+
+      if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        ${actionScript}
+      else
+        echo ""
+        echo "${skipMessage}"
+      fi
+      echo ""
+    '';
+
   # Conditionally load packages (maintained for backward compatibility)
   # Returns packages if condition is true, empty list otherwise
   conditionalPackages = condition: packages:

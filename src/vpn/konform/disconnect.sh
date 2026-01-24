@@ -37,17 +37,13 @@ run_as_root() {
     return
   fi
 
-  if command -v sudo >/dev/null 2>&1; then
-    sudo -E "$@"
+  if command -v pkexec >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    pkexec "$@"
     return
   fi
 
-  if command -v pkexec >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-    pkexec env \
-      DISPLAY="${DISPLAY:-:0}" \
-      XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
-      DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
-      "$@"
+  if command -v sudo >/dev/null 2>&1; then
+    sudo -E "$@"
     return
   fi
 

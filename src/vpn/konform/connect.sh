@@ -17,6 +17,7 @@ PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 LOG_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.log"
 OPENCONNECT_BIN="$(command -v openconnect || true)"
+SETSID_BIN="$(command -v setsid || true)"
 
 iface_name() {
   local raw="oc-${PROVIDER_NAME}"
@@ -31,17 +32,13 @@ run_as_root() {
     return
   fi
 
-  if command -v sudo >/dev/null 2>&1; then
-    sudo -E "$@"
+  if command -v pkexec >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    pkexec "$@"
     return
   fi
 
-  if command -v pkexec >/dev/null 2>&1 && [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-    pkexec env \
-      DISPLAY="${DISPLAY:-:0}" \
-      XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
-      DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" \
-      "$@"
+  if command -v sudo >/dev/null 2>&1; then
+    sudo -E "$@"
     return
   fi
 
@@ -97,14 +94,22 @@ if [ -z "$password" ]; then
   exit 1
 fi
 
-printf '%s\n' "$password" | run_as_root "$OPENCONNECT_BIN" \
-  --protocol=gp \
-  --user "$VPN_USERNAME" \
-  --passwd-on-stdin \
-  --interface "$IFACE_NAME" \
-  --pid-file "$PID_FILE" \
-  --syslog \
-  --background \
+openconnect_args=(
+  "$OPENCONNECT_BIN"
+  --protocol=gp
+  --user "$VPN_USERNAME"
+  --passwd-on-stdin
+  --interface "$IFACE_NAME"
+  --pid-file "$PID_FILE"
+  --syslog
+  --background
   "$VPN_GATEWAY"
+)
+
+if [ -n "$SETSID_BIN" ]; then
+  printf '%s\n' "$password" | run_as_root "$SETSID_BIN" "${openconnect_args[@]}"
+else
+  printf '%s\n' "$password" | run_as_root "${openconnect_args[@]}"
+fi
 
 echo "${PROVIDER_NAME} VPN connecting via openconnect (pid file: $PID_FILE)"

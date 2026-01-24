@@ -1,0 +1,86 @@
+{ config, pkgs, lib, homeLib, ... }:
+
+let
+  rulePath = "/etc/polkit-1/rules.d/49-openconnect.rules";
+  stateDir = config.xdg.stateHome or "${config.home.homeDirectory}/.local/state";
+  stampPath = "${stateDir}/vpn/polkit-installed";
+  ruleContent = ''
+// managed-by: home-manager vpn-polkit v1
+polkit.addRule(function(action, subject) {
+  if (action.id == "org.freedesktop.policykit.exec" &&
+      subject.user == "${config.home.username}") {
+    var program = action.lookup("program");
+    var commandLine = action.lookup("command_line");
+    var allowed = [
+      "/usr/bin/openconnect",
+      "${config.home.homeDirectory}/.nix-profile/bin/openconnect",
+      "/usr/bin/pkill",
+      "${config.home.homeDirectory}/.nix-profile/bin/pkill",
+      "/usr/bin/setsid",
+      "${config.home.homeDirectory}/.nix-profile/bin/setsid"
+    ];
+    if ((program && allowed.indexOf(program) !== -1) ||
+        (commandLine && (commandLine.indexOf(allowed[1]) == 0 ||
+          commandLine.indexOf(allowed[3]) == 0 ||
+          commandLine.indexOf(allowed[5]) == 0))) {
+      return polkit.Result.YES;
+    }
+  }
+});
+  '';
+
+  setupScript = homeLib.sudoPromptScript {
+    inherit pkgs;
+    name = "setup-vpn-polkit";
+    preCheck = ''
+      if [ -f "${stampPath}" ]; then
+        exit 0
+      fi
+
+      if [ -r "${rulePath}" ] && grep -q "managed-by: home-manager vpn-polkit v1" "${rulePath}"; then
+        mkdir -p "${stateDir}/vpn"
+        touch "${stampPath}"
+        exit 0
+      fi
+
+      if $SUDO -n test -f "${rulePath}" 2>/dev/null; then
+        if $SUDO -n grep -q "managed-by: home-manager vpn-polkit v1" "${rulePath}"; then
+          mkdir -p "${stateDir}/vpn"
+          touch "${stampPath}"
+          exit 0
+        fi
+      fi
+
+      tmpfile=$(mktemp)
+      cat > "$tmpfile" <<'EOF'
+${ruleContent}
+EOF
+    '';
+    promptTitle = "Installing polkit rule for VPN (passwordless pkexec)";
+    promptBody = ''
+      echo "This allows ${config.home.username} to run openconnect/pkill via pkexec"
+      echo "without a password prompt."
+    '';
+    promptQuestion = "Install VPN polkit rule?";
+    actionScript = ''
+      $SUDO install -m 0644 "$tmpfile" "${rulePath}"
+      if getent group polkitd >/dev/null 2>&1; then
+        $SUDO chown root:polkitd "${rulePath}"
+      else
+        $SUDO chown root:root "${rulePath}"
+      fi
+      rm -f "$tmpfile"
+
+      mkdir -p "${stateDir}/vpn"
+      touch "${stampPath}"
+
+      if command -v systemctl >/dev/null 2>&1; then
+        $SUDO systemctl restart polkit.service >/dev/null 2>&1 || true
+      fi
+    '';
+    skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
+  };
+in
+''
+  ${setupScript}
+''

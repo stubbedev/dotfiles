@@ -33,4 +33,6 @@ with pkgs; [
   # Cursor and icon themes
   vimix-cursors
   vimix-icon-theme
+
+  util-linux
 ]

@@ -153,22 +153,35 @@ in
         });
       # Setup PAM wrappers for Nix on non-NixOS (interactive, prompts for sudo if needed)
       setupPamWrappers = lib.hm.dag.entryAfter [ "customConfigCleanUp" ]
-        (import ./scripts/setup-pam-wrappers.nix { inherit config pkgs lib; });
+        (import ./scripts/setup-pam-wrappers.nix {
+          inherit config pkgs lib homeLib;
+        });
       # Setup hyprlock PAM configuration
       setupHyprlockPam = lib.hm.dag.entryAfter [ "setupPamWrappers" ]
-        (import ./scripts/setup-hyprlock-pam.nix { inherit config pkgs lib; });
+        (import ./scripts/setup-hyprlock-pam.nix {
+          inherit config pkgs lib homeLib;
+        });
       # Setup GNOME Keyring PAM integration
       setupHyprKeyringPam = lib.hm.dag.entryAfter [ "setupHyprlockPam" ]
         (import ./scripts/hypr-keyring-pam.nix { inherit pkgs; });
       # Setup SDDM session entry for Hyprland
       setupHyprSession = lib.hm.dag.entryAfter [ "setupHyprKeyringPam" ]
-        (import ./scripts/setup-sddm-session.nix { inherit config pkgs lib; });
+        (import ./scripts/setup-sddm-session.nix {
+          inherit config pkgs lib homeLib;
+        });
       # Install icon/cursor themes for snap apps
       setupSnapThemes = lib.hm.dag.entryAfter [ "setupHyprSession" ]
-        (import ./scripts/setup-snap-themes.nix { inherit config pkgs lib; });
+        (import ./scripts/setup-snap-themes.nix {
+          inherit config pkgs lib homeLib;
+        });
       # System checks - verifies system configuration and provides helpful warnings
       systemChecks = lib.hm.dag.entryAfter [ "setupSnapThemes" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
+      # Polkit rule for passwordless VPN pkexec usage
+      setupVpnPolkit = lib.hm.dag.entryAfter [ "systemChecks" ]
+        (import ./scripts/setup-vpn-polkit.nix {
+          inherit config pkgs lib homeLib;
+        });
     };
   };
 
