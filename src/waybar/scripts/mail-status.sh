@@ -14,6 +14,16 @@ declare -i total_unread=0
 declare -A current_counts
 declare -A previous_uids
 
+send_notification() {
+  if ! command -v notify-send >/dev/null 2>&1; then
+    return
+  fi
+  if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && [ -n "$XDG_RUNTIME_DIR" ]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+  fi
+  timeout 3 notify-send "$@" || true
+}
+
 # Load previous state (UIDs of unread emails)
 if [ -f "$STATE_FILE" ]; then
   while IFS='=' read -r account uids; do
@@ -89,12 +99,12 @@ count_unread_imap() {
   password=$(eval "$source_cred_cmd" 2>/dev/null)
   [ -z "$password" ] && echo "0||$from" && return
 
-  # Get all unseen email UIDs
+  # Get all unseen email UIDs (use UID SEARCH for stable identifiers)
   local result
   result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
     --user "${imap_user}:${password}" \
     --login-options "AUTH=PLAIN" \
-    -X "SEARCH UNSEEN" 2>/dev/null)
+    -X "UID SEARCH UNSEEN" 2>/dev/null)
 
   # Extract UIDs from "* SEARCH uid1 uid2 uid3..."
   local uids
@@ -114,8 +124,11 @@ get_new_unseen_emails() {
   local current_uids="$1"
   local prev_uids="$2"
 
-  # If no previous UIDs, don't return anything (first run)
+  # If no previous UIDs, treat current as new (first run after restart)
   if [ -z "$prev_uids" ]; then
+    if [ -n "$current_uids" ]; then
+      echo "$current_uids" | tr ',' '\n'
+    fi
     return
   fi
 
@@ -137,20 +150,19 @@ fetch_email_headers() {
   local password="$4"
   local uid="$5"
 
-  # Fetch the entire email but we'll only parse headers
-  local result
-  result=$(timeout 10 curl -s --url "imaps://${server}:${port}/INBOX;UID=${uid}/;SECTION=HEADER" \
+  # Fetch only selected headers using BODY.PEEK to avoid marking as seen
+  timeout 10 curl -s --url "imaps://${server}:${port}/INBOX" \
     --user "${user}:${password}" \
-    --login-options "AUTH=PLAIN" 2>/dev/null)
-
-  echo "$result"
+    --login-options "AUTH=PLAIN" \
+    --request "UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (SUBJECT FROM TO DATE)])" 2>/dev/null
 }
 
-# Function to parse email subject and sender from headers
+# Function to parse email subject, sender, recipient, and date from headers
 parse_email_info() {
   local headers="$1"
   local subject=""
   local sender=""
+  local recipient=""
   local date=""
   local in_headers=0
   local current_field=""
@@ -188,6 +200,9 @@ parse_email_info() {
       From)
         sender="$value"
         ;;
+      To)
+        recipient="$value"
+        ;;
       Date)
         date="$value"
         ;;
@@ -201,6 +216,9 @@ parse_email_info() {
         ;;
       From)
         sender="${sender} ${continuation}"
+        ;;
+      To)
+        recipient="${recipient} ${continuation}"
         ;;
       Date)
         date="${date} ${continuation}"
@@ -218,12 +236,15 @@ parse_email_info() {
   # Clean up sender
   sender=$(echo "$sender" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
+  # Clean up recipient
+  recipient=$(echo "$recipient" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
   # Decode MIME encoded subjects
   if [[ "$subject" =~ =\?.*\?= ]]; then
     subject=$(echo "$subject" | perl -CS -MEncode -ne 'print decode("MIME-Header", $_)' 2>/dev/null || echo "$subject")
   fi
 
-  echo "${subject}|${sender}|${date}"
+  echo "${subject}|${sender}|${recipient}|${date}"
 }
 
 # Function to check account in background
@@ -345,11 +366,13 @@ if [ "$total_new_emails" -gt 0 ]; then
           email_info=$(parse_email_info "$headers")
           subject=$(echo "$email_info" | cut -d'|' -f1)
           sender=$(echo "$email_info" | cut -d'|' -f2)
-          date=$(echo "$email_info" | cut -d'|' -f3)
+          recipient=$(echo "$email_info" | cut -d'|' -f3)
+          date=$(echo "$email_info" | cut -d'|' -f4)
 
           # Default values if parsing failed
           subject="${subject:-No Subject}"
           sender="${sender:-Unknown Sender}"
+          recipient="${recipient:-${email}}"
           date="${date:-}"
 
           # Format the notification body with sender and date
@@ -359,12 +382,18 @@ if [ "$total_new_emails" -gt 0 ]; then
 Date: ${date}"
           fi
           notification_body="${notification_body}
-To: ${email}"
+To: ${recipient}"
 
           # Send notification
-          notify-send -u normal -i mail-unread -a "mail-notification" \
+          send_notification -u normal -i mail-unread -a "mail-notification" \
             "${subject}" \
             "${notification_body}"
+        else
+          # Fallback if headers could not be fetched (still notify)
+          send_notification -u normal -i mail-unread -a "mail-notification" \
+            "New mail: ${account_name}" \
+            "To: ${email}
+UID: ${uid}"
         fi
       fi
     done
