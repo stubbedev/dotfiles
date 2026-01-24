@@ -1,6 +1,5 @@
-{ pkgs, config, ... }:
-let inherit (config.lib.nixGL) wrap;
-in with pkgs; [
+{ pkgs, homeLib, ... }:
+with pkgs; [
   # JavaScript/TypeScript runtimes (CLI tools)
   nodejs
   bun
@@ -22,7 +21,7 @@ in with pkgs; [
   mago
 
   # IDE toolbox (GUI app)
-  (wrap jetbrains-toolbox)
+  (homeLib.gfx jetbrains-toolbox)
   networkmanager-openconnect
   openconnect
 ]

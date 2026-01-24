@@ -1,31 +1,21 @@
 # Hyprland compositor and related tools
-{ pkgs, config, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
+{ pkgs, homeLib, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
 let
-  inherit (config.lib.nixGL) wrap;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
   hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
 
   # Create custom Hyprland wrapper with build-time GPU detection
   # This is needed because Nix's mesa-libgbm doesn't include GBM backends
   # The nixGL wrapper is pre-selected in systemInfo based on GPU detection
-  hyprland-wrapped = pkgs.writeShellScriptBin "hyprland" (''
+  hyprland-wrapped = homeLib.gfxNameWith "hyprland" ''
     # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
     # Auto-detected: ${
       if systemInfo.isFedora then "Fedora (lib64)" else "Generic Linux (lib)"
     }
     export GBM_BACKENDS_PATH=/usr/${systemInfo.libPath}/gbm:/usr/lib/gbm
     export LIBGL_DRIVERS_PATH=/usr/${systemInfo.libPath}/dri:/usr/lib/dri
-
-    # GPU detected at build time: ${if systemInfo.hasNvidia then "NVIDIA" else "Intel/Mesa"}
-    # Using wrapper: ${systemInfo.nixGLWrapper}
-  '' + (if systemInfo.hasNvidia then ''
-    # NVIDIA: Find the versioned binary (e.g., nixGLNvidia-560.35.03)
-    NIXGL_BIN=$(ls ${systemInfo.nixGLWrapper}/bin/nixGLNvidia* 2>/dev/null | head -1)
-    exec "$NIXGL_BIN" ${hyprlandPkg}/bin/hyprland "$@"
-  '' else ''
-    # Intel/AMD: Use nixGLIntel directly
-    exec ${systemInfo.nixGLWrapper}/bin/nixGLIntel ${hyprlandPkg}/bin/hyprland "$@"
-  ''));
+  ''
+    hyprlandPkg;
 
   # Create start-hyprland wrapper that uses our wrapped hyprland
   # The watchdog monitors the wrapped hyprland process
@@ -90,11 +80,11 @@ let
 
     # Add our wrapped Hyprland to PATH so start-hyprland can find it
     export PATH="${hyprland-wrapped}/bin:$PATH"
-    
+
     # Ensure we have the Hyprland binary available (both cases)
     # start-hyprland looks for "Hyprland" with capital H
     export PATH="${hyprland-both-cases}/bin:$PATH"
-    
+
     # Use the official start-hyprland watchdog
     exec ${hyprlandPkg}/bin/start-hyprland "$@"
   '';
@@ -159,7 +149,8 @@ let
     exec ${pkgs.swaynotificationcenter}/bin/swaync "$@"
   '';
 
-in with pkgs; [
+in
+with pkgs; [
   # Custom wrapped Hyprland with GBM path fix (provides both hyprland and Hyprland)
   hyprland-both-cases
 
@@ -170,40 +161,40 @@ in with pkgs; [
   start-hyprland-wrapped
 
   # Hyprlock with nixGL wrapper
-  (wrap hyprlock)
+  (homeLib.gfx hyprlock)
 
   # Hyprland GUI utilities (from flake input)
-  (wrap guiutils)
+  (homeLib.gfxExe "hyprland-guiutils" guiutils)
 
   # Hyprland ecosystem
-  (wrap hyprshot)
+  (homeLib.gfx hyprshot)
   hyprlang
   hyprkeys
   hypridle
-  (wrap hyprpaper)
+  (homeLib.gfx hyprpaper)
   hyprsunset
-  (wrap hyprpicker)
+  (homeLib.gfx hyprpicker)
   hyprcursor
   hyprpolkitagent
   hyprutils
   hyprprop
-  (wrap hyprsysteminfo)
+  (homeLib.gfx hyprsysteminfo)
   hyprwayland-scanner
 
   # Wayland tools
   wlprop
   wayland-scanner
   wayland-utils
-  (wrap xwayland)
-  (wrap slurp) # Screen area selection tool for screensharing picker
-  (wrap grim) # Screenshot utility (works with slurp)
+  (homeLib.gfx xwayland)
+  (homeLib.gfx slurp) # Screen area selection tool for screensharing picker
+  (homeLib.gfx grim) # Screenshot utility (works with slurp)
 
   # Desktop components (GUI apps need wrapping)
-  (wrap waybar)
-  (wrap ashell)
+  (homeLib.gfx waybar)
+  (homeLib.gfx ashell)
   swaync-wrapped # Custom wrapper with Wayland display auto-detection
-  (wrap rofi)
-  (wrap bemenu)
+  (homeLib.gfx rofi)
+  (homeLib.gfx bemenu)
 
   # Portals
   hyprwire

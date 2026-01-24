@@ -1,19 +1,10 @@
 { config, lib, pkgs, ... }@args:
 let
-  homeLib = import ./lib.nix { inherit lib; };
   constants = import ./constants.nix { inherit config; };
-
-  homePackages = homeLib.safeLoadPackagesFromDir ./packages
-    (args // { inherit systemInfo; });
-  programs = homeLib.loadModulesFromDir ./programs;
-
-  # Load VPN scripts/config dynamically
-  vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
-  vpnScripts = homeLib.loadVpnScripts ./../../vpn;
 
   # Auto-detect system information
   hasNvidia =
-    builtins.pathExists (homeLib.toPath "/proc/driver/nvidia/version");
+    builtins.pathExists (builtins.toPath "/proc/driver/nvidia/version");
 
   # Detect OS distribution
   osReleasePath = /etc/os-release;
@@ -32,6 +23,16 @@ let
     nixGLWrapper =
       if hasNvidia then pkgs.nixgl.nixGLNvidia else pkgs.nixgl.nixGLIntel;
   };
+
+  homeLib = import ./lib.nix { inherit lib pkgs systemInfo; };
+
+  homePackages = homeLib.safeLoadPackagesFromDir ./packages
+    (args // { inherit systemInfo homeLib; });
+  programs = homeLib.loadModulesFromDir ./programs;
+
+  # Load VPN scripts/config dynamically
+  vpnConfigs = homeLib.loadVpnConfigs ./../../vpn;
+  vpnScripts = homeLib.loadVpnScripts ./../../vpn;
 in
 {
   targets.genericLinux = {

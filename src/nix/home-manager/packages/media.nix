@@ -1,7 +1,5 @@
-{ pkgs, config, ... }:
+{ pkgs, homeLib, ... }:
 let
-  wrap = config.lib.nixGL.wrap;
-  
   # Wrapper for pavucontrol that avoids nixGL NVIDIA driver conflicts
   # GTK4 tries to initialize GL which causes crashes when mixing nixGL and system NVIDIA drivers
   pavucontrol-wrapped = pkgs.writeShellScriptBin "pavucontrol" ''
@@ -25,12 +23,12 @@ with pkgs; [
   ghostscript
 
   # Video/media (ffmpeg uses GPU acceleration)
-  (wrap ffmpeg-full)
+  (homeLib.gfx ffmpeg-full)
 
   # Terminal image viewers (some use GPU)
   chafa
-  (wrap viu)
-  (wrap ueberzugpp)
+  (homeLib.gfx viu)
+  (homeLib.gfxExe "ueberzugpp" ueberzugpp)
 
   # Audio control (wrapped to avoid nixGL conflicts)
   # GTK4 apps try to initialize GL even if they don't render anything with it
@@ -38,6 +36,5 @@ with pkgs; [
   pavucontrol-wrapped
 
   # Office suite (GUI app)
-  (wrap libreoffice-fresh)
+  (homeLib.gfx libreoffice-fresh)
 ]
-

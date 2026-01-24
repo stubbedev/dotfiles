@@ -1,6 +1,8 @@
-{ lib, ... }:
+{ lib, pkgs ? null, systemInfo ? null, ... }:
 
-{
+rec {
+  gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo; };
+  inherit (gfxLib) gfx gfxWith gfxName gfxNameWith gfxExe gfxNameExe gfxList gfxExec;
   # Common function to get .nix files from a directory
   # More efficient than the original implementation using lib.mapAttrsToList
   getNixFiles = dir:
@@ -12,6 +14,7 @@
   pathJoin = dir: name: dir + "/${name}";
 
   toPath = path: /. + path;
+
 
   # Load all .nix files from a directory and return their contents as a list
   # Optimized to use lib.mapAttrsToList instead of manual iteration
