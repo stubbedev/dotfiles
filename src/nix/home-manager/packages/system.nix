@@ -1,11 +1,8 @@
 # System services and utilities
 { pkgs, homeLib, systemInfo, ... }:
-let
-  alacritty-wrapped = homeLib.gfx pkgs.alacritty;
-in
 with pkgs; [
   # Terminal emulator (GPU accelerated)
-  alacritty-wrapped
+  (homeLib.gfx alacritty)
 
   # Network management (GUI applets)
   networkmanagerapplet
@@ -25,10 +22,12 @@ with pkgs; [
   # Mail (TUI, no GPU needed)
   mailutils
   aerc
+  khard
+  vdirsyncer
 
   # Keyring management (for automatic password management)
   # Note: Uses system-installed GNOME Keyring and KDE Wallet from Fedora
-  libsecret  # Provides secret-tool command
+  libsecret # Provides secret-tool command
 
   # Cursor and icon themes
   vimix-cursors
