@@ -262,12 +262,17 @@ in
         # Electron apps (VSCode, Discord, etc.) - force dark mode
         env = ELECTRON_OZONE_PLATFORM_HINT,auto
 
+        # Firefox: force native Wayland backend to keep video playback smooth
+        env = MOZ_ENABLE_WAYLAND,1
+
         # GPU driver configuration (auto-detected: ${
           if systemInfo.hasNvidia then "NVIDIA" else "Mesa"
         })
         ${lib.optionalString systemInfo.hasNvidia ''
           env = __GLX_VENDOR_LIBRARY_NAME,nvidia
           env = LIBVA_DRIVER_NAME,nvidia
+          env = MOZ_DISABLE_RDD_SANDBOX,1
+          env = NVD_BACKEND,direct
         ''}
       '';
     };
