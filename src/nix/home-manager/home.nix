@@ -307,20 +307,6 @@ in
       };
     };
 
-    swaync = {
-      Unit = {
-        Description = "Sway Notification Center";
-        PartOf = [ "graphical-session.target" ];
-        After = [ "graphical-session.target" ];
-      };
-      Service = {
-        ExecStart = "${config.home.homeDirectory}/.nix-profile/bin/swaync";
-        Restart = "on-failure";
-        Environment = [ "GDK_BACKEND=wayland" ];
-      };
-      Install = { WantedBy = [ "graphical-session.target" ]; };
-    };
-
     await-powerprofile = {
       Unit = {
         Description = "Reload Waybar when power-profiles-daemon starts";
