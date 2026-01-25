@@ -108,8 +108,18 @@ in
         QT_QPA_PLATFORMTHEME=kde
         QT_STYLE=breeze
         COLOR_SCHEME=prefer-dark
-        GDK_BACKEND=wayland
+        GDK_BACKEND=wayland,x11
       '';
+
+      # Steam Flatpak override for X11/GLX support in KDE Wayland
+      # Grants access to XDG_RUNTIME_DIR for XAUTHORITY and Discord RPC
+      ".local/share/flatpak/overrides/com.valvesoftware.Steam" = {
+        text = ''
+          [Context]
+          filesystems=/run/user/1000
+        '';
+        force = true;
+      };
     } // vpnScripts;
 
     sessionVariables = {
@@ -120,7 +130,7 @@ in
 
       # Editor and display
       EDITOR = "${config.home.homeDirectory}/.local/bin/nvim";
-      DISPLAY = ":0";
+      # DISPLAY = ":0";
 
       # Desktop entries (Flatpak + Nix)
       XDG_DATA_DIRS = lib.mkForce
@@ -236,6 +246,18 @@ in
 
     "xdg-desktop-portal/portals.conf"
   ] // {
+    # KDE Plasma Wayland configuration to use nixGL-wrapped Xwayland
+    # This enables GLX support with NVIDIA drivers for X11 apps (like Steam)
+    "kwinrc" = {
+      text = lib.generators.toINI { } {
+        Xwayland = {
+          Scale = 1;
+          ServerPath = "${config.home.homeDirectory}/.nix-profile/bin/Xwayland";
+          XwaylandEavesdrops = "None";
+        };
+      };
+      force = true;
+    };
 
     # Generate dynamic Hyprland env.conf based on system detection
     "hypr/env.conf" = {

@@ -1,4 +1,6 @@
 # Hyprland compositor and related tools
+# Also provides a custom Xwayland wrapper with nixGL support for KDE Plasma Wayland
+# This enables GLX with NVIDIA/Mesa drivers for X11 apps running under KDE Wayland
 { pkgs, homeLib, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
 let
   lib = pkgs.lib;
@@ -161,6 +163,24 @@ let
     exec ${pkgs.swaynotificationcenter}/bin/swaync "$@"
   '';
 
+  # Create custom Xwayland wrapper with nixGL for NVIDIA support
+  # This replaces the Xwayland binary completely so KDE will use it
+  xwayland-wrapped = pkgs.symlinkJoin {
+    name = "xwayland-wrapped";
+    paths = [ pkgs.xwayland ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      rm $out/bin/Xwayland
+      makeWrapper ${pkgs.xwayland}/bin/Xwayland $out/bin/Xwayland \
+        --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ pkgs.libglvnd ]}" \
+        --set GBM_BACKENDS_PATH "${lib.concatStringsSep ":" gbmPaths}" \
+        --set LIBGL_DRIVERS_PATH "${lib.concatStringsSep ":" driPaths}" \
+        ${if systemInfo.hasNvidia then ''
+          --prefix PATH : "${systemInfo.nixGLWrapper}/bin"
+        '' else ""}
+    '';
+  };
+
 in
 with pkgs; [
   # Custom wrapped Hyprland with GBM path fix (provides both hyprland and Hyprland)
@@ -193,11 +213,15 @@ with pkgs; [
   (homeLib.gfx hyprsysteminfo)
   hyprwayland-scanner
 
+  # Custom Xwayland wrapper with NVIDIA driver support
+  # This wrapper is used by both Hyprland and KDE Plasma Wayland
+  # KDE finds it via ~/.local/bin which is in PATH
+  xwayland-wrapped
+
   # Wayland tools
   wlprop
   wayland-scanner
   wayland-utils
-  (homeLib.gfx xwayland)
   (homeLib.gfx slurp) # Screen area selection tool for screensharing picker
   (homeLib.gfx grim) # Screenshot utility (works with slurp)
 
