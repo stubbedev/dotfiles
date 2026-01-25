@@ -3,7 +3,7 @@
 # This enables GLX with NVIDIA/Mesa drivers for X11 apps running under KDE Wayland
 { pkgs, homeLib, hyprland, hyprland-guiutils, hy3, systemInfo, ... }:
 let
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
   guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
   hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
 
@@ -165,21 +165,27 @@ let
 
   # Create custom Xwayland wrapper with nixGL for NVIDIA support
   # This replaces the Xwayland binary completely so KDE will use it
-  xwayland-wrapped = pkgs.symlinkJoin {
-    name = "xwayland-wrapped";
-    paths = [ pkgs.xwayland ];
-    buildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      rm $out/bin/Xwayland
-      makeWrapper ${pkgs.xwayland}/bin/Xwayland $out/bin/Xwayland \
-        --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ pkgs.libglvnd ]}" \
-        --set GBM_BACKENDS_PATH "${lib.concatStringsSep ":" gbmPaths}" \
-        --set LIBGL_DRIVERS_PATH "${lib.concatStringsSep ":" driPaths}" \
-        ${if systemInfo.hasNvidia then ''
-          --prefix PATH : "${systemInfo.nixGLWrapper}/bin"
-        '' else ""}
-    '';
-  };
+  xwayland-wrapped = pkgs.writeShellScriptBin "Xwayland"
+    (if systemInfo.hasNvidia then ''
+      # NVIDIA: Run Xwayland through nixGLNvidia for proper GPU acceleration
+      export GBM_BACKENDS_PATH="${lib.concatStringsSep ":" gbmPaths}"
+      export LIBGL_DRIVERS_PATH="${lib.concatStringsSep ":" driPaths}"
+
+      # Find the versioned nixGLNvidia binary
+      NIXGL_BIN=$(ls ${systemInfo.nixGLWrapper}/bin/nixGLNvidia* 2>/dev/null | head -1)
+      if [ -z "$NIXGL_BIN" ]; then
+        echo "Error: nixGLNvidia not found" >&2
+        exit 1
+      fi
+
+      exec "$NIXGL_BIN" ${pkgs.xwayland}/bin/Xwayland "$@"
+    '' else ''
+      # Intel/AMD: Run Xwayland through nixGLIntel
+      export GBM_BACKENDS_PATH="${lib.concatStringsSep ":" gbmPaths}"
+      export LIBGL_DRIVERS_PATH="${lib.concatStringsSep ":" driPaths}"
+
+      exec ${systemInfo.nixGLWrapper}/bin/nixGLIntel ${pkgs.xwayland}/bin/Xwayland "$@"
+    '');
 
 in
 with pkgs; [
