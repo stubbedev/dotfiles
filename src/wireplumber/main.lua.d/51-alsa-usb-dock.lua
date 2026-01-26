@@ -1,6 +1,6 @@
 -- ALSA configuration for USB docks with KVM switches
 -- Only apply to USB audio devices (Thunderbolt dock)
--- Slightly increased buffers for USB dock through KVM switch
+-- Increased buffers for USB dock through KVM switch to prevent popping
 table.insert(alsa_monitor.rules, {
   matches = {
     {
@@ -11,11 +11,14 @@ table.insert(alsa_monitor.rules, {
     },
   },
   apply_properties = {
-    ["api.alsa.period-size"] = 1024,  -- Increased for USB dock stability
-    ["api.alsa.headroom"] = 2048,
+    ["api.alsa.period-size"] = 2048,  -- Doubled for better stability with KVM switch
+    ["api.alsa.period-num"] = 2,      -- Number of periods in buffer
+    ["api.alsa.headroom"] = 4096,     -- Doubled headroom for additional safety margin
     ["api.alsa.disable-batch"] = false,  -- Enable batching for USB
-    ["session.suspend-timeout-seconds"] = 0,
-    ["node.pause-on-idle"] = false,
+    ["session.suspend-timeout-seconds"] = 0,  -- Never suspend
+    ["node.pause-on-idle"] = false,   -- Never pause when idle
     ["audio.rate"] = 48000,
+    ["api.alsa.use-chmap"] = false,   -- Disable channel mapping for stability
+    ["resample.quality"] = 4,         -- Medium quality resampling (lower CPU)
   },
 })
