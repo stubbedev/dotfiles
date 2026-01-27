@@ -189,9 +189,26 @@ in
         (import ./scripts/setup-vpn-polkit.nix {
           inherit config pkgs lib homeLib;
         });
+      # Polkit rule for CPU frequency scaling fix
+      setupPowerProfileFix = lib.hm.dag.entryAfter [ "setupVpnPolkit" ]
+        (import ./scripts/setup-power-profile-fix.nix {
+          inherit config pkgs lib homeLib;
+        });
+      # GRUB config for intel_pstate passive mode
+      setupGrubIntelPstate = lib.hm.dag.entryAfter [ "setupPowerProfileFix" ]
+        (import ./scripts/setup-grub-intel-pstate.nix {
+          inherit config pkgs lib homeLib;
+        });
       # System checks - verifies system configuration and provides helpful warnings
-      systemChecks = lib.hm.dag.entryAfter [ "setupVpnPolkit" ]
+      systemChecks = lib.hm.dag.entryAfter [ "setupGrubIntelPstate" ]
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
+      # Restart Waybar after home-manager switch
+      restartWaybar = lib.hm.dag.entryAfter [ "systemChecks" ] ''
+        if command -v hyprctl >/dev/null 2>&1 && pgrep -x Hyprland >/dev/null 2>&1; then
+          $DRY_RUN_CMD pkill -x waybar || true
+          $DRY_RUN_CMD hyprctl dispatch exec waybar || true
+        fi
+      '';
     };
   };
 
@@ -353,6 +370,20 @@ in
         ExecStart =
           "${constants.paths.hypr}/scripts/service.await.sh bluetooth.service";
         Restart = "no";
+      };
+    };
+
+    power-profile-fix = {
+      Unit = {
+        Description = "Fix CPU frequency scaling for power profiles";
+        After = [ "default.target" "power-profiles-daemon.service" ];
+      };
+      Install = { WantedBy = [ "default.target" ]; };
+      Service = {
+        Type = "simple";
+        ExecStart = "${constants.paths.hypr}/scripts/power-profile-fix.sh";
+        Restart = "on-failure";
+        RestartSec = "5s";
       };
     };
   };
