@@ -204,9 +204,8 @@ in
         (import ./scripts/system-checks.nix { inherit config pkgs lib; });
       # Restart Waybar after home-manager switch
       restartWaybar = lib.hm.dag.entryAfter [ "systemChecks" ] ''
-        if command -v hyprctl >/dev/null 2>&1 && pgrep -x Hyprland >/dev/null 2>&1; then
-          $DRY_RUN_CMD pkill -x waybar || true
-          $DRY_RUN_CMD hyprctl dispatch exec waybar || true
+        if command -v systemctl >/dev/null 2>&1; then
+          $DRY_RUN_CMD systemctl --user restart waybar.service || true
         fi
       '';
     };
@@ -348,27 +347,25 @@ in
 
     await-powerprofile = {
       Unit = {
-        Description = "Reload Waybar when power-profiles-daemon starts";
+        Description = "Restart Waybar when power-profiles-daemon starts";
         After = [ "default.target" "power-profiles-daemon.service" ];
       };
       Install = { WantedBy = [ "default.target" ]; };
       Service = {
         Type = "oneshot";
-        ExecStart =
-          "${constants.paths.hypr}/scripts/service.await.sh power-profiles-daemon.service";
+        ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
         Restart = "no";
       };
     };
     await-bluetooth = {
       Unit = {
-        Description = "Reload Waybar when bluetooth starts";
+        Description = "Restart Waybar when bluetooth starts";
         After = [ "default.target" "bluetooth.service" ];
       };
       Install = { WantedBy = [ "default.target" ]; };
       Service = {
         Type = "oneshot";
-        ExecStart =
-          "${constants.paths.hypr}/scripts/service.await.sh bluetooth.service";
+        ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
         Restart = "no";
       };
     };
@@ -384,6 +381,23 @@ in
         ExecStart = "${constants.paths.hypr}/scripts/power-profile-fix.sh";
         Restart = "on-failure";
         RestartSec = "5s";
+      };
+    };
+
+    waybar = {
+      Unit = {
+        Description = "Waybar - Highly customizable Wayland bar";
+        Documentation = "https://github.com/Alexays/Waybar/wiki";
+        After = [ "graphical-session.target" "power-profiles-daemon.service" ];
+        Wants = [ "power-profiles-daemon.service" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Install = { WantedBy = [ "graphical-session.target" ]; };
+      Service = {
+        Type = "simple";
+        ExecStart = "${constants.paths.hypr}/scripts/waybar.launch.sh";
+        Restart = "on-failure";
+        RestartSec = "3s";
       };
     };
   };
