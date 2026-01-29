@@ -3,7 +3,7 @@
 ''
   set -euo pipefail
   hdir="${config.home.homeDirectory}"
-  
+
   # Set redirect suffix based on debug flag
   if [ -n "''${BIN_INSTALL_DEBUG:-}" ]; then
     # Debug mode: don't redirect
@@ -124,51 +124,51 @@
 
   check_nvim_needs_update() {
     local binary_path="${constants.paths.customBinDir}/nvim"
-    
+
     # If binary doesn't exist, needs install
     if [ ! -x "$binary_path" ]; then
       return 0
     fi
-    
+
     # Get currently installed version
     local current_version
     current_version="$(get_binary_version "$binary_path")"
-    
+
     # If can't determine current version, reinstall
     if [ -z "$current_version" ]; then
       return 0
     fi
-    
+
     # Get the latest version from GitHub
     local latest_version
     latest_version="$(get_latest_nvim_version)"
-    
+
     # If can't fetch latest version, skip update
     if [ -z "$latest_version" ]; then
       echo "Warning: Could not fetch latest Neovim version from GitHub"
       return 1
     fi
-    
+
     # Get the version from lock file
     local lock_content
     lock_content="$(read_lock_file)"
     local locked_version
     locked_version="$(echo "$lock_content" | ${pkgs.jq}/bin/jq -r ".[\"$binary_path\"] // \"\"")"
-    
+
     echo "Neovim - Installed: $current_version, Locked: $locked_version, Latest: $latest_version"
-    
+
     # If latest version is different from locked version, update needed
     if [ "$latest_version" != "$locked_version" ]; then
       echo "New Neovim version available: $latest_version"
       return 0
     fi
-    
+
     # If current version doesn't match locked version, reinstall
     if [ "$current_version" != "$locked_version" ]; then
       echo "Neovim version mismatch detected"
       return 0
     fi
-    
+
     return 1
   }
 

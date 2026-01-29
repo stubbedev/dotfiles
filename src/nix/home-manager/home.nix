@@ -396,6 +396,7 @@ in
       Service = {
         Type = "simple";
         ExecStart = "${constants.paths.hypr}/scripts/waybar.launch.sh";
+        ExecStopPost = "-${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -9 waybar || true; sleep 0.5'";
         Restart = "on-failure";
         RestartSec = "3s";
       };
