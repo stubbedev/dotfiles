@@ -226,8 +226,10 @@
   echo "Installing opencode-ai globally..."
   eval "\"${pkgs.bun}/bin/bun\" install opencode-ai@latest --global $REDIRECT_SUFFIX"
 
-  echo "Installing biome globally"
+  echo "Installing biome globally..."
   eval "\"${pkgs.bun}/bin/bun\" install biome@latest --global $REDIRECT_SUFFIX"
+
+  eval "\"${pkgs.bun}/bin/bun\" pm trust --all $REDIRECT_SUFFIX"
 
   echo "Installing lazydocker globally..."
   eval "\"${pkgs.go}/bin/go\" install github.com/jesseduffield/lazydocker@latest $REDIRECT_SUFFIX"
