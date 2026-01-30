@@ -1,1 +1,0 @@
-{ ... }: { programs.uv = { enable = true; }; }
