@@ -12,16 +12,8 @@ is_arch() {
   grep -q '^ID=arch' /etc/os-release 2>/dev/null
 }
 
-is_nvidia() {
-  lspci | grep -qi nvidia 2>/dev/null
-}
-
 is_file() {
   [ -f "$1" ]
-}
-
-is_binary() {
-  command -v "$1" >/dev/null 2>&1
 }
 
 # INFO: INSTALL FUNCTION
@@ -82,7 +74,7 @@ install_nix_home_manager() {
 
   conf_nix_home_manager
 
-  "$HOME/.nix-profile/bin/home-manager" switch --impure
+  "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$HOME/.stubbe/src/nix/home-manager#stubbe"
 }
 
 install_docker() {
