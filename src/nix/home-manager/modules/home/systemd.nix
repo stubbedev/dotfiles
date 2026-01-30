@@ -61,7 +61,7 @@
           Unit = {
             Description = "Waybar - Highly customizable Wayland bar";
             Documentation = "https://github.com/Alexays/Waybar/wiki";
-            After = [ "graphical-session.target" "power-profiles-daemon.service" ];
+            After = [ "graphical-session.target" "power-profiles-daemon.service" "xdg-desktop-portal-hyprland.service" ];
             Wants = [ "power-profiles-daemon.service" ];
             PartOf = [ "graphical-session.target" ];
             ConditionPathExists = "/run/user/%U/hypr";
