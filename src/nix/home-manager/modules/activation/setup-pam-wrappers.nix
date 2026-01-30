@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupPamWrappers";
   activationName = "setupPamWrappers";
   scriptName = "setup-pam-wrappers";
-  after = [ "customConfigCleanUp" ];
+  after = order.after.setupPamWrappers;
+  enableIf = { config, ... }: config.features.hyprland;
   sudoArgs = { ... }:
     let
       wrapperPath = "/run/wrappers/bin/unix_chkpwd";

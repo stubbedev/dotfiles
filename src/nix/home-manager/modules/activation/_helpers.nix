@@ -1,9 +1,17 @@
 {
-  mkSetupModule = { moduleName, activationName ? moduleName, after, script, provideSudo ? false }:
+  mkSetupModule = {
+    moduleName,
+    activationName ? moduleName,
+    after,
+    script,
+    provideSudo ? false,
+    enableIf ? true
+  }:
     {
       flake.modules.homeManager.${moduleName} = { lib, ... }@args:
         let
           scriptText = if builtins.isFunction script then script args else script;
+          isEnabled = if builtins.isFunction enableIf then enableIf args else enableIf;
           sudoPrelude = if provideSudo then ''
             # Find sudo in common locations
             SUDO=""
@@ -22,13 +30,20 @@
             sudo() { "$SUDO" "$@"; }
           '' else "";
         in
-        {
+        lib.mkIf isEnabled {
           home.activation.${activationName} =
             lib.hm.dag.entryAfter after (sudoPrelude + scriptText);
         };
     };
 
-  mkSudoSetupModule = { moduleName, activationName ? moduleName, after, sudoArgs, scriptName ? null }:
+  mkSudoSetupModule = {
+    moduleName,
+    activationName ? moduleName,
+    after,
+    sudoArgs,
+    scriptName ? null,
+    enableIf ? true
+  }:
     {
       flake.modules.homeManager.${moduleName} = { lib, pkgs, homeLib, ... }@args:
         let
@@ -36,6 +51,7 @@
             if builtins.isFunction sudoArgs then sudoArgs args else sudoArgs;
           resolvedScriptName =
             if scriptName != null then scriptName else (resolvedArgs.name or moduleName);
+          isEnabled = if builtins.isFunction enableIf then enableIf args else enableIf;
           withSudo = text:
             if text == "" then
               text
@@ -54,7 +70,7 @@
             name = resolvedScriptName;
           });
         in
-        {
+        lib.mkIf isEnabled {
           home.activation.${activationName} =
             lib.hm.dag.entryAfter after ''
               ${setupScript}

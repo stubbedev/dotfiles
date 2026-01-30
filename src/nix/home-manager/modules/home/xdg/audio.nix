@@ -1,7 +1,8 @@
 { ... }:
 {
-  flake.modules.homeManager.xdgAudio = { homeLib, ... }: {
-    xdg.configFile = homeLib.xdgSources [
+  flake.modules.homeManager.xdgAudio = { homeLib, lib, config, ... }:
+    lib.mkIf config.features.desktop {
+      xdg.configFile = homeLib.xdgSources [
       # PipeWire audio configuration for USB docks with KVM switches
       "pipewire/pipewire.conf.d/99-usb-dock.conf"
       "pipewire/pipewire-pulse.conf.d/99-usb-dock.conf"
@@ -16,6 +17,6 @@
 
       # WirePlumber configuration to stop Bluetooth auto profile switching
       "wireplumber/main.lua.d/60-disable-bt-autoswitch.lua"
-    ];
-  };
+      ];
+    };
 }

@@ -1,7 +1,7 @@
 { ... }:
 {
-  flake.modules.homeManager.themeFiles = { constants, pkgs, ... }:
-    {
+  flake.modules.homeManager.themeFiles = { constants, pkgs, lib, config, ... }:
+    lib.mkIf config.features.theming {
       home.file = {
         ".icons/${constants.theme.iconTheme}".source =
           "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";

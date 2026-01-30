@@ -23,7 +23,7 @@
       withSystem cfg.system ({ pkgs, ... }:
         inputs.home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
-          extraSpecialArgs = cfg.extraSpecialArgs;
+          extraSpecialArgs = cfg.extraSpecialArgs // { inherit pkgs; };
           modules = [ cfg.module ];
         })
     ) config.configurations.homeManager;

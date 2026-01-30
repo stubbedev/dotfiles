@@ -1,9 +1,10 @@
 { ... }:
 {
-  flake.modules.homeManager.programsVifm = { ... }: {
-    programs.vifm = {
-      enable = true;
-      extraConfig = ''
+  flake.modules.homeManager.programsVifm = { lib, config, ... }:
+    lib.mkIf config.features.desktop {
+      programs.vifm = {
+        enable = true;
+        extraConfig = ''
         " palenight color scheme for vifm
 
         " Reset all styles first
@@ -32,7 +33,7 @@
         highlight Device	cterm=bold,standout	ctermfg=000	ctermbg=011
         highlight Fifo		cterm=none	ctermfg=003	ctermbg=default
         highlight Socket	cterm=bold	ctermfg=005	ctermbg=default
-      '';
+        '';
+      };
     };
-  };
 }

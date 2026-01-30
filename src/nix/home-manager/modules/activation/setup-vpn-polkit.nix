@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupVpnPolkit";
   activationName = "setupVpnPolkit";
   scriptName = "setup-vpn-polkit";
-  after = [ "setupSnapThemes" ];
+  after = order.after.setupVpnPolkit;
+  enableIf = { config, ... }: config.features.vpn;
   sudoArgs = { config, ... }:
     let
       rulePath = "/etc/polkit-1/rules.d/49-openconnect.rules";

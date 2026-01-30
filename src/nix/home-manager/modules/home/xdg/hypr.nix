@@ -2,7 +2,7 @@
 {
   flake.modules.homeManager.xdgHypr =
     { config, lib, pkgs, systemInfo, homeLib, hy3, ... }:
-    {
+    lib.mkIf config.features.hyprland {
       xdg.configFile = homeLib.xdgSources [
         # Copy individual hypr config files (not as a directory to allow overriding env.conf)
         "hypr/hypridle.conf"

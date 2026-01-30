@@ -1,7 +1,7 @@
 { ... }:
 {
-  flake.modules.homeManager.systemd = { constants, pkgs, ... }:
-    {
+  flake.modules.homeManager.systemd = { constants, pkgs, lib, config, ... }:
+    lib.mkIf config.features.hyprland {
       systemd.user.services = {
         xdg-desktop-portal-hyprland = {
           Unit = {

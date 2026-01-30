@@ -1,7 +1,8 @@
 { ... }:
 {
-  flake.modules.homeManager.xdgBase = { homeLib, ... }: {
-    xdg.configFile = homeLib.xdgSources [
+  flake.modules.homeManager.xdgBase = { homeLib, lib, config, ... }:
+    lib.mkIf config.features.desktop {
+      xdg.configFile = homeLib.xdgSources [
       "lazygit/config.yml"
       "alacritty"
       "rofi"
@@ -11,6 +12,6 @@
       "btop/themes/catppuccin_mocha.theme"
       "swaync"
       "waybar"
-    ];
-  };
+      ];
+    };
 }

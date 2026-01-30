@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupPowerProfileFix";
   activationName = "setupPowerProfileFix";
   scriptName = "setup-power-profile-fix";
-  after = [ "setupVpnPolkit" ];
+  after = order.after.setupPowerProfileFix;
+  enableIf = { config, ... }: config.features.desktop;
   sudoArgs = { config, ... }:
     let
       rulePath = "/etc/polkit-1/rules.d/50-power-profile-fix.rules";

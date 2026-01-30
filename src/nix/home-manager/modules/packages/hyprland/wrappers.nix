@@ -1,14 +1,10 @@
-# Hyprland compositor and related tools
-# Also provides a custom Xwayland wrapper with nixGL support for KDE Plasma Wayland
-# This enables GLX with NVIDIA/Mesa drivers for X11 apps running under KDE Wayland
 { ... }:
 {
-  flake.modules.homeManager.packagesHyprland =
-    { pkgs, homeLib, hyprland, hyprland-guiutils, systemInfo, ... }:
+  flake.modules.homeManager.packagesHyprlandWrappers =
+    { pkgs, homeLib, hyprland, systemInfo, lib, config, ... }:
     let
       inherit (pkgs) lib;
       system = pkgs.stdenv.hostPlatform.system;
-      guiutils = hyprland-guiutils.packages.${system}.default;
       hyprlandPkg = hyprland.packages.${system}.hyprland;
 
       gbmPaths = lib.unique [
@@ -34,6 +30,14 @@
         export LIBGL_DRIVERS_PATH=${lib.concatStringsSep ":" driPaths}
       ''
         hyprlandPkg;
+
+      # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
+      # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
+      hyprland-both-cases = pkgs.runCommand "hyprland-both-cases" { } ''
+        mkdir -p $out/bin
+        ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/hyprland
+        ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/Hyprland
+      '';
 
       # Create start-hyprland wrapper that uses our wrapped hyprland
       # The watchdog monitors the wrapped hyprland process
@@ -106,6 +110,7 @@
         # Use the official start-hyprland watchdog
         exec ${hyprlandPkg}/bin/start-hyprland "$@"
       '';
+
       # Create hyprctl wrapper with automatic instance signature detection
       # This fixes the issue where shells started before Hyprland restart have stale
       # HYPRLAND_INSTANCE_SIGNATURE values (e.g., in tmux sessions or long-running terminals)
@@ -139,34 +144,6 @@
         exec ${hyprlandPkg}/bin/hyprctl "$@"
       '';
 
-      # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
-      # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
-      hyprland-both-cases = pkgs.runCommand "hyprland-both-cases" { } ''
-        mkdir -p $out/bin
-        ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/hyprland
-        ln -s ${hyprland-wrapped}/bin/hyprland $out/bin/Hyprland
-      '';
-
-      # Create swaync wrapper that auto-detects the correct Wayland display
-      swaync-wrapped = pkgs.writeShellScriptBin "swaync" ''
-        # Auto-detect the correct Wayland display socket
-        if [ -z "$WAYLAND_DISPLAY" ] || [ ! -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
-          # Find the most recent wayland-* socket
-          for socket in $(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v ".lock"); do
-            if [ -S "$socket" ]; then
-              export WAYLAND_DISPLAY=$(basename "$socket")
-              break
-            fi
-          done
-        fi
-
-        # Ensure GDK uses Wayland backend
-        export GDK_BACKEND=wayland
-
-        # Run swaync
-        exec ${pkgs.swaynotificationcenter}/bin/swaync "$@"
-      '';
-
       # Create custom Xwayland wrapper with nixGL for NVIDIA support
       # This replaces the Xwayland binary completely so KDE will use it
       xwayland-wrapped = pkgs.writeShellScriptBin "Xwayland"
@@ -191,66 +168,12 @@
           exec ${systemInfo.nixGLWrapper}/bin/nixGLIntel ${pkgs.xwayland}/bin/Xwayland "$@"
         '');
     in
-    {
-      home.packages = with pkgs; [
-        # Custom wrapped Hyprland with GBM path fix (provides both hyprland and Hyprland)
+    lib.mkIf config.features.hyprland {
+      home.packages = [
         hyprland-both-cases
-
-        # Hyprctl (Hyprland control CLI)
         hyprctl-wrapped
-
-        # Hyprland Start Binary
         start-hyprland-wrapped
-
-        # Hyprlock with nixGL wrapper
-        (homeLib.gfx hyprlock)
-
-        # Hyprland GUI utilities (from flake input)
-        (homeLib.gfxExe "hyprland-guiutils" guiutils)
-
-        # Hyprland ecosystem
-        (homeLib.gfx hyprshot)
-        hyprlang
-        hyprkeys
-        hypridle
-        (homeLib.gfx hyprpaper)
-        hyprsunset
-        (homeLib.gfx hyprpicker)
-        hyprcursor
-        hyprpolkitagent
-        hyprutils
-        hyprprop
-        (homeLib.gfx hyprsysteminfo)
-        hyprwayland-scanner
-
-        # Custom Xwayland wrapper with NVIDIA driver support
-        # This wrapper is used by both Hyprland and KDE Plasma Wayland
-        # KDE finds it via ~/.local/bin which is in PATH
         xwayland-wrapped
-
-        # Wayland tools
-        wlprop
-        wayland-scanner
-        wayland-utils
-        (homeLib.gfx slurp) # Screen area selection tool for screensharing picker
-        (homeLib.gfx grim) # Screenshot utility (works with slurp)
-
-        # Desktop components (GUI apps need wrapping)
-        (homeLib.gfx waybar)
-        (homeLib.gfx ashell)
-        swaync-wrapped # Custom wrapper with Wayland display auto-detection
-        (homeLib.gfx rofi)
-        (homeLib.gfx bemenu)
-
-        # Portals
-        hyprwire
-        hyprland-protocols
-        xdg-desktop-portal
-        xdg-desktop-portal-hyprland
-        xdg-desktop-portal-wlr
-
-        # Clipboard
-        wl-clip-persist
       ];
     };
 }

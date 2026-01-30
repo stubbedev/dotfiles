@@ -1,7 +1,7 @@
 { ... }:
 {
-  flake.modules.homeManager.themeFlatpak = { ... }:
-    {
+  flake.modules.homeManager.themeFlatpak = { lib, config, ... }:
+    lib.mkIf config.features.theming {
       home.file = {
         # Flatpak overrides for dark mode theming
         # Note: Qt/KDE flatpaks may have poor contrast because they use the Breeze

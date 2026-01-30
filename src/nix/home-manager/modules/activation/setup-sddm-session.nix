@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupHyprSession";
   activationName = "setupHyprSession";
   scriptName = "setup-sddm-session";
-  after = [ "setupHyprKeyringPam" ];
+  after = order.after.setupHyprSession;
+  enableIf = { config, ... }: config.features.hyprland;
   sudoArgs = { config, ... }:
     let
       desktopPath = "/usr/share/wayland-sessions/hyprland-nix.desktop";

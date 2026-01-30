@@ -1,7 +1,8 @@
 { ... }:
 {
-  flake.modules.homeManager.packagesNixTools = { pkgs, ... }: {
-    home.packages = with pkgs; [
+  flake.modules.homeManager.packagesNixTools = { pkgs, lib, config, ... }:
+    lib.mkIf config.features.development {
+      home.packages = with pkgs; [
       nix-zsh-completions
       nh
       pass
@@ -9,6 +10,6 @@
       cachix
       nixd
       nixdoc
-    ];
-  };
+      ];
+    };
 }

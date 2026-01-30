@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.packagesDevelopment = { pkgs, homeLib, ... }:
+  flake.modules.homeManager.packagesDevelopment = { pkgs, homeLib, lib, config, ... }:
     let
       luaBin = pkgs.writeShellScriptBin "lua" ''
         exec ${pkgs.lua5_1}/bin/lua "$@"
@@ -9,7 +9,7 @@
         exec ${pkgs.luajit}/bin/luajit "$@"
       '';
     in
-    {
+    lib.mkIf config.features.development {
       home.packages = with pkgs; [
       # JavaScript/TypeScript runtimes (CLI tools)
       nodejs
@@ -40,6 +40,6 @@
       (homeLib.gfx jetbrains-toolbox)
       networkmanager-openconnect
       openconnect
-    ];
-  };
+      ];
+    };
 }

@@ -2,8 +2,8 @@
 { ... }:
 {
   flake.modules.homeManager.packagesSystem =
-    { pkgs, homeLib, ... }:
-    {
+    { pkgs, homeLib, lib, config, ... }:
+    lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
         # Terminal emulator (GPU accelerated)
         (homeLib.gfx alacritty)

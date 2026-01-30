@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupGrubIntelPstate";
   activationName = "setupGrubIntelPstate";
   scriptName = "setup-grub-intel-pstate";
-  after = [ "setupPowerProfileFix" ];
+  after = order.after.setupGrubIntelPstate;
+  enableIf = { config, ... }: config.features.desktop;
   sudoArgs = { config, ... }:
     let
       grubConfigPath = "/etc/default/grub.d/intel-pstate-passive.cfg";

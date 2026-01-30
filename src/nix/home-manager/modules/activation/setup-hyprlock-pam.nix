@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupHyprlockPam";
   activationName = "setupHyprlockPam";
   scriptName = "setup-hyprlock-pam";
-  after = [ "setupPamWrappers" ];
+  after = order.after.setupHyprlockPam;
+  enableIf = { config, ... }: config.features.hyprland;
   sudoArgs = { ... }:
     let
       pamPath = "/etc/pam.d/hyprlock";

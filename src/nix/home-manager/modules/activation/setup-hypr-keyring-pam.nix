@@ -1,11 +1,13 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSetupModule {
   moduleName = "activationSetupHyprKeyringPam";
   activationName = "setupHyprKeyringPam";
-  after = [ "setupHyprlockPam" ];
+  after = order.after.setupHyprKeyringPam;
+  enableIf = { config, ... }: config.features.hyprland;
   provideSudo = true;
   script = { ... }: ''
     set -e

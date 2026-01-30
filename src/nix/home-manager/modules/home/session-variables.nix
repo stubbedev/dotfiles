@@ -10,7 +10,6 @@
 
         # Editor and display
         EDITOR = lib.getExe pkgs.neovim;
-        # DISPLAY = ":0";
 
         # Desktop entries (Flatpak + Nix)
         XDG_DATA_DIRS = lib.mkForce

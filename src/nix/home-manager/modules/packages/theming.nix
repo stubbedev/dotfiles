@@ -1,7 +1,8 @@
 { ... }:
 {
-  flake.modules.homeManager.packagesTheming = { pkgs, ... }: {
-    home.packages = with pkgs; [
+  flake.modules.homeManager.packagesTheming = { pkgs, lib, config, ... }:
+    lib.mkIf config.features.theming {
+      home.packages = with pkgs; [
       # Fonts
       nerd-fonts.jetbrains-mono
       font-awesome
@@ -26,6 +27,6 @@
       # KDE/Qt theming - Kvantum for dark mode support
       libsForQt5.qtstyleplugin-kvantum
       kdePackages.breeze # Breeze Qt theme
-    ];
-  };
+      ];
+    };
 }

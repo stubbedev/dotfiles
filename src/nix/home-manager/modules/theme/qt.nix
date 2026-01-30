@@ -113,20 +113,12 @@ let
   '';
 in
 {
-  flake.modules.homeManager.themeQt = { pkgs, lib, ... }:
-    {
+  flake.modules.homeManager.themeQt = { pkgs, lib, config, ... }:
+    lib.mkIf config.features.theming {
       # Disabled to prevent global QT_STYLE_OVERRIDE export which breaks KDE Plasma login
       # QT settings are configured per-environment:
       # - Hyprland: QT vars set in env.conf
       # - KDE Plasma: uses system Qt settings
-      # qt = {
-      #   enable = true;
-      #   platformTheme.name = "kde";
-      #   style = {
-      #     name = "Breeze";
-      #     package = pkgs.kdePackages.breeze;
-      #   };
-      # };
 
       # Create kdeglobals as a regular file (avoids symlink issues with Flatpak)
       home.activation.kdeglobals = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

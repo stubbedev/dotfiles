@@ -1,7 +1,8 @@
 { ... }:
 {
-  flake.modules.homeManager.packagesSecurity = { pkgs, ... }: {
-    home.packages = with pkgs; [
+  flake.modules.homeManager.packagesSecurity = { pkgs, lib, config, ... }:
+    lib.mkIf config.features.desktop {
+      home.packages = with pkgs; [
       # GPG and keyring tools
       gnupg
       pinentry-gnome3 # Wayland-compatible pinentry for GPG
@@ -10,6 +11,6 @@
 
       # Keyring management GUI
       seahorse # GNOME keyring manager
-    ];
-  };
+      ];
+    };
 }

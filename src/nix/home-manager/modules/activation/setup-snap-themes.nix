@@ -1,12 +1,14 @@
 { ... }:
 let
   helpers = import ./_helpers.nix;
+  order = import ./_order.nix;
 in
 helpers.mkSudoSetupModule {
   moduleName = "activationSetupSnapThemes";
   activationName = "setupSnapThemes";
   scriptName = "setup-snap-themes";
-  after = [ "setupHyprSession" ];
+  after = order.after.setupSnapThemes;
+  enableIf = { config, ... }: config.features.theming;
   sudoArgs = { pkgs, ... }:
     let
       iconThemeName = "Vimix-dark";
