@@ -109,7 +109,7 @@ EOF
                 echo "home-manager is not available on PATH" >&2
                 exit 1
               fi
-              home-manager switch --flake "$hm_flake_ref" --impure --refresh "$@"
+              home-manager switch --flake "$hm_flake_ref" --impure "$@"
               ;;
             help|-h|--help)
               usage
@@ -119,7 +119,7 @@ EOF
                 echo "home-manager is not available on PATH" >&2
                 exit 1
               fi
-              exec home-manager --impure --refresh "$@"
+              exec home-manager --impure "$@"
               ;;
           esac
         '')
