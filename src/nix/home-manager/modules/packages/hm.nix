@@ -86,15 +86,15 @@
 
           usage() {
             cat <<'EOF'
-Usage: hm <command> [args]
+            Usage: hm <command> [args]
 
-Commands:
-  update   Update system package managers and nix inputs
-  upgrade  Update system packages and apply home-manager switch
-  help     Show this help message
+            Commands:
+              update   Update system package managers and nix inputs
+              upgrade  Update system packages and apply home-manager switch
+              help     Show this help message
 
-Other args are passed through to home-manager.
-EOF
+            Other args are passed through to home-manager.
+            EOF
           }
 
           case "''${1:-}" in
