@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupPamWrappers";
+  moduleName = "activationSetupPamWrappers";
+  activationName = "setupPamWrappers";
   scriptName = "setup-pam-wrappers";
   after = [ "customConfigCleanUp" ];
   sudoArgs = { ... }:

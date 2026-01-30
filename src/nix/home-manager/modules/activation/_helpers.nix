@@ -1,7 +1,7 @@
 {
-  mkSetupModule = { name, after, script, provideSudo ? false }:
+  mkSetupModule = { moduleName, activationName ? moduleName, after, script, provideSudo ? false }:
     {
-      flake.modules.homeManager.activation.${name} = { lib, ... }@args:
+      flake.modules.homeManager.${moduleName} = { lib, ... }@args:
         let
           scriptText = if builtins.isFunction script then script args else script;
           sudoPrelude = if provideSudo then ''
@@ -23,19 +23,19 @@
           '' else "";
         in
         {
-          home.activation.${name} =
+          home.activation.${activationName} =
             lib.hm.dag.entryAfter after (sudoPrelude + scriptText);
         };
     };
 
-  mkSudoSetupModule = { name, after, sudoArgs, scriptName ? null }:
+  mkSudoSetupModule = { moduleName, activationName ? moduleName, after, sudoArgs, scriptName ? null }:
     {
-      flake.modules.homeManager.activation.${name} = { lib, pkgs, homeLib, ... }@args:
+      flake.modules.homeManager.${moduleName} = { lib, pkgs, homeLib, ... }@args:
         let
           resolvedArgs =
             if builtins.isFunction sudoArgs then sudoArgs args else sudoArgs;
           resolvedScriptName =
-            if scriptName != null then scriptName else (resolvedArgs.name or name);
+            if scriptName != null then scriptName else (resolvedArgs.name or moduleName);
           withSudo = text:
             if text == "" then
               text
@@ -55,7 +55,7 @@
           });
         in
         {
-          home.activation.${name} =
+          home.activation.${activationName} =
             lib.hm.dag.entryAfter after ''
               ${setupScript}
             '';

@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.packages.nixTools = { pkgs, ... }: {
+  flake.modules.homeManager.packagesNixTools = { pkgs, ... }: {
     home.packages = with pkgs; [
       nix-zsh-completions
       nh

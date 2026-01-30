@@ -8,8 +8,8 @@
             source ${constants.paths.zsh}/init
           fi
         '';
-        ".ideavimrc".source = ../../../ideavim/ideavimrc;
-        ".tmux.conf".source = ../../../tmux/tmux.conf;
+        ".ideavimrc".source = ../../../../ideavim/ideavimrc;
+        ".tmux.conf".source = ../../../../tmux/tmux.conf;
 
         ".local/bin/open-mail" = {
           text = ''
@@ -22,12 +22,12 @@
           executable = true;
         };
         ".local/bin/konform-vpn-waybar" = {
-          source = ../../../vpn/konform/waybar.sh;
+          source = ../../../../vpn/konform/waybar.sh;
           executable = true;
         };
-        ".local/bin/unsubscribe-mail".source = ../../../aerc/scripts/unsubscribe;
+        ".local/bin/unsubscribe-mail".source = ../../../../aerc/scripts/unsubscribe;
 
-        ".w3m".source = ../../../w3m;
+        ".w3m".source = ../../../../w3m;
       } // vpnScripts;
     };
 }

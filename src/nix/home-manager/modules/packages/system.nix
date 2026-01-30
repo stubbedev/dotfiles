@@ -1,7 +1,7 @@
 # System services and utilities
 { ... }:
 {
-  flake.modules.homeManager.packages.system =
+  flake.modules.homeManager.packagesSystem =
     { pkgs, homeLib, ... }:
     {
       home.packages = with pkgs; [

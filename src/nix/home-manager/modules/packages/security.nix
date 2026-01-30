@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.packages.security = { pkgs, ... }: {
+  flake.modules.homeManager.packagesSecurity = { pkgs, ... }: {
     home.packages = with pkgs; [
       # GPG and keyring tools
       gnupg

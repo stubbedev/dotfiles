@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.activation.restartWaybar = { lib, ... }:
+  flake.modules.homeManager.activationRestartServiceWaybar = { lib, ... }:
     {
       home.activation.restartWaybar = lib.hm.dag.entryAfter [ "setupGrubIntelPstate" ] ''
         if command -v systemctl >/dev/null 2>&1; then

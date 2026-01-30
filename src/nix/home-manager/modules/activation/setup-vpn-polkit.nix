@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupVpnPolkit";
+  moduleName = "activationSetupVpnPolkit";
+  activationName = "setupVpnPolkit";
   scriptName = "setup-vpn-polkit";
   after = [ "setupSnapThemes" ];
   sudoArgs = { config, ... }:

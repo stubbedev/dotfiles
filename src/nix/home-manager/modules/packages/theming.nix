@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.packages.theming = { pkgs, ... }: {
+  flake.modules.homeManager.packagesTheming = { pkgs, ... }: {
     home.packages = with pkgs; [
       # Fonts
       nerd-fonts.jetbrains-mono

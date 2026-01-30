@@ -10,15 +10,15 @@ in
         hm.context
         hm.targets
         hm.base
-        hm.packages.cli
-        hm.packages.development
-        hm.packages.system
-        hm.packages.nixTools
-        hm.packages.security
-        hm.packages.media
-        hm.packages.hyprland
-        hm.packages.theming
-        hm.packages.hm
+        hm.packagesCli
+        hm.packagesDevelopment
+        hm.packagesSystem
+        hm.packagesNixTools
+        hm.packagesSecurity
+        hm.packagesMedia
+        hm.packagesHyprland
+        hm.packagesTheming
+        hm.packagesHm
         hm.themeDconf
         hm.themeGtk
         hm.themeQt
@@ -27,22 +27,21 @@ in
         hm.themeSessionVariables
         hm.files
         hm.sessionVariables
-        hm.activation.customBinInstall
-        hm.activation.customShellCompletions
-        hm.activation.customConfigCleanUp
-        hm.activation.setupPamWrappers
-        hm.activation.setupHyprlockPam
-        hm.activation.setupHyprKeyringPam
-        hm.activation.setupHyprSession
-        hm.activation.setupSnapThemes
-        hm.activation.setupVpnPolkit
-        hm.activation.setupPowerProfileFix
-        hm.activation.setupGrubIntelPstate
-        hm.activation.restartWaybar
-        hm.programs.git
-        hm.programs.go
-        hm.programs.uv
-        hm.programs.vifm
+        hm.activationSetupShellCompletions
+        hm.activationApplyMutableConfig
+        hm.activationSetupPamWrappers
+        hm.activationSetupHyprlockPam
+        hm.activationSetupHyprKeyringPam
+        hm.activationSetupHyprSession
+        hm.activationSetupSnapThemes
+        hm.activationSetupVpnPolkit
+        hm.activationSetupPowerProfileFix
+        hm.activationSetupGrubIntelPstate
+        hm.activationRestartServiceWaybar
+        hm.programsGit
+        hm.programsGo
+        hm.programsUv
+        hm.programsVifm
         hm.xdgBase
         hm.xdgHypr
         hm.xdgOpencode

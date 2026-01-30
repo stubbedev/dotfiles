@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSetupModule {
-  name = "setupHyprKeyringPam";
+  moduleName = "activationSetupHyprKeyringPam";
+  activationName = "setupHyprKeyringPam";
   after = [ "setupHyprlockPam" ];
   provideSudo = true;
   script = { ... }: ''

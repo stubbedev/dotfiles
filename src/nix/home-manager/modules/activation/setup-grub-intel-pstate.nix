@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupGrubIntelPstate";
+  moduleName = "activationSetupGrubIntelPstate";
+  activationName = "setupGrubIntelPstate";
   scriptName = "setup-grub-intel-pstate";
   after = [ "setupPowerProfileFix" ];
   sudoArgs = { config, ... }:

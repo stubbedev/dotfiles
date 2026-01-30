@@ -684,6 +684,21 @@
         "type": "github"
       }
     },
+    "import-tree": {
+      "locked": {
+        "lastModified": 1763762820,
+        "narHash": "sha256-ZvYKbFib3AEwiNMLsejb/CWs/OL/srFQ8AogkebEPF0=",
+        "owner": "vic",
+        "repo": "import-tree",
+        "rev": "3c23749d8013ec6daa1d7255057590e9ca726646",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vic",
+        "repo": "import-tree",
+        "type": "github"
+      }
+    },
     "nixgl": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -795,6 +810,7 @@
         "hy3": "hy3",
         "hyprland": "hyprland",
         "hyprland-guiutils": "hyprland-guiutils_2",
+        "import-tree": "import-tree",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_3"
       }

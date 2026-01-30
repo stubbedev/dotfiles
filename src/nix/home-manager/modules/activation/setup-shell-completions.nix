@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.activation.customShellCompletions =
+  flake.modules.homeManager.activationSetupShellCompletions =
     { config, pkgs, lib, constants ? null, ... }:
     let
       homeDir = config.home.homeDirectory;

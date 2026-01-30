@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupHyprlockPam";
+  moduleName = "activationSetupHyprlockPam";
+  activationName = "setupHyprlockPam";
   scriptName = "setup-hyprlock-pam";
   after = [ "setupPamWrappers" ];
   sudoArgs = { ... }:

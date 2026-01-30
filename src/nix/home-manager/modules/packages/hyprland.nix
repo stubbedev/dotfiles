@@ -3,12 +3,13 @@
 # This enables GLX with NVIDIA/Mesa drivers for X11 apps running under KDE Wayland
 { ... }:
 {
-  flake.modules.homeManager.packages.hyprland =
+  flake.modules.homeManager.packagesHyprland =
     { pkgs, homeLib, hyprland, hyprland-guiutils, systemInfo, ... }:
     let
       inherit (pkgs) lib;
-      guiutils = hyprland-guiutils.packages.${pkgs.system}.default;
-      hyprlandPkg = hyprland.packages.${pkgs.system}.hyprland;
+      system = pkgs.stdenv.hostPlatform.system;
+      guiutils = hyprland-guiutils.packages.${system}.default;
+      hyprlandPkg = hyprland.packages.${system}.hyprland;
 
       gbmPaths = lib.unique [
         "/usr/lib64/gbm"

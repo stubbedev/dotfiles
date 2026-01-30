@@ -1,8 +1,18 @@
 # Core CLI utilities and build tools
 { ... }:
 {
-  flake.modules.homeManager.packages.cli = { pkgs, ... }: {
-    home.packages = with pkgs; [
+  flake.modules.homeManager.packagesCli = { pkgs, ... }:
+    let
+      system = pkgs.stdenv.hostPlatform.system;
+      latestOpencodeTag =
+        (builtins.fromJSON (builtins.readFile (builtins.fetchurl
+          "https://api.github.com/repos/anomalyco/opencode/releases/latest"))).tag_name;
+      opencodeFlake = builtins.getFlake
+        "github:anomalyco/opencode?ref=refs/tags/${latestOpencodeTag}";
+      opencodePkg = opencodeFlake.packages.${system}.opencode;
+    in
+    {
+      home.packages = with pkgs; [
       # Shell and terminal
       bc
       zsh
@@ -46,7 +56,9 @@
       # Version control
       git
       lazygit
+      lazydocker
       gh
+      opencodePkg
 
       # Archive handling
       zip
@@ -85,6 +97,6 @@
       lynx
       chafa
       catimg
-    ];
-  };
+      ];
+    };
 }

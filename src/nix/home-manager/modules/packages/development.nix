@@ -1,7 +1,16 @@
 { ... }:
 {
-  flake.modules.homeManager.packages.development = { pkgs, homeLib, ... }: {
-    home.packages = with pkgs; [
+  flake.modules.homeManager.packagesDevelopment = { pkgs, homeLib, ... }:
+    let
+      luaBin = pkgs.writeShellScriptBin "lua" ''
+        exec ${pkgs.lua5_1}/bin/lua "$@"
+      '';
+      luajitBin = pkgs.writeShellScriptBin "luajit" ''
+        exec ${pkgs.luajit}/bin/luajit "$@"
+      '';
+    in
+    {
+      home.packages = with pkgs; [
       # JavaScript/TypeScript runtimes (CLI tools)
       nodejs
       bun
@@ -11,8 +20,8 @@
 
       # Editor and Lua runtimes
       neovim
-      lua5_1
-      luajit
+      luaBin
+      luajitBin
 
       # Go tools (CLI)
       gopass

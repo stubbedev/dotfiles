@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.programs.go = { ... }: {
+  flake.modules.homeManager.programsGo = { ... }: {
     programs.go = { enable = true; };
   };
 }

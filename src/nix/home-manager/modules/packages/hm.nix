@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.packages.hm = { pkgs, config, ... }:
+  flake.modules.homeManager.packagesHm = { pkgs, config, ... }:
     let
       hmFlakeDir = "${config.home.homeDirectory}/.stubbe/src/nix/home-manager";
     in

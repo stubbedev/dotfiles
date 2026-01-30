@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupHyprSession";
+  moduleName = "activationSetupHyprSession";
+  activationName = "setupHyprSession";
   scriptName = "setup-sddm-session";
   after = [ "setupHyprKeyringPam" ];
   sudoArgs = { config, ... }:

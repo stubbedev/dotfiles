@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.programs.vifm = { ... }: {
+  flake.modules.homeManager.programsVifm = { ... }: {
     programs.vifm = {
       enable = true;
       extraConfig = ''

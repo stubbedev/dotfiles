@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.activation.customConfigCleanUp =
+  flake.modules.homeManager.activationApplyMutableConfig =
     { config, pkgs, lib, constants ? null, ... }:
     let
       homeDir = config.home.homeDirectory;

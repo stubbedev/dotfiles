@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.modules.homeManager.packages.media = { pkgs, homeLib, ... }:
+  flake.modules.homeManager.packagesMedia = { pkgs, homeLib, ... }:
     let
       # Wrapper for pavucontrol that avoids nixGL NVIDIA driver conflicts
       # GTK4 tries to initialize GL which causes crashes when mixing nixGL and system NVIDIA drivers

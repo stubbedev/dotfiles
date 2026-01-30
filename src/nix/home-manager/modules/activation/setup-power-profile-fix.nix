@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupPowerProfileFix";
+  moduleName = "activationSetupPowerProfileFix";
+  activationName = "setupPowerProfileFix";
   scriptName = "setup-power-profile-fix";
   after = [ "setupVpnPolkit" ];
   sudoArgs = { config, ... }:

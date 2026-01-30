@@ -62,7 +62,7 @@
           text =
             let
               # hy3 is already built against the correct hyprland from the flake
-              hy3-plugin = hy3.packages.${pkgs.system}.hy3;
+              hy3-plugin = hy3.packages.${pkgs.stdenv.hostPlatform.system}.hy3;
             in
             ''
               # Hyprland plugins loaded from Nix

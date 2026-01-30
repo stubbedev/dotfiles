@@ -29,8 +29,8 @@
       homeLib = import ../../lib.nix { inherit lib pkgs systemInfo; };
 
       # Load VPN scripts/config dynamically
-      vpnConfigs = homeLib.loadVpnConfigs ../../../vpn;
-      vpnScripts = homeLib.loadVpnScripts ../../../vpn;
+      vpnConfigs = homeLib.loadVpnConfigs ../../../../vpn;
+      vpnScripts = homeLib.loadVpnScripts ../../../../vpn;
     in
     {
       _module.args = {

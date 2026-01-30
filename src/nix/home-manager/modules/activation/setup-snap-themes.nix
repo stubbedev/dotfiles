@@ -3,7 +3,8 @@ let
   helpers = import ./_helpers.nix;
 in
 helpers.mkSudoSetupModule {
-  name = "setupSnapThemes";
+  moduleName = "activationSetupSnapThemes";
+  activationName = "setupSnapThemes";
   scriptName = "setup-snap-themes";
   after = [ "setupHyprSession" ];
   sudoArgs = { pkgs, ... }:
