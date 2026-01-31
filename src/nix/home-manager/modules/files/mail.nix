@@ -1,6 +1,11 @@
-{ ... }:
-{
-  flake.modules.homeManager.filesMail = { constants, lib, config, ... }:
+_: {
+  flake.modules.homeManager.filesMail =
+    {
+      constants,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       home.file = {
         ".local/bin/open-mail" = {

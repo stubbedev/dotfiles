@@ -1,7 +1,13 @@
-{ ... }:
-{
-  flake.modules.homeManager.programsGo = { lib, config, ... }:
+_: {
+  flake.modules.homeManager.programsGo =
+    {
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.development {
-      programs.go = { enable = true; };
+      programs.go = {
+        enable = true;
+      };
     };
 }

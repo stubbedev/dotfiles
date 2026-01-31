@@ -1,5 +1,4 @@
 { config, ... }:
-
 {
   # Path constants
   paths = {
@@ -7,7 +6,6 @@
     zsh = "${config.home.homeDirectory}/.stubbe/src/zsh";
     hypr = "${config.home.homeDirectory}/.stubbe/src/hypr";
     term = "${config.home.homeDirectory}/.nix-profile/bin/alacritty";
-
   };
 
   # User information

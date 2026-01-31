@@ -1,18 +1,18 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+}:
 let
-  toPath = path:
-    if builtins.isPath path then
-      path
-    else
-      /. + path;
+  # Convert string path to path type
+  stringToPath = path: if builtins.isPath path then path else /. + path;
 
   nvidiaVersionPath = "/proc/driver/nvidia/version";
-  hasNvidia = builtins.pathExists (toPath nvidiaVersionPath);
+  hasNvidia = builtins.pathExists (stringToPath nvidiaVersionPath);
 
   osReleasePath = "/etc/os-release";
   osReleaseContent =
-    if builtins.pathExists (toPath osReleasePath) then
-      builtins.readFile (toPath osReleasePath)
+    if builtins.pathExists (stringToPath osReleasePath) then
+      builtins.readFile (stringToPath osReleasePath)
     else
       "";
   isFedora = builtins.match ".*ID=fedora.*" osReleaseContent != null;

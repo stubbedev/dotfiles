@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,7 +9,8 @@ helpers.mkSudoSetupModule {
   scriptName = "setup-pam-wrappers";
   after = order.after.setupPamWrappers;
   enableIf = { config, ... }: config.features.hyprland;
-  sudoArgs = { ... }:
+  sudoArgs =
+    _:
     let
       wrapperPath = "/run/wrappers/bin/unix_chkpwd";
       servicePath = "/etc/systemd/system/nix-pam-wrappers.service";
@@ -56,7 +57,6 @@ helpers.mkSudoSetupModule {
         echo ""
         echo "✓ Service installed and started successfully!"
       '';
-      skipMessage =
-        "Skipped. You can install it later by running: home-manager switch --flake . --impure";
+      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

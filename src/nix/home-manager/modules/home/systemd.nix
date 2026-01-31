@@ -1,6 +1,12 @@
-{ ... }:
-{
-  flake.modules.homeManager.systemd = { constants, pkgs, lib, config, ... }:
+_: {
+  flake.modules.homeManager.systemd =
+    {
+      constants,
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.hyprland {
       systemd.user.services = {
         xdg-desktop-portal-hyprland = {
@@ -12,8 +18,7 @@
           Service = {
             Type = "dbus";
             BusName = "org.freedesktop.impl.portal.desktop.hyprland";
-            ExecStart =
-              "${pkgs.xdg-desktop-portal-hyprland}/libexec/xdg-desktop-portal-hyprland";
+            ExecStart = "${pkgs.xdg-desktop-portal-hyprland}/libexec/xdg-desktop-portal-hyprland";
             Restart = "on-failure";
           };
         };
@@ -21,9 +26,14 @@
         await-powerprofile = {
           Unit = {
             Description = "Restart Waybar when power-profiles-daemon starts";
-            After = [ "default.target" "power-profiles-daemon.service" ];
+            After = [
+              "default.target"
+              "power-profiles-daemon.service"
+            ];
           };
-          Install = { WantedBy = [ "default.target" ]; };
+          Install = {
+            WantedBy = [ "default.target" ];
+          };
           Service = {
             Type = "oneshot";
             ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
@@ -33,9 +43,14 @@
         await-bluetooth = {
           Unit = {
             Description = "Restart Waybar when bluetooth starts";
-            After = [ "default.target" "bluetooth.service" ];
+            After = [
+              "default.target"
+              "bluetooth.service"
+            ];
           };
-          Install = { WantedBy = [ "default.target" ]; };
+          Install = {
+            WantedBy = [ "default.target" ];
+          };
           Service = {
             Type = "oneshot";
             ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
@@ -46,9 +61,14 @@
         power-profile-fix = {
           Unit = {
             Description = "Fix CPU frequency scaling for power profiles";
-            After = [ "default.target" "power-profiles-daemon.service" ];
+            After = [
+              "default.target"
+              "power-profiles-daemon.service"
+            ];
           };
-          Install = { WantedBy = [ "default.target" ]; };
+          Install = {
+            WantedBy = [ "default.target" ];
+          };
           Service = {
             Type = "simple";
             ExecStart = "${constants.paths.hypr}/scripts/power-profile-fix.sh";
@@ -61,12 +81,18 @@
           Unit = {
             Description = "Waybar - Highly customizable Wayland bar";
             Documentation = "https://github.com/Alexays/Waybar/wiki";
-            After = [ "graphical-session.target" "power-profiles-daemon.service" "xdg-desktop-portal-hyprland.service" ];
+            After = [
+              "graphical-session.target"
+              "power-profiles-daemon.service"
+              "xdg-desktop-portal-hyprland.service"
+            ];
             Wants = [ "power-profiles-daemon.service" ];
             PartOf = [ "graphical-session.target" ];
             ConditionPathExists = "/run/user/%U/hypr";
           };
-          Install = { WantedBy = [ "graphical-session.target" ]; };
+          Install = {
+            WantedBy = [ "graphical-session.target" ];
+          };
           Service = {
             Type = "simple";
             ExecStart = "${constants.paths.hypr}/scripts/waybar.launch.sh";

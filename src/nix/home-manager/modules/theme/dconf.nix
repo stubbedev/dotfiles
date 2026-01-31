@@ -1,6 +1,10 @@
-{ ... }:
-{
-  flake.modules.homeManager.themeDconf = { lib, config, ... }:
+_: {
+  flake.modules.homeManager.themeDconf =
+    {
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.theming {
       # Configure dconf (GNOME settings) to prefer dark mode
       dconf.settings = {

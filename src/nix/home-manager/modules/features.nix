@@ -1,6 +1,6 @@
-{ ... }:
-{
-  flake.modules.homeManager.features = { lib, ... }:
+_: {
+  flake.modules.homeManager.features =
+    { lib, ... }:
     {
       options.features = {
         desktop = lib.mkOption {

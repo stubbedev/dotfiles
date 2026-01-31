@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,11 +9,11 @@ helpers.mkSudoSetupModule {
   scriptName = "setup-power-profile-fix";
   after = order.after.setupPowerProfileFix;
   enableIf = { config, ... }: config.features.desktop;
-  sudoArgs = { config, ... }:
+  sudoArgs =
+    { config, ... }:
     let
       rulePath = "/etc/polkit-1/rules.d/50-power-profile-fix.rules";
-      stateDir =
-        config.xdg.stateHome or "${config.home.homeDirectory}/.local/state";
+      stateDir = config.xdg.stateHome or "${config.home.homeDirectory}/.local/state";
       stampPath = "${stateDir}/power-profile-fix/polkit-installed";
       ruleContent = ''
         // managed-by: home-manager power-profile-fix v2
@@ -77,7 +77,6 @@ helpers.mkSudoSetupModule {
           sudo systemctl restart polkit.service >/dev/null 2>&1 || true
         fi
       '';
-      skipMessage =
-        "Skipped. You can install it later by running: home-manager switch --flake . --impure";
+      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

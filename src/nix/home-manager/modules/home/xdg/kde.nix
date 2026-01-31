@@ -1,6 +1,10 @@
-{ ... }:
-{
-  flake.modules.homeManager.xdgKde = { config, lib, ... }:
+_: {
+  flake.modules.homeManager.xdgKde =
+    {
+      config,
+      lib,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       xdg.configFile = {
         # KDE Plasma Wayland configuration to use nixGL-wrapped Xwayland

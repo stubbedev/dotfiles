@@ -1,6 +1,10 @@
-{ ... }:
-{
-  flake.modules.homeManager.programsGit = { lib, config, ... }:
+_: {
+  flake.modules.homeManager.programsGit =
+    {
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       programs.git = {
         enable = true;

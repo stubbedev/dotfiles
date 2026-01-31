@@ -1,6 +1,11 @@
-{ ... }:
-{
-  flake.modules.homeManager.filesShell = { constants, lib, config, ... }:
+_: {
+  flake.modules.homeManager.filesShell =
+    {
+      constants,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       home.file = {
         ".zshrc".text = ''

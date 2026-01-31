@@ -1,7 +1,13 @@
-{ ... }:
-{
-  flake.modules.homeManager.programsUv = { lib, config, ... }:
+_: {
+  flake.modules.homeManager.programsUv =
+    {
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.development {
-      programs.uv = { enable = true; };
+      programs.uv = {
+        enable = true;
+      };
     };
 }

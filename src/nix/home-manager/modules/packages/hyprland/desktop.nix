@@ -1,7 +1,12 @@
-{ ... }:
-{
+_: {
   flake.modules.homeManager.packagesHyprlandDesktop =
-    { pkgs, homeLib, lib, config, ... }:
+    {
+      pkgs,
+      homeLib,
+      lib,
+      config,
+      ...
+    }:
     let
       # Create swaync wrapper that auto-detects the correct Wayland display
       swaync-wrapped = pkgs.writeShellScriptBin "swaync" ''

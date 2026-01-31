@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ../_helpers.nix;
   order = import ../_order.nix;

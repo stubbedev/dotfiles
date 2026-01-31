@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,7 +9,8 @@ helpers.mkSudoSetupModule {
   scriptName = "setup-hyprlock-pam";
   after = order.after.setupHyprlockPam;
   enableIf = { config, ... }: config.features.hyprland;
-  sudoArgs = { ... }:
+  sudoArgs =
+    _:
     let
       pamPath = "/etc/pam.d/hyprlock";
 
@@ -43,7 +44,6 @@ helpers.mkSudoSetupModule {
         echo ""
         echo "✓ PAM configuration created successfully!"
       '';
-      skipMessage =
-        "Skipped. You can create it later by running: home-manager switch --flake . --impure";
+      skipMessage = "Skipped. You can create it later by running: home-manager switch --flake . --impure";
     };
 }

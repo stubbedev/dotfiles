@@ -1,6 +1,11 @@
-{ ... }:
-{
-  flake.modules.homeManager.sessionVariables = { config, lib, pkgs, ... }:
+_: {
+  flake.modules.homeManager.sessionVariables =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       home.sessionVariables = {
         # Nix configuration
@@ -12,8 +17,7 @@
         EDITOR = lib.getExe pkgs.neovim;
 
         # Desktop entries (Flatpak + Nix)
-        XDG_DATA_DIRS = lib.mkForce
-          "${config.home.homeDirectory}/.local/share/flatpak/exports/share:${config.home.homeDirectory}/.nix-profile/share:/nix/var/nix/profiles/default/share:/var/lib/flatpak/exports/share:/usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop:$XDG_DATA_DIRS";
+        XDG_DATA_DIRS = lib.mkForce "${config.home.homeDirectory}/.local/share/flatpak/exports/share:${config.home.homeDirectory}/.nix-profile/share:/nix/var/nix/profiles/default/share:/var/lib/flatpak/exports/share:/usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop:$XDG_DATA_DIRS";
 
         # Paging and documentation
         MANPAGER = "sh -c 'col -bx | bat -l man -p'";

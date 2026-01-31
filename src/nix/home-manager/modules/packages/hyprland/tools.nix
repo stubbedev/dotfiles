@@ -1,9 +1,15 @@
-{ ... }:
-{
+_: {
   flake.modules.homeManager.packagesHyprlandTools =
-    { pkgs, homeLib, hyprland-guiutils, lib, config, ... }:
+    {
+      pkgs,
+      homeLib,
+      hyprland-guiutils,
+      lib,
+      config,
+      ...
+    }:
     let
-      system = pkgs.stdenv.hostPlatform.system;
+      inherit (pkgs.stdenv.hostPlatform) system;
       guiutils = hyprland-guiutils.packages.${system}.default;
     in
     lib.mkIf config.features.hyprland {

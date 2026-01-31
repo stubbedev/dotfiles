@@ -1,10 +1,17 @@
-{ ... }:
-{
+_: {
   flake.modules.homeManager.packagesHyprlandWrappers =
-    { pkgs, homeLib, hyprland, systemInfo, lib, config, ... }:
+    {
+      pkgs,
+      homeLib,
+      hyprland,
+      systemInfo,
+      lib,
+      config,
+      ...
+    }:
     let
       inherit (pkgs) lib;
-      system = pkgs.stdenv.hostPlatform.system;
+      inherit (pkgs.stdenv.hostPlatform) system;
       hyprlandPkg = hyprland.packages.${system}.hyprland;
 
       gbmPaths = lib.unique [
@@ -28,8 +35,7 @@
         # Set GBM/DRI paths to use system libraries (needed on non-NixOS)
         export GBM_BACKENDS_PATH=${lib.concatStringsSep ":" gbmPaths}
         export LIBGL_DRIVERS_PATH=${lib.concatStringsSep ":" driPaths}
-      ''
-        hyprlandPkg;
+      '' hyprlandPkg;
 
       # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
       # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
@@ -146,27 +152,31 @@
 
       # Create custom Xwayland wrapper with nixGL for NVIDIA support
       # This replaces the Xwayland binary completely so KDE will use it
-      xwayland-wrapped = pkgs.writeShellScriptBin "Xwayland"
-        (if systemInfo.hasNvidia then ''
-          # NVIDIA: Run Xwayland through nixGLNvidia for proper GPU acceleration
-          export GBM_BACKENDS_PATH="${lib.concatStringsSep ":" gbmPaths}"
-          export LIBGL_DRIVERS_PATH="${lib.concatStringsSep ":" driPaths}"
+      xwayland-wrapped = pkgs.writeShellScriptBin "Xwayland" (
+        if systemInfo.hasNvidia then
+          ''
+            # NVIDIA: Run Xwayland through nixGLNvidia for proper GPU acceleration
+            export GBM_BACKENDS_PATH="${lib.concatStringsSep ":" gbmPaths}"
+            export LIBGL_DRIVERS_PATH="${lib.concatStringsSep ":" driPaths}"
 
-          # Find the versioned nixGLNvidia binary
-          NIXGL_BIN=$(ls ${systemInfo.nixGLWrapper}/bin/nixGLNvidia* 2>/dev/null | head -1)
-          if [ -z "$NIXGL_BIN" ]; then
-            echo "Error: nixGLNvidia not found" >&2
-            exit 1
-          fi
+            # Find the versioned nixGLNvidia binary
+            NIXGL_BIN=$(ls ${systemInfo.nixGLWrapper}/bin/nixGLNvidia* 2>/dev/null | head -1)
+            if [ -z "$NIXGL_BIN" ]; then
+              echo "Error: nixGLNvidia not found" >&2
+              exit 1
+            fi
 
-          exec "$NIXGL_BIN" ${pkgs.xwayland}/bin/Xwayland "$@"
-        '' else ''
-          # Intel/AMD: Run Xwayland through nixGLIntel
-          export GBM_BACKENDS_PATH="${lib.concatStringsSep ":" gbmPaths}"
-          export LIBGL_DRIVERS_PATH="${lib.concatStringsSep ":" driPaths}"
+            exec "$NIXGL_BIN" ${pkgs.xwayland}/bin/Xwayland "$@"
+          ''
+        else
+          ''
+            # Intel/AMD: Run Xwayland through nixGLIntel
+            export GBM_BACKENDS_PATH="${lib.concatStringsSep ":" gbmPaths}"
+            export LIBGL_DRIVERS_PATH="${lib.concatStringsSep ":" driPaths}"
 
-          exec ${systemInfo.nixGLWrapper}/bin/nixGLIntel ${pkgs.xwayland}/bin/Xwayland "$@"
-        '');
+            exec ${systemInfo.nixGLWrapper}/bin/nixGLIntel ${pkgs.xwayland}/bin/Xwayland "$@"
+          ''
+      );
     in
     lib.mkIf config.features.hyprland {
       home.packages = [

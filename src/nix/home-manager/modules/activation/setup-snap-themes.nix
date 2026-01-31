@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,7 +9,8 @@ helpers.mkSudoSetupModule {
   scriptName = "setup-snap-themes";
   after = order.after.setupSnapThemes;
   enableIf = { config, ... }: config.features.theming;
-  sudoArgs = { pkgs, ... }:
+  sudoArgs =
+    { pkgs, ... }:
     let
       iconThemeName = "Vimix-dark";
       cursorThemeName = "Vimix-cursors";
@@ -38,7 +39,6 @@ helpers.mkSudoSetupModule {
         echo ""
         echo "Installed Vimix themes for snap apps."
       '';
-      skipMessage =
-        "Skipped. You can install them later by running: home-manager switch --flake . --impure";
+      skipMessage = "Skipped. You can install them later by running: home-manager switch --flake . --impure";
     };
 }

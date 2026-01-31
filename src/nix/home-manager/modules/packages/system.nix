@@ -1,8 +1,13 @@
 # System services and utilities
-{ ... }:
-{
+_: {
   flake.modules.homeManager.packagesSystem =
-    { pkgs, homeLib, lib, config, ... }:
+    {
+      pkgs,
+      homeLib,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
         # Terminal emulator (GPU accelerated)

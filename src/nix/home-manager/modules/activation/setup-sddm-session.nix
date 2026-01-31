@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,7 +9,8 @@ helpers.mkSudoSetupModule {
   scriptName = "setup-sddm-session";
   after = order.after.setupHyprSession;
   enableIf = { config, ... }: config.features.hyprland;
-  sudoArgs = { config, ... }:
+  sudoArgs =
+    { config, ... }:
     let
       desktopPath = "/usr/share/wayland-sessions/hyprland-nix.desktop";
 
@@ -42,7 +43,6 @@ helpers.mkSudoSetupModule {
         echo ""
         echo "✓ SDDM session entry created successfully!"
       '';
-      skipMessage =
-        "Skipped. You can create it later by running: home-manager switch --flake . --impure";
+      skipMessage = "Skipped. You can create it later by running: home-manager switch --flake . --impure";
     };
 }

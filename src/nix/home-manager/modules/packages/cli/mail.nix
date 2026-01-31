@@ -1,7 +1,12 @@
 # CLI mail and TUI helpers
-{ ... }:
-{
-  flake.modules.homeManager.packagesCliMail = { pkgs, lib, config, ... }:
+_: {
+  flake.modules.homeManager.packagesCliMail =
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
         msmtp

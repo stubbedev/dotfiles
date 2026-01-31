@@ -1,7 +1,12 @@
 # Core CLI utilities and build tools
-{ ... }:
-{
-  flake.modules.homeManager.packagesCliCore = { pkgs, lib, config, ... }:
+_: {
+  flake.modules.homeManager.packagesCliCore =
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
         # Shell and terminal

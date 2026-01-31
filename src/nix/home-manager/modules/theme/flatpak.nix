@@ -1,6 +1,10 @@
-{ ... }:
-{
-  flake.modules.homeManager.themeFlatpak = { lib, config, ... }:
+_: {
+  flake.modules.homeManager.themeFlatpak =
+    {
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.theming {
       home.file = {
         # Flatpak overrides for dark mode theming

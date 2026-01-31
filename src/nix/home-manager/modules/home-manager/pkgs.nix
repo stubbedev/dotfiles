@@ -13,15 +13,15 @@ let
         data = builtins.readFile nvidiaVersionPath;
         # Match version after "x86_64" (works for Open Kernel Module)
         # or after "Module" (works for proprietary driver)
-        versionMatch =
-          builtins.match ".*x86_64[[:space:]]+([0-9.]+)[[:space:]]+.*" data;
+        versionMatch = builtins.match ".*x86_64[[:space:]]+([0-9.]+)[[:space:]]+.*" data;
       in
       if versionMatch != null then builtins.head versionMatch else null
     else
       null;
 
   # Custom nixGL overlay with NVIDIA version detection
-  nixglOverlay = final: prev:
+  nixglOverlay =
+    final: prev:
     let
       isIntelX86Platform = final.stdenv.hostPlatform.system == "x86_64-linux";
       # Build nixGL arguments - only include nvidiaVersion if detected
@@ -29,25 +29,30 @@ let
         pkgs = final;
         enable32bits = isIntelX86Platform;
         enableIntelX86Extensions = isIntelX86Platform;
-      } // (if nvidiaVersion != null then { inherit nvidiaVersion; } else {});
-    in {
+      }
+      // (if nvidiaVersion != null then { inherit nvidiaVersion; } else { });
+    in
+    {
       nixgl = import "${inputs.nixgl}/default.nix" nixglArgs;
     };
 
-  mkPkgs = system:
+  mkPkgs =
+    system:
     import inputs.nixpkgs {
       inherit system;
       config = {
         allowUnfree = true;
-        allowUnfreePredicate = _ : true;
+        allowUnfreePredicate = _: true;
         allowInsecure = true;
-        allowInsecurePredicate = _ : true;
+        allowInsecurePredicate = _: true;
       };
       overlays = [ nixglOverlay ];
     };
 in
 {
-  perSystem = { system, ... }: {
-    _module.args.pkgs = mkPkgs system;
-  };
+  perSystem =
+    { system, ... }:
+    {
+      _module.args.pkgs = mkPkgs system;
+    };
 }

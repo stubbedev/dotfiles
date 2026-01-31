@@ -1,9 +1,14 @@
-{ ... }:
+_:
 let
   order = import ./_order.nix;
 in
 {
-  flake.modules.homeManager.activationRestartServiceWaybar = { lib, config, ... }:
+  flake.modules.homeManager.activationRestartServiceWaybar =
+    {
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.hyprland {
       home.activation.restartWaybar = lib.hm.dag.entryAfter order.after.restartWaybar ''
         if command -v systemctl >/dev/null 2>&1; then

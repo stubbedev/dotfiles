@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,49 +9,50 @@ helpers.mkSudoSetupModule {
   scriptName = "setup-grub-intel-pstate";
   after = order.after.setupGrubIntelPstate;
   enableIf = { config, ... }: config.features.desktop;
-  sudoArgs = { config, ... }:
+  sudoArgs =
+    { config, ... }:
     let
       grubConfigPath = "/etc/default/grub.d/intel-pstate-passive.cfg";
       stateDir = config.xdg.stateHome or "${config.home.homeDirectory}/.local/state";
       stampPath = "${stateDir}/grub-intel-pstate/installed";
       grubConfigContent = ''
-# managed-by: home-manager grub-intel-pstate v1
-# Force intel_pstate to use passive mode for software-controlled CPU frequency scaling
-# This allows using schedutil or other CPUFreq governors instead of HWP
-GRUB_CMDLINE_LINUX_DEFAULT="''${GRUB_CMDLINE_LINUX_DEFAULT} intel_pstate=passive"
+        # managed-by: home-manager grub-intel-pstate v1
+        # Force intel_pstate to use passive mode for software-controlled CPU frequency scaling
+        # This allows using schedutil or other CPUFreq governors instead of HWP
+        GRUB_CMDLINE_LINUX_DEFAULT="''${GRUB_CMDLINE_LINUX_DEFAULT} intel_pstate=passive"
       '';
     in
     {
       preCheck = ''
-        if [ -f "${stampPath}" ]; then
-          exit 0
-        fi
+                if [ -f "${stampPath}" ]; then
+                  exit 0
+                fi
 
-        if [ -r "${grubConfigPath}" ] && grep -q "managed-by: home-manager grub-intel-pstate v1" "${grubConfigPath}"; then
-          mkdir -p "${stateDir}/grub-intel-pstate"
-          touch "${stampPath}"
-          exit 0
-        fi
+                if [ -r "${grubConfigPath}" ] && grep -q "managed-by: home-manager grub-intel-pstate v1" "${grubConfigPath}"; then
+                  mkdir -p "${stateDir}/grub-intel-pstate"
+                  touch "${stampPath}"
+                  exit 0
+                fi
 
-        if sudo -n test -f "${grubConfigPath}" 2>/dev/null; then
-          if sudo -n grep -q "managed-by: home-manager grub-intel-pstate v1" "${grubConfigPath}"; then
-            mkdir -p "${stateDir}/grub-intel-pstate"
-            touch "${stampPath}"
-            exit 0
-          fi
-        fi
+                if sudo -n test -f "${grubConfigPath}" 2>/dev/null; then
+                  if sudo -n grep -q "managed-by: home-manager grub-intel-pstate v1" "${grubConfigPath}"; then
+                    mkdir -p "${stateDir}/grub-intel-pstate"
+                    touch "${stampPath}"
+                    exit 0
+                  fi
+                fi
 
-        if ! command -v update-grub >/dev/null 2>&1; then
-          if ! sudo -n sh -c 'command -v update-grub >/dev/null 2>&1'; then
-            echo "Skipping GRUB config: update-grub not found on this system."
-            exit 0
-          fi
-        fi
+                if ! command -v update-grub >/dev/null 2>&1; then
+                  if ! sudo -n sh -c 'command -v update-grub >/dev/null 2>&1'; then
+                    echo "Skipping GRUB config: update-grub not found on this system."
+                    exit 0
+                  fi
+                fi
 
-        tmpfile=$(mktemp)
-        cat > "$tmpfile" <<'EOF'
-${grubConfigContent}
-EOF
+                tmpfile=$(mktemp)
+                cat > "$tmpfile" <<'EOF'
+        ${grubConfigContent}
+        EOF
       '';
       promptTitle = "Installing GRUB config for intel_pstate passive mode";
       promptBody = ''
@@ -78,7 +79,6 @@ EOF
         echo "  sudo update-grub"
         echo "  sudo reboot"
       '';
-      skipMessage =
-        "Skipped. You can install it later by running: home-manager switch --flake . --impure";
+      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

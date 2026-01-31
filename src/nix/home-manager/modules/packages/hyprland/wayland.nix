@@ -1,6 +1,12 @@
-{ ... }:
-{
-  flake.modules.homeManager.packagesHyprlandWayland = { pkgs, homeLib, lib, config, ... }:
+_: {
+  flake.modules.homeManager.packagesHyprlandWayland =
+    {
+      pkgs,
+      homeLib,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.hyprland {
       home.packages = with pkgs; [
         wlprop

@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   kdeglobalsText = ''
     [General]
@@ -113,7 +113,13 @@ let
   '';
 in
 {
-  flake.modules.homeManager.themeQt = { pkgs, lib, config, ... }:
+  flake.modules.homeManager.themeQt =
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.theming {
       # Disabled to prevent global QT_STYLE_OVERRIDE export which breaks KDE Plasma login
       # QT settings are configured per-environment:

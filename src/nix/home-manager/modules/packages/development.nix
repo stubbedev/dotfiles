@@ -1,6 +1,12 @@
-{ ... }:
-{
-  flake.modules.homeManager.packagesDevelopment = { pkgs, homeLib, lib, config, ... }:
+_: {
+  flake.modules.homeManager.packagesDevelopment =
+    {
+      pkgs,
+      homeLib,
+      lib,
+      config,
+      ...
+    }:
     let
       luaBin = pkgs.writeShellScriptBin "lua" ''
         exec ${pkgs.lua5_1}/bin/lua "$@"
@@ -11,35 +17,35 @@
     in
     lib.mkIf config.features.development {
       home.packages = with pkgs; [
-      # JavaScript/TypeScript runtimes (CLI tools)
-      nodejs
-      bun
-      yarn
-      deno
-      volta
+        # JavaScript/TypeScript runtimes (CLI tools)
+        nodejs
+        bun
+        yarn
+        deno
+        volta
 
-      # Editor and Lua runtimes
-      neovim
-      luaBin
-      luajitBin
+        # Editor and Lua runtimes
+        neovim
+        luaBin
+        luajitBin
 
-      # Go tools (CLI)
-      gopass
-      gotools
-      air
-      templ
+        # Go tools (CLI)
+        gopass
+        gotools
+        air
+        templ
 
-      # Database tools (CLI)
-      mongodb-tools
-      mongosh
+        # Database tools (CLI)
+        mongodb-tools
+        mongosh
 
-      # PHP tools (CLI)
-      mago
+        # PHP tools (CLI)
+        mago
 
-      # IDE toolbox (GUI app)
-      (homeLib.gfx jetbrains-toolbox)
-      networkmanager-openconnect
-      openconnect
+        # IDE toolbox (GUI app)
+        (homeLib.gfx jetbrains-toolbox)
+        networkmanager-openconnect
+        openconnect
       ];
     };
 }

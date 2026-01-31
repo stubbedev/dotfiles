@@ -1,6 +1,11 @@
-{ ... }:
-{
-  flake.modules.homeManager.themeGtk = { pkgs, lib, config, ... }:
+_: {
+  flake.modules.homeManager.themeGtk =
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.theming {
       gtk = {
         enable = true;
@@ -18,9 +23,13 @@
           size = 24;
         };
 
-        gtk3.extraConfig = { gtk-application-prefer-dark-theme = 1; };
+        gtk3.extraConfig = {
+          gtk-application-prefer-dark-theme = 1;
+        };
 
-        gtk4.extraConfig = { gtk-application-prefer-dark-theme = 1; };
+        gtk4.extraConfig = {
+          gtk-application-prefer-dark-theme = 1;
+        };
       };
     };
 }

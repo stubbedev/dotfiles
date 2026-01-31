@@ -1,6 +1,11 @@
-{ ... }:
-{
-  flake.modules.homeManager.packagesHyprlandPortal = { pkgs, lib, config, ... }:
+_: {
+  flake.modules.homeManager.packagesHyprlandPortal =
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     lib.mkIf config.features.hyprland {
       home.packages = with pkgs; [
         hyprwire

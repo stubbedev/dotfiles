@@ -1,4 +1,4 @@
-{ ... }:
+_:
 let
   helpers = import ./_helpers.nix;
   order = import ./_order.nix;
@@ -9,7 +9,7 @@ helpers.mkSetupModule {
   after = order.after.setupHyprKeyringPam;
   enableIf = { config, ... }: config.features.hyprland;
   provideSudo = true;
-  script = { ... }: ''
+  script = _: ''
     set -e
 
     authLine="auth optional pam_gnome_keyring.so"
