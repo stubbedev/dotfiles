@@ -38,29 +38,30 @@ helpers.mkSetupModule {
     done
 
     if [ "''${#missingFiles[@]}" -eq 0 ]; then
-      exit 0
-    fi
-
-    echo ""
-    echo "Missing GNOME Keyring PAM lines in:"
-    for file in "''${missingFiles[@]}"; do
-      echo "  - $file"
-    done
-    echo ""
-    read -p "Add GNOME Keyring PAM lines to these files? [Y/n] " -n 1 -r
-    echo
-
-    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-      for file in "''${missingFiles[@]}"; do
-        grep -qF "$authLine" "$file" || printf '%s\n' "$authLine" | sudo tee -a "$file" > /dev/null
-        grep -qF "$sessionLine" "$file" || printf '%s\n' "$sessionLine" | sudo tee -a "$file" > /dev/null
-      done
-      echo ""
-      echo "✓ GNOME Keyring PAM lines added."
+      # Nothing to do, all files already have keyring lines
+      true  # Don't exit, just continue (exit would exit entire activation!)
     else
       echo ""
-      echo "Skipped GNOME Keyring PAM updates."
+      echo "Missing GNOME Keyring PAM lines in:"
+      for file in "''${missingFiles[@]}"; do
+        echo "  - $file"
+      done
+      echo ""
+      read -p "Add GNOME Keyring PAM lines to these files? [Y/n] " -n 1 -r
+      echo
+
+      if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        for file in "''${missingFiles[@]}"; do
+          grep -qF "$authLine" "$file" || printf '%s\n' "$authLine" | sudo tee -a "$file" > /dev/null
+          grep -qF "$sessionLine" "$file" || printf '%s\n' "$sessionLine" | sudo tee -a "$file" > /dev/null
+        done
+        echo ""
+        echo "✓ GNOME Keyring PAM lines added."
+      else
+        echo ""
+        echo "Skipped GNOME Keyring PAM updates."
+      fi
+      echo ""
     fi
-    echo ""
   '';
 }

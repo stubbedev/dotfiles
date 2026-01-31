@@ -75,28 +75,22 @@ helpers.mkSudoSetupModule {
     in
     {
       preCheck = ''
+        # All checks must not fail (use || true) because of set -e in the wrapper
         needsSetup=0
 
-        # Check if config exists and is correct
-        if [ ! -f "${configPath}" ]; then
-          needsSetup=1
-        fi
+        # Check if config exists
+        [ -f "${configPath}" ] || needsSetup=1
 
         # Check if service exists
-        if [ ! -f "${servicePath}" ]; then
-          needsSetup=1
-        fi
+        [ -f "${servicePath}" ] || needsSetup=1
 
         # Check if PAM config exists
-        if [ ! -f "${pamPath}" ]; then
-          needsSetup=1
-        fi
+        [ -f "${pamPath}" ] || needsSetup=1
 
-        # Check if greetd service is enabled
-        if ! systemctl is-enabled greetd.service &>/dev/null; then
-          needsSetup=1
-        fi
+        # Check if greetd service is enabled (don't fail on non-zero exit)
+        systemctl is-enabled greetd.service >/dev/null 2>&1 || needsSetup=1
 
+        # If everything is already set up, exit early (skip the prompt)
         if [ "$needsSetup" -eq 0 ]; then
           exit 0
         fi
