@@ -39,9 +39,9 @@ helpers.mkSudoSetupModule {
         fi
 
         if [ -f "${servicePath}" ]; then
-          echo "Service exists but wrapper missing, starting service..."
-          sudo systemctl start nix-pam-wrappers.service
-          exit 0
+          if systemctl is-enabled nix-pam-wrappers.service >/dev/null 2>&1; then
+            exit 0
+          fi
         fi
       '';
       promptTitle = "⚠️  Nix PAM wrapper setup required for hyprlock authentication";

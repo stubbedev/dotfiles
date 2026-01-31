@@ -42,14 +42,6 @@ helpers.mkSudoSetupModule {
                 exit 0
               fi
 
-              if sudo -n test -f "${rulePath}" 2>/dev/null; then
-                if sudo -n grep -q "managed-by: home-manager power-profile-fix v2" "${rulePath}"; then
-                  mkdir -p "${stateDir}/power-profile-fix"
-                  touch "${stampPath}"
-                  exit 0
-                fi
-              fi
-
               tmpfile=$(mktemp)
               cat > "$tmpfile" <<'EOF'
         ${ruleContent}

@@ -34,16 +34,8 @@ helpers.mkSudoSetupModule {
                   exit 0
                 fi
 
-                if sudo -n test -f "${grubConfigPath}" 2>/dev/null; then
-                  if sudo -n grep -q "managed-by: home-manager grub-intel-pstate v1" "${grubConfigPath}"; then
-                    mkdir -p "${stateDir}/grub-intel-pstate"
-                    touch "${stampPath}"
-                    exit 0
-                  fi
-                fi
-
                 if ! command -v update-grub >/dev/null 2>&1; then
-                  if ! sudo -n sh -c 'command -v update-grub >/dev/null 2>&1'; then
+                  if [ ! -x /usr/sbin/update-grub ] && [ ! -x /usr/bin/update-grub ]; then
                     echo "Skipping GRUB config: update-grub not found on this system."
                     exit 0
                   fi

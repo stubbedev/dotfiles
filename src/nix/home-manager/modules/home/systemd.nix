@@ -88,7 +88,6 @@ _: {
             ];
             Wants = [ "power-profiles-daemon.service" ];
             PartOf = [ "graphical-session.target" ];
-            ConditionPathExists = "/run/user/%U/hypr";
           };
           Install = {
             WantedBy = [ "graphical-session.target" ];

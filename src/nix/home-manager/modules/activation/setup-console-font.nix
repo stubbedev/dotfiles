@@ -52,20 +52,9 @@ helpers.mkSudoSetupModule {
     in
     {
       preCheck = ''
-        # All checks must not fail (use || true) because of set -e in the wrapper
-        needsSetup=0
-        
-        # Check if service exists
-        [ -f "${servicePath}" ] || needsSetup=1
-        
-        # Check if vconsole.conf exists with correct font (don't fail on grep)
-        grep -q "FONT=${fontName}" "${vconsolePath}" 2>/dev/null || needsSetup=1
-        
-        # Check if service is enabled (don't fail on non-zero exit)
-        systemctl is-enabled console-font.service >/dev/null 2>&1 || needsSetup=1
-        
-        # If everything is already set up, exit early (skip the prompt)
-        if [ "$needsSetup" -eq 0 ]; then
+        # Only check for installed artifact - no sudo required
+        # If the service file exists, console font setup already ran
+        if [ -f "${servicePath}" ]; then
           exit 0
         fi
       '';

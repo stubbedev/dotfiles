@@ -61,14 +61,6 @@ helpers.mkSudoSetupModule {
                   exit 0
                 fi
 
-                if sudo -n test -f "${rulePath}" 2>/dev/null; then
-                  if sudo -n grep -q "managed-by: home-manager vpn-polkit v1" "${rulePath}"; then
-                    mkdir -p "${stateDir}/vpn"
-                    touch "${stampPath}"
-                    exit 0
-                  fi
-                fi
-
                 tmpfile=$(mktemp)
                 cat > "$tmpfile" <<'EOF'
         ${ruleContent}

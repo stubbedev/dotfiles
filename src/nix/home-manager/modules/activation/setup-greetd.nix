@@ -75,23 +75,9 @@ helpers.mkSudoSetupModule {
     in
     {
       preCheck = ''
-        # All checks must not fail (use || true) because of set -e in the wrapper
-        needsSetup=0
-
-        # Check if config exists
-        [ -f "${configPath}" ] || needsSetup=1
-
-        # Check if service exists
-        [ -f "${servicePath}" ] || needsSetup=1
-
-        # Check if PAM config exists
-        [ -f "${pamPath}" ] || needsSetup=1
-
-        # Check if greetd service is enabled (don't fail on non-zero exit)
-        systemctl is-enabled greetd.service >/dev/null 2>&1 || needsSetup=1
-
-        # If everything is already set up, exit early (skip the prompt)
-        if [ "$needsSetup" -eq 0 ]; then
+        # Only check for installed artifacts - no sudo required
+        # If these exist, greetd setup already ran
+        if [ -f "${configPath}" ] && [ -f "${servicePath}" ] && [ -f "${pamPath}" ]; then
           exit 0
         fi
       '';
@@ -129,23 +115,41 @@ helpers.mkSudoSetupModule {
         echo "${pamContent}" | sudo tee "${pamPath}" > /dev/null
         echo "✓ PAM config installed to ${pamPath}"
 
-        # Reload systemd
-        sudo systemctl daemon-reload
-        echo "✓ Systemd daemon reloaded"
-
-        # Disable other display managers
+        # Disable other display managers BEFORE daemon-reload
+        echo "Disabling conflicting services before daemon-reload..."
         for dm in sddm lightdm gdm ly@tty2; do
-          if systemctl is-enabled "$dm.service" &>/dev/null; then
+          # Use /usr/bin/systemctl directly to avoid sudo wrapper affecting the check
+          if /usr/bin/systemctl is-enabled "$dm.service" &>/dev/null; then
+            echo "  Disabling $dm.service..."
             sudo systemctl disable "$dm.service"
             echo "✓ Disabled $dm.service"
+          else
+            echo "  $dm.service is not enabled, skipping"
           fi
         done
 
-        # Disable getty on tty1
-        if systemctl is-enabled getty@tty1.service &>/dev/null; then
+        # Also disable display-manager.service alias (used by Fedora/systemd)
+        if [ -L "/etc/systemd/system/display-manager.service" ]; then
+          echo "  Disabling display-manager.service alias..."
+          sudo systemctl disable display-manager.service
+          echo "✓ Disabled display-manager.service alias"
+        else
+          echo "  display-manager.service alias not found, skipping"
+        fi
+
+        # Disable getty on tty1 BEFORE daemon-reload (important!)
+        # Use /usr/bin/systemctl directly to avoid sudo wrapper affecting the check
+        if /usr/bin/systemctl is-enabled getty@tty1.service &>/dev/null; then
+          echo "  Disabling getty@tty1.service..."
           sudo systemctl disable getty@tty1.service
           echo "✓ Disabled getty@tty1.service"
+        else
+          echo "  getty@tty1.service is not enabled, skipping"
         fi
+
+        # Reload systemd AFTER disabling conflicting services
+        sudo systemctl daemon-reload
+        echo "✓ Systemd daemon reloaded"
 
         # Enable greetd
         sudo systemctl enable greetd.service
