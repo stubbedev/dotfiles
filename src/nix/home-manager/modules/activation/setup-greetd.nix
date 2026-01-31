@@ -64,11 +64,30 @@ helpers.mkSudoSetupModule {
 
       pamContent = ''
         #%PAM-1.0
-        # greetd PAM configuration
-        auth       include      system-local-login
-        account    include      system-local-login
-        password   include      system-local-login
-        session    include      system-local-login
+        # managed-by: home-manager greetd pam v2
+        auth     [success=done ignore=ignore default=bad] pam_selinux_permit.so
+        auth        substack      password-auth
+        -auth        optional      pam_gnome_keyring.so
+        -auth        optional      pam_kwallet5.so
+        -auth        optional      pam_kwallet.so
+        auth        include       postlogin
+
+        account     required      pam_nologin.so
+        account     include       password-auth
+
+        password    include       password-auth
+
+        session     required      pam_selinux.so close
+        session     required      pam_loginuid.so
+        -session    optional    pam_ck_connector.so
+        session     required      pam_selinux.so open
+        session     optional      pam_keyinit.so force revoke
+        session     required      pam_namespace.so
+        session     include       password-auth
+        -session     optional      pam_gnome_keyring.so auto_start unlock
+        -session     optional      pam_kwallet5.so auto_start unlock
+        -session     optional      pam_kwallet.so auto_start unlock
+        session     include       postlogin
       '';
 
       pamPath = "/etc/pam.d/greetd";
@@ -76,8 +95,10 @@ helpers.mkSudoSetupModule {
     {
       preCheck = ''
         # Only check for installed artifacts - no sudo required
-        # If these exist, greetd setup already ran
-        if [ -f "${configPath}" ] && [ -f "${servicePath}" ] && [ -f "${pamPath}" ]; then
+        # If these exist and greetd files are current, greetd setup already ran
+        if [ -f "${configPath}" ] && [ -f "${servicePath}" ] && [ -f "${pamPath}" ] \
+          && grep -q "managed-by: home-manager greetd config v2" "${configPath}" \
+          && grep -q "managed-by: home-manager greetd pam v2" "${pamPath}"; then
           exit 0
         fi
       '';

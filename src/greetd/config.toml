@@ -1,4 +1,5 @@
 # greetd configuration
+# managed-by: home-manager greetd config v2
 # See: https://man.sr.ht/~kennylevinsen/greetd/
 
 [terminal]
@@ -18,5 +19,5 @@ vt = 1
 # - Peach (actions): #fab387
 # - Yellow (buttons): #f9e2af
 # - Red (time): #f38ba8
-command = "tuigreet --time --time-format '%F %R' --remember --remember-session --asterisks --theme 'border=magenta;text=white;prompt=blue;time=red;action=yellow;button=yellow;container=black;input=green;title=magenta;greet=cyan' --greeting 'Welcome to Hyprland' --cmd start-hyprland"
-user = "greeter"
+command = "/home/stubbe/.nix-profile/bin/tuigreet --time --time-format '%F %R' --remember --remember-session --asterisks --theme 'border=magenta;text=white;prompt=blue;time=red;action=yellow;button=yellow;container=black;input=green;title=magenta;greet=cyan' --greeting 'Welcome to Hyprland' --cmd /home/stubbe/.nix-profile/bin/start-hyprland"
+user = "stubbe"
