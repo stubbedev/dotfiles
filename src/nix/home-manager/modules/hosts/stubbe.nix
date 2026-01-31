@@ -16,7 +16,6 @@ in
         media = true;
         vpn = true;
         opencode = true;
-        greetd = true;
       };
     };
   };

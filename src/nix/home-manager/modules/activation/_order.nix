@@ -6,8 +6,6 @@
     setupHyprlockPam = "setupHyprlockPam";
     setupHyprKeyringPam = "setupHyprlockPam";
     setupHyprSession = "setupHyprKeyringPam";
-    setupGreetd = "setupGreetd";
-    setupConsoleFont = "setupConsoleFont";
     setupSnapThemes = "setupSnapThemes";
     setupVpnPolkit = "setupVpnPolkit";
     setupPowerProfileFix = "setupPowerProfileFix";
@@ -22,9 +20,7 @@
     setupHyprlockPam = [ "setupPamWrappers" ];
     setupHyprKeyringPam = [ "setupHyprlockPam" ];
     setupHyprSession = [ "setupHyprKeyringPam" ];
-    setupGreetd = [ "setupHyprSession" ];
-    setupConsoleFont = [ "setupGreetd" ];
-    setupSnapThemes = [ "setupConsoleFont" ];
+    setupSnapThemes = [ "setupHyprSession" ];
     setupVpnPolkit = [ "setupSnapThemes" ];
     setupPowerProfileFix = [ "setupVpnPolkit" ];
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];
