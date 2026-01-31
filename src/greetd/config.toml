@@ -1,0 +1,22 @@
+# greetd configuration
+# See: https://man.sr.ht/~kennylevinsen/greetd/
+
+[terminal]
+# The VT to run the greeter on. Can be "next", "current" or a number
+# designating the VT.
+vt = 1
+
+[default_session]
+# The default session to run when no session is specified
+# This runs tuigreet with Hyprland as the default session
+# Catppuccin Mocha theme colors:
+# - Base (background): #1e1e2e
+# - Text: #cdd6f4
+# - Mauve (borders/titles): #cba6f7
+# - Blue (prompts): #89b4fa
+# - Green (input): #a6e3a1
+# - Peach (actions): #fab387
+# - Yellow (buttons): #f9e2af
+# - Red (time): #f38ba8
+command = "tuigreet --time --time-format '%F %R' --remember --remember-session --asterisks --theme 'border=magenta;text=white;prompt=blue;time=red;action=yellow;button=yellow;container=black;input=green;title=magenta;greet=cyan' --greeting 'Welcome to Hyprland' --cmd start-hyprland"
+user = "greeter"

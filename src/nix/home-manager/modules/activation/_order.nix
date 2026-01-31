@@ -4,8 +4,10 @@
     mutableConfig = "customConfigCleanUp";
     setupPamWrappers = "setupPamWrappers";
     setupHyprlockPam = "setupHyprlockPam";
-    setupHyprKeyringPam = "setupHyprKeyringPam";
-    setupHyprSession = "setupHyprSession";
+    setupHyprKeyringPam = "setupHyprlockPam";
+    setupHyprSession = "setupHyprKeyringPam";
+    setupGreetd = "setupGreetd";
+    setupConsoleFont = "setupConsoleFont";
     setupSnapThemes = "setupSnapThemes";
     setupVpnPolkit = "setupVpnPolkit";
     setupPowerProfileFix = "setupPowerProfileFix";
@@ -20,7 +22,9 @@
     setupHyprlockPam = [ "setupPamWrappers" ];
     setupHyprKeyringPam = [ "setupHyprlockPam" ];
     setupHyprSession = [ "setupHyprKeyringPam" ];
-    setupSnapThemes = [ "setupHyprSession" ];
+    setupGreetd = [ "setupHyprSession" ];
+    setupConsoleFont = [ "setupGreetd" ];
+    setupSnapThemes = [ "setupConsoleFont" ];
     setupVpnPolkit = [ "setupSnapThemes" ];
     setupPowerProfileFix = [ "setupVpnPolkit" ];
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];

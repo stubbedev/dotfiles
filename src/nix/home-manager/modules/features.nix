@@ -38,6 +38,11 @@ _: {
           default = true;
           description = "Enable opencode package and config.";
         };
+        greetd = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable greetd display manager with tuigreet.";
+        };
       };
     };
 }
