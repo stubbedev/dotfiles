@@ -8,7 +8,7 @@ helpers.mkSudoSetupModule {
   activationName = "setupConsoleFont";
   scriptName = "setup-console-font";
   after = order.after.setupConsoleFont;
-  enableIf = { config, ... }: config.features.greetd or false;
+  enableIf = { config, ... }: config.features.greetd;
   sudoArgs =
     { config, pkgs, ... }:
     let

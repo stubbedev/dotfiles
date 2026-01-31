@@ -8,7 +8,7 @@ helpers.mkSudoSetupModule {
   activationName = "setupGreetd";
   scriptName = "setup-greetd";
   after = order.after.setupGreetd;
-  enableIf = { config, ... }: config.features.greetd or false;
+  enableIf = { config, ... }: config.features.greetd;
   sudoArgs = { config, ... }:
     let
       configPath = "/etc/greetd/config.toml";
