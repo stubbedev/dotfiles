@@ -8,12 +8,19 @@ _: {
       ...
     }:
     lib.mkIf config.features.hyprland {
+      systemd.user.targets = {
+        hyprland-session = {
+          Unit = {
+            Description = "Hyprland session";
+          };
+        };
+      };
       systemd.user.services = {
         xdg-desktop-portal-hyprland = {
           Unit = {
             Description = "Portal service (Hyprland implementation)";
-            PartOf = [ "graphical-session.target" ];
-            After = [ "graphical-session.target" ];
+            PartOf = [ "hyprland-session.target" ];
+            After = [ "hyprland-session.target" ];
           };
           Service = {
             Type = "dbus";
@@ -82,15 +89,15 @@ _: {
             Description = "Waybar - Highly customizable Wayland bar";
             Documentation = "https://github.com/Alexays/Waybar/wiki";
             After = [
-              "graphical-session.target"
+              "hyprland-session.target"
               "power-profiles-daemon.service"
               "xdg-desktop-portal-hyprland.service"
             ];
             Wants = [ "power-profiles-daemon.service" ];
-            PartOf = [ "graphical-session.target" ];
+            PartOf = [ "hyprland-session.target" ];
           };
           Install = {
-            WantedBy = [ "graphical-session.target" ];
+            WantedBy = [ "hyprland-session.target" ];
           };
           Service = {
             Type = "simple";
@@ -104,11 +111,11 @@ _: {
         swaync = {
           Unit = {
             Description = "SwayNotificationCenter";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
+            After = [ "hyprland-session.target" ];
+            PartOf = [ "hyprland-session.target" ];
           };
           Install = {
-            WantedBy = [ "graphical-session.target" ];
+            WantedBy = [ "hyprland-session.target" ];
           };
           Service = {
             Type = "dbus";
