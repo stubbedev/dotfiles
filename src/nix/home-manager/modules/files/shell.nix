@@ -14,7 +14,6 @@ _: {
           fi
         '';
         ".ideavimrc".source = ../../../../ideavim/ideavimrc;
-        ".tmux.conf".source = ../../../../tmux/tmux.conf;
       };
     };
 }
