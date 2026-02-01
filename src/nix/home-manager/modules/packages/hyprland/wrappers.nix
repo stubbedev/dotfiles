@@ -14,25 +14,16 @@ _: {
       inherit (pkgs.stdenv.hostPlatform) system;
       hyprlandPkg = hyprland.packages.${system}.hyprland;
       homeDir = config.home.homeDirectory;
-      desiredPaths = [
-        "${homeDir}/.cargo/bin"
-        "${homeDir}/.nix-profile/bin"
-        "${homeDir}/.local/bin"
-        "${homeDir}/.local/share/flatpak/exports/bin"
-        "/var/lib/flatpak/exports/bin"
-        "/usr/local/bin"
-        "/usr/bin"
-        "/bin"
-      ];
+      desiredPaths =
+        map (path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path) config.home.sessionPath;
 
-      desiredDataDirs = [
-        "${homeDir}/.local/share/flatpak/exports/share"
-        "${homeDir}/.nix-profile/share"
-        "/nix/var/nix/profiles/default/share"
-        "/var/lib/flatpak/exports/share"
-        "/usr/local/share"
-        "/usr/share"
-      ];
+      desiredDataDirs =
+        let
+          rawDataDirs = lib.splitString ":" (config.home.sessionVariables.XDG_DATA_DIRS or "");
+          replaceHome = path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path;
+          isPlaceholder = value: value == "$XDG_DATA_DIRS" || value == "\${XDG_DATA_DIRS}";
+        in
+        map replaceHome (builtins.filter (value: value != "" && !isPlaceholder value) rawDataDirs);
 
       pathPrefix = lib.concatStringsSep ":" desiredPaths;
       dataDirsPrefix = lib.concatStringsSep ":" desiredDataDirs;
