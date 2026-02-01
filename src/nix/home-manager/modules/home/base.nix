@@ -16,6 +16,7 @@ _: {
           "/usr/local/bin"
           "/usr/bin"
           "/bin"
+          "/sbin"
         ];
       };
     };
