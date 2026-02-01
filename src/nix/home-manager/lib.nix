@@ -6,7 +6,7 @@
 }:
 rec {
   gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo; };
-  inherit (gfxLib) gfx gfxNameWith gfxExe;
+  inherit (gfxLib) gfx gfxExe gfxBinIncDrivers gfxBinExeIncDrivers;
 
   # Convert string path to path type
   stringToPath =
