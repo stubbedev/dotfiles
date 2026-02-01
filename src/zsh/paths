@@ -2,6 +2,7 @@
 # EXPAND LIST WITH DESIRED PATHS
 
 STUBBE_PATHS=(
+  "$HOME/.nix-profile/bin"
   "$HOME/.stubbe/bin"
   "$HOME/.stubbe/src/go/bin"
   "$HOME/.stubbe/src/go/packages/bin"
@@ -18,8 +19,6 @@ STUBBE_PATHS=(
   "$HOME/go/bin"
   "$HOME/bin"
   "$HOME/.pyenv/bin"
-  "$HOME/.nix-profile/bin"
-  "/home/linuxbrew/.linuxbrew/bin"
   "/sbin"
 )
 
