@@ -14,6 +14,9 @@ _: {
           icon-theme = "Vimix-dark";
           cursor-theme = "Vimix-cursors";
         };
+        "org/blueman/general" = {
+          notification-daemon = true;
+        };
       };
     };
 }

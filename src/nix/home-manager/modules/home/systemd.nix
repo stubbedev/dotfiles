@@ -100,6 +100,24 @@ _: {
             RestartSec = "3s";
           };
         };
+
+        swaync = {
+          Unit = {
+            Description = "SwayNotificationCenter";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Install = {
+            WantedBy = [ "graphical-session.target" ];
+          };
+          Service = {
+            Type = "dbus";
+            BusName = "org.freedesktop.Notifications";
+            ExecStart = "${constants.paths.nixBin}/swaync";
+            Restart = "on-failure";
+            RestartSec = "2s";
+          };
+        };
       };
     };
 }

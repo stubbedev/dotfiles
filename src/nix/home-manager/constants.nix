@@ -6,6 +6,7 @@
     zsh = "${config.home.homeDirectory}/.stubbe/src/zsh";
     hypr = "${config.home.homeDirectory}/.stubbe/src/hypr";
     term = "${config.home.homeDirectory}/.nix-profile/bin/alacritty";
+    nixBin = "${config.home.homeDirectory}/.nix-profile/bin";
   };
 
   # User information
