@@ -16,7 +16,7 @@ _: {
       home.packages = with pkgs; [
         (homeLib.gfx hyprlock)
         (homeLib.gfxExe "hyprland-guiutils" guiutils)
-        (homeLib.gfx hyprshot)
+        hyprshot
         hyprlang
         hyprkeys
         hypridle
