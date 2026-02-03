@@ -415,6 +415,33 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
     git stash
     git stash drop
   }
+
+  function gwa {
+    in_git_repo || return 1
+
+    if [[ -z "$(git status --porcelain)" ]]; then
+      return 0
+    fi
+
+    local choice=$(echo -e "No\nYes" |
+      fzf \
+        --no-input \
+        --header="[WARN] Local Branch: Wipe Non-Pushed Changes" \
+        --reverse \
+        --height=3 \
+        --no-info \
+        --no-multi \
+        --exit-0)
+
+    if [[ "$choice" != "Yes" ]]; then
+      return 0
+    fi
+
+    git add .
+    git stash
+    git stash clear
+  }
+
   function ggo {
     in_git_repo || return 1
 
