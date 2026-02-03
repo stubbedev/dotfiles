@@ -22,13 +22,14 @@ _: {
         hypridle
         (homeLib.gfx hyprpaper)
         hyprsunset
-        (homeLib.gfx hyprpicker)
+        hyprpicker
         hyprcursor
         hyprpolkitagent
         hyprutils
         hyprprop
-        (homeLib.gfx hyprsysteminfo)
+        hyprsysteminfo
         hyprwayland-scanner
+        hyprpwcenter
       ];
     };
 }
