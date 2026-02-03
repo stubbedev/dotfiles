@@ -419,10 +419,6 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
   function gwa {
     in_git_repo || return 1
 
-    if [[ -z "$(git status --porcelain)" ]]; then
-      return 0
-    fi
-
     local choice=$(echo -e "No\nYes" |
       fzf \
         --no-input \
