@@ -6,17 +6,5 @@
     "leader": "ctrl+space",
     "command_list": "alt+space",
     "app_exit": "ctrl+c,ctrl+d,ctrl+q,<leader>q"
-  },
-  "mcp": {
-    "kontainer": {
-      "type": "remote",
-      "url": "http://kontainer.test/mcp",
-      "enabled": false,
-      "oauth": {
-        "clientId": "{env:MCP_CLIENT_ID}",
-        "clientSecret": "{env:MCP_CLIENT_SECRET}",
-        "scope": "mcp:use"
-      }
-    }
   }
-}
+ }
