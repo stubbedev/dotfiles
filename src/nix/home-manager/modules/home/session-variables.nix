@@ -27,6 +27,7 @@ _: {
 
           # Node
           NODE_USE_SYSTEM_CA = "1";
+          NODE_EXTRA_CA_CERTS = "${config.home.homeDirectory}/.cache/node/extra-ca.pem";
 
           # Go configuration
           GOROOT = "${config.home.homeDirectory}/.go";

@@ -10,6 +10,7 @@
     setupVpnPolkit = "setupVpnPolkit";
     setupPowerProfileFix = "setupPowerProfileFix";
     setupGrubIntelPstate = "setupGrubIntelPstate";
+    setupNodeCaBundle = "setupNodeCaBundle";
     restartWaybar = "restartWaybar";
   };
 
@@ -24,6 +25,7 @@
     setupVpnPolkit = [ "setupSnapThemes" ];
     setupPowerProfileFix = [ "setupVpnPolkit" ];
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];
+    setupNodeCaBundle = [ "writeBoundary" ];
     restartWaybar = [ "setupGrubIntelPstate" ];
   };
 }
