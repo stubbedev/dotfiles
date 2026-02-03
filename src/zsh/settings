@@ -30,14 +30,6 @@ zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept --height=40% 
 zstyle ':fzf-tab:*' switch-group '<' '>'
 zstyle ':fzf-tab:*' fuzzy-search true
 
-export FZF_DEFAULT_OPTS=" \
---color=bg+:-1,bg:-1,spinner:#f5e0dc,hl:#f38ba8 \
---color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
---color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8 \
---color=selected-bg:-1,selected-fg:#b4befe \
---color=current-fg:#cba6f7 \
---multi"
-
 HYPHEN_INSENSITIVE=false
 DISABLE_AUTO_TITLE=true
 ENABLE_CORRECTION=true
@@ -55,13 +47,6 @@ setopt EXTENDED_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt COMPLETE_ALIASES
 
-# FOR CLIPBOARD STUFF
-export MANPAGER="sh -c 'col -bx | bat -l man -p'"
-export MANROFFOPT="-c"
-export DEPLOYER_REMOTE_USER="abs"
-export NIXPKGS_ALLOW_UNFREE=1
-export NIXPKGS_ALLOW_INSECURE=1
-
 bindkey -s "^[A" "tmux-lazy-docker^M"
 bindkey -s "^[t" "tmux-new-session^M"
 bindkey -s "^[g" "tmux-lazy-git^M"
@@ -76,17 +61,9 @@ if is_binary fzf; then
     # Load fzf shell integration (but don't let it bind TAB, we use fzf-tab instead)
     # We'll load it without completion bindings
     source <(fzf --zsh | grep -v "bindkey '^I'")
-    export FZF_CTRL_T_OPTS="
-      --walker-skip .git,node_modules,target
-      --preview '[[ -f {} ]] && bat -n --color=always {} || ls -lhA --color=always {}'
-      --bind 'ctrl-/:change-preview-window(down|hidden|)'"
-    export FZF_CTRL_R_OPTS=""
-    export FZF_ALT_C_COMMAND=""
 fi
 
 if is_binary starship; then
-    export STARSHIP_CONFIG="$HOME/.stubbe/src/starship/starship.toml"
-    export STARSHIP_LOG="error"
     type starship_zle-keymap-select >/dev/null || \
       {
         eval "$(starship init zsh)"
@@ -97,4 +74,3 @@ if is_binary pyenv; then
     eval "$(pyenv init -)"
     eval "$(pyenv virtualenv-init -)"
 fi
-

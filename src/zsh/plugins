@@ -5,11 +5,6 @@ if [[ ! -o interactive ]] || [[ ! -t 0 ]]; then
   return 0
 fi
 
-# SHELL THEME
-if ! is_binary $(which starship); then
-  curl -sS https://starship.rs/install.sh | sh
-fi
-
 local -a plugins=(
   "Aloxaf/fzf-tab"
   "zsh-users/zsh-autosuggestions"
