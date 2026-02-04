@@ -109,7 +109,9 @@
       "🌗",
       "🌖",
       "🌕"
-    ]
+    ],
+    "on-scroll-up": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh increase",
+    "on-scroll-down": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh decrease"
   },
   "battery": {
     "states": {
