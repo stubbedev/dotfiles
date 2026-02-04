@@ -65,6 +65,24 @@ _: {
           };
         };
 
+        await-gnome-keyring = {
+          Unit = {
+            Description = "Restart Waybar when gnome-keyring is ready";
+            After = [
+              "hyprland-session.target"
+              "gnome-keyring-daemon.service"
+            ];
+          };
+          Install = {
+            WantedBy = [ "default.target" ];
+          };
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
+            Restart = "no";
+          };
+        };
+
         power-profile-fix = {
           Unit = {
             Description = "Fix CPU frequency scaling for power profiles";
