@@ -85,61 +85,134 @@ set_pstate_limits() {
   fi
 }
 
+set_policy_freqs() {
+  local min_pct="$1"
+  local max_pct="$2"
+  local helper=$(get_helper_path)
+
+  if [ -n "$helper" ]; then
+    log "Setting policy freqs: min=${min_pct}%, max=${max_pct}%"
+    pkexec "$helper" set-policy-freqs "$min_pct" "$max_pct" 2>&1 | logger -t power-profile-fix || true
+  fi
+}
+
+set_schedutil_tunables() {
+  local up_rate_us="$1"
+  local down_rate_us="$2"
+  local iowait_enable="$3"
+  local helper=$(get_helper_path)
+
+  if [ -n "$helper" ]; then
+    log "Setting schedutil tunables: up=${up_rate_us}us down=${down_rate_us}us iowait=${iowait_enable}"
+    pkexec "$helper" set-schedutil "$up_rate_us" "$down_rate_us" "$iowait_enable" 2>&1 | logger -t power-profile-fix || true
+  fi
+}
+
+set_boost() {
+  local enable="$1"
+  local helper=$(get_helper_path)
+
+  if [ -n "$helper" ]; then
+    log "Setting turbo/boost to: $enable"
+    pkexec "$helper" set-boost "$enable" 2>&1 | logger -t power-profile-fix || true
+  fi
+}
+
+is_high_load() {
+  local load cores
+  load=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo "0")
+  cores=$(nproc 2>/dev/null || echo "1")
+  # Return success if load >= 0.7 * cores
+  awk -v l="$load" -v c="$cores" 'BEGIN { exit (l >= c*0.7 ? 0 : 1) }'
+}
+
 apply_profile_fix() {
   local profile="$1"
 
+  # Defaults
+  local gov="schedutil"
+  local epp="balance_power"
+  local min_pct=10
+  local max_pct=100
+  local boost=1
+
   if is_passive_mode; then
-    # Passive mode: Use software governors (schedutil, ondemand, etc.)
     case "$profile" in
     power-saver)
-      # Use powersave governor for maximum battery life
-      # Let schedutil handle scaling - it's smarter than powersave
-      set_governor "schedutil"
-      set_pstate_limits 9 100
-      set_epp "power" # Hint if available
-      log "Applied fix for power-saver profile (governor: schedutil, min: 9%, max: 100%)"
+      gov="schedutil"
+      epp="power"
+      min_pct=10
+      max_pct=70
+      boost=0
       ;;
     balanced)
-      # Use schedutil for responsive yet efficient scaling
-      set_governor "schedutil"
-      set_pstate_limits 15 100
-      set_epp "balance_performance" # Hint if available
-      log "Applied fix for balanced profile (governor: schedutil, min: 15%, max: 100%)"
+      gov="schedutil"
+      epp="balance_performance"
+      min_pct=30
+      max_pct=100
+      boost=1
       ;;
     performance)
-      # Use performance governor for maximum responsiveness
-      set_governor "performance"
-      set_pstate_limits 25 100
-      set_epp "performance" # Hint if available
-      log "Applied performance profile (governor: performance, min: 25%, max: 100%)"
+      gov="performance"
+      epp="performance"
+      min_pct=85
+      max_pct=100
+      boost=1
       ;;
     *)
       log "Unknown profile: $profile, skipping"
+      return
       ;;
     esac
   else
-    # Active mode: Use EPP hints for HWP
     case "$profile" in
     power-saver)
-      set_epp "balance_power"
-      set_pstate_limits 9 100
-      log "Applied fix for power-saver profile (EPP: balance_power, min: 9%, max: 100%)"
+      gov="schedutil"
+      epp="balance_power"
+      min_pct=10
+      max_pct=70
+      boost=0
       ;;
     balanced)
-      set_epp "balance_performance"
-      set_pstate_limits 15 100
-      log "Applied fix for balanced profile (EPP: balance_performance, min: 15%, max: 100%)"
+      gov="schedutil"
+      epp="balance_performance"
+      min_pct=30
+      max_pct=100
+      boost=1
       ;;
     performance)
-      set_epp "performance"
-      set_pstate_limits 25 100
-      log "Applied performance profile (EPP: performance, min: 25%, max: 100%)"
+      gov="performance"
+      epp="performance"
+      min_pct=85
+      max_pct=100
+      boost=1
       ;;
     *)
       log "Unknown profile: $profile, skipping"
+      return
       ;;
     esac
   fi
+
+  set_governor "$gov"
+  set_epp "$epp"
+  set_policy_freqs "$min_pct" "$max_pct"
+  set_pstate_limits "$min_pct" "$max_pct"
+  set_boost "$boost"
+  if [ "$gov" = "schedutil" ]; then
+    case "$profile" in
+    power-saver)
+      set_schedutil_tunables 30000 80000 0
+      ;;
+    balanced)
+      set_schedutil_tunables 20000 60000 0
+      ;;
+    performance)
+      set_schedutil_tunables 5000 20000 1
+      ;;
+    esac
+  fi
+  log "Applied profile=$profile gov=$gov epp=$epp min=${min_pct}% max=${max_pct}% boost=$boost"
 }
 
 # If called with a profile argument, apply it once
@@ -188,11 +261,17 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
 
           # Double check profile hasn't changed again during wait
           current_check=$(get_current_profile)
-          if [[ "$current_check" == "$new_profile" ]]; then
-            apply_profile_fix "$new_profile"
-          else
+          if [[ "$current_check" != "$new_profile" ]]; then
             log "Profile changed again during downscale delay to: $current_check - skipping downscale"
+            continue
           fi
+
+          if is_high_load; then
+            log "Skipping downscale to $new_profile due to high load"
+            continue
+          fi
+
+          apply_profile_fix "$new_profile"
         fi
 
         current_profile="$new_profile"
