@@ -28,6 +28,8 @@ _: {
           # Node
           NODE_USE_SYSTEM_CA = "1";
           NODE_EXTRA_CA_CERTS = "${config.home.homeDirectory}/.cache/node/extra-ca.pem";
+          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
 
           # Go configuration
           GOROOT = "${config.home.homeDirectory}/.go";

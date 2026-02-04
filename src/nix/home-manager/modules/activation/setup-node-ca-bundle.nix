@@ -28,8 +28,19 @@ in
 
         add_dir() {
           [ -d "$1" ] || return 0
-          for f in "$1"/*.pem "$1"/*.crt "$1"/*.cer; do
-            [ -f "$f" ] && cat "$f" >> "$tmp"
+          find "$1" -maxdepth 1 \( -name '*.pem' -o -name '*.crt' -o -name '*.cer' \) -type f -print0 |
+            xargs -0 -r cat >> "$tmp"
+        }
+
+        add_valet_paths() {
+          for dir in \
+            "$HOME/.valet" \
+            "$HOME/.config/valet" \
+            "''${XDG_DATA_HOME:-$HOME/.local/share}/valet" \
+            "''${XDG_CONFIG_HOME:-$HOME/.config}/valet"; do
+            [ -d "$dir" ] || continue
+            add_dir "$dir/CA"
+            add_dir "$dir/Certificates"
           done
         }
 
@@ -42,8 +53,7 @@ in
           [ -n "$caroot" ] && add_file "$caroot/rootCA.pem"
         fi
 
-        add_dir "$HOME/.valet/CA"
-        add_dir "$HOME/.config/valet/CA"
+        add_valet_paths
 
         mv "$tmp" "$bundle"
       '';
