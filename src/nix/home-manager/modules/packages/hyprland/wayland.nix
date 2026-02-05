@@ -15,6 +15,7 @@ _: {
         (homeLib.gfx slurp)
         (homeLib.gfx grim)
         wl-clip-persist
+        wl-clipboard
       ];
     };
 }

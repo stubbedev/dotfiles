@@ -25,6 +25,8 @@ _: {
         hyprpicker # might need wrapping
         hyprcursor
         hyprpolkitagent
+        hyprtoolkit
+        hyprlauncher
         hyprutils
         hyprprop
         hyprsysteminfo # might need wrapping

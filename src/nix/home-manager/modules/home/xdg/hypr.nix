@@ -18,6 +18,8 @@ _: {
           "hypr/hyprlock.conf"
           "hypr/hyprpaper.conf"
           "hypr/hyprsunset.conf"
+          "hypr/hyprtoolkit.conf"
+          # "hypr/hyprlauncher.conf"
           "hypr/keybinds.conf"
           "hypr/monitors.conf"
           "hypr/settings.conf"
