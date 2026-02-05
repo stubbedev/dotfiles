@@ -8,6 +8,7 @@ set -euo pipefail
 STARTUP_WARMUP_SECONDS=${STARTUP_WARMUP_SECONDS:-75}
 STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-75}
 STARTUP_WARMUP_MAX_PCT=${STARTUP_WARMUP_MAX_PCT:-100}
+PKEXEC_CMD=(pkexec --disable-internal-agent)
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | systemd-cat -t power-profile-fix -p info
@@ -63,7 +64,7 @@ set_governor() {
   log "Setting CPU governor to: $governor"
 
   if [ -n "$helper" ]; then
-    pkexec "$helper" set-governor "$governor" 2>&1 | logger -t power-profile-fix || true
+    "${PKEXEC_CMD[@]}" "$helper" set-governor "$governor" 2>&1 | logger -t power-profile-fix || true
   fi
 }
 
@@ -74,7 +75,7 @@ set_epp() {
   log "Setting EPP to: $epp"
 
   if [ -n "$helper" ]; then
-    pkexec "$helper" set-epp "$epp" 2>&1 | logger -t power-profile-fix || true
+    "${PKEXEC_CMD[@]}" "$helper" set-epp "$epp" 2>&1 | logger -t power-profile-fix || true
   fi
 }
 
@@ -85,7 +86,7 @@ set_pstate_limits() {
 
   if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ] && [ -n "$helper" ]; then
     log "Setting Intel P-state limits: min=$min_perf%, max=$max_perf%"
-    pkexec "$helper" set-pstate-limits "$min_perf" "$max_perf" 2>&1 | logger -t power-profile-fix || true
+    "${PKEXEC_CMD[@]}" "$helper" set-pstate-limits "$min_perf" "$max_perf" 2>&1 | logger -t power-profile-fix || true
   fi
 }
 
@@ -96,7 +97,17 @@ set_policy_freqs() {
 
   if [ -n "$helper" ]; then
     log "Setting policy freqs: min=${min_pct}%, max=${max_pct}%"
-    pkexec "$helper" set-policy-freqs "$min_pct" "$max_pct" 2>&1 | logger -t power-profile-fix || true
+    "${PKEXEC_CMD[@]}" "$helper" set-policy-freqs "$min_pct" "$max_pct" 2>&1 | logger -t power-profile-fix || true
+  fi
+}
+
+set_policy_min_freqs() {
+  local min_pct="$1"
+  local helper=$(get_helper_path)
+
+  if [ -n "$helper" ]; then
+    log "Setting policy min freqs: min=${min_pct}%"
+    "${PKEXEC_CMD[@]}" "$helper" set-policy-min "$min_pct" 2>&1 | logger -t power-profile-fix || true
   fi
 }
 
@@ -108,7 +119,7 @@ set_schedutil_tunables() {
 
   if [ -n "$helper" ]; then
     log "Setting schedutil tunables: up=${up_rate_us}us down=${down_rate_us}us iowait=${iowait_enable}"
-    pkexec "$helper" set-schedutil "$up_rate_us" "$down_rate_us" "$iowait_enable" 2>&1 | logger -t power-profile-fix || true
+    "${PKEXEC_CMD[@]}" "$helper" set-schedutil "$up_rate_us" "$down_rate_us" "$iowait_enable" 2>&1 | logger -t power-profile-fix || true
   fi
 }
 
@@ -118,7 +129,7 @@ set_boost() {
 
   if [ -n "$helper" ]; then
     log "Setting turbo/boost to: $enable"
-    pkexec "$helper" set-boost "$enable" 2>&1 | logger -t power-profile-fix || true
+    "${PKEXEC_CMD[@]}" "$helper" set-boost "$enable" 2>&1 | logger -t power-profile-fix || true
   fi
 }
 

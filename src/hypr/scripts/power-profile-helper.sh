@@ -50,6 +50,18 @@ case "${1:-}" in
             write_value "$policy/scaling_max_freq" "$max_cap_khz"
         done
         ;;
+    set-policy-min)
+        # Set per-policy min frequency as percentage of hardware max, leave max untouched
+        # Args: <min_pct>
+        min_pct="$2"
+        for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+            [ -d "$policy" ] || continue
+            max_khz=$(cat "$policy/cpuinfo_max_freq" 2>/dev/null || echo "")
+            [ -n "$max_khz" ] || continue
+            min_khz=$((max_khz * min_pct / 100))
+            write_value "$policy/scaling_min_freq" "$min_khz"
+        done
+        ;;
     set-schedutil)
         # Set schedutil tunables if governor is schedutil
         # Args: <up_rate_us> <down_rate_us> <iowait_boost_enable>
@@ -79,7 +91,7 @@ case "${1:-}" in
         fi
         ;;
     *)
-        echo "Usage: $0 {set-governor|set-epp|set-pstate-limits|set-policy-freqs|set-schedutil|set-boost} <args>"
+        echo "Usage: $0 {set-governor|set-epp|set-pstate-limits|set-policy-freqs|set-policy-min|set-schedutil|set-boost} <args>"
         exit 1
         ;;
 esac
