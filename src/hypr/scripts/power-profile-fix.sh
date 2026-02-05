@@ -5,6 +5,10 @@
 
 set -euo pipefail
 
+STARTUP_WARMUP_SECONDS=${STARTUP_WARMUP_SECONDS:-75}
+STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-75}
+STARTUP_WARMUP_MAX_PCT=${STARTUP_WARMUP_MAX_PCT:-100}
+
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | systemd-cat -t power-profile-fix -p info
 }
@@ -118,6 +122,31 @@ set_boost() {
   fi
 }
 
+apply_startup_warmup() {
+  local profile="$1"
+
+  case "$profile" in
+  balanced | power-saver)
+    log "Startup warmup for $profile: holding min freq at ${STARTUP_WARMUP_MIN_PCT}% for ${STARTUP_WARMUP_SECONDS}s"
+    set_policy_freqs "$STARTUP_WARMUP_MIN_PCT" "$STARTUP_WARMUP_MAX_PCT"
+    set_pstate_limits "$STARTUP_WARMUP_MIN_PCT" "$STARTUP_WARMUP_MAX_PCT"
+    (
+      sleep "$STARTUP_WARMUP_SECONDS"
+      local active_profile
+      active_profile=$(get_current_profile)
+      if [[ "$active_profile" = "$profile" ]]; then
+        log "Startup warmup complete; restoring defaults for $profile"
+        apply_profile_fix "$profile"
+      else
+        log "Startup warmup complete; current profile is $active_profile, skipping revert"
+      fi
+    ) &
+    ;;
+  *)
+    ;;
+  esac
+}
+
 is_high_load() {
   local load cores
   load=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo "0")
@@ -228,6 +257,7 @@ log "Starting power profile monitor"
 current_profile=$(get_current_profile)
 log "Current profile on startup: $current_profile"
 apply_profile_fix "$current_profile"
+apply_startup_warmup "$current_profile"
 
 # Monitor for profile changes using dbus-monitor
 dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/net/hadess/PowerProfiles'" 2>/dev/null |
