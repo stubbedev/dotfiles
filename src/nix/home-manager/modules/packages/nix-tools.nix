@@ -10,7 +10,6 @@ _: {
       home.packages = with pkgs; [
         nix-zsh-completions
         nh
-        home-manager
         pass
         age
         cachix
