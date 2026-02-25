@@ -110,14 +110,14 @@ _: {
                         shift
                         update_system
                         home-manager switch --flake "$hm_flake_ref" --impure "$@"
-                        nix-store --gc --quiet
+                        nix-store --gc --quiet &!
                         ;;
                       help|-h|--help)
                         usage
                         ;;
                       *)
                         home-manager --impure "$@"
-                        nix-store --gc --quiet
+                        nix-store --gc --quiet &!
                         ;;
                     esac
         '')
