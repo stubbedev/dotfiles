@@ -2,9 +2,17 @@
   "$schema": "https://opencode.ai/config.json",
   "theme": "catppuccin",
   "autoupdate": true,
+  "plugin": [
+    "@tarquinen/opencode-dcp@latest",
+    "@franlol/opencode-md-table-formatter@latest",
+    "opencode-websearch-cited@1.2.0" // Must be last
+  ],
+  "instructions": [
+    "~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"
+  ],
   "keybinds": {
     "leader": "ctrl+space",
-    "command_list": "alt+space",
+    "command_list": "alt+shift+space",
     "app_exit": "ctrl+c,ctrl+d,ctrl+q,<leader>q"
   }
  }
