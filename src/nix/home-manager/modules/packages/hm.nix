@@ -109,23 +109,15 @@ _: {
                       upgrade)
                         shift
                         update_system
-                        if ! has_cmd home-manager; then
-                          echo "home-manager is not available on PATH" >&2
-                          exit 1
-                        fi
                         home-manager switch --flake "$hm_flake_ref" --impure "$@"
-                        nh clean user -q
+                        nix-store --gc --quiet
                         ;;
                       help|-h|--help)
                         usage
                         ;;
                       *)
-                        if ! has_cmd home-manager; then
-                          echo "home-manager is not available on PATH" >&2
-                          exit 1
-                        fi
                         home-manager --impure "$@"
-                        nh clean user -q
+                        nix-store --gc --quiet
                         ;;
                     esac
         '')
