@@ -3,7 +3,6 @@
   "theme": "catppuccin",
   "autoupdate": true,
   "plugin": [
-    "@tarquinen/opencode-dcp@latest",
     "@franlol/opencode-md-table-formatter@latest",
     "opencode-websearch-cited@1.2.0" // Must be last
   ],
