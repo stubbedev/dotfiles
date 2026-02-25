@@ -114,6 +114,7 @@ _: {
                           exit 1
                         fi
                         home-manager switch --flake "$hm_flake_ref" --impure "$@"
+                        nh clean user -q
                         ;;
                       help|-h|--help)
                         usage
@@ -123,7 +124,8 @@ _: {
                           echo "home-manager is not available on PATH" >&2
                           exit 1
                         fi
-                        exec home-manager --impure "$@"
+                        home-manager --impure "$@"
+                        nh clean user -q
                         ;;
                     esac
         '')
