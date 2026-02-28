@@ -27,7 +27,7 @@
           vpnConfigs
           vpnScripts
           ;
-        inherit (inputs) hyprland hy3;
+        inherit (inputs) hyprland hy3 fenix;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
       };
     };
