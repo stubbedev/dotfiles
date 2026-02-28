@@ -30,14 +30,16 @@ Optimized configuration for USB audio devices connected through docking stations
 
 **Settings:**
 - Sample rate: 48000 Hz
-- Quantum: 1024 samples (~21ms latency)
-- Min quantum: 512 samples
-- Max quantum: 2048 samples
+- Quantum: 4096 samples (~85ms latency)
+- Min quantum: 2048 samples
+- Max quantum: 8192 samples
 
 **When to adjust:**
-- If you still hear pops: increase quantum to 2048
-- If you need lower latency (direct connection, no KVM): decrease quantum to 256 or 512
-- For audio production work: decrease to 128-256 (but expect issues with USB/KVM)
+- If you still hear pops: increase quantum to 8192
+- If you need lower latency (direct connection, no KVM): decrease quantum to 1024 or 2048
+- For audio production work: decrease to 256-512 (but expect issues with USB/KVM)
+
+**Note:** The current settings are optimized for ThinkPad Thunderbolt 3 Dock → KVM Switch → DisplayPort Monitor → Audio Jack chain. This setup requires larger buffers due to additional USB latency and KVM switch timing jitter.
 
 ### `pipewire-pulse.conf.d/99-usb-dock.conf`
 
@@ -49,9 +51,9 @@ PipeWire's PulseAudio compatibility layer configuration.
 - `~/.config/pipewire/pipewire-pulse.conf.d/99-usb-dock.conf`
 
 **Settings:**
-- Minimum quantum/fragment: 1024 samples (21ms)
-- Default target length: 2048 samples (42ms)
-- Stream latency: 21ms
+- Minimum quantum/fragment: 4096 samples (85ms)
+- Default target length: 8192 samples (170ms)
+- Stream latency: 85ms
 - Sample rate: 48000 Hz
 
 ### `pulse-client.conf`
@@ -82,13 +84,13 @@ WirePlumber rules for ALSA buffer configuration.
 - `~/.config/wireplumber/main.lua.d/51-alsa-usb-dock.lua`
 
 **Settings:**
-- General ALSA period size: 256 samples (default, works for most devices)
-- General ALSA: batching disabled for low latency
-- USB-specific period size: 1024 samples (4x larger for stability)
-- USB-specific headroom: 2048 samples
+- USB-specific period size: 4096 samples (85ms at 48kHz)
+- USB-specific period count: 2 periods
+- USB-specific headroom: 8192 samples
 - USB-specific: batching enabled for better buffering
 - Auto-suspend disabled (prevents pops when resuming)
 - Fixed 48kHz sample rate
+- Channel mapping disabled for stability
 
 **Why this matters:** ALSA is the lowest level before the hardware. These settings keep normal devices at low latency while giving USB audio devices extra buffers for KVM switch stability.
 
@@ -128,3 +130,32 @@ wpctl status
 ```bash
 cat /sys/module/usbcore/parameters/autosuspend
 ```
+
+### Check for conflicting manual configurations
+The Nix configuration may be overridden by manual config files. Check for these:
+```bash
+# These should be symlinks to /nix/store, not regular files
+ls -la ~/.config/pipewire/pipewire.conf.d/
+ls -la ~/.config/wireplumber/main.lua.d/
+
+# If you see regular files (not symlinks), they may be conflicting
+# Disable them by renaming to .disabled
+```
+
+### Audio popping troubleshooting checklist
+If you experience audio popping:
+
+1. **Check for config conflicts** - Ensure no manual configs override Nix
+2. **Verify quantum settings** - Should be 4096+ for USB through KVM
+3. **Test hardware path**:
+   - Try bypassing KVM switch temporarily
+   - Try direct dock audio output instead of monitor's audio jack
+   - Test with different speakers/cable
+4. **Check for electromagnetic interference**:
+   - Separate audio and power cables
+   - Use shielded cables
+   - Move dock away from power supplies
+5. **Monitor kernel logs** during playback:
+   ```bash
+   journalctl -f -k | grep -i "usb\|audio\|xhci"
+   ```

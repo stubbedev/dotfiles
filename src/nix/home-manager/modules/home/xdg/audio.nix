@@ -14,14 +14,11 @@ _: {
         # Low-latency PipeWire configuration for screen sharing and camera
         "pipewire/pipewire.conf.d/10-screenshare-optimize.conf"
 
-        # WirePlumber ALSA configuration for USB dock stability
-        "wireplumber/main.lua.d/51-alsa-usb-dock.lua"
-
-        # WirePlumber configuration to enable HDMI/DisplayPort audio
-        "wireplumber/main.lua.d/50-enable-hdmi-audio.lua"
-
-        # WirePlumber configuration to stop Bluetooth auto profile switching
-        "wireplumber/main.lua.d/60-disable-bt-autoswitch.lua"
+        # WirePlumber ALSA configuration (new .conf format for WirePlumber 1.4+)
+        "wireplumber/wireplumber.conf.d/50-enable-hdmi-audio.conf"
+        "wireplumber/wireplumber.conf.d/51-alsa-usb-dock.conf"
+        "wireplumber/wireplumber.conf.d/52-hdmi-dp-buffers.conf"
+        "wireplumber/wireplumber.conf.d/60-disable-bt-autoswitch.conf"
       ];
     };
 }

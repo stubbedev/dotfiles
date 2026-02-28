@@ -1,0 +1,12 @@
+# Disable USB power management for audio devices to prevent popping
+# This prevents USB audio devices from being auto-suspended, which can cause
+# audio pops, clicks, and dropouts especially with USB docks and KVM switches.
+
+# ThinkPad Thunderbolt 3 Dock Audio (17ef:306a) - device level only
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="17ef", ATTR{idProduct}=="306a", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="17ef", ATTR{idProduct}=="306a", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
+
+# Generic rule: Disable autosuspend for all USB Audio devices (device level)
+# Only apply to actual USB devices, not interfaces
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_CLASS}=="01", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_CLASS}=="01", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"

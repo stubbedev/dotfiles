@@ -11,9 +11,9 @@ table.insert(alsa_monitor.rules, {
     },
   },
   apply_properties = {
-    ["api.alsa.period-size"] = 2048,  -- Doubled for better stability with KVM switch
+    ["api.alsa.period-size"] = 4096,  -- Quadrupled for maximum stability with KVM switch
     ["api.alsa.period-num"] = 2,      -- Number of periods in buffer
-    ["api.alsa.headroom"] = 4096,     -- Doubled headroom for additional safety margin
+    ["api.alsa.headroom"] = 8192,     -- Quadrupled headroom for additional safety margin
     ["api.alsa.disable-batch"] = false,  -- Enable batching for USB
     ["session.suspend-timeout-seconds"] = 0,  -- Never suspend
     ["node.pause-on-idle"] = false,   -- Never pause when idle
