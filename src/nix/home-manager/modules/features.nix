@@ -38,6 +38,11 @@ _: {
           default = true;
           description = "Enable opencode package and config.";
         };
+        rust = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable rust toolchain installation";
+        };
       };
     };
 }

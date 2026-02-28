@@ -42,9 +42,6 @@ _: {
         # PHP tools (CLI)
         mago
 
-        # Rust tool chain
-        rustup
-
         # IDE toolbox (GUI app)
         (homeLib.gfx jetbrains-toolbox)
         networkmanager-openconnect
