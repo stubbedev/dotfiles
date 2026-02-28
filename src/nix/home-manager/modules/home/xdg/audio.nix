@@ -10,6 +10,8 @@ _: {
       xdg.configFile = homeLib.xdgSources [
         # Low-latency PipeWire configuration for screen sharing and camera
         "pipewire/pipewire.conf.d/10-screenshare-optimize.conf"
+        # Prevent initial pop when starting audio playback
+        "pipewire/pipewire.conf.d/11-prevent-startup-pop.conf"
 
         # WirePlumber ALSA configuration (new .conf format for WirePlumber 1.4+)
         "wireplumber/wireplumber.conf.d/50-enable-hdmi-audio.conf"
