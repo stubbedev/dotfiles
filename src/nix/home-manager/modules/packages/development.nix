@@ -42,6 +42,9 @@ _: {
         # PHP tools (CLI)
         mago
 
+        # c3
+        c3c
+
         # IDE toolbox (GUI app)
         (homeLib.gfx jetbrains-toolbox)
         networkmanager-openconnect
