@@ -32,7 +32,6 @@ _: {
           SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
 
           # Go configuration
-          GOROOT = "${config.home.homeDirectory}/.go";
           GOPATH = "${config.home.homeDirectory}/go";
 
           # Theme and custom variables
