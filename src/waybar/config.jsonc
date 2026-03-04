@@ -27,10 +27,8 @@
   ],
   "custom/tmux": {
     "exec": "~/.config/waybar/scripts/tmux-status.sh",
-    "return-type": "string",
     "format": "{}",
-    "interval": 3,
-    "markup": "pango"
+    "interval": 3
   },
   "custom/mail": {
     "exec": "~/.config/waybar/scripts/mail-status.sh",

@@ -8,7 +8,7 @@ while IFS=: read -r name windows attached; do
     else
         output+="[ $name:$windows] "
     fi
-done < <(tmux list-sessions -F "#{session_name}:#{session_windows}:#{session_attached}" 2>/dev/null)
+done < <(tmux -S "/run/user/$(id -u)/tmux-$(id -u)/default" list-sessions -F "#{session_name}:#{session_windows}:#{session_attached}" 2>/dev/null)
 
 # Remove trailing space
 output="${output% }"
