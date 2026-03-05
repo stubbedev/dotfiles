@@ -76,6 +76,7 @@ _: {
                       if has_cmd flatpak; then
                         echo "Updating flatpak packages"
                         flatpak update -y
+                        flatpak uninstall --unused -y
                       fi
 
                       if has_cmd nix; then
