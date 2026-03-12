@@ -11,6 +11,7 @@ _: {
         "opencode/opencode.json"
         "opencode/AGENTS.md"
         "opencode/themes/catppuccin-mocha.json"
+        "opencode/agents"
       ];
     };
 }
