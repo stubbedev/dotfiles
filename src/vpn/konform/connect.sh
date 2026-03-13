@@ -16,6 +16,7 @@ CONFIG_FILE="$CONFIG_DIR/config"
 PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 LOG_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.log"
+COOKIE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.cookie"
 OPENCONNECT_BIN="$(command -v openconnect || true)"
 SETSID_BIN="$(command -v setsid || true)"
 
@@ -87,6 +88,54 @@ if is_running; then
   exit 0
 fi
 
+# Try to use cached cookie if available and not expired (8 hours = 28800 seconds)
+cookie_valid=false
+if [ -f "$COOKIE_FILE" ]; then
+  cookie_age=$(($(date +%s) - $(stat -c %Y "$COOKIE_FILE" 2>/dev/null || echo 0)))
+  if [ "$cookie_age" -lt 28800 ]; then
+    cookie_valid=true
+  else
+    echo "Cached cookie expired (age: ${cookie_age}s), re-authenticating..."
+    rm -f "$COOKIE_FILE"
+  fi
+fi
+
+if [ "$cookie_valid" = true ]; then
+  echo "Attempting connection with cached session cookie..."
+
+  cookie=$(cat "$COOKIE_FILE")
+
+  cookie_args=(
+    "$OPENCONNECT_BIN"
+    --protocol=gp
+    --cookie-on-stdin
+    --interface "$IFACE_NAME"
+    --pid-file "$PID_FILE"
+    --syslog
+    --background
+    "$VPN_GATEWAY"
+  )
+
+  if [ -n "$SETSID_BIN" ]; then
+    if printf '%s\n' "$cookie" | run_as_root "$SETSID_BIN" "${cookie_args[@]}" 2>/dev/null; then
+      echo "${PROVIDER_NAME} VPN connected using cached session (no 2FA required)"
+      exit 0
+    else
+      echo "Cookie authentication failed, falling back to password authentication..."
+      rm -f "$COOKIE_FILE"
+    fi
+  else
+    if printf '%s\n' "$cookie" | run_as_root "${cookie_args[@]}" 2>/dev/null; then
+      echo "${PROVIDER_NAME} VPN connected using cached session (no 2FA required)"
+      exit 0
+    else
+      echo "Cookie authentication failed, falling back to password authentication..."
+      rm -f "$COOKIE_FILE"
+    fi
+  fi
+fi
+
+# Full authentication with password (and 2FA if required)
 password=$("$PASSWORD_SCRIPT")
 
 if [ -z "$password" ]; then
@@ -94,22 +143,74 @@ if [ -z "$password" ]; then
   exit 1
 fi
 
-openconnect_args=(
-  "$OPENCONNECT_BIN"
-  --protocol=gp
-  --user "$VPN_USERNAME"
-  --passwd-on-stdin
-  --interface "$IFACE_NAME"
-  --pid-file "$PID_FILE"
-  --syslog
-  --background
-  "$VPN_GATEWAY"
-)
+echo "Authenticating to retrieve session cookie..."
 
-if [ -n "$SETSID_BIN" ]; then
-  printf '%s\n' "$password" | run_as_root "$SETSID_BIN" "${openconnect_args[@]}"
+# First, authenticate to get the cookie
+auth_output=$(mktemp)
+trap 'rm -f "$auth_output"' EXIT
+
+if printf '%s\n' "$password" | "$OPENCONNECT_BIN" \
+  --protocol=gp \
+  --user "$VPN_USERNAME" \
+  --passwd-on-stdin \
+  --authenticate \
+  "$VPN_GATEWAY" >"$auth_output" 2>&1; then
+
+  # Extract cookie from authentication output
+  cookie=$(grep "^COOKIE=" "$auth_output" | cut -d= -f2- || true)
+
+  if [ -n "$cookie" ]; then
+    # Save cookie for future use
+    printf '%s\n' "$cookie" >"$COOKIE_FILE"
+    chmod 600 "$COOKIE_FILE"
+
+    echo "Session cookie obtained and cached for 8 hours"
+
+    # Now connect using the cookie
+    cookie_args=(
+      "$OPENCONNECT_BIN"
+      --protocol=gp
+      --cookie-on-stdin
+      --interface "$IFACE_NAME"
+      --pid-file "$PID_FILE"
+      --syslog
+      --background
+      "$VPN_GATEWAY"
+    )
+
+    if [ -n "$SETSID_BIN" ]; then
+      printf '%s\n' "$cookie" | run_as_root "$SETSID_BIN" "${cookie_args[@]}"
+    else
+      printf '%s\n' "$cookie" | run_as_root "${cookie_args[@]}"
+    fi
+
+    echo "${PROVIDER_NAME} VPN connecting via openconnect (pid file: $PID_FILE)"
+  else
+    echo "Warning: Failed to extract cookie, using direct password authentication" >&2
+
+    # Fallback to original method
+    openconnect_args=(
+      "$OPENCONNECT_BIN"
+      --protocol=gp
+      --user "$VPN_USERNAME"
+      --passwd-on-stdin
+      --interface "$IFACE_NAME"
+      --pid-file "$PID_FILE"
+      --syslog
+      --background
+      "$VPN_GATEWAY"
+    )
+
+    if [ -n "$SETSID_BIN" ]; then
+      printf '%s\n' "$password" | run_as_root "$SETSID_BIN" "${openconnect_args[@]}"
+    else
+      printf '%s\n' "$password" | run_as_root "${openconnect_args[@]}"
+    fi
+
+    echo "${PROVIDER_NAME} VPN connecting via openconnect (pid file: $PID_FILE)"
+  fi
 else
-  printf '%s\n' "$password" | run_as_root "${openconnect_args[@]}"
+  echo "Authentication failed" >&2
+  cat "$auth_output" >&2
+  exit 1
 fi
-
-echo "${PROVIDER_NAME} VPN connecting via openconnect (pid file: $PID_FILE)"
