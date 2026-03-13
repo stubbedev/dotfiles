@@ -74,12 +74,15 @@ install_nix_home_manager() {
 
   conf_nix_home_manager
 
-  "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$HOME/.stubbe/src/nix/home-manager#stubbe"
+  local flake_path=$(realpath "$HOME/.stubbe/src/nix/home-manager")
+  "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
 }
 
 install_docker() {
   if is_arch; then
     sudo pacman -Sy docker docker-compose docker-buildx
+    sudo systemctl enable docker
+    sudo systemctl start docker
   else
     DOCKERTMPDIR=$(mktemp -d)
     "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"

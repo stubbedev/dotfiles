@@ -17,9 +17,10 @@ in
     in
     {
       home.activation.customShellCompletions = lib.hm.dag.entryAfter order.after.shellCompletions ''
-        ${pkgs.gh}/bin/gh completion -s zsh > ${stubbeDir}/src/zsh/fpaths.d/_gh
-        ${pkgs.volta}/bin/volta completions zsh > ${stubbeDir}/src/zsh/fpaths.d/_volta
-        ${pkgs.uv}/bin/uv generate-shell-completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_uv
+        mkdir -p ${stubbeDir}/src/zsh/fpaths.d
+        ${pkgs.gh}/bin/gh completion -s zsh > ${stubbeDir}/src/zsh/fpaths.d/_gh 2>/dev/null
+        ${pkgs.volta}/bin/volta completions zsh > ${stubbeDir}/src/zsh/fpaths.d/_volta 2>/dev/null
+        ${pkgs.uv}/bin/uv generate-shell-completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_uv 2>/dev/null
       '';
     };
 }
