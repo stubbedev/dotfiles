@@ -43,9 +43,6 @@ _: {
         hunspell
         gawk
 
-        # Python runtime for scripts
-        python315
-
         # Nix linter
         statix
 
