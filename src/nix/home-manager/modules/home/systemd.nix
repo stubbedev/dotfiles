@@ -67,7 +67,7 @@ _: {
 
         await-gnome-keyring = {
           Unit = {
-            Description = "Restart Waybar when gnome-keyring is ready";
+            Description = "Restart Waybar when gnome-keyring is unlocked";
             After = [
               "hyprland-session.target"
               "gnome-keyring-daemon.service"
@@ -78,7 +78,7 @@ _: {
           };
           Service = {
             Type = "oneshot";
-            ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
+            ExecStart = "${constants.paths.hypr}/scripts/await.keyring.unlocked.sh";
             Restart = "no";
           };
         };
