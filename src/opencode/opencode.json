@@ -11,7 +11,7 @@
   ],
   "keybinds": {
     "leader": "ctrl+space",
-    "command_list": "alt+shift+space",
+    "command_list": "ctrl+shift+space",
     "app_exit": "ctrl+c,ctrl+d,ctrl+q,<leader>q"
   }
  }
