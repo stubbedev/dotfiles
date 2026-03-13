@@ -2,6 +2,7 @@ return {
   {
     "nvim-lualine/lualine.nvim",
     dependencies = {
+      { "catppuccin/nvim" },
       {
         "rcarriga/nvim-notify",
         opts = {
@@ -136,7 +137,7 @@ return {
     config = function()
       require("lualine").setup({
         options = {
-          theme = "catppuccin",
+          theme = "catppuccin-macchiato",
           extensions = { "lazy", "mason", "oil", "nvim-dap", "overseer", "trouble" },
         },
       })

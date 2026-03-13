@@ -43,6 +43,9 @@ _: {
         vimix-icon-theme
 
         util-linux
+
+        # file manager
+        yazi
       ];
     };
 }
