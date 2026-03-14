@@ -13,6 +13,7 @@ _: {
         pinentry-gnome3 # Wayland-compatible pinentry for GPG
         gcr_4 # GNOME Crypto library (provides gcr-prompter)
         libsecret # Secret storage library
+        gnome-keyring # Secret storage daemon (org.freedesktop.secrets)
 
         # Keyring management GUI
         seahorse # GNOME keyring manager
