@@ -8,7 +8,6 @@
     setupHyprSession = "setupHyprKeyringPam";
     setupSnapThemes = "setupSnapThemes";
     setupVpnPolkit = "setupVpnPolkit";
-    setupGnomeKeyring = "setupGnomeKeyring";
     setupPowerProfileFix = "setupPowerProfileFix";
     setupGrubIntelPstate = "setupGrubIntelPstate";
     setupNodeCaBundle = "setupNodeCaBundle";
@@ -24,8 +23,7 @@
     setupHyprSession = [ "setupHyprKeyringPam" ];
     setupSnapThemes = [ "setupHyprSession" ];
     setupVpnPolkit = [ "setupSnapThemes" ];
-    setupGnomeKeyring = [ "setupVpnPolkit" ];
-    setupPowerProfileFix = [ "setupGnomeKeyring" ];
+    setupPowerProfileFix = [ "setupVpnPolkit" ];
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];
     setupNodeCaBundle = [ "writeBoundary" ];
     restartWaybar = [ "setupGrubIntelPstate" ];
