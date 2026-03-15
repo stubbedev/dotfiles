@@ -43,6 +43,11 @@ _: {
           default = true;
           description = "Enable rust toolchain installation";
         };
+        srv = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable srv site management tool.";
+        };
       };
     };
 }

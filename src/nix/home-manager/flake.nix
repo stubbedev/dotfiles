@@ -34,6 +34,7 @@
       flake = false;
     };
     opencode.url = "github:anomalyco/opencode";
+    srv.url = "github:stubbedev/srv";
   };
 
   outputs =
