@@ -56,6 +56,10 @@ install_all_nix() {
 }
 
 install_nix() {
+  if is_arch; then
+    sudo pacman -Sy passt
+  fi
+
   curl -sSf -L https://install.lix.systems/lix | sh -s -- install
   conf_nix
   install_nix_home_manager
@@ -74,7 +78,8 @@ install_nix_home_manager() {
 
   conf_nix_home_manager
 
-  local flake_path=$(realpath "$HOME/.stubbe/src/nix/home-manager")
+  local flake_path
+  flake_path=$(realpath "$HOME/.stubbe/src/nix/home-manager")
   "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
 }
 
@@ -112,6 +117,10 @@ conf_nix() {
     sudo sed -i '/^trusted-users/d' /etc/nix/nix.conf
   fi
   echo "trusted-users = root stubbe" | sudo tee -a /etc/nix/nix.conf >/dev/null
+  if grep -Eq "^pasta-path" /etc/nix/nix.conf; then
+    sudo sed -i '/^pasta-path/d' /etc/nix/nix.conf
+  fi
+  echo "pasta-path = /usr/bin/pasta" | sudo tee -a /etc/nix/nix.conf >/dev/null
 }
 
 conf_nix_home_manager() {
