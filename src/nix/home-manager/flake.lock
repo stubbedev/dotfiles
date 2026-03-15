@@ -736,6 +736,23 @@
         "type": "github"
       }
     },
+    "mkcert": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1713430407,
+        "narHash": "sha256-gVm69SScwkQFHxzk2EwdCZjllaQ4lxYeQ10PeJZv65M=",
+        "owner": "FiloSottile",
+        "repo": "mkcert",
+        "rev": "1c1dc4ed27ed5936046b6398d39cab4d657a2d8e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FiloSottile",
+        "repo": "mkcert",
+        "rev": "1c1dc4ed27ed5936046b6398d39cab4d657a2d8e",
+        "type": "github"
+      }
+    },
     "nixgl": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -819,11 +836,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1773375660,
-        "narHash": "sha256-SEzUWw2Rf5Ki3bcM26nSKgbeoqi2uYy8IHVBqOKjX3w=",
+        "lastModified": 1773524153,
+        "narHash": "sha256-Jms57zzlFf64ayKzzBWSE2SGvJmK+NGt8Gli71d9kmY=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "3e20095fe3c6cbb1ddcef89b26969a69a1570776",
+        "rev": "e9f278faa1d0c2fc835bd331d4666b59b505a410",
         "type": "github"
       },
       "original": {
@@ -870,11 +887,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1773539812,
-        "narHash": "sha256-/JRHFN4hzBJv2Yvp0x1G6wpNzNBpbzEOftD50HeZU8I=",
+        "lastModified": 1773581140,
+        "narHash": "sha256-5xhPD48XS1iwnbFY6zwKex6qcDx4Zg68WwAmZXwlIPc=",
         "owner": "anomalyco",
         "repo": "opencode",
-        "rev": "2fc06c5a179b53d041a77093564bbee937e7b70c",
+        "rev": "b9f6b40e3a317b1881d7901bf221c186ffae4dfd",
         "type": "github"
       },
       "original": {
@@ -942,14 +959,15 @@
     "srv": {
       "inputs": {
         "flake-utils": "flake-utils_2",
+        "mkcert": "mkcert",
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1773567812,
-        "narHash": "sha256-7fVWTyDDR27HWqfFYnB3B9gS62Bj6LkVcI5bBY3w2xw=",
+        "lastModified": 1773585090,
+        "narHash": "sha256-sBG0jfos13TugDjM1bmzyQBCplGOVbYumTV5oo9cABk=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "36a23e5d1bbbcc19a5ac6deb194ff506fc10707b",
+        "rev": "b74e7f71306c8f3139f003f8e44157ba965ba987",
         "type": "github"
       },
       "original": {
