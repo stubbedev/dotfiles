@@ -29,6 +29,10 @@
     # Don't follow nixpkgs — fenix cache (nix-community.cachix.org) is built
     # against nixpkgs-unstable; following our nixpkgs causes cache misses.
     fenix.url = "github:nix-community/fenix";
+    tmux-stubbe = {
+      url = "github:stubbedev/tmux-stubbe";
+      flake = false;
+    };
   };
 
   outputs =

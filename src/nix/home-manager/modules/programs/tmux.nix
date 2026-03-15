@@ -4,6 +4,7 @@ _: {
       lib,
       config,
       pkgs,
+      tmux-stubbe,
       ...
     }:
     lib.mkIf config.features.desktop {
@@ -13,10 +14,7 @@ _: {
             pluginName = "tmux-stubbe";
             rtpFilePath = "stubbe.tmux";
             version = "unstable-master";
-            src = builtins.fetchGit {
-              url = "https://github.com/stubbedev/tmux-stubbe";
-              ref = "master";
-            };
+            src = tmux-stubbe;
           };
         in
         {

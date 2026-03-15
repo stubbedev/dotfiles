@@ -848,7 +848,8 @@
         "hyprland-guiutils": "hyprland-guiutils_2",
         "import-tree": "import-tree",
         "nixgl": "nixgl",
-        "nixpkgs": "nixpkgs_4"
+        "nixpkgs": "nixpkgs_4",
+        "tmux-stubbe": "tmux-stubbe"
       }
     },
     "rust-analyzer-src": {
@@ -910,6 +911,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "tmux-stubbe": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770064241,
+        "narHash": "sha256-EYM2p/xlfxnYN0UbotZLeiQ8vTMLF/PECFKKxVJvfN4=",
+        "owner": "stubbedev",
+        "repo": "tmux-stubbe",
+        "rev": "acec86d152687b8cf1b56f3939ab8132d4b40b17",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "tmux-stubbe",
         "type": "github"
       }
     },
