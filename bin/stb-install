@@ -56,10 +56,6 @@ install_all_nix() {
 }
 
 install_nix() {
-  if is_arch; then
-    sudo pacman -Sy passt
-  fi
-
   curl -sSf -L https://install.lix.systems/lix | sh -s -- install
   conf_nix
   install_nix_home_manager
@@ -110,17 +106,40 @@ conf_nix() {
   if is_nix; then
     return 0
   fi
-  if ! grep -Fxq "experimental-features = nix-command flakes" /etc/nix/nix.conf; then
-    echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf >/dev/null
+
+  local conf="/etc/nix/nix.conf"
+  local needs_update=false
+  local tmpfile original_perms
+  tmpfile=$(mktemp)
+  trap 'rm -f "$tmpfile"' RETURN
+  original_perms=$(stat -c '%a' "$conf")
+  cp -f "$conf" "$tmpfile"
+
+  # experimental-features
+  if ! grep -Fxq "experimental-features = nix-command flakes" "$tmpfile"; then
+    sed -i '/^experimental-features/d' "$tmpfile"
+    echo "experimental-features = nix-command flakes" >>"$tmpfile"
+    needs_update=true
   fi
-  if grep -Eq "^trusted-users" /etc/nix/nix.conf; then
-    sudo sed -i '/^trusted-users/d' /etc/nix/nix.conf
+
+  # trusted-users
+  if ! grep -Fxq "trusted-users = root $USER" "$tmpfile"; then
+    sed -i '/^trusted-users/d' "$tmpfile"
+    echo "trusted-users = root $USER" >>"$tmpfile"
+    needs_update=true
   fi
-  echo "trusted-users = root stubbe" | sudo tee -a /etc/nix/nix.conf >/dev/null
-  if grep -Eq "^pasta-path" /etc/nix/nix.conf; then
-    sudo sed -i '/^pasta-path/d' /etc/nix/nix.conf
+
+  # sandbox
+  if ! grep -Fxq "sandbox = relaxed" "$tmpfile"; then
+    sed -i '/^sandbox/d' "$tmpfile"
+    echo "sandbox = relaxed" >>"$tmpfile"
+    needs_update=true
   fi
-  echo "pasta-path = /usr/bin/pasta" | sudo tee -a /etc/nix/nix.conf >/dev/null
+
+  if [ "$needs_update" = true ]; then
+    sudo cp -f "$tmpfile" "$conf"
+    sudo chmod "$original_perms" "$conf"
+  fi
 }
 
 conf_nix_home_manager() {

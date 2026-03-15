@@ -26,10 +26,9 @@
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Don't follow nixpkgs — fenix cache (nix-community.cachix.org) is built
+    # against nixpkgs-unstable; following our nixpkgs causes cache misses.
+    fenix.url = "github:nix-community/fenix";
   };
 
   outputs =

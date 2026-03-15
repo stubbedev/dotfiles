@@ -10,7 +10,6 @@
     setupVpnPolkit = "setupVpnPolkit";
     setupPowerProfileFix = "setupPowerProfileFix";
     setupGrubIntelPstate = "setupGrubIntelPstate";
-    setupNixPastaCaps = "setupNixPastaCaps";
     setupNodeCaBundle = "setupNodeCaBundle";
     restartWaybar = "restartWaybar";
   };
@@ -26,8 +25,7 @@
     setupVpnPolkit = [ "setupSnapThemes" ];
     setupPowerProfileFix = [ "setupVpnPolkit" ];
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];
-    setupNixPastaCaps = [ "setupGrubIntelPstate" ];
     setupNodeCaBundle = [ "writeBoundary" ];
-    restartWaybar = [ "setupNixPastaCaps" ];
+    restartWaybar = [ "setupGrubIntelPstate" ];
   };
 }
