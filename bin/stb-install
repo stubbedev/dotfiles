@@ -136,6 +136,20 @@ conf_nix() {
     needs_update=true
   fi
 
+  # keep-outputs (prevent GC from deleting cached source trees)
+  if ! grep -Fxq "keep-outputs = true" "$tmpfile"; then
+    sed -i '/^keep-outputs/d' "$tmpfile"
+    echo "keep-outputs = true" >>"$tmpfile"
+    needs_update=true
+  fi
+
+  # keep-derivations
+  if ! grep -Fxq "keep-derivations = true" "$tmpfile"; then
+    sed -i '/^keep-derivations/d' "$tmpfile"
+    echo "keep-derivations = true" >>"$tmpfile"
+    needs_update=true
+  fi
+
   if [ "$needs_update" = true ]; then
     sudo cp -f "$tmpfile" "$conf"
     sudo chmod "$original_perms" "$conf"

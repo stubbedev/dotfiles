@@ -815,6 +815,40 @@
         "type": "github"
       }
     },
+    "nixpkgs_5": {
+      "locked": {
+        "lastModified": 1772091128,
+        "narHash": "sha256-TnrYykX8Mf/Ugtkix6V+PjW7miU2yClA6uqWl/v6KWM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3f0336406035444b4a24b942788334af5f906259",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "opencode": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_5"
+      },
+      "locked": {
+        "lastModified": 1773539812,
+        "narHash": "sha256-/JRHFN4hzBJv2Yvp0x1G6wpNzNBpbzEOftD50HeZU8I=",
+        "owner": "anomalyco",
+        "repo": "opencode",
+        "rev": "2fc06c5a179b53d041a77093564bbee937e7b70c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "anomalyco",
+        "repo": "opencode",
+        "type": "github"
+      }
+    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -849,6 +883,7 @@
         "import-tree": "import-tree",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_4",
+        "opencode": "opencode",
         "tmux-stubbe": "tmux-stubbe"
       }
     },

@@ -27,7 +27,7 @@
           vpnConfigs
           vpnScripts
           ;
-        inherit (inputs) hyprland hy3 fenix tmux-stubbe;
+        inherit (inputs) hyprland hy3 fenix tmux-stubbe opencode;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
       };
     };
