@@ -85,18 +85,20 @@ _: {
           Unit = {
             Description = "Restart Waybar when gnome-keyring is unlocked";
             After = [
-              "hyprland-session.target"
+              "waybar.service"
               "gnome-keyring-daemon.service"
             ];
           };
           Install = {
-            WantedBy = [ "default.target" ];
+            WantedBy = [ "waybar.service" ];
           };
           Service = {
             Type = "oneshot";
             ExecStart = "${constants.paths.hypr}/scripts/await.keyring.unlocked.sh";
             Restart = "no";
-            TimeoutStartSec = "30s";
+            TimeoutStartSec = "10s";
+            # Don't block session startup - this is optional/nice-to-have
+            RemainAfterExit = false;
           };
         };
 
