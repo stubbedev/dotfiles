@@ -96,6 +96,7 @@ _: {
             Type = "oneshot";
             ExecStart = "${constants.paths.hypr}/scripts/await.keyring.unlocked.sh";
             Restart = "no";
+            TimeoutStartSec = "30s";
           };
         };
 

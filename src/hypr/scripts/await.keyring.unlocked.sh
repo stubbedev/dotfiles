@@ -36,4 +36,5 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
 done
 
 # Restart waybar so mail-status.sh can access credentials
-systemctl --user restart waybar.service
+# Use --no-block to avoid hanging during home-manager activation
+systemctl --user restart --no-block waybar.service
