@@ -61,6 +61,7 @@ _: {
                         echo "Updating apt packages"
                         sudo apt update
                         sudo apt upgrade -y
+                        sudo apt autoremove -y
                       fi
 
                       if has_cmd dnf; then
