@@ -25,9 +25,6 @@ return {
             }
           }
         },
-        htmx = {
-          filetypes = { "html", "htm", "templ", "tmpl", "php", "blade", "twig" },
-        },
         html = {
           filetypes = { "html", "htm", "templ", "tmpl", "php", "blade", "twig" },
         },
