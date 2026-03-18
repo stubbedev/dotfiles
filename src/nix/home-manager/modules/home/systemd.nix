@@ -88,17 +88,21 @@ _: {
               "waybar.service"
               "gnome-keyring-daemon.service"
             ];
+            # Only run once per session, not on every waybar restart
+            ConditionPathExists = "!/tmp/await-gnome-keyring-done-%U";
           };
           Install = {
-            WantedBy = [ "waybar.service" ];
+            # Start after hyprland session, not tied to waybar
+            WantedBy = [ "hyprland-session.target" ];
           };
           Service = {
             Type = "oneshot";
             ExecStart = "${constants.paths.hypr}/scripts/await.keyring.unlocked.sh";
+            # Mark as done so it doesn't run again this session
+            ExecStartPost = "/usr/bin/touch /tmp/await-gnome-keyring-done-%U";
             Restart = "no";
             TimeoutStartSec = "10s";
-            # Don't block session startup - this is optional/nice-to-have
-            RemainAfterExit = false;
+            RemainAfterExit = true;
           };
         };
 
