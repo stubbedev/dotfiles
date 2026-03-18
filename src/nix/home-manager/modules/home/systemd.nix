@@ -65,22 +65,6 @@ _: {
           };
         };
 
-        gnome-keyring-daemon = {
-          Unit = {
-            Description = "GNOME Keyring daemon (secrets component)";
-            PartOf = [ "graphical-session.target" ];
-          };
-          Install = {
-            WantedBy = [ "graphical-session.target" ];
-          };
-          Service = {
-            Type = "simple";
-            ExecStart = "${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --start --foreground --components=secrets";
-            Restart = "on-failure";
-            RestartSec = "2s";
-          };
-        };
-
         power-profile-fix = {
           Unit = {
             Description = "Fix CPU frequency scaling for power profiles";
