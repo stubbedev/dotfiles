@@ -81,31 +81,6 @@ _: {
           };
         };
 
-        await-gnome-keyring = {
-          Unit = {
-            Description = "Restart Waybar when gnome-keyring is unlocked";
-            After = [
-              "waybar.service"
-              "gnome-keyring-daemon.service"
-            ];
-            # Only run once per session, not on every waybar restart
-            ConditionPathExists = "!/tmp/await-gnome-keyring-done-%U";
-          };
-          Install = {
-            # Start after hyprland session, not tied to waybar
-            WantedBy = [ "hyprland-session.target" ];
-          };
-          Service = {
-            Type = "oneshot";
-            ExecStart = "${constants.paths.hypr}/scripts/await.keyring.unlocked.sh";
-            # Mark as done so it doesn't run again this session
-            ExecStartPost = "/usr/bin/touch /tmp/await-gnome-keyring-done-%U";
-            Restart = "no";
-            TimeoutStartSec = "10s";
-            RemainAfterExit = true;
-          };
-        };
-
         power-profile-fix = {
           Unit = {
             Description = "Fix CPU frequency scaling for power profiles";
