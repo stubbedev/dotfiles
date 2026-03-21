@@ -11,6 +11,7 @@
     setupPowerProfileFix = "setupPowerProfileFix";
     setupGrubIntelPstate = "setupGrubIntelPstate";
     setupNodeCaBundle = "setupNodeCaBundle";
+    setupOxcTools = "setupOxcTools";
     restartWaybar = "restartWaybar";
   };
 
@@ -26,6 +27,7 @@
     setupPowerProfileFix = [ "setupVpnPolkit" ];
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];
     setupNodeCaBundle = [ "writeBoundary" ];
+    setupOxcTools = [ "writeBoundary" ];
     restartWaybar = [ "setupGrubIntelPstate" ];
   };
 }

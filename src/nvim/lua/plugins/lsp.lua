@@ -4,6 +4,34 @@ return {
     opts = {
       inlay_hints = { enabled = false },
       servers = {
+        -- htmx-lsp binary is not installed; disable to suppress exit-code-127 warnings
+        htmx = { enabled = false },
+        oxlint = {
+          filetypes = {
+            "javascript",
+            "javascriptreact",
+            "typescript",
+            "typescriptreact",
+            "vue",
+            "svelte",
+            "astro",
+          },
+        },
+        oxfmt = {
+          filetypes = {
+            "javascript",
+            "javascriptreact",
+            "typescript",
+            "typescriptreact",
+            "vue",
+            "svelte",
+            "astro",
+            "json",
+            "jsonc",
+            "css",
+            "scss",
+          },
+        },
         lua_ls = {
           settings = {
             Lua = {

@@ -3,17 +3,11 @@ return {
   opts_extend = { "formatters_by_ft" },
   opts = {
     formatters_by_ft = {
-      css = { "prettier" },
+      -- html/xml/markdown: oxfmt is workspace-gated and unreliable for standalone files
       html = { "prettier" },
       xml = { "prettier" },
-      javascript = { "prettier" },
-      javascriptreact = { "prettier" },
-      json = { "prettier" },
-      jsonc = { "prettier" },
       markdown = { "prettier" },
-      scss = { "prettier" },
-      typescript = { "prettier" },
-      typescriptreact = { "prettier" },
+      -- js/ts/json/css/scss: handled by oxfmt LSP
       php = { "pint" },
     },
   },
