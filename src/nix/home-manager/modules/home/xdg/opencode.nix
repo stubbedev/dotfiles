@@ -9,6 +9,7 @@ _: {
     lib.mkIf config.features.opencode {
       xdg.configFile = homeLib.xdgSources [
         "opencode/opencode.json"
+        "opencode/tui.json"
         "opencode/AGENTS.md"
         "opencode/themes/catppuccin-mocha.json"
         "opencode/agents"
