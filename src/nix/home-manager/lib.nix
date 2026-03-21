@@ -26,7 +26,10 @@ rec {
       fullPath = stringToPath (toString baseDir + "/${path}");
     in
     {
-      "${path}".source = fullPath;
+      "${path}" = {
+        source = fullPath;
+        force = true;
+      };
     };
 
   xdgSources = paths: lib.foldl' (acc: path: acc // xdgSource path) { } paths;
