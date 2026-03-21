@@ -24,6 +24,9 @@ _: {
         deno
         volta
 
+        # Only wanted for Oauth handshake
+        claude-code
+
         # Editor and Lua runtimes
         neovim
         luaBin
