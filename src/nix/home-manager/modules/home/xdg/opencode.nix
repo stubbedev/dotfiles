@@ -14,5 +14,9 @@ _: {
         "opencode/themes/catppuccin-mocha.json"
         "opencode/agents"
       ];
+
+      home.sessionVariables = {
+        OPENCODE_DISABLE_CLAUDE_CODE = 1;
+      };
     };
 }
