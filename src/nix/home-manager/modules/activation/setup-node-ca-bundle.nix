@@ -44,6 +44,15 @@ in
           done
         }
 
+        add_srv_paths() {
+          add_file "''${XDG_DATA_HOME:-$HOME/.local/share}/mkcert/rootCA.pem"
+          local sites_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/srv/sites"
+          [ -d "$sites_dir" ] || return 0
+          for site_dir in "$sites_dir"/*/; do
+            add_dir "$site_dir/certs"
+          done
+        }
+
         if [ -n "''${CAROOT-}" ]; then
           add_file "''${CAROOT}/rootCA.pem"
         fi
@@ -54,8 +63,13 @@ in
         fi
 
         add_valet_paths
+        ${lib.optionalString config.features.srv "add_srv_paths"}
 
-        mv "$tmp" "$bundle"
+        if [ -s "$tmp" ]; then
+          mv "$tmp" "$bundle"
+        else
+          rm -f "$tmp" "$bundle"
+        fi
       '';
     };
 }
