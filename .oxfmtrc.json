@@ -1,0 +1,6 @@
+{
+	"$shema": "https://raw.githubusercontent.com/oxc-project/oxc/refs/heads/main/npm/oxfmt/configuration_schema.json",
+	"printWidth": 80,
+	"singleQuote": true,
+	"useTabs": true
+}

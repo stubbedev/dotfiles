@@ -1,10 +1,11 @@
 # STUBBEDEV DOTFILES
 
 <!--toc:start-->
+
 - [STUBBEDEV DOTFILES](#stubbedev-dotfiles)
   - [STRUCTURE](#structure)
   - [INSTALLATION](#installation)
-<!--toc:end-->
+  <!--toc:end-->
 
 This is a collection of personal dotfiles and utilities I use on linux. They are bundled as an installer and a maintenance utility.
 

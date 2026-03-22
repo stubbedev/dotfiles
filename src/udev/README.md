@@ -9,6 +9,7 @@ This directory contains udev rules for hardware device management.
 **Purpose:** Disables USB power management for audio devices to prevent audio popping and dropouts.
 
 **What it does:**
+
 - Sets `power/control` to `on` (disable autosuspend)
 - Sets `power/autosuspend` to `-1` (never suspend)
 - Applies to:
@@ -20,6 +21,7 @@ This directory contains udev rules for hardware device management.
 ## Installation
 
 ### System-wide installation (recommended)
+
 ```bash
 sudo cp rules.d/90-usb-audio-power.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
@@ -27,6 +29,7 @@ sudo udevadm trigger
 ```
 
 ### Verify it's working
+
 ```bash
 # Find your USB audio device
 lsusb | grep -i audio
@@ -43,6 +46,7 @@ cat /sys/bus/usb/devices/*/power/autosuspend
 ## Troubleshooting
 
 If the rules don't apply:
+
 1. Ensure the file is in `/etc/udev/rules.d/`
 2. Check for syntax errors: `udevadm test $(udevadm info -q path -n /dev/snd/controlC1)`
 3. Reload rules: `sudo udevadm control --reload-rules`

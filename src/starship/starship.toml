@@ -2,7 +2,7 @@
 
 command_timeout = 100
 
-format ="""
+format = """
 ${custom.vpn}\
 $all"""
 

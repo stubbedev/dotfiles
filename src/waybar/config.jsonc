@@ -1,180 +1,158 @@
 // -*- mode: jsonc -*-
 {
-  "layer": "bottom", // Waybar at top layer
-  // "position": "bottom", // Waybar position (top|bottom|left|right)
-  "height": 30, // Waybar height (to be removed for auto height)
-  // "width": 1280, // Waybar width
-  "spacing": 4, // Gaps between modules (4px)
-  // Choose the order of the modules
-  "modules-left": [
-    "hyprland/workspaces",
-    "hyprland/submap"
-  ],
-  "modules-center": [
-    "custom/mail",
-    "custom/tmux"
-  ],
-  "modules-right": [
-    "hyprland/language",
-    "pulseaudio",
-    "bluetooth",
-    "backlight",
-    "battery",
-    "clock",
-    "tray",
-    "custom/konform-vpn",
-    "power-profiles-daemon"
-  ],
-  "custom/tmux": {
-    "exec": "~/.config/waybar/scripts/tmux-status.sh",
-    "format": "{}",
-    "interval": 3
-  },
-  "custom/mail": {
-    "exec": "~/.config/waybar/scripts/mail-status.sh",
-    "return-type": "json",
-    "format": "{}",
-    "interval": 30,
-    "markup": "pango",
-    "on-click": "~/.local/bin/open-mail"
-  },
-  "custom/konform-vpn": {
-    "exec": "~/.local/bin/konform-vpn-waybar status",
-    "return-type": "json",
-    "format": "{}",
-    "interval": 3,
-    "on-click": "~/.local/bin/konform-vpn-waybar toggle"
-  },
-  "hyprland/workspaces": {
-    "format": "{name} {icon}",
-    "on-scroll-up": "hyprctl dispatch workspace e+1",
-    "on-scroll-down": "hyprctl dispatch workspace e-1",
-    "format-icons": {
-      "1": "<span foreground='#89B4FA'> </span>",
-      "2": "<span foreground='#F0C6C6'> </span>",
-      "3": "<span foreground='#DDB6F2'> </span>",
-      "4": "<span foreground='#F5BDE6'> </span>",
-      "5": "<span foreground='#F28D8C'> </span>",
-      "6": "<span foreground='#E8A2A1'> </span>",
-      "7": "<span foreground='#F8BD96'> </span>",
-      "8": "<span foreground='#FAE3B0'> </span>",
-      "9": "<span foreground='#A6D189'> </span>",
-      "10": "<span foreground='#81C8BE'> </span>",
-      "default": "<span> </span>",
-      "focused": "<span> </span>",
-      "urgent": "<span> </span>"
-    }
-  },
-  "hyprland/window": {
-    "format": "{class}",
-    "max-length": 50
-  },
-  "hyprland/language": {
-    "format": "{}",
-    "format-en": " EN",
-    "format-da": " DA",
-    "format-es": " ES"
-  },
-  "bluetooth": {
-    "format": " {status}",
-    "format-connected": " {device_alias}",
-    "format-connected-battery": " {device_alias} {device_battery_percentage}%",
-    // "format-device-preference": [ "device1", "device2" ], // preference list deciding the displayed device
-    "tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} connected",
-    "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
-    "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-    "tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
-    "on-click": "blueman-manager"
-  },
-  "hyprland/submap": {
-    "format": " ",
-    "tooltip": false
-  },
-  "tray": {
-    "spacing": 10
-  },
-  "clock": {
-    "timezone": "Europe/Copenhagen",
-    "format": "{:%Y-%m-%d %H:%M}",
-    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-    "format-alt": "{:%Y-%m-%d %H:%M}"
-  },
-  "backlight": {
-    "format": "{percent}% {icon}",
-    "format-icons": [
-      "🌑",
-      "🌘",
-      "🌗",
-      "🌖",
-      "🌕"
-    ],
-    "on-scroll-up": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh increase",
-    "on-scroll-down": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh decrease"
-  },
-  "battery": {
-    "states": {
-      "good": 95,
-      "warning": 30,
-      "critical": 15
-    },
-    "format": "{capacity}% {icon}",
-    "format-full": "{capacity}% {icon}",
-    "format-charging": "{capacity}% ",
-    "format-plugged": "{capacity}% ",
-    "format-alt": "{time} {icon}",
-    "format-icons": [
-      "",
-      "",
-      "",
-      "",
-      ""
-    ]
-  },
-  "battery#bat2": {
-    "bat": "BAT2"
-  },
-  "power-profiles-daemon": {
-    "format": "{icon}",
-    "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
-    "tooltip": true,
-    "format-icons": {
-      "default": "",
-      "performance": "",
-      "balanced": "",
-      "power-saver": ""
-    }
-  },
-  "network": {
-    // "interface": "wlp2*", // (Optional) To force the use of this interface
-    "format-wifi": "{essid} ({signalStrength}%) ",
-    "format-ethernet": "{ipaddr}/{cidr} ",
-    "tooltip-format": "{ifname} via {gwaddr} ",
-    "format-linked": "{ifname} (No IP) ",
-    "format-disconnected": "Disconnected ⚠",
-    "format-alt": "{ifname}: {ipaddr}/{cidr}"
-  },
-  "pulseaudio": {
-    // "scroll-step": 1, // %, can be a float
-    "format": "{volume}% {icon} {format_source}",
-    "format-bluetooth": "{volume}% {icon} {format_source}",
-    "format-bluetooth-muted": "󰝟 {icon} {format_source}",
-    "format-muted": "󰝟 {format_source}",
-    "format-source": "{volume}% ",
-    "format-source-muted": "",
-    "format-icons": {
-      "headphone": "",
-      "hands-free": "",
-      "headset": "",
-      "phone": "",
-      "portable": "",
-      "car": "",
-      "default": [
-        "",
-        "",
-        ""
-      ]
-    },
-    "on-click": "pavucontrol",
-    "max-volume": 200
-  }
+	"layer": "bottom", // Waybar at top layer
+	// "position": "bottom", // Waybar position (top|bottom|left|right)
+	"height": 30, // Waybar height (to be removed for auto height)
+	// "width": 1280, // Waybar width
+	"spacing": 4, // Gaps between modules (4px)
+	// Choose the order of the modules
+	"modules-left": ["hyprland/workspaces", "hyprland/submap"],
+	"modules-center": ["custom/mail", "custom/tmux"],
+	"modules-right": [
+		"hyprland/language",
+		"pulseaudio",
+		"bluetooth",
+		"backlight",
+		"battery",
+		"clock",
+		"tray",
+		"custom/konform-vpn",
+		"power-profiles-daemon",
+	],
+	"custom/tmux": {
+		"exec": "~/.config/waybar/scripts/tmux-status.sh",
+		"format": "{}",
+		"interval": 3,
+	},
+	"custom/mail": {
+		"exec": "~/.config/waybar/scripts/mail-status.sh",
+		"return-type": "json",
+		"format": "{}",
+		"interval": 30,
+		"markup": "pango",
+		"on-click": "~/.local/bin/open-mail",
+	},
+	"custom/konform-vpn": {
+		"exec": "~/.local/bin/konform-vpn-waybar status",
+		"return-type": "json",
+		"format": "{}",
+		"interval": 3,
+		"on-click": "~/.local/bin/konform-vpn-waybar toggle",
+	},
+	"hyprland/workspaces": {
+		"format": "{name} {icon}",
+		"on-scroll-up": "hyprctl dispatch workspace e+1",
+		"on-scroll-down": "hyprctl dispatch workspace e-1",
+		"format-icons": {
+			"1": "<span foreground='#89B4FA'> </span>",
+			"2": "<span foreground='#F0C6C6'> </span>",
+			"3": "<span foreground='#DDB6F2'> </span>",
+			"4": "<span foreground='#F5BDE6'> </span>",
+			"5": "<span foreground='#F28D8C'> </span>",
+			"6": "<span foreground='#E8A2A1'> </span>",
+			"7": "<span foreground='#F8BD96'> </span>",
+			"8": "<span foreground='#FAE3B0'> </span>",
+			"9": "<span foreground='#A6D189'> </span>",
+			"10": "<span foreground='#81C8BE'> </span>",
+			"default": "<span> </span>",
+			"focused": "<span> </span>",
+			"urgent": "<span> </span>",
+		},
+	},
+	"hyprland/window": {
+		"format": "{class}",
+		"max-length": 50,
+	},
+	"hyprland/language": {
+		"format": "{}",
+		"format-en": " EN",
+		"format-da": " DA",
+		"format-es": " ES",
+	},
+	"bluetooth": {
+		"format": " {status}",
+		"format-connected": " {device_alias}",
+		"format-connected-battery": " {device_alias} {device_battery_percentage}%",
+		// "format-device-preference": [ "device1", "device2" ], // preference list deciding the displayed device
+		"tooltip-format": "{controller_alias}\t{controller_address}\n\n{num_connections} connected",
+		"tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
+		"tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
+		"tooltip-format-enumerate-connected-battery": "{device_alias}\t{device_address}\t{device_battery_percentage}%",
+		"on-click": "blueman-manager",
+	},
+	"hyprland/submap": {
+		"format": " ",
+		"tooltip": false,
+	},
+	"tray": {
+		"spacing": 10,
+	},
+	"clock": {
+		"timezone": "Europe/Copenhagen",
+		"format": "{:%Y-%m-%d %H:%M}",
+		"tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+		"format-alt": "{:%Y-%m-%d %H:%M}",
+	},
+	"backlight": {
+		"format": "{percent}% {icon}",
+		"format-icons": ["🌑", "🌘", "🌗", "🌖", "🌕"],
+		"on-scroll-up": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh increase",
+		"on-scroll-down": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh decrease",
+	},
+	"battery": {
+		"states": {
+			"good": 95,
+			"warning": 30,
+			"critical": 15,
+		},
+		"format": "{capacity}% {icon}",
+		"format-full": "{capacity}% {icon}",
+		"format-charging": "{capacity}% ",
+		"format-plugged": "{capacity}% ",
+		"format-alt": "{time} {icon}",
+		"format-icons": ["", "", "", "", ""],
+	},
+	"battery#bat2": {
+		"bat": "BAT2",
+	},
+	"power-profiles-daemon": {
+		"format": "{icon}",
+		"tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+		"tooltip": true,
+		"format-icons": {
+			"default": "",
+			"performance": "",
+			"balanced": "",
+			"power-saver": "",
+		},
+	},
+	"network": {
+		// "interface": "wlp2*", // (Optional) To force the use of this interface
+		"format-wifi": "{essid} ({signalStrength}%) ",
+		"format-ethernet": "{ipaddr}/{cidr} ",
+		"tooltip-format": "{ifname} via {gwaddr} ",
+		"format-linked": "{ifname} (No IP) ",
+		"format-disconnected": "Disconnected ⚠",
+		"format-alt": "{ifname}: {ipaddr}/{cidr}",
+	},
+	"pulseaudio": {
+		// "scroll-step": 1, // %, can be a float
+		"format": "{volume}% {icon} {format_source}",
+		"format-bluetooth": "{volume}% {icon} {format_source}",
+		"format-bluetooth-muted": "󰝟 {icon} {format_source}",
+		"format-muted": "󰝟 {format_source}",
+		"format-source": "{volume}% ",
+		"format-source-muted": "",
+		"format-icons": {
+			"headphone": "",
+			"hands-free": "",
+			"headset": "",
+			"phone": "",
+			"portable": "",
+			"car": "",
+			"default": ["", "", ""],
+		},
+		"on-click": "pavucontrol",
+		"max-volume": 200,
+	},
 }
