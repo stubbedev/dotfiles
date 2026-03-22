@@ -1,0 +1,14 @@
+{
+	"printWidth": 80,
+	"useTabs": true,
+	"singleQuote": true,
+	"overrides": [
+		{
+			"files": ["*.md", "*.mdx"],
+			"options": {
+				"proseWrap": "always",
+				"printWidth": 80
+			}
+		}
+	]
+}

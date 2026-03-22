@@ -12,6 +12,7 @@
     setupGrubIntelPstate = "setupGrubIntelPstate";
     setupNodeCaBundle = "setupNodeCaBundle";
     setupOxcTools = "setupOxcTools";
+    setupPrettier = "setupPrettier";
     restartWaybar = "restartWaybar";
   };
 
@@ -28,6 +29,7 @@
     setupGrubIntelPstate = [ "setupPowerProfileFix" ];
     setupNodeCaBundle = [ "writeBoundary" ];
     setupOxcTools = [ "writeBoundary" ];
+    setupPrettier = [ "writeBoundary" ];
     restartWaybar = [ "setupGrubIntelPstate" ];
   };
 }

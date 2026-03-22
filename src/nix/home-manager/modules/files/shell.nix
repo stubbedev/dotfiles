@@ -14,6 +14,7 @@ _: {
           fi
         '';
         ".ideavimrc".source = ../../../../ideavim/ideavimrc;
+        ".prettierrc.json".source = ../../../../prettier/.prettierrc.json;
       };
     };
 }

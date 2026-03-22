@@ -1,14 +1,20 @@
 return {
   "stevearc/conform.nvim",
   opts_extend = { "formatters_by_ft" },
-  opts = {
-    formatters_by_ft = {
-      -- html/xml/markdown: oxfmt is workspace-gated and unreliable for standalone files
-      html = { "prettier" },
-      xml = { "prettier" },
-      markdown = { "prettier" },
-      -- js/ts/json/css/scss: handled by oxfmt LSP
-      php = { "pint" },
-    },
-  },
+  opts = function(_, opts)
+    opts.formatters_by_ft = opts.formatters_by_ft or {}
+    -- html/xml/markdown: prettier with ~/.prettierrc.json
+    opts.formatters_by_ft.html = { "prettier" }
+    opts.formatters_by_ft.xml = { "prettier" }
+    opts.formatters_by_ft.markdown = { "prettier" }
+    -- js/ts/json/css/scss: handled by oxfmt LSP
+    opts.formatters_by_ft.php = { "pint" }
+
+    opts.formatters = opts.formatters or {}
+    opts.formatters.prettier = vim.tbl_extend("force", opts.formatters.prettier or {}, {
+      command = vim.fn.expand("~/.bun/bin/prettier"),
+    })
+
+    return opts
+  end,
 }
