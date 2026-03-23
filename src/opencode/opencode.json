@@ -7,5 +7,14 @@
 		"@franlol/opencode-md-table-formatter@latest",
 		"opencode-websearch-cited@1.2.0" // Must be last
 	],
-	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"]
+	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"],
+  "provider": {
+    "anthropic": {
+      "options": {
+        "websearch_cited": {
+          "model": "anthropic/claude-haiku-4-5"
+        }
+      }
+    }
+  }
 }

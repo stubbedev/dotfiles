@@ -42,6 +42,12 @@ _: {
         mongodb-tools
         mongosh
 
+        # PHP 8.4 with all extensions
+        (php84.withExtensions (
+          { all, ... }:
+          builtins.attrValues all
+        ))
+
         # PHP tools (CLI)
         mago
 
