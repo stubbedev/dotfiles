@@ -9,10 +9,10 @@
 	],
 	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"],
   "provider": {
-    "anthropic": {
+    "openrouter": {
       "options": {
         "websearch_cited": {
-          "model": "anthropic/claude-haiku-4-5"
+          "model": "minimax/minimax-m2.5:free"
         }
       }
     }
