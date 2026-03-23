@@ -36,6 +36,34 @@ let
       nixgl = import "${inputs.nixgl}/default.nix" nixglArgs;
     };
 
+  # Overlay that exposes the opencode package from the opencode flake input,
+  # patching out the bun version check so it builds with whatever bun nixpkgs
+  # provides. The check is a build-time guard that serves no runtime purpose.
+  opencodeOverlay =
+    final: prev:
+    let
+      system = final.stdenv.hostPlatform.system;
+      opencodeFlakePkg = inputs.opencode.packages.${system}.opencode;
+    in
+    {
+      opencode = opencodeFlakePkg.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [
+          (final.writeText "relax-bun-version-check.patch" ''
+            --- a/packages/script/src/index.ts
+            +++ b/packages/script/src/index.ts
+            @@ -13,7 +13,7 @@
+             // relax version requirement
+             const expectedBunVersionRange = `^''${expectedBunVersion}`
+
+            -if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
+            +if (false) {
+               throw new Error(`This script requires bun@''${expectedBunVersionRange}, but you are using bun@''${process.versions.bun}`)
+             }
+          '')
+        ];
+      });
+    };
+
   mkPkgs =
     system:
     import inputs.nixpkgs {
@@ -46,7 +74,10 @@ let
         allowInsecure = true;
         allowInsecurePredicate = _: true;
       };
-      overlays = [ nixglOverlay ];
+      overlays = [
+        nixglOverlay
+        opencodeOverlay
+      ];
     };
 in
 {

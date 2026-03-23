@@ -4,13 +4,9 @@ _: {
       pkgs,
       lib,
       config,
-      opencode,
       ...
     }:
-    let
-      inherit (pkgs.stdenv.hostPlatform) system;
-    in
     lib.mkIf config.features.opencode {
-      home.packages = [ opencode.packages.${system}.opencode ];
+      home.packages = [ pkgs.opencode ];
     };
 }
