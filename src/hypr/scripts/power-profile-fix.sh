@@ -166,6 +166,29 @@ is_high_load() {
   awk -v l="$load" -v c="$cores" 'BEGIN { exit (l >= c*0.7 ? 0 : 1) }'
 }
 
+get_profile_min_pct() {
+  local profile="$1"
+  case "$profile" in
+  power-saver) echo 10 ;;
+  balanced) echo 30 ;;
+  performance) echo 85 ;;
+  *) echo 10 ;;
+  esac
+}
+
+# Apply only the minimum frequency floor immediately to prevent 400MHz during
+# the delay window that follows a profile change. Does not touch governor or EPP.
+apply_min_floor() {
+  local profile="$1"
+  local min_pct
+  min_pct=$(get_profile_min_pct "$profile")
+  log "Applying min freq floor for $profile: ${min_pct}%"
+  set_policy_min_freqs "$min_pct"
+  if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
+    set_pstate_limits "$min_pct" 100
+  fi
+}
+
 apply_profile_fix() {
   local profile="$1"
 
@@ -297,6 +320,11 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
             ;;
           esac
 
+          # Immediately apply a min freq floor so the CPU doesn't sit at
+          # 400MHz (cpuinfo_min_freq) while we wait for the delay to expire.
+          # PPD resets scaling_min_freq to cpuinfo_min_freq on profile changes;
+          # this bridges that gap.
+          apply_min_floor "$new_profile"
           log "Downscaling detected - waiting $delay seconds before applying changes to $new_profile"
           sleep $delay
 
