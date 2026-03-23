@@ -16,6 +16,7 @@ fi
 
 if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
   tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+  tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
 fi
 
 if [[ -n $TMUX ]]; then
