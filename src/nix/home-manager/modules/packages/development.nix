@@ -98,7 +98,5 @@ _: {
         networkmanager-openconnect
         openconnect
       ];
-
-      xdg.configFile."php/php-fpm.conf".source = ../../../../php/php-fpm.conf;
     };
 }

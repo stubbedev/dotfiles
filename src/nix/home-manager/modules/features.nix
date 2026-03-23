@@ -48,6 +48,11 @@ _: {
           default = true;
           description = "Enable srv site management tool.";
         };
+        php = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable php installation.";
+        };
       };
     };
 }
