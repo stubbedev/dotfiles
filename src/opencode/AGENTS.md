@@ -2,9 +2,11 @@
 
 ## Web Search
 
-Use `mcp_websearch_cited` whenever uncertain about any fact, version,
+Use `websearch_cited` whenever uncertain about any fact, version,
 API, or process. Do not guess — search instead. Verify the current
 date is reflected in your answers.
+
+Do NOT use the built-in `websearch` tool — use `websearch_cited` instead.
 
 ## Scope
 
