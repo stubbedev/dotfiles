@@ -1,20 +1,10 @@
 {
-  "$schema": "https://opencode.ai/config.json",
-  "autoupdate": false,
-  "plugin": [
+	"$schema": "https://opencode.ai/config.json",
+	"autoupdate": false,
+	"plugin": [
 		"opencode-claude-auth",
 		"opencode-vibeguard",
-		"@franlol/opencode-md-table-formatter@latest",
-		"github:stubbedev/opencode-websearch-cited-extended" // Must be last
+		"@franlol/opencode-md-table-formatter@latest"
 	],
-  "instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"],
-  "provider": {
-    "anthropic": {
-      "options": {
-        "websearch_cited": {
-          "model": "claude-haiku-4-5"
-        }
-      }
-    }
-  }
+	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"]
 }
