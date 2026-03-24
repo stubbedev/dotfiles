@@ -33,6 +33,8 @@ _: {
 
         # Video/media (ffmpeg uses GPU acceleration)
         (homeLib.gfx ffmpeg-full)
+        (homeLib.gfxExe "ffprobe" ffmpeg-full)
+        (homeLib.gfxExe "ffplay" ffmpeg-full)
 
         # Terminal image viewers (some use GPU)
         chafa
