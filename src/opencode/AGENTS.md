@@ -1,13 +1,5 @@
 # Agent Guidelines
 
-## Web Search
-
-Use `websearch_cited` whenever uncertain about any fact, version,
-API, or process. Do not guess — search instead. Verify the current
-date is reflected in your answers.
-
-Do NOT use the built-in `websearch` tool — use `websearch_cited` instead.
-
 ## Scope
 
 Fix only what was asked. Do not refactor, rename, or restructure
