@@ -17,6 +17,7 @@ in
         vpn = true;
         opencode = true;
         srv = true;
+        k8s = true;
       };
     };
   };

@@ -53,6 +53,11 @@ _: {
           default = false;
           description = "Enable php installation.";
         };
+        k8s = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable Kubernetes tools (kubectl, minikube).";
+        };
       };
     };
 }
