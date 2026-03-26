@@ -33,7 +33,7 @@
       url = "github:stubbedev/tmux-stubbe";
       flake = false;
     };
-    opencode.url = "github:anomalyco/opencode";
+    opencode.url = "github:anomalyco/opencode/d6fc5f414b1f78994fffd550d4104627dbbfac51";
     srv.url = "github:stubbedev/srv";
   };
 
