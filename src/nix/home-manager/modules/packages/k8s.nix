@@ -9,6 +9,7 @@ _: {
     lib.mkIf config.features.k8s {
       home.packages = with pkgs; [
         kubectl
+        kubectl.convert
         minikube
       ];
     };
