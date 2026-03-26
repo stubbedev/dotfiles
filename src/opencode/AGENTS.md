@@ -13,6 +13,10 @@ state your plan and wait for confirmation.
 After making changes, run the relevant build, lint, or test command.
 Do not stop at the edit — confirm it works.
 
+When doing edits on JavaScript, TypeScript, HTML or CSS files, check
+the project package.json for any lint or lint fix specific commands
+and run those.
+
 ## File Operations
 
 Always edit existing files. Never create a new file when an existing
