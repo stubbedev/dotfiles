@@ -27,6 +27,10 @@ in
         ${lib.optionalString config.features.srv ''
           ${srvBin} completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_srv 2>/dev/null
         ''}
+        ${lib.optionalString config.features.k8s ''
+          ${pkgs.kubectl}/bin/kubectl completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_kubectl 2>/dev/null
+          ${pkgs.minikube}/bin/minikube completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_minikube 2>/dev/null
+        ''}
       '';
     };
 }
