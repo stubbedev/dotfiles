@@ -13,7 +13,8 @@
 				"npx",
 				"-y",
 				"chrome-devtools-mcp@latest",
-				"--no-usage-statistics"
+				"--no-usage-statistics",
+				"--autoConnect"
 			]
 		}
 	},
