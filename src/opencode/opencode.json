@@ -6,5 +6,16 @@
 		"opencode-vibeguard",
 		"@franlol/opencode-md-table-formatter@latest"
 	],
+	"mcp": {
+		"chrome-devtools": {
+			"type": "local",
+			"command": [
+				"npx",
+				"-y",
+				"chrome-devtools-mcp@latest",
+				"--no-usage-statistics"
+			]
+		}
+	},
 	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"]
 }
