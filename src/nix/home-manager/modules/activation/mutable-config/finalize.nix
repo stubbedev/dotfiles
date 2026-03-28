@@ -1,7 +1,6 @@
 _:
 let
   helpers = import ../_helpers.nix;
-  order = import ../_order.nix;
 in
 helpers.mkSetupModule {
   moduleName = "activationApplyMutableConfigFinalize";
@@ -12,6 +11,7 @@ helpers.mkSetupModule {
     "applyMutableConfigLazygit"
     "applyMutableConfigBtop"
     "applyMutableConfigAerc"
+    "applyMutableConfigOpenCode"
     "applyMutableConfigZsh"
   ];
   enableIf = { config, ... }: config.features.desktop;
