@@ -11,7 +11,7 @@ helpers.mkSetupModule {
   script =
     { config, ... }:
     ''
-      if [ -f "${config.home.homeDirectory}/.local/share/opencode/opencode.db" ]; then
+      if [ ! -f "${config.home.homeDirectory}/.local/share/opencode/opencode.db" ]; then
         ln -s "${config.home.homeDirectory}/.local/share/opencode/opencode-local.db" "${config.home.homeDirectory}/.local/share/opencode/opencode.db" 2>&1 >/dev/null
       fi
     '';
