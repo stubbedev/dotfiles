@@ -36,7 +36,6 @@ helpers.mkSudoSetupModule {
 
                 if ! command -v update-grub >/dev/null 2>&1; then
                   if [ ! -x /usr/sbin/update-grub ] && [ ! -x /usr/bin/update-grub ]; then
-                    echo "Skipping GRUB config: update-grub not found on this system."
                     exit 0
                   fi
                 fi
