@@ -41,6 +41,9 @@ return {
       set("n", "<c-leftdrag>", mc.handleMouseDrag, { desc = "Multicursor: drag cursors" })
       set("n", "<c-leftrelease>", mc.handleMouseRelease, { desc = "Multicursor: release drag" })
 
+      -- Add a cursor for each line in a motion/selection.
+      set({ "n", "x" }, "ga", mc.addCursorOperator, { desc = "Multicursor: add cursor for each line in motion" })
+
       -- Disable and enable cursors.
       set({ "n", "x" }, "<c-q>", mc.toggleCursor, { desc = "Multicursor: toggle cursors enabled" })
 
