@@ -26,6 +26,9 @@
 			"model": "anthropic/claude-haiku-4-5"
 		}
 	},
+	"watcher": {
+		"ignore": ["node_modules/**", "dist/**", ".git/**"]
+	},
 	"formatter": false,
 	"plugin": [
 		"opencode-claude-auth",
