@@ -13,9 +13,17 @@ state your plan and wait for confirmation.
 After making changes, run the relevant build, lint, or test command.
 Do not stop at the edit — confirm it works.
 
+If you use a class or a function, ensure that it is properly imported
+before running any linting.
+
 When doing edits on JavaScript, TypeScript, HTML or CSS files, check
 the project package.json for any lint or lint fix specific commands
 and run those.
+
+Do not run PINT formatter on anything which isn't a PHP file.
+
+Do not make changes in TS, JS, TSX, or JSX files to the quote type.
+That change should always be handled by the formatter or linter.
 
 ## File Operations
 
