@@ -1,31 +1,6 @@
 {
 	"$schema": "https://opencode.ai/config.json",
 	"autoupdate": false,
-	"model": "anthropic/claude-sonnet-4-6",
-	"small_model": "anthropic/claude-haiku-4-5",
-	"agent": {
-		"explore": {
-			"model": "anthropic/claude-haiku-4-5"
-		},
-		"plan": {
-			"model": "anthropic/claude-sonnet-4-6"
-		},
-		"build": {
-			"model": "anthropic/claude-haiku-4-5"
-		},
-		"summary": {
-			"model": "anthropic/claude-haiku-4-5"
-		},
-		"compaction": {
-			"model": "anthropic/claude-haiku-4-5"
-		},
-		"title": {
-			"model": "anthropic/claude-haiku-4-5"
-		},
-		"general": {
-			"model": "anthropic/claude-haiku-4-5"
-		}
-	},
 	"watcher": {
 		"ignore": ["node_modules/**", "dist/**", ".git/**"]
 	},
