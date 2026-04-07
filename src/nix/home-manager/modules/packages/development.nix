@@ -45,6 +45,9 @@ _: {
         # c3
         c3c
 
+        # Caddy server
+        caddy
+
         # IDE toolbox (GUI app)
         (homeLib.gfx jetbrains-toolbox)
         networkmanager-openconnect

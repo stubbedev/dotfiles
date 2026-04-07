@@ -16,6 +16,11 @@ vim.g.root_spec = { ".git", "lsp", "cwd" }
 vim.treesitter.language.register("html", { "html", "vue", "tmpl" })
 vim.treesitter.language.register("templ", { "templ", "tmpl" })
 
+vim.filetype.add({
+  extension = { caddy = "caddy" },
+  filename = { Caddyfile = "caddy" },
+})
+
 -- Folding
 vim.opt.foldlevel = 99
 vim.opt.foldtext = "v:lua.require'lazyvim.util'.ui.foldtext()"
