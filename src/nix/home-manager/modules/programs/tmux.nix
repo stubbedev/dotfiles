@@ -4,29 +4,23 @@ _: {
       lib,
       config,
       pkgs,
-      tmux-stubbe,
       ...
     }:
     lib.mkIf config.features.desktop {
-      programs.tmux =
-        let
-          tmuxStubbe = pkgs.tmuxPlugins.mkTmuxPlugin {
-            pluginName = "tmux-stubbe";
-            rtpFilePath = "stubbe.tmux";
-            version = "unstable-master";
-            src = tmux-stubbe;
-          };
-        in
-        {
-          enable = true;
-          sensibleOnTop = true;
-          extraConfig = builtins.readFile ../../../../tmux/tmux.conf;
-          plugins = with pkgs.tmuxPlugins; [
-            yank
-            resurrect
-            continuum
-            tmuxStubbe
-          ];
-        };
+      home.file.".config/tmux/scripts/commands.sh" = {
+        source = ../../../../tmux/scripts/commands.sh;
+        executable = true;
+      };
+
+      programs.tmux = {
+        enable = true;
+        sensibleOnTop = true;
+        extraConfig = builtins.readFile ../../../../tmux/tmux.conf;
+        plugins = with pkgs.tmuxPlugins; [
+          yank
+          resurrect
+          continuum
+        ];
+      };
     };
 }

@@ -184,11 +184,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1775661044,
-        "narHash": "sha256-HlvLj+wE5ELaU+u2cY2nBFUJHdrob1V7qydk9lBx7oE=",
+        "lastModified": 1775677668,
+        "narHash": "sha256-cxKncYR4mPOlVB3hFqZEcC/4A6hGwunH1PWEubUr5XE=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "4ac0a4fd1537325d769377d574dccd10b97c28a2",
+        "rev": "01ea51d7065e0ab06a09df9db4d1c17f6eb2675f",
         "type": "github"
       },
       "original": {
@@ -953,7 +953,6 @@
         "nixpkgs": "nixpkgs_4",
         "opencode": "opencode",
         "srv": "srv",
-        "tmux-stubbe": "tmux-stubbe",
         "tree-sitter": "tree-sitter"
       }
     },
@@ -1051,22 +1050,6 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
-        "type": "github"
-      }
-    },
-    "tmux-stubbe": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1770064241,
-        "narHash": "sha256-EYM2p/xlfxnYN0UbotZLeiQ8vTMLF/PECFKKxVJvfN4=",
-        "owner": "stubbedev",
-        "repo": "tmux-stubbe",
-        "rev": "acec86d152687b8cf1b56f3939ab8132d4b40b17",
-        "type": "github"
-      },
-      "original": {
-        "owner": "stubbedev",
-        "repo": "tmux-stubbe",
         "type": "github"
       }
     },

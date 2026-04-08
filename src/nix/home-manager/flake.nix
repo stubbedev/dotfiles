@@ -32,10 +32,6 @@
     # nixpkgs-unstable ships 0.25.x but nvim-treesitter requires >= 0.26.1.
     # Track upstream master so nix flake update always pulls the latest.
     tree-sitter.url = "github:tree-sitter/tree-sitter";
-    tmux-stubbe = {
-      url = "github:stubbedev/tmux-stubbe";
-      flake = false;
-    };
     opencode.url = "github:anomalyco/opencode/d6fc5f414b1f78994fffd550d4104627dbbfac51";
     srv.url = "github:stubbedev/srv";
   };
