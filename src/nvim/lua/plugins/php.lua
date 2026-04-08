@@ -14,13 +14,15 @@ return {
       "MunifTanjim/nui.nvim",
       "kevinhwang91/promise-async",
     },
+    cond = function()
+      return vim.fn.filereadable("artisan") == 1
+    end,
     cmd = { "Sail", "Artisan", "Composer", "Npm", "Yarn", "Laravel" },
     keys = {
       { "<leader>pa", ":Laravel artisan<cr>" },
       { "<leader>pr", ":Laravel routes<cr>" },
       { "<leader>pm", ":Laravel related<cr>" },
     },
-    event = { "VeryLazy" },
     config = true,
     opts = {
       lsp_server = "intelephense",

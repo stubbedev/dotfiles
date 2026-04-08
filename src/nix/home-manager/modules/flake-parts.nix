@@ -5,6 +5,6 @@
   perSystem =
     { pkgs, ... }:
     {
-      formatter = pkgs.nixpkgs-fmt;
+      formatter = pkgs.nixfmt-rfc-style;
     };
 }

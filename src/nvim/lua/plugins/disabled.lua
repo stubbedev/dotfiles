@@ -5,6 +5,10 @@ return {
   { "akinsho/bufferline.nvim",      enabled = false },
   {
     "folke/snacks.nvim",
+    keys = {
+      { "<c-/>", false },
+      { "<c-_>", false },
+    },
     opts = {
       explorer = { enabled = false },
       scroll = { enabled = false },

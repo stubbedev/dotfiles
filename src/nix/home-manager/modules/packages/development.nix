@@ -5,9 +5,11 @@ _: {
       homeLib,
       lib,
       config,
+      tree-sitter,
       ...
     }:
     let
+      inherit (pkgs.stdenv.hostPlatform) system;
       luaBin = pkgs.writeShellScriptBin "lua" ''
         exec ${pkgs.lua5_1}/bin/lua "$@"
       '';
@@ -26,6 +28,8 @@ _: {
 
         # Editor and Lua runtimes
         neovim
+        (homeLib.gfx neovide)
+        tree-sitter.packages.${system}.cli
         luaBin
         luajitBin
 

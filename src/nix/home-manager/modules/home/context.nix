@@ -29,6 +29,7 @@
           ;
         inherit (inputs) hyprland hy3 fenix tmux-stubbe opencode srv;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
+        "tree-sitter" = inputs."tree-sitter";
       };
     };
 }

@@ -21,7 +21,6 @@ _: {
         bat
         fzf
         ripgrep
-        tree-sitter
         zoxide
         just
 
