@@ -54,8 +54,11 @@ _: {
 
       # Create start-hyprland wrapper that uses our wrapped hyprland
       # The watchdog monitors the wrapped hyprland process
+      # --no-nixgl: disable built-in nixGL detection (we already handle it via hyprland-wrapped)
+      # --path: point to our nixGL-wrapped Hyprland binary
       start-hyprland-wrapped = pkgs.runCommand "start-hyprland" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         makeWrapper ${hyprlandPkg}/bin/start-hyprland $out/bin/start-hyprland \
+          --add-flags "--no-nixgl --path ${hyprland-wrapped}/bin/hyprland" \
           --prefix PATH : "${pathPrefix}" \
           --prefix PATH : "${hyprlandPathPrefix}" \
           --prefix XDG_DATA_DIRS : "${dataDirsPrefix}"
