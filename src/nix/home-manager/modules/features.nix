@@ -58,6 +58,11 @@ _: {
           default = false;
           description = "Enable Kubernetes tools (kubectl, minikube).";
         };
+        claudeCode = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable claude-code CLI from nixpkgs unstable.";
+        };
       };
     };
 }

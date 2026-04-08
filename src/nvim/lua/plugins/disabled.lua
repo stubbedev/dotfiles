@@ -6,10 +6,15 @@ return {
   {
     "folke/snacks.nvim",
     keys = {
-      { "<c-/>", false },
-      { "<c-_>", false },
+      { "<c-/>",    false },
+      { "<c-_>",    false },
+      { "<leader>e",  false },
+      { "<leader>E",  false },
+      { "<leader>fe", false },
+      { "<leader>fE", false },
     },
     opts = {
+      terminal = { enabled = false },
       explorer = { enabled = false },
       scroll = { enabled = false },
       indent = {

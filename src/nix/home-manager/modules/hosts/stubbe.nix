@@ -18,6 +18,7 @@ in
         opencode = true;
         srv = true;
         k8s = true;
+        claudeCode = true;
       };
     };
   };

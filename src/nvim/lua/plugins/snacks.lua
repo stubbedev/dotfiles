@@ -25,8 +25,5 @@ return {
         },
       },
     },
-    explorer = {
-      enabled = false,
-    },
   },
 }
