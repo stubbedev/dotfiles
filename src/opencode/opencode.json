@@ -6,7 +6,6 @@
 	},
 	"formatter": false,
 	"plugin": [
-		"opencode-claude-auth",
 		"opencode-vibeguard",
 		"@franlol/opencode-md-table-formatter@latest"
 	],
