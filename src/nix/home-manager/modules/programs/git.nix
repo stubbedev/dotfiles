@@ -1,10 +1,5 @@
 _: {
-  flake.modules.homeManager.programsGit =
-    {
-      lib,
-      config,
-      ...
-    }:
+  flake.modules.homeManager.programsGit = { lib, config, pkgs, ... }:
     lib.mkIf config.features.desktop {
       programs.git = {
         enable = true;
@@ -15,10 +10,11 @@ _: {
           };
           core = {
             excludesfile = "~/.gitignore";
-            editor = "nvim";
+            editor = "${pkgs.neovim}/bin/nvim";
           };
           init.defaultBranch = "master";
           push.autoSetupRemote = true;
+          pull.rebase = false;
           advice.setUpstreamFailure = false;
         };
       };
