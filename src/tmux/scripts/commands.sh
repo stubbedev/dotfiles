@@ -103,6 +103,14 @@ toggle_lazydocker_window() {
 	toggle_window "lazydocker" tmux-lazy-docker
 }
 
+toggle_opencode_window() {
+	if ! command -v tmux-opencode >/dev/null 2>&1; then
+		return
+	fi
+
+	toggle_window "opencode" tmux-opencode
+}
+
 case "$1" in
 "toggle_lazygit_window")
 	toggle_lazygit_window
@@ -112,6 +120,9 @@ case "$1" in
 	;;
 "toggle_lazydocker_window")
 	toggle_lazydocker_window
+	;;
+"toggle_opencode_window")
+	toggle_opencode_window
 	;;
 "session_init")
 	session_init
