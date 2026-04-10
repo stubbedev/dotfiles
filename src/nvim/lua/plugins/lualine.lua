@@ -137,7 +137,7 @@ return {
     config = function()
       require("lualine").setup({
         options = {
-          theme = "catppuccin-macchiato",
+          theme = "catppuccin-mocha",
           extensions = { "lazy", "mason", "oil", "nvim-dap", "overseer", "trouble" },
         },
       })
