@@ -11,3 +11,14 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
     vim.diagnostic.enable(false, { bufnr = args.buf })
   end,
 })
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  callback = function()
+    vim.lsp.inlay_hint.enable(false)
+  end,
+})
+vim.api.nvim_create_autocmd("BufWritePost", {
+  callback = function()
+    vim.lsp.inlay_hint.enable(true)
+  end,
+})
