@@ -3,7 +3,7 @@ return {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     opts = {
-      ensure_installed = { "caddy" },
+      ensure_installed = { "caddy", "css", "scss", "less" },
     },
   },
 }
