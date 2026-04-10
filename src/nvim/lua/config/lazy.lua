@@ -39,10 +39,10 @@ require("lazy").setup({
   },
   rocks = { enabled = false },
   defaults = {
-    lazy = false,
+    lazy = true,
     version = false,
   },
-  checker = { enabled = true },
+  checker = { enabled = false },
   install = { colorscheme = { "catppuccin" } },
   performance = {
     rtp = {

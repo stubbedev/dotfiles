@@ -67,20 +67,20 @@ return {
             return {
               lualine_a = {
                 {
-                  'buffers',
+                  "buffers",
                   show_filename_only = true,
                   hide_filename_extension = false,
                   show_modified_status = true,
                   mode = 0,
                   max_length = vim.o.columns,
-                  filetype_names = { snacks_dashboard = '' },
+                  filetype_names = { snacks_dashboard = "" },
                   use_mode_colors = true,
                   symbols = {
-                    modified = ' ●',
-                    alternate_file = '^',
-                    directory = '',
+                    modified = " ●",
+                    alternate_file = "^",
+                    directory = "",
                   },
-                }
+                },
               },
             }
           end
@@ -92,7 +92,7 @@ return {
             lualine.setup(config)
           end
 
-          vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete", "BufWipeout", "BufEnter" }, {
+          vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete", "BufWipeout" }, {
             callback = function()
               vim.schedule(function()
                 pcall(update_lualine_tabline)
@@ -107,17 +107,17 @@ return {
           table.insert(lualineZ, { require("recorder").recordingStatus })
           table.insert(lualineY, { require("recorder").displaySlots })
           table.insert(lualineX, 1, {
-            'filename',
+            "filename",
             file_status = false,
             newfile_status = false,
             path = 1,
             shorting_target = 40,
             symbols = {
-              modified = '',
-              readonly = '',
-              unnamed = '',
-              newfile = '',
-            }
+              modified = "",
+              readonly = "",
+              unnamed = "",
+              newfile = "",
+            },
           })
           table.insert(lualineX, { require("opencode").statusline })
           local lualineC = {}
@@ -128,7 +128,7 @@ return {
               lualine_y = lualineY,
               lualine_z = lualineZ,
             },
-            tabline = get_tabline()
+            tabline = get_tabline(),
           })
         end,
       },
