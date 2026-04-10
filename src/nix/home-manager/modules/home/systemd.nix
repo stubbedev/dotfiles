@@ -108,6 +108,40 @@ _: {
           };
         };
 
+      } // (
+        let
+          secretsExec =
+            if builtins.pathExists /usr/bin/ksecretd then
+              "/usr/bin/ksecretd"
+            else if builtins.pathExists /usr/bin/gnome-keyring-daemon then
+              "/usr/bin/gnome-keyring-daemon --start --foreground --components=secrets"
+            else if builtins.pathExists /usr/bin/pass-secret-service then
+              "/usr/bin/pass-secret-service"
+            else
+              null;
+        in
+        lib.optionalAttrs (secretsExec != null) {
+          secrets-service = {
+            Unit = {
+              Description = "D-Bus secrets service (org.freedesktop.secrets)";
+              After = [ "hyprland-session.target" ];
+              PartOf = [ "hyprland-session.target" ];
+            };
+            Install = {
+              WantedBy = [ "hyprland-session.target" ];
+            };
+            Service = {
+              Type = "dbus";
+              BusName = "org.freedesktop.secrets";
+              ExecCondition = "/bin/sh -c '! ${pkgs.systemd}/bin/busctl --user status org.freedesktop.secrets 2>/dev/null'";
+              ExecStart = secretsExec;
+              Restart = "on-failure";
+              RestartSec = "2s";
+            };
+          };
+        }
+      ) // {
+
         swaync = {
           Unit = {
             Description = "SwayNotificationCenter";
