@@ -13,7 +13,7 @@ vim.opt.mouse = ""
 -- * a function with signature `function(buf) -> string|string[]`
 -- Prioritize .git over lsp to prevent subdirectory flake.nix from changing root
 vim.g.root_spec = { ".git", "lsp", "cwd" }
-vim.treesitter.language.register("html", { "html", "vue", "tmpl" })
+vim.treesitter.language.register("html", { "html", "tmpl" })
 vim.treesitter.language.register("templ", { "templ", "tmpl" })
 
 vim.filetype.add({
