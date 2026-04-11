@@ -78,7 +78,7 @@ _: {
           };
           Service = {
             Type = "simple";
-            ExecStart = "${constants.paths.hypr}/scripts/power-profile-fix.sh";
+            ExecStart = "${constants.paths.hypr}/scripts/power.profile.fix.sh";
             Restart = "on-failure";
             RestartSec = "5s";
           };

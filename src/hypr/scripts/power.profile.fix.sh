@@ -48,7 +48,7 @@ is_passive_mode() {
 get_helper_path() {
   # Try to find the helper script
   local script_dir="$(dirname "$(readlink -f "$0")")"
-  local helper="$script_dir/power-profile-helper.sh"
+  local helper="$script_dir/power.profile.helper.sh"
 
   if [ -f "$helper" ]; then
     echo "$helper"
