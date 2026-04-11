@@ -2,10 +2,11 @@
 
 DIRECTION=$1
 CURRENT_LAYOUT=$(hyprctl getoption general:layout -j 2>/dev/null | jq -r '.str')
-HY3_LAYOUT="hy3"
 
-if [ "$CURRENT_LAYOUT" = "$HY3_LAYOUT" ]; then
+if [ "$CURRENT_LAYOUT" = "hy3" ]; then
   hyprctl dispatch hy3:movefocus "$DIRECTION"
+elif [ "$CURRENT_LAYOUT" = "scrolling" ]; then
+  hyprctl dispatch layoutmsg "focus $DIRECTION"
 else
   hyprctl dispatch movefocus "$DIRECTION"
 fi
