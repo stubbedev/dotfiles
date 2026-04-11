@@ -1,6 +1,6 @@
 -- This file is automatically loaded by plugins.core
 vim.g.mapleader = " "
-vim.g.maplocalleader = "\\"
+vim.g.maplocalleader = vim.g.mapleader
 
 -- Enable LazyVim auto format
 vim.g.autoformat = false
