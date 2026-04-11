@@ -9,9 +9,9 @@ if [ "$CURRENT_LAYOUT" = "scrolling" ] && [ "$DX" != "0" ]; then
   # Use colresize for horizontal resizing in scrolling mode
   # Convert px delta to fractional increment (monitor width ~1920px => 50px ≈ 0.026)
   if [ "$DX" -gt 0 ]; then
-    hyprctl dispatch layoutmsg "colresize +0.03"
+    hyprctl dispatch layoutmsg "colresize +conf"
   else
-    hyprctl dispatch layoutmsg "colresize -0.03"
+    hyprctl dispatch layoutmsg "colresize -conf"
   fi
 else
   hyprctl dispatch resizeactive "$DX" "$DY"
