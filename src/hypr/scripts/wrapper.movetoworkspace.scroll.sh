@@ -1,23 +1,13 @@
-#!/bin/bash
-# Wrapper for movetoworkspace with scroll direction - works in both layouts
-# Usage: wrapper.movetoworkspace.scroll.sh <direction>
-# Direction: "next" or "prev"
+#!/usr/bin/env bash
 
 DIRECTION=$1
-CURRENT_LAYOUT=$(hyprctl getoption general:layout -j 2>/dev/null | grep -o '"scroll"' | tr -d '"')
+CURRENT_LAYOUT=$(hyprctl getoption general:layout -j 2>/dev/null | jq -r '.str')
+HY3_LAYOUT="hy3"
+MOVE_COMMAND=$([ "$CURRENT_LAYOUT" = "$HY3_LAYOUT" ] && echo "hy3:movetoworkspace" || echo "movetoworkspace")
 
-if [ "$CURRENT_LAYOUT" = "scroll" ]; then
-    # In scroll mode, move to adjacent workspace
-    if [ "$DIRECTION" = "next" ]; then
-        hyprctl dispatch movetoworkspace e+1
-    elif [ "$DIRECTION" = "prev" ]; then
-        hyprctl dispatch movetoworkspace e-1
-    fi
-else
-    # In hy3 mode, same behavior
-    if [ "$DIRECTION" = "next" ]; then
-        hyprctl dispatch hy3:movetoworkspace e+1
-    elif [ "$DIRECTION" = "prev" ]; then
-        hyprctl dispatch hy3:movetoworkspace e-1
-    fi
+# In scroll mode, move to adjacent workspace
+if [ "$DIRECTION" = "next" ]; then
+  hyprctl dispatch "$MOVE_COMMAND" e+1
+elif [ "$DIRECTION" = "prev" ]; then
+  hyprctl dispatch "$MOVE_COMMAND" e-1
 fi

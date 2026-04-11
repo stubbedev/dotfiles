@@ -1,12 +1,8 @@
-#!/bin/bash
-# Wrapper for movewindow - works in both hy3 and scroll layouts
-# Usage: wrapper.movewindow.sh <direction>
+#!/usr/bin/env bash
 
 DIRECTION=$1
-CURRENT_LAYOUT=$(hyprctl getoption general:layout -j 2>/dev/null | grep -o '"scroll"' | tr -d '"')
+CURRENT_LAYOUT=$(hyprctl getoption general:layout -j 2>/dev/null | jq -r '.str')
+HY3_LAYOUT="hy3"
+MOVE_COMMAND=$([ "$CURRENT_LAYOUT" = "$HY3_LAYOUT" ] && echo "hy3:movewindow" || echo "movewindow")
 
-if [ "$CURRENT_LAYOUT" = "scroll" ]; then
-    hyprctl dispatch movewindow $DIRECTION
-else
-    hyprctl dispatch hy3:movewindow $DIRECTION
-fi
+hyprctl dispatch "$MOVE_COMMAND" "$DIRECTION"
