@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
 
 # Event-driven hy3 autotile trigger based on focused monitor width.
+# Only runs when hy3 layout is active.
 
 MIN_TRIGGER=400
 last_set=""
 
 SOCK="${XDG_RUNTIME_DIR}/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock"
 
+is_hy3_mode() {
+  local current_layout
+  current_layout=$(hyprctl getoption general:layout -j 2>/dev/null | jq -r '.str // .set // empty' 2>/dev/null)
+  [[ "${current_layout}" == "hy3" ]]
+}
+
 set_trigger() {
+  # Skip if not in hy3 mode
+  if ! is_hy3_mode; then
+    return
+  fi
   local monitors_json width trigger
 
   monitors_json=$(hyprctl monitors -j 2>/dev/null) || return
