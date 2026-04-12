@@ -8,7 +8,6 @@ _: {
     }:
     lib.mkIf config.features.niri {
       home.packages = with pkgs; [
-        xdg-desktop-portal
         xdg-desktop-portal-gnome
       ];
     };

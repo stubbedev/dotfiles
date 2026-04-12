@@ -14,17 +14,11 @@ _: {
     in
     lib.mkIf config.features.hyprland {
       home.packages = with pkgs; [
-        (homeLib.gfx hyprlock)
         (homeLib.gfxExe "hyprland-guiutils" guiutils)
         hyprshot
         hyprlang
         hyprkeys
-        hypridle
         (homeLib.gfx hyprpaper)
-        hyprsunset
-        hyprpicker # might need wrapping
-        hyprcursor
-        hyprpolkitagent
         hyprtoolkit
         hyprlauncher
         hyprutils

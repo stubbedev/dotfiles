@@ -9,10 +9,7 @@ _: {
     }:
     lib.mkIf config.features.niri {
       home.packages = with pkgs; [
-        (homeLib.gfx hyprlock)
-        hypridle
-        swww
-        hyprpolkitagent
+        awww
         xwayland-satellite
       ];
     };

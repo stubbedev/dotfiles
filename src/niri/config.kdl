@@ -88,7 +88,7 @@ xwayland-satellite {
 
 spawn-at-startup "waybar"
 spawn-at-startup "hypridle" "--config" "/home/stubbe/.config/niri/hypridle.conf"
-spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.sh"
+spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.sh"  // uses awww (renamed from swww)
 spawn-at-startup "swaync"
 spawn-at-startup "wl-clip-persist" "--clipboard" "regular"
 spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
