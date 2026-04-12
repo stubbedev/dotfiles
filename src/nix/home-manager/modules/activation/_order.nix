@@ -6,6 +6,8 @@
     setupHyprlockPam = "setupHyprlockPam";
     setupHyprKeyringPam = "setupHyprlockPam";
     setupHyprSession = "setupHyprKeyringPam";
+    setupNiriKeyringPam = "setupNiriKeyringPam";
+    setupNiriSession = "setupNiriSession";
     setupSnapThemes = "setupSnapThemes";
     setupVpnPolkit = "setupVpnPolkit";
     setupPowerProfileFix = "setupPowerProfileFix";
@@ -23,6 +25,8 @@
     setupHyprlockPam = [ "setupPamWrappers" ];
     setupHyprKeyringPam = [ "setupHyprlockPam" ];
     setupHyprSession = [ "setupHyprKeyringPam" ];
+    setupNiriKeyringPam = [ "setupPamWrappers" ];
+    setupNiriSession = [ "setupNiriKeyringPam" ];
     setupSnapThemes = [ "setupHyprSession" ];
     setupVpnPolkit = [ "setupSnapThemes" ];
     setupPowerProfileFix = [ "setupVpnPolkit" ];

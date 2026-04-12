@@ -1,0 +1,237 @@
+// Niri Wayland Compositor Configuration
+// https://github.com/niri-wm/niri/wiki
+
+prefer-no-csd
+
+screenshot-path "~/Pictures/Screenshots/niri-%Y-%m-%d_%H-%M-%S.png"
+
+input {
+    keyboard {
+        xkb {
+            layout "us,dk,es"
+            options "grp:toggle"
+        }
+        repeat-delay 300
+        repeat-rate 50
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+        click-method "clickfinger"
+        drag-lock
+    }
+
+    mouse {
+        accel-profile "flat"
+    }
+}
+
+// Monitor configuration
+// Outputs are matched by connector name (e.g. eDP-1, DP-1, HDMI-A-1).
+// Run `niri msg outputs` to list connected outputs and find connector names.
+output "eDP-1" {
+    scale 1.5
+}
+
+layout {
+    gaps 0
+
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        width 2
+        active-color "#cba6f7"   // catppuccin mauve
+        inactive-color "#11111b" // catppuccin crust
+    }
+
+    border {
+        off
+    }
+}
+
+animations {
+    off
+}
+
+cursor {
+    xcursor-theme "Vimix-cursors"
+    xcursor-size 24
+}
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+environment {
+    XDG_CURRENT_DESKTOP "niri"
+    XDG_SESSION_TYPE "wayland"
+    XDG_SESSION_DESKTOP "niri"
+
+    GDK_BACKEND "wayland"
+    GTK_USE_PORTAL "0"
+
+    QT_QPA_PLATFORMTHEME "kde"
+    QT_STYLE_OVERRIDE "Breeze"
+
+    MOZ_ENABLE_WAYLAND "1"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+
+    COLOR_SCHEME "prefer-dark"
+}
+
+// Native xwayland-satellite integration: niri creates the X11 socket,
+// sets DISPLAY, and auto-spawns xwayland-satellite on first X11 client.
+xwayland-satellite {
+    path "xwayland-satellite"
+}
+
+spawn-at-startup "waybar"
+spawn-at-startup "hypridle" "--config" "/home/stubbe/.config/niri/hypridle.conf"
+spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.sh"
+spawn-at-startup "swaync"
+spawn-at-startup "wl-clip-persist" "--clipboard" "regular"
+spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
+spawn-at-startup "nm-applet" "--indicator"
+spawn-at-startup "blueman-applet"
+spawn-at-startup "hyprpolkitagent"
+spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
+
+window-rule {
+    match title="Select what to share"
+    open-floating true
+    default-column-width { fixed 800; }
+}
+
+window-rule {
+    match app-id=r#"org\.pulseaudio\.pavucontrol"#
+    open-floating true
+    default-column-width { fixed 800; }
+}
+
+window-rule {
+    match app-id=r#"\.blueman-manager-wrapped"#
+    open-floating true
+    default-column-width { fixed 800; }
+}
+
+window-rule {
+    match app-id="nm-connection-editor"
+    open-floating true
+    default-column-width { fixed 800; }
+}
+
+window-rule {
+    match app-id="jetbrains-toolbox"
+    open-floating true
+}
+
+window-rule {
+    match app-id="vpn-prompt"
+    open-floating true
+    default-column-width { fixed 640; }
+}
+
+// Steam: all windows float except the main Steam window
+window-rule {
+    match app-id="^steam$"
+    open-floating true
+}
+window-rule {
+    match app-id="^steam$" title="^Steam$"
+    open-floating false
+}
+
+binds {
+    // LAUNCHERS
+    Mod+Return { spawn "alacritty"; }
+    Mod+Shift+E { spawn "bash" "-c" "nautilus || thunar || dolphin"; }
+    Mod+Space { spawn "rofi" "-drun-reload-desktop-cache" "-drun-use-desktop-cache" "-show" "drun"; }
+    Mod+Shift+Space { spawn "rofi" "-show" "combi" "-combi-modes" "run" "-modes" "combi"; }
+    Mod+Ctrl+Space { spawn "rofi" "-show" "combi" "-combi-modes" "window" "-modes" "combi"; }
+    Mod+M { spawn "open-mail"; }
+
+    // SCREENSHOTS (niri built-in)
+    Print { screenshot; }
+    Shift+Print { screenshot-screen; }
+    Mod+Print { screenshot-window; }
+
+    // CLIPBOARD
+    Mod+V { spawn "bash" "-c" "cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send 'Pasted selection'"; }
+    Mod+C { spawn "bash" "-c" "wl-copy \"$(wl-paste -p)\" && notify-send 'Copied selection'"; }
+
+    // GENERAL
+    Mod+Shift+Q { close-window; }
+    Mod+F { fullscreen-window; }
+    Mod+Shift+F { maximize-column; }
+    Mod+T { toggle-window-floating; }
+    Mod+Escape { spawn "hyprlock"; }
+    Mod+Delete { quit skip-confirmation=true; }
+
+    // WINDOW FOCUS
+    Mod+Left  { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up    { focus-window-up; }
+    Mod+Down  { focus-window-down; }
+
+    // WINDOW MOVEMENT
+    Mod+Shift+Left  { move-column-left; }
+    Mod+Shift+Right { move-column-right; }
+    Mod+Shift+Up    { move-window-up; }
+    Mod+Shift+Down  { move-window-down; }
+
+    // COLUMN / WINDOW RESIZE
+    Mod+Ctrl+Left  { set-column-width "-50px"; }
+    Mod+Ctrl+Right { set-column-width "+50px"; }
+    Mod+Ctrl+Up    { set-window-height "-50px"; }
+    Mod+Ctrl+Down  { set-window-height "+50px"; }
+
+    // WORKSPACE SWITCHING
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+0 { focus-workspace 10; }
+
+    // MOVE WINDOW TO WORKSPACE
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+    Mod+Shift+0 { move-column-to-workspace 10; }
+
+    // FOCUS / WORKSPACE CYCLE (matches hyprland bracket binds)
+    Mod+bracketright { focus-column-right; }
+    Mod+bracketleft  { focus-column-left; }
+    Mod+Shift+bracketright { focus-workspace-down; }
+    Mod+Shift+bracketleft  { focus-workspace-up; }
+
+    // MOUSE WHEEL (matches hyprland mouse_down/up → column focus)
+    Mod+WheelScrollDown       cooldown-ms=150 { focus-column-right; }
+    Mod+WheelScrollUp         cooldown-ms=150 { focus-column-left; }
+    Mod+Shift+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+Shift+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
+
+    // MEDIA KEYS
+    XF86AudioPlay allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioStop allow-when-locked=true { spawn "playerctl" "stop"; }
+    XF86AudioPrev allow-when-locked=true { spawn "playerctl" "previous"; }
+    XF86AudioNext allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute          allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+
+    // BRIGHTNESS KEYS
+    XF86MonBrightnessUp   { spawn "brightnessctl" "s" "5%+"; }
+    XF86MonBrightnessDown { spawn "brightnessctl" "s" "5%-"; }
+}

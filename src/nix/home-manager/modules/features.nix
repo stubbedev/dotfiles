@@ -18,6 +18,11 @@ _: {
           default = true;
           description = "Enable Hyprland-specific packages and configuration.";
         };
+        niri = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Enable Niri-specific packages and configuration.";
+        };
         theming = lib.mkOption {
           type = lib.types.bool;
           default = true;
