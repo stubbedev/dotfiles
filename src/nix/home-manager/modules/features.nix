@@ -20,7 +20,7 @@ _: {
         };
         niri = lib.mkOption {
           type = lib.types.bool;
-          default = false;
+          default = true;
           description = "Enable Niri-specific packages and configuration.";
         };
         theming = lib.mkOption {
