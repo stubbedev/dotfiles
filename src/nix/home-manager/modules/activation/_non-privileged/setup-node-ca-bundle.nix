@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupNodeCaBundle";
-  activationName = "setupNodeCaBundle";
   args =
     { config, lib, ... }:
     {

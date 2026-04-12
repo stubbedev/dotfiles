@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupHyprKeyringPam";
-  activationName = "setupHyprKeyringPam";
   enableIf = { config, ... }: config.features.hyprland;
   args = _: {
     promptTitle = "GNOME Keyring PAM setup";

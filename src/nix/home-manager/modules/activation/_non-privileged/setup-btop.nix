@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationApplyMutableConfigBtop";
-  activationName = "applyMutableConfigBtop";
   enableIf = { config, ... }: config.features.desktop;
   args =
     { config, ... }:

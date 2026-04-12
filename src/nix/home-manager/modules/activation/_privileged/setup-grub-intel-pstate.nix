@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupGrubIntelPstate";
-  activationName = "setupGrubIntelPstate";
   enableIf = { config, ... }: config.features.desktop;
   args = _: {
     preCheck = ''

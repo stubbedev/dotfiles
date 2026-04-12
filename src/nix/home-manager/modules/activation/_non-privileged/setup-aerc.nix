@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationApplyMutableConfigAerc";
-  activationName = "applyMutableConfigAerc";
   enableIf = { config, ... }: config.features.desktop;
   args =
     { config, ... }:

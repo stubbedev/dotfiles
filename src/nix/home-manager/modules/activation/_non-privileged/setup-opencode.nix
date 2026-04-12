@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationApplyMutableConfigOpenCode";
-  activationName = "applyMutableConfigOpenCode";
   enableIf = { config, ... }: config.features.opencode;
   args =
     { config, ... }:

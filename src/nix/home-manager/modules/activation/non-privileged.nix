@@ -1,4 +1,4 @@
-flakeArgs:
+flakeArgs@{ lib, ... }:
 let
   inherit ((import ./_helpers.nix)) mkSetupModule;
   dir = ./_non-privileged;
@@ -7,5 +7,8 @@ let
     (builtins.attrNames (builtins.readDir dir));
 in
 {
-  imports = map (n: mkSetupModule ((import (dir + "/${n}")) flakeArgs)) nixFiles;
+  imports = map (n:
+    let attrs = (import (dir + "/${n}")) flakeArgs;
+    in mkSetupModule ({ name = "non-privileged-${lib.removeSuffix ".nix" n}"; } // attrs)
+  ) nixFiles;
 }

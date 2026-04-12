@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationApplyMutableConfigZsh";
-  activationName = "applyMutableConfigZsh";
   enableIf = { config, ... }: config.features.desktop;
   args =
     {

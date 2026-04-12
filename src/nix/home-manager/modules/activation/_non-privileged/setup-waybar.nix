@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationRestartServiceWaybar";
-  activationName = "restartWaybar";
   enableIf = { config, ... }: config.features.hyprland;
   args = _: {
     actionScript = ''

@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationApplyMutableConfigLazygit";
-  activationName = "applyMutableConfigLazygit";
   enableIf = { config, ... }: config.features.desktop;
   args =
     {

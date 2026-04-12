@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupPowerProfileFix";
-  activationName = "setupPowerProfileFix";
   enableIf = { config, ... }: config.features.desktop;
   args =
     { config, ... }:

@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupVpnPolkit";
-  activationName = "setupVpnPolkit";
   enableIf = { config, ... }: config.features.vpn;
   args =
     { config, ... }:

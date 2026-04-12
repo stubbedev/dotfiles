@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupHyprlockPam";
-  activationName = "setupHyprlockPam";
   enableIf = { config, ... }: config.features.hyprland;
   args = _: {
     promptTitle = "⚠️  Hyprlock PAM configuration missing";

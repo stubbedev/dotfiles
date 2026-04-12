@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupHyprSession";
-  activationName = "setupHyprSession";
   enableIf = { config, ... }: config.features.hyprland;
   args =
     { config, ... }:

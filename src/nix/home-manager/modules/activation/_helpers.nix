@@ -1,32 +1,30 @@
 {
   mkSetupModule =
     {
-      moduleName,
-      activationName ? moduleName,
+      name,
       args,
       enableIf ? true,
     }:
     {
-      flake.modules.homeManager.${moduleName} =
+      flake.modules.homeManager.${name} =
         { lib, ... }@moduleArgs:
         let
           resolvedArgs = if builtins.isFunction args then args moduleArgs else args;
           isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
         in
         lib.mkIf isEnabled {
-          home.activation.${activationName} = lib.hm.dag.entryAfter [ "writeBoundary" ] resolvedArgs.actionScript;
+          home.activation.${name} = lib.hm.dag.entryAfter [ "writeBoundary" ] resolvedArgs.actionScript;
         };
     };
 
   mkSudoSetupModule =
     {
-      moduleName,
-      activationName ? moduleName,
+      name,
       args,
       enableIf ? true,
     }:
     {
-      flake.modules.homeManager.${moduleName} =
+      flake.modules.homeManager.${name} =
         {
           lib,
           pkgs,
@@ -45,21 +43,16 @@
                 sudo() { "$SUDO" "$@"; }
                 ${text}
               '';
-          resolvedArgsWithSudo = resolvedArgs // {
-            preCheck = withSudo (resolvedArgs.preCheck or "");
-            actionScript = withSudo (resolvedArgs.actionScript or "");
-          };
-          resolvedArgsNoName = builtins.removeAttrs resolvedArgsWithSudo [ "name" ];
           setupScript = homeLib.sudoPromptScript (
-            resolvedArgsNoName
+            resolvedArgs
             // {
-              inherit pkgs;
-              name = activationName;
+              inherit pkgs name;
+              actionScript = withSudo (resolvedArgs.actionScript or "");
             }
           );
         in
         lib.mkIf isEnabled {
-          home.activation.${activationName} = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          home.activation.${name} = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             ${setupScript}
           '';
         };

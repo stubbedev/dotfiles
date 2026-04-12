@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationApplyMutableConfigNvim";
-  activationName = "applyMutableConfigNvim";
   enableIf = { config, ... }: config.features.desktop;
   args =
     { config, ... }:

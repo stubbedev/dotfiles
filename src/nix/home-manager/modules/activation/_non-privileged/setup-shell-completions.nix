@@ -3,8 +3,6 @@ let
   inherit (inputs) srv;
 in
 {
-  moduleName = "activationSetupShellCompletions";
-  activationName = "customShellCompletions";
   args =
     {
       config,

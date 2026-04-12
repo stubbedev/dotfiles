@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupNiriSession";
-  activationName = "setupNiriSession";
   enableIf = { config, ... }: config.features.niri;
   args =
     { config, ... }:

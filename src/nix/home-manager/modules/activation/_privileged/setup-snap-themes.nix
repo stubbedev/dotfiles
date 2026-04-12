@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupSnapThemes";
-  activationName = "setupSnapThemes";
   enableIf = { config, ... }: config.features.theming;
   args =
     { pkgs, ... }:

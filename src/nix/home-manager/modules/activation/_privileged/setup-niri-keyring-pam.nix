@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupNiriKeyringPam";
-  activationName = "setupNiriKeyringPam";
   enableIf = { config, ... }: config.features.niri;
   args = _: {
     promptTitle = "GNOME Keyring PAM setup";

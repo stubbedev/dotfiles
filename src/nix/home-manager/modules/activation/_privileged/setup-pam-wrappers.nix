@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupPamWrappers";
-  activationName = "setupPamWrappers";
   enableIf = { config, ... }: config.features.hyprland;
   args = _: {
     promptTitle = "⚠️  Nix PAM wrapper setup required for hyprlock authentication";

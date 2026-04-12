@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupOxcTools";
-  activationName = "setupOxcTools";
   args =
     { pkgs, ... }:
     {

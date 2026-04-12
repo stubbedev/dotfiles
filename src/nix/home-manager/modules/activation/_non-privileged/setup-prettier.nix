@@ -1,6 +1,4 @@
 _: {
-  moduleName = "activationSetupPrettier";
-  activationName = "setupPrettier";
   args =
     { pkgs, ... }:
     {
