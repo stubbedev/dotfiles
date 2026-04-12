@@ -181,10 +181,10 @@ binds {
     Mod+Shift+Down  { move-window-down; }
 
     // COLUMN / WINDOW RESIZE
-    Mod+Ctrl+Left  { set-column-width "-50px"; }
-    Mod+Ctrl+Right { set-column-width "+50px"; }
-    Mod+Ctrl+Up    { set-window-height "-50px"; }
-    Mod+Ctrl+Down  { set-window-height "+50px"; }
+    Mod+Ctrl+Left  { set-column-width "-50"; }
+    Mod+Ctrl+Right { set-column-width "+50"; }
+    Mod+Ctrl+Up    { set-window-height "-50"; }
+    Mod+Ctrl+Down  { set-window-height "+50"; }
 
     // WORKSPACE SWITCHING
     Mod+1 { focus-workspace 1; }
