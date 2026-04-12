@@ -40,7 +40,11 @@ _: {
           export NVD_BACKEND=direct
           ''}
 
-          exec ${niri-wrapped}/bin/niri
+          if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+            exec ${pkgs.dbus}/bin/dbus-run-session -- ${niri-wrapped}/bin/niri
+          else
+            exec ${niri-wrapped}/bin/niri
+          fi
         ''} $out/bin/start-niri \
           --prefix PATH : "${pathPrefix}" \
           --prefix XDG_DATA_DIRS : "${dataDirsPrefix}"
