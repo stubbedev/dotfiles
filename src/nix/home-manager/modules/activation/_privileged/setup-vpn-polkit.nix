@@ -1,21 +1,20 @@
-_:
-let
-  helpers = import ./_helpers.nix;
-  order = import ./_order.nix;
-in
-helpers.mkSudoSetupModule {
+_: {
   moduleName = "activationSetupVpnPolkit";
   activationName = "setupVpnPolkit";
-  scriptName = "setup-vpn-polkit";
-  after = order.after.setupVpnPolkit;
   enableIf = { config, ... }: config.features.vpn;
-  sudoArgs =
+  args =
     { config, ... }:
-    let
-      rulePath = "/etc/polkit-1/rules.d/49-openconnect.rules";
-      stateDir = config.xdg.stateHome or "${config.home.homeDirectory}/.local/state";
-      stampPath = "${stateDir}/vpn/polkit-installed";
-      ruleContent = ''
+    {
+      promptTitle = "Installing polkit rule for VPN (passwordless pkexec)";
+      promptBody = ''
+        This allows ${config.home.username} to run openconnect/pkill via pkexec
+        without a password prompt.
+      '';
+      promptQuestion = "Install VPN polkit rule?";
+      actionScript = ''
+        tmpfile=$(mktemp)
+        trap 'rm -f "$tmpfile"' EXIT
+        cat > "$tmpfile" << 'EOF'
         // managed-by: home-manager vpn-polkit v1
         polkit.addRule(function(action, subject) {
           if (action.id == "org.freedesktop.policykit.exec" &&
@@ -47,43 +46,13 @@ helpers.mkSudoSetupModule {
             }
           }
         });
-      '';
-    in
-    {
-      preCheck = ''
-                if [ -f "${stampPath}" ]; then
-                  exit 0
-                fi
-
-                if [ -r "${rulePath}" ] && grep -q "managed-by: home-manager vpn-polkit v1" "${rulePath}"; then
-                  mkdir -p "${stateDir}/vpn"
-                  touch "${stampPath}"
-                  exit 0
-                fi
-
-                tmpfile=$(mktemp)
-                cat > "$tmpfile" <<'EOF'
-        ${ruleContent}
         EOF
-      '';
-      promptTitle = "Installing polkit rule for VPN (passwordless pkexec)";
-      promptBody = ''
-        echo "This allows ${config.home.username} to run openconnect/pkill via pkexec"
-        echo "without a password prompt."
-      '';
-      promptQuestion = "Install VPN polkit rule?";
-      actionScript = ''
-        sudo install -m 0644 "$tmpfile" "${rulePath}"
+        sudo install -m 0644 "$tmpfile" /etc/polkit-1/rules.d/49-openconnect.rules
         if getent group polkitd >/dev/null 2>&1; then
-          sudo chown root:polkitd "${rulePath}"
+          sudo chown root:polkitd /etc/polkit-1/rules.d/49-openconnect.rules
         else
-          sudo chown root:root "${rulePath}"
+          sudo chown root:root /etc/polkit-1/rules.d/49-openconnect.rules
         fi
-        rm -f "$tmpfile"
-
-        mkdir -p "${stateDir}/vpn"
-        touch "${stampPath}"
-
         if command -v systemctl >/dev/null 2>&1; then
           sudo systemctl restart polkit.service >/dev/null 2>&1 || true
         fi

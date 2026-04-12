@@ -1,23 +1,18 @@
-_:
-let
-  helpers = import ../_helpers.nix;
-  order = import ../_order.nix;
-in
-helpers.mkSetupModule {
+_: {
   moduleName = "activationApplyMutableConfigZsh";
   activationName = "applyMutableConfigZsh";
-  after = order.after.mutableConfig;
   enableIf = { config, ... }: config.features.desktop;
-  script =
+  args =
     {
       config,
       pkgs,
       ...
     }:
-    ''
-      echo "Regenerating zsh completion cache..."
-      rm -f "${config.home.homeDirectory}/.zcompdump" "${config.home.homeDirectory}/.zcompdump.zwc"
-      ${pkgs.zsh}/bin/zsh <<'ZSHEOF'
+    {
+      actionScript = ''
+        echo "Regenerating zsh completion cache..."
+        rm -f "${config.home.homeDirectory}/.zcompdump" "${config.home.homeDirectory}/.zcompdump.zwc"
+        ${pkgs.zsh}/bin/zsh <<'ZSHEOF'
         export HOME='${config.home.homeDirectory}'
         STBDIR='${config.home.homeDirectory}/.stubbe/src/zsh'
 
@@ -36,6 +31,7 @@ helpers.mkSetupModule {
 
         autoload -Uz compinit
         compinit -d '${config.home.homeDirectory}/.zcompdump'
-      ZSHEOF
-    '';
+        ZSHEOF
+      '';
+    };
 }

@@ -1,14 +1,15 @@
-_:
+{ inputs, ... }:
 let
-  order = import ./_order.nix;
+  inherit (inputs) srv;
 in
 {
-  flake.modules.homeManager.activationSetupShellCompletions =
+  moduleName = "activationSetupShellCompletions";
+  activationName = "customShellCompletions";
+  args =
     {
       config,
       pkgs,
       lib,
-      srv,
       constants ? null,
       ...
     }:
@@ -19,7 +20,7 @@ in
       srvBin = "${srv.packages.${system}.srv}/bin/srv";
     in
     {
-      home.activation.customShellCompletions = lib.hm.dag.entryAfter order.after.shellCompletions ''
+      actionScript = ''
         mkdir -p ${stubbeDir}/src/zsh/fpaths.d
         ${pkgs.gh}/bin/gh completion -s zsh > ${stubbeDir}/src/zsh/fpaths.d/_gh 2>/dev/null
         ${pkgs.volta}/bin/volta completions zsh > ${stubbeDir}/src/zsh/fpaths.d/_volta 2>/dev/null

@@ -6,7 +6,12 @@
 }:
 rec {
   gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo; };
-  inherit (gfxLib) gfx gfxExe gfxBinIncDrivers gfxBinExeIncDrivers;
+  inherit (gfxLib)
+    gfx
+    gfxExe
+    gfxBinIncDrivers
+    gfxBinExeIncDrivers
+    ;
 
   # Convert string path to path type
   stringToPath =
@@ -45,21 +50,30 @@ rec {
       actionScript,
       skipMessage ? "Skipped.",
     }:
+    let
+      actionHash = builtins.hashString "sha256" actionScript;
+    in
     pkgs.writeShellScript name ''
       set -e
 
-      # Find sudo in common locations
       SUDO=""
-      for path in /usr/bin/sudo /bin/sudo /run/wrappers/bin/sudo; do
+      for path in /bin/sudo /usr/bin/sudo /usr/local/bin/sudo; do
         if [ -x "$path" ]; then
           SUDO="$path"
           break
         fi
       done
 
+      # We return if no sudo is found
       if [ -z "$SUDO" ]; then
-        echo "Error: sudo not found. Please install sudo or run manually."
-        exit 1
+        return 0
+      fi
+
+      sudo() { "$SUDO" "$@"; }
+
+      lockFile="$HOME/.local/state/nix/home-manager/${name}.lock.sum"
+      if [ -f "$lockFile" ] && [ "$(cat "$lockFile")" = "${actionHash}" ]; then
+        exit 0
       fi
 
       ${preCheck}
@@ -69,12 +83,14 @@ rec {
       echo "${promptTitle}"
       echo "--------------------------------------------------------------------"
       echo ""
-      ${promptBody}
+      echo "${promptBody}"
       read -p "${promptQuestion} [Y/n] " -n 1 -r
       echo
 
       if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         ${actionScript}
+        mkdir -p "$HOME/.local/state/nix/home-manager"
+        echo -n "${actionHash}" > "$lockFile"
       else
         echo ""
         echo "${skipMessage}"

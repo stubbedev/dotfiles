@@ -3,41 +3,18 @@
     {
       moduleName,
       activationName ? moduleName,
-      after,
-      script,
-      provideSudo ? false,
+      args,
       enableIf ? true,
     }:
     {
       flake.modules.homeManager.${moduleName} =
-        { lib, ... }@args:
+        { lib, ... }@moduleArgs:
         let
-          scriptText = if builtins.isFunction script then script args else script;
-          isEnabled = if builtins.isFunction enableIf then enableIf args else enableIf;
-          sudoPrelude =
-            if provideSudo then
-              ''
-                # Find sudo in common locations
-                SUDO=""
-                for path in /usr/bin/sudo /bin/sudo /run/wrappers/bin/sudo; do
-                  if [ -x "$path" ]; then
-                    SUDO="$path"
-                    break
-                  fi
-                done
-
-                if [ -z "$SUDO" ]; then
-                  echo "Error: sudo not found. Please install sudo or run manually."
-                  exit 1
-                fi
-
-                sudo() { "$SUDO" "$@"; }
-              ''
-            else
-              "";
+          resolvedArgs = if builtins.isFunction args then args moduleArgs else args;
+          isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
         in
         lib.mkIf isEnabled {
-          home.activation.${activationName} = lib.hm.dag.entryAfter after (sudoPrelude + scriptText);
+          home.activation.${activationName} = lib.hm.dag.entryAfter [ "writeBoundary" ] resolvedArgs.actionScript;
         };
     };
 
@@ -45,9 +22,7 @@
     {
       moduleName,
       activationName ? moduleName,
-      after,
-      sudoArgs,
-      scriptName ? null,
+      args,
       enableIf ? true,
     }:
     {
@@ -57,11 +32,10 @@
           pkgs,
           homeLib,
           ...
-        }@args:
+        }@moduleArgs:
         let
-          resolvedArgs = if builtins.isFunction sudoArgs then sudoArgs args else sudoArgs;
-          resolvedScriptName = if scriptName != null then scriptName else (resolvedArgs.name or moduleName);
-          isEnabled = if builtins.isFunction enableIf then enableIf args else enableIf;
+          resolvedArgs = if builtins.isFunction args then args moduleArgs else args;
+          isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
           withSudo =
             text:
             if text == "" then
@@ -80,12 +54,12 @@
             resolvedArgsNoName
             // {
               inherit pkgs;
-              name = resolvedScriptName;
+              name = activationName;
             }
           );
         in
         lib.mkIf isEnabled {
-          home.activation.${activationName} = lib.hm.dag.entryAfter after ''
+          home.activation.${activationName} = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             ${setupScript}
           '';
         };

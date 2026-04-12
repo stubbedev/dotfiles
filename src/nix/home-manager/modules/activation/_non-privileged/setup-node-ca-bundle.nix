@@ -1,22 +1,12 @@
-_:
-let
-  order = import ./_order.nix;
-in
-{
-  flake.modules.homeManager.activationSetupNodeCaBundle =
+_: {
+  moduleName = "activationSetupNodeCaBundle";
+  activationName = "setupNodeCaBundle";
+  args =
+    { config, lib, ... }:
     {
-      config,
-      lib,
-      ...
-    }:
-    let
-      bundlePath = config.home.sessionVariables.NODE_EXTRA_CA_CERTS;
-      bundleDir = builtins.dirOf bundlePath;
-    in
-    {
-      home.activation.setupNodeCaBundle = lib.hm.dag.entryAfter order.after.setupNodeCaBundle ''
-        bundle="${bundlePath}"
-        bundle_dir="${bundleDir}"
+      actionScript = ''
+        bundle="${config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
+        bundle_dir="${builtins.dirOf config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
         tmp="$bundle.tmp"
 
         mkdir -p "$bundle_dir"
