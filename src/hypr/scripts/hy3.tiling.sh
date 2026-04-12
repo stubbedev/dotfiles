@@ -31,7 +31,7 @@ set_trigger() {
 
   trigger=$(awk -v w="${width}" -v m="${MIN_TRIGGER}" 'BEGIN {
     # Force a vertical split before a 4th column is possible
-    val = (w / 4) + 1;
+    val = (w / 3) - 5;
     if (val < m) val = m;
     printf "%d\n", int(val);
   }')
