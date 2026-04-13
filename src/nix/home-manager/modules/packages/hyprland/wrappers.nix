@@ -82,12 +82,8 @@ _: {
           socket_path="$instance_dir/.socket.sock"
 
           if [ -S "$socket_path" ]; then
-            case "$(ss -xl)" in
-              *"$socket_path"*)
-                current_instance="$instance_name"
-                break
-                ;;
-            esac
+            current_instance="$instance_name"
+            break
           fi
 
           if [ -z "$newest_lock" ] || [ "$lockfile" -nt "$newest_lock" ]; then

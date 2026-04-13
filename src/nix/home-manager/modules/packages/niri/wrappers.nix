@@ -33,6 +33,12 @@ _: {
           export XDG_SESSION_TYPE=wayland
           export XDG_SESSION_DESKTOP=niri
 
+          # Force DRM/KMS mode: unset any inherited Wayland/X11 display from the
+          # parent session (e.g. GDM's own Wayland compositor sets WAYLAND_DISPLAY).
+          # Without this, niri would start nested under GDM instead of taking DRM.
+          unset WAYLAND_DISPLAY
+          unset DISPLAY
+
           ${lib.optionalString systemInfo.hasNvidia ''
           export __GLX_VENDOR_LIBRARY_NAME=nvidia
           export LIBVA_DRIVER_NAME=nvidia

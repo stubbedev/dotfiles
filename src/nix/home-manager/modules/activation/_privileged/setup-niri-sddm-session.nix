@@ -18,6 +18,7 @@ _: {
         Exec=${config.home.homeDirectory}/.nix-profile/bin/start-niri
         Type=Application
         DesktopNames=niri
+        X-GDM-SessionRegisters=true
         EOF
       '';
       skipMessage = "Skipped. You can create it later by running: home-manager switch --flake . --impure";

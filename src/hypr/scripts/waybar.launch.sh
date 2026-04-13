@@ -9,7 +9,7 @@ attempt=0
 
 if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
   socket_path="/run/user/$(id -u)/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock"
-  if [ -S "$socket_path" ] && ss -xl | grep -q "$socket_path"; then
+  if [ -S "$socket_path" ]; then
     CURRENT_INSTANCE="$HYPRLAND_INSTANCE_SIGNATURE"
   fi
 fi
@@ -21,7 +21,7 @@ while [ $attempt -lt 50 ] && [ -z "$CURRENT_INSTANCE" ]; do
     instance_name=$(basename "$instance_dir")
     socket_path="$instance_dir/.socket.sock"
 
-    if [ -S "$socket_path" ] && ss -xl | grep -q "$socket_path"; then
+    if [ -S "$socket_path" ]; then
       CURRENT_INSTANCE="$instance_name"
       break
     fi
@@ -40,13 +40,14 @@ else
   exit 1
 fi
 
-# Auto-detect WAYLAND_DISPLAY if not set (wait briefly if needed)
+# Auto-detect WAYLAND_DISPLAY if not set or if the socket no longer exists
 if [ -n "$WAYLAND_DISPLAY" ] && [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
   :
-elif [ -z "$WAYLAND_DISPLAY" ]; then
+else
+  unset WAYLAND_DISPLAY
   attempt=0
   while [ $attempt -lt 50 ] && [ -z "$WAYLAND_DISPLAY" ]; do
-    for socket in $(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v ".lock"); do
+    for socket in $(ls -t "$XDG_RUNTIME_DIR"/wayland-[0-9]* 2>/dev/null | grep -E 'wayland-[0-9]+$'); do
       if [ -S "$socket" ]; then
         export WAYLAND_DISPLAY=$(basename "$socket")
         break
