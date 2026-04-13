@@ -25,7 +25,7 @@ _: {
       pathPrefix = lib.concatStringsSep ":" desiredPaths;
       dataDirsPrefix = lib.concatStringsSep ":" desiredDataDirs;
 
-      niri-wrapped = homeLib.gfxBinIncDrivers "niri" pkgs.niri;
+      niri-wrapped = homeLib.gfxDirectWithDrivers "niri" pkgs.niri;
 
       start-niri = pkgs.runCommand "start-niri" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         makeWrapper ${pkgs.writeShellScript "start-niri-inner" ''
@@ -47,9 +47,9 @@ _: {
           ''}
 
           if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
-            exec ${pkgs.dbus}/bin/dbus-run-session -- ${niri-wrapped}/bin/niri
+            exec ${pkgs.dbus}/bin/dbus-run-session -- ${niri-wrapped}/bin/niri --session
           else
-            exec ${niri-wrapped}/bin/niri
+            exec ${niri-wrapped}/bin/niri --session
           fi
         ''} $out/bin/start-niri \
           --prefix PATH : "${pathPrefix}" \

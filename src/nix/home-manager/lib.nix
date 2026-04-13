@@ -11,6 +11,7 @@ rec {
     gfxExe
     gfxBinIncDrivers
     gfxBinExeIncDrivers
+    gfxDirectWithDrivers
     ;
 
   # Convert string path to path type

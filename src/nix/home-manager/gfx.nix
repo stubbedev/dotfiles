@@ -22,23 +22,50 @@ let
     "/run/opengl-driver-32/lib/dri"
   ];
 
+  eglVendorPaths = lib.unique [
+    "/usr/share/glvnd/egl_vendor.d"
+    "/usr/local/share/glvnd/egl_vendor.d"
+    "/etc/glvnd/egl_vendor.d"
+  ];
+
+  ldPaths = lib.unique [
+    "usr/lib"
+    "usr/lib64"
+  ];
+
   gfxDriverEnv = {
     GBM_BACKENDS_PATH = lib.concatStringsSep ":" gbmPaths;
     LIBGL_DRIVERS_PATH = lib.concatStringsSep ":" driPaths;
+    EGL_VENDOR_LIBRARY_DIRS = lib.concatStringsSep ":" eglVendorPaths;
+    LD_LIBRARY_PATHS = lib.concatStringsSep ":" ldPaths;
   };
 
-  mkNixGLWrapper = name: programPath:
+  mkNixGLWrapper =
+    name: programPath:
     requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
       makeWrapper ${requireSystemInfo.nixGLBin} $out/bin/${name} \
         --add-flag "${programPath}"
     '';
 
-  mkNixGLWrapperWithDrivers = name: programPath:
+  mkNixGLWrapperWithDrivers =
+    name: programPath:
     requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
       makeWrapper ${requireSystemInfo.nixGLBin} $out/bin/${name} \
         --set GBM_BACKENDS_PATH "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
         --set LIBGL_DRIVERS_PATH "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
         --add-flag "${programPath}"
+    '';
+
+  # Direct wrapper without nixGL - for DRM/KMS mode where we need host EGL
+  mkDirectWrapperWithDrivers =
+    name: programPath:
+    requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
+      makeWrapper ${programPath} $out/bin/${name} \
+        --set GBM_BACKENDS_PATH "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
+        --set LIBGL_DRIVERS_PATH "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
+        --set __EGL_VENDOR_LIBRARY_DIRS "${gfxDriverEnv.EGL_VENDOR_LIBRARY_DIRS}" \
+        --set LD_LIBRARY_PATH "${gfxDriverEnv.LD_LIBRARY_PATHS}" \
+        --unset __EGL_VENDOR_LIBRARY_FILENAMES
     '';
 in
 {
@@ -50,9 +77,8 @@ in
     in
     mkNixGLWrapper name programPath;
   gfxName = name: program: mkNixGLWrapper name (lib.getExe program);
-  gfxBinIncDrivers =
-    name: program:
-    mkNixGLWrapperWithDrivers name (lib.getExe program);
+  gfxBinIncDrivers = name: program: mkNixGLWrapperWithDrivers name (lib.getExe program);
+  gfxDirectWithDrivers = name: program: mkDirectWrapperWithDrivers name (lib.getExe program);
   gfxExe =
     exeName: program:
     let
