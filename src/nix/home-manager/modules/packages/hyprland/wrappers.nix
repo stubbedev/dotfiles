@@ -68,39 +68,38 @@ _: {
       # This fixes the issue where shells started before Hyprland restart have stale
       # HYPRLAND_INSTANCE_SIGNATURE values (e.g., in tmux sessions or long-running terminals)
       hyprctl-wrapped = pkgs.writeShellScriptBin "hyprctl" ''
-        # Auto-detect the current active Hyprland instance
-        # Prefer instances with a listening control socket
+        # Use the existing HYPRLAND_INSTANCE_SIGNATURE if its socket is still valid.
+        # This is always the case when Hyprland itself dispatches an exec bind.
+        # Only auto-detect when the env var is absent or points to a dead instance
+        # (e.g. stale shells started before a Hyprland restart).
         uid="''${UID:-$(id -u)}"
         hypr_root="/run/user/$uid/hypr"
-        current_instance=""
-        newest_lock=""
 
-        for lockfile in "$hypr_root"/*/hyprland.lock; do
-          [ -e "$lockfile" ] || continue
-          instance_dir="''${lockfile%/hyprland.lock}"
-          instance_name="''${instance_dir##*/}"
-          socket_path="$instance_dir/.socket.sock"
+        _socket_ok() {
+          [ -S "$hypr_root/$1/.socket.sock" ]
+        }
 
-          if [ -S "$socket_path" ]; then
-            current_instance="$instance_name"
-            break
+        if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ] && _socket_ok "$HYPRLAND_INSTANCE_SIGNATURE"; then
+          : # already correct
+        else
+          # Pick the newest instance (by lock file mtime) that has a live socket.
+          current_instance=""
+          newest_lock=""
+          for lockfile in "$hypr_root"/*/hyprland.lock; do
+            [ -e "$lockfile" ] || continue
+            instance_name="''${lockfile%/hyprland.lock}"
+            instance_name="''${instance_name##*/}"
+            if _socket_ok "$instance_name"; then
+              if [ -z "$newest_lock" ] || [ "$lockfile" -nt "$newest_lock" ]; then
+                newest_lock="$lockfile"
+                current_instance="$instance_name"
+              fi
+            fi
+          done
+          if [ -n "$current_instance" ]; then
+            export HYPRLAND_INSTANCE_SIGNATURE="$current_instance"
           fi
-
-          if [ -z "$newest_lock" ] || [ "$lockfile" -nt "$newest_lock" ]; then
-            newest_lock="$lockfile"
-          fi
-        done
-
-        # Fallback to newest lock file if no listening socket found
-        if [ -z "$current_instance" ] && [ -n "$newest_lock" ]; then
-          instance_dir="''${newest_lock%/hyprland.lock}"
-          current_instance="''${instance_dir##*/}"
         fi
-
-        if [ -n "$current_instance" ]; then
-          export HYPRLAND_INSTANCE_SIGNATURE="$current_instance"
-        fi
-        # If no active instance found, fall back to existing env var (if any)
 
         # Call hyprctl
         exec ${hyprlandPkg}/bin/hyprctl "$@"
