@@ -473,7 +473,7 @@ if are_binary git fzf awk sed; then
     in_git_repo || return 1
 
     local repo_root=$(git rev-parse --show-toplevel)
-    local worktrees_dir="$repo_root/.git_worktrees"
+    local worktrees_dir="$repo_root/.worktrees"
 
     local occupied_branches=$(git worktree list --porcelain |
       awk '/^branch / { sub("refs/heads/", "", $2); print $2 }')
