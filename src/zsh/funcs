@@ -468,6 +468,152 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
 
 fi
 
+if are_binary git fzf awk sed; then
+  function gwta {
+    in_git_repo || return 1
+
+    local repo_root=$(git rev-parse --show-toplevel)
+    local worktrees_dir="$repo_root/.git_worktrees"
+
+    local occupied_branches=$(git worktree list --porcelain |
+      awk '/^branch / { sub("refs/heads/", "", $2); print $2 }')
+
+    local all_branches=$(git branch --all |
+      awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' |
+      grep -v '^HEAD' | sort -u)
+
+    local available_branches
+    if [[ -n "$occupied_branches" ]]; then
+      available_branches=$(echo "$all_branches" | grep -vxF "$occupied_branches" 2>/dev/null || echo "$all_branches")
+    else
+      available_branches="$all_branches"
+    fi
+
+    local branch_name=$(echo "$available_branches" |
+      fzf --prompt="(Enter: select or type branch name)> " \
+        --print-query \
+        --exact \
+        --select-1 \
+        --exit-0 \
+        --no-info \
+        --height=10 |
+      tail -n1)
+
+    if [[ -z "$branch_name" ]]; then
+      return 0
+    fi
+
+    local sanitized=$(echo "$branch_name" | sed 's/\//-/g')
+    local worktree_path="$worktrees_dir/$sanitized"
+
+    mkdir -p "$worktrees_dir"
+
+    if echo "$available_branches" | grep -qFx "$branch_name"; then
+      git worktree add "$worktree_path" "$branch_name" || return 1
+    else
+      local base_branch=$(echo "$all_branches" |
+        fzf --prompt="(Enter: select base branch for [$branch_name])> " \
+          --select-1 \
+          --exit-0 \
+          --no-info \
+          --height=10)
+
+      if [[ -z "$base_branch" ]]; then
+        return 0
+      fi
+
+      git worktree add -b "$branch_name" "$worktree_path" "$base_branch" || return 1
+    fi
+
+    cd "$worktree_path"
+  }
+
+  function gwt {
+    in_git_repo || return 1
+
+    local current_worktree=$(git rev-parse --show-toplevel)
+
+    local selected=$(git worktree list |
+      grep -v "^$current_worktree " |
+      fzf --prompt="(Enter: switch to worktree)> " \
+        --select-1 \
+        --exit-0 \
+        --no-info \
+        --height=10)
+
+    if [[ -z "$selected" ]]; then
+      return 0
+    fi
+
+    cd "$(echo "$selected" | awk '{print $1}')"
+  }
+
+  function gwtd {
+    in_git_repo || return 1
+
+    local linked_worktrees=$(git worktree list --porcelain |
+      awk '
+        /^worktree / { path = $2; branch = ""; has_gitdir = 0 }
+        /^branch /   { sub("refs/heads/", "", $2); branch = $2 }
+        /^gitdir /   { has_gitdir = 1 }
+        /^$/ { if (has_gitdir && branch != "") print branch "  →  " path }
+      ')
+
+    if [[ -z "$linked_worktrees" ]]; then
+      echo "No linked worktrees found."
+      return 0
+    fi
+
+    local selected=$(echo "$linked_worktrees" |
+      fzf --prompt="(Enter: select worktree to remove)> " \
+        --select-1 \
+        --exit-0 \
+        --no-info \
+        --height=10)
+
+    if [[ -z "$selected" ]]; then
+      return 0
+    fi
+
+    local branch_name=$(echo "$selected" | awk -F'  →  ' '{print $1}')
+    local worktree_path=$(echo "$selected" | awk -F'  →  ' '{print $2}')
+
+    local confirm=$(echo -e "No\nYes" |
+      fzf \
+        --no-input \
+        --header="[WARN] Remove worktree: $branch_name" \
+        --reverse \
+        --height=3 \
+        --no-info \
+        --no-multi \
+        --exit-0)
+
+    if [[ "$confirm" != "Yes" ]]; then
+      return 0
+    fi
+
+    if [[ "$PWD" == "$worktree_path"* ]]; then
+      cd "$(git rev-parse --show-toplevel)"
+    fi
+
+    git worktree remove "$worktree_path" || return 1
+
+    local delete_branch=$(echo -e "No\nYes" |
+      fzf \
+        --no-input \
+        --header="Also delete branch: $branch_name?" \
+        --reverse \
+        --height=3 \
+        --no-info \
+        --no-multi \
+        --exit-0)
+
+    if [[ "$delete_branch" == "Yes" ]]; then
+      git branch -d "$branch_name" 2>/dev/null || git branch -D "$branch_name"
+    fi
+  }
+fi
+
 if is_binary bat; then
   function view_git_file {
     curl "$(echo "$1" | sed "s/github.com/raw.githubusercontent.com/g" | sed "s/\/blob\//\/refs\/heads\//g")" | bat -f -l "${1##*\.}"
