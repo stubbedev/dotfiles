@@ -473,6 +473,16 @@ if are_binary git fzf awk sed; then
     in_git_repo || return 1
 
     local repo_root=$(git rev-parse --show-toplevel)
+    local git_common_dir=$(git rev-parse --git-common-dir)
+
+    if [[ "$git_common_dir" != /* ]]; then
+      git_common_dir="$(cd "$git_common_dir" && pwd -P)"
+    fi
+
+    if [[ "$git_common_dir" == */.git ]]; then
+      repo_root="${git_common_dir%/.git}"
+    fi
+
     local worktrees_dir="$repo_root/.worktrees"
 
     local occupied_branches=$(git worktree list --porcelain |
@@ -525,7 +535,7 @@ if are_binary git fzf awk sed; then
       git worktree add -b "$branch_name" "$worktree_path" "$base_branch" || return 1
     fi
 
-    cd "$worktree_path"
+    cd "$worktree_path" || return 1
   }
 
   function gwt {
@@ -551,13 +561,23 @@ if are_binary git fzf awk sed; then
   function gwtd {
     in_git_repo || return 1
 
+    local repo_root=$(git rev-parse --show-toplevel)
+    local git_common_dir=$(git rev-parse --git-common-dir)
+
+    if [[ "$git_common_dir" != /* ]]; then
+      git_common_dir="$(cd "$git_common_dir" && pwd -P)"
+    fi
+
+    if [[ "$git_common_dir" == */.git ]]; then
+      repo_root="${git_common_dir%/.git}"
+    fi
+
     local linked_worktrees=$(git worktree list --porcelain |
       awk '
-        /^worktree / { path = $2; branch = ""; has_gitdir = 0 }
+        /^worktree / { path = $2; branch = "" }
         /^branch /   { sub("refs/heads/", "", $2); branch = $2 }
-        /^gitdir /   { has_gitdir = 1 }
-        /^$/ { if (has_gitdir && branch != "") print branch "  →  " path }
-      ')
+        /^$/ { if (branch != "") print branch "  →  " path }
+      ' | grep -v "  →  $repo_root$" || true)
 
     if [[ -z "$linked_worktrees" ]]; then
       echo "No linked worktrees found."
