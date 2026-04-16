@@ -13,7 +13,6 @@ _: {
         tmpfile=$(mktemp)
         trap 'rm -f "$tmpfile"' EXIT
         cat > "$tmpfile" << 'EOF'
-        // managed-by: home-manager power-profile-fix v3
         polkit.addRule(function(action, subject) {
           if (action.id !== "org.freedesktop.policykit.exec") {
             return;
@@ -98,6 +97,24 @@ _: {
 
           if (mode === "set-boost") {
             if (args.length === 3 && (args[2] === "0" || args[2] === "1")) {
+              return polkit.Result.YES;
+            }
+          }
+
+          if (mode === "set-all") {
+            // Args: min_pct max_pct governor epp|none boost up_rate_us down_rate_us iowait_enable
+            if (
+              args.length === 10 &&
+              isIntInRange(args[2], 0, 100) &&
+              isIntInRange(args[3], 0, 100) &&
+              Number(args[2]) <= Number(args[3]) &&
+              (args[4] === "schedutil" || args[4] === "performance" || args[4] === "powersave") &&
+              (args[5] === "none" || args[5] === "power" || args[5] === "balance_power" || args[5] === "balance_performance" || args[5] === "performance") &&
+              (args[6] === "0" || args[6] === "1") &&
+              isIntInRange(args[7], 0, 1000000) &&
+              isIntInRange(args[8], 0, 1000000) &&
+              (args[9] === "0" || args[9] === "1")
+            ) {
               return polkit.Result.YES;
             }
           }

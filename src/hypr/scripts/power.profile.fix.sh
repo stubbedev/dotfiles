@@ -8,8 +8,8 @@ set -euo pipefail
 STARTUP_WARMUP_SECONDS=${STARTUP_WARMUP_SECONDS:-8}
 STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-28}
 STARTUP_WARMUP_MAX_PCT=${STARTUP_WARMUP_MAX_PCT:-100}
-APPLY_RETRIES=${APPLY_RETRIES:-4}
-APPLY_RETRY_SLEEP_SECONDS=${APPLY_RETRY_SLEEP_SECONDS:-0.35}
+APPLY_RETRIES=${APPLY_RETRIES:-6}
+APPLY_RETRY_SLEEP_SECONDS=${APPLY_RETRY_SLEEP_SECONDS:-0.2}
 HIGH_LOAD_RETRY_SECONDS=${HIGH_LOAD_RETRY_SECONDS:-8}
 BALANCED_MIN_PCT=${BALANCED_MIN_PCT:-18}
 BALANCED_MAX_PCT=${BALANCED_MAX_PCT:-90}
@@ -248,6 +248,21 @@ is_floor_applied() {
   return 0
 }
 
+keep_floor() {
+  local min_pct="$1"
+  local duration_s="$2"
+  local elapsed=0
+  while [ "$elapsed" -lt "$duration_s" ]; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    if ! is_floor_applied "$min_pct"; then
+      log "Floor drifted during delay window, reapplying"
+      set_policy_min_freqs "$min_pct"
+      set_pstate_limits "$min_pct" 100
+    fi
+  done
+}
+
 enforce_min_floor() {
   local profile="$1"
   local min_pct="$2"
@@ -371,9 +386,13 @@ apply_profile_fix() {
   local epp_fallback="balance_performance"
   local gov
   local epp
+  local epp_arg
   local min_pct=8
   local max_pct=100
   local boost=1
+  local up_rate=4000
+  local down_rate=65000
+  local iowait=1
 
   case "$profile" in
   power-saver)
@@ -384,6 +403,9 @@ apply_profile_fix() {
     min_pct=8
     max_pct=60
     boost=0
+    up_rate=40000
+    down_rate=120000
+    iowait=0
     ;;
   balanced)
     gov_pref="schedutil"
@@ -393,6 +415,9 @@ apply_profile_fix() {
     min_pct=$BALANCED_MIN_PCT
     max_pct=$BALANCED_MAX_PCT
     boost=$BALANCED_BOOST
+    up_rate=$BALANCED_UP_RATE_US
+    down_rate=$BALANCED_DOWN_RATE_US
+    iowait=$BALANCED_IOWAIT_BOOST
     if is_hot; then
       max_pct=$BALANCED_HOT_MAX_PCT
       epp_pref="$BALANCED_HOT_EPP"
@@ -407,6 +432,9 @@ apply_profile_fix() {
     min_pct=35
     max_pct=100
     boost=1
+    up_rate=2000
+    down_rate=15000
+    iowait=1
     ;;
   *)
     log "Unknown profile: $profile, skipping"
@@ -416,27 +444,14 @@ apply_profile_fix() {
 
   gov=$(choose_governor "$gov_pref" "$gov_fallback")
   epp=$(choose_epp "$epp_pref" "$epp_fallback")
+  epp_arg="${epp:-none}"
 
-  set_governor "$gov"
-  set_epp "$epp"
-  set_policy_freqs "$min_pct" "$max_pct"
-  set_pstate_limits "$min_pct" "$max_pct"
-  set_boost "$boost"
+  # Single pkexec call: freq caps are removed first inside the helper so the
+  # CPU can ramp immediately, then governor/EPP/boost/schedutil follow.
+  log "Applying profile=$profile gov=$gov epp=$epp_arg min=${min_pct}% max=${max_pct}% boost=$boost"
+  run_helper set-all "$min_pct" "$max_pct" "$gov" "$epp_arg" "$boost" "$up_rate" "$down_rate" "$iowait"
   enforce_min_floor "$profile" "$min_pct"
-  if [ "$gov" = "schedutil" ]; then
-    case "$profile" in
-    power-saver)
-      set_schedutil_tunables 40000 120000 0
-      ;;
-    balanced)
-      set_schedutil_tunables "$BALANCED_UP_RATE_US" "$BALANCED_DOWN_RATE_US" "$BALANCED_IOWAIT_BOOST"
-      ;;
-    performance)
-      set_schedutil_tunables 2000 15000 1
-      ;;
-    esac
-  fi
-  log "Applied profile=$profile gov=$gov epp=$epp min=${min_pct}% max=${max_pct}% boost=$boost"
+  log "Applied profile=$profile gov=$gov epp=$epp_arg min=${min_pct}% max=${max_pct}% boost=$boost"
   log_policy_state
 }
 
@@ -459,7 +474,7 @@ apply_startup_warmup "$current_profile"
 dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/net/hadess/PowerProfiles'" 2>/dev/null |
   while read -r line; do
     if [[ "$line" == *"ActiveProfile"* ]]; then
-      sleep 0.5 # Brief delay to ensure the profile change is complete
+      sleep 0.2 # Brief delay to ensure the profile change is complete
       old_profile="$current_profile"
       new_profile=$(get_current_profile)
 
@@ -472,13 +487,13 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
         else
           case "$new_profile" in
           performance)
-            delay=15
+            delay=8
             ;;
           balanced)
-            delay=5
+            delay=2
             ;;
           power-saver | *)
-            delay=2
+            delay=1
             ;;
           esac
 
@@ -486,9 +501,14 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
           # 400MHz (cpuinfo_min_freq) while we wait for the delay to expire.
           # PPD resets scaling_min_freq to cpuinfo_min_freq on profile changes;
           # this bridges that gap.
+          floor_min_pct=$(get_profile_min_pct "$new_profile")
           apply_min_floor "$new_profile"
           log "Downscaling detected - waiting $delay seconds before applying changes to $new_profile"
+          keep_floor "$floor_min_pct" "$delay" &
+          floor_pid=$!
           sleep $delay
+          kill "$floor_pid" 2>/dev/null || true
+          wait "$floor_pid" 2>/dev/null || true
 
           # Double check profile hasn't changed again during wait
           current_check=$(get_current_profile)

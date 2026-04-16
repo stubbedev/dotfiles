@@ -154,8 +154,80 @@ case "${1:-}" in
             write_value "/sys/devices/system/cpu/intel_pstate/no_turbo" "1"
         fi
         ;;
+    set-all)
+        # Apply all CPU settings in one pkexec call for minimal latency.
+        # Args: <min_pct> <max_pct> <governor> <epp|none> <boost> <up_rate_us> <down_rate_us> <iowait_enable>
+        min_pct="$2"
+        max_pct="$3"
+        governor="$4"
+        epp="$5"
+        boost="$6"
+        up_rate="$7"
+        down_rate="$8"
+        iowait_enable="$9"
+
+        # 1. Remove frequency caps first so the CPU can ramp immediately.
+        for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+            [ -d "$policy" ] || continue
+            max_khz=$(cat "$policy/cpuinfo_max_freq" 2>/dev/null || echo "")
+            [ -n "$max_khz" ] || continue
+            min_khz=$((max_khz * min_pct / 100))
+            max_cap_khz=$((max_khz * max_pct / 100))
+            if [ $min_khz -gt $max_cap_khz ]; then
+                min_khz=$max_cap_khz
+            fi
+            current_min_khz=$(cat "$policy/scaling_min_freq" 2>/dev/null || echo "$min_khz")
+            if [ "$current_min_khz" -gt "$max_cap_khz" ]; then
+                write_value "$policy/scaling_min_freq" "$max_cap_khz"
+            fi
+            write_value "$policy/scaling_max_freq" "$max_cap_khz"
+            write_value "$policy/scaling_min_freq" "$min_khz"
+        done
+
+        # 2. Intel P-state limits.
+        write_value "/sys/devices/system/cpu/intel_pstate/min_perf_pct" "$min_pct"
+        write_value "/sys/devices/system/cpu/intel_pstate/max_perf_pct" "$max_pct"
+
+        # 3. Governor.
+        for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+            policy=$(dirname "$cpu")
+            resolved=$(resolve_governor "$policy" "$governor")
+            write_value "$cpu" "$resolved"
+        done
+
+        # 4. EPP (skip if caller passed "none").
+        if [ "$epp" != "none" ]; then
+            for cpu in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
+                write_value "$cpu" "$epp"
+            done
+        fi
+
+        # 5. Boost / turbo.
+        if [ "$boost" = "1" ]; then
+            write_value "/sys/devices/system/cpu/cpufreq/boost" "1"
+            write_value "/sys/devices/system/cpu/intel_pstate/no_turbo" "0"
+        else
+            write_value "/sys/devices/system/cpu/cpufreq/boost" "0"
+            write_value "/sys/devices/system/cpu/intel_pstate/no_turbo" "1"
+        fi
+
+        # 6. Schedutil tunables (written after governor is set so the files exist).
+        if [ "$governor" = "schedutil" ]; then
+            for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+                [ -d "$policy" ] || continue
+                gov_file="$policy/scaling_governor"
+                [ -f "$gov_file" ] || continue
+                if [ "$(cat "$gov_file" 2>/dev/null)" != "schedutil" ]; then
+                    continue
+                fi
+                write_value "$policy/schedutil/up_rate_limit_us" "$up_rate"
+                write_value "$policy/schedutil/down_rate_limit_us" "$down_rate"
+                write_value "$policy/schedutil/iowait_boost_enable" "$iowait_enable"
+            done
+        fi
+        ;;
     *)
-        echo "Usage: $0 {set-governor|set-epp|set-pstate-limits|set-policy-freqs|set-policy-min|set-schedutil|set-boost} <args>"
+        echo "Usage: $0 {set-governor|set-epp|set-pstate-limits|set-policy-freqs|set-policy-min|set-schedutil|set-boost|set-all} <args>"
         exit 1
         ;;
 esac
