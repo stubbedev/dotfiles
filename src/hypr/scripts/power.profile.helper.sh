@@ -46,8 +46,19 @@ case "${1:-}" in
             if [ $min_khz -gt $max_cap_khz ]; then
                 min_khz=$max_cap_khz
             fi
-            write_value "$policy/scaling_min_freq" "$min_khz"
+
+            current_min_khz=$(cat "$policy/scaling_min_freq" 2>/dev/null || echo "$min_khz")
+
+            # Kernel rejects scaling_max_freq below current scaling_min_freq.
+            # Lower min first only when needed for downscaling.
+            if [ "$current_min_khz" -gt "$max_cap_khz" ]; then
+                write_value "$policy/scaling_min_freq" "$max_cap_khz"
+            fi
+
+            # Set max before final min so upscales (e.g. 70% -> 100%) do not
+            # fail when the requested min is above the previous max.
             write_value "$policy/scaling_max_freq" "$max_cap_khz"
+            write_value "$policy/scaling_min_freq" "$min_khz"
         done
         ;;
     set-policy-min)

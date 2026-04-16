@@ -46,12 +46,20 @@ is_passive_mode() {
 }
 
 get_helper_path() {
-  # Try to find the helper script
-  local script_dir="$(dirname "$(readlink -f "$0")")"
-  local helper="$script_dir/power.profile.helper.sh"
+  # Prefer invocation path so polkit rules tied to symlink paths still match.
+  local script_dir helper resolved_dir resolved_helper
 
+  script_dir="$(dirname "$0")"
+  helper="$script_dir/power.profile.helper.sh"
   if [ -f "$helper" ]; then
     echo "$helper"
+    return
+  fi
+
+  resolved_dir="$(dirname "$(readlink -f "$0")")"
+  resolved_helper="$resolved_dir/power.profile.helper.sh"
+  if [ -f "$resolved_helper" ]; then
+    echo "$resolved_helper"
   else
     echo ""
   fi
