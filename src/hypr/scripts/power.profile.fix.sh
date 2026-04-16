@@ -5,9 +5,22 @@
 
 set -euo pipefail
 
-STARTUP_WARMUP_SECONDS=${STARTUP_WARMUP_SECONDS:-75}
-STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-75}
+STARTUP_WARMUP_SECONDS=${STARTUP_WARMUP_SECONDS:-8}
+STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-28}
 STARTUP_WARMUP_MAX_PCT=${STARTUP_WARMUP_MAX_PCT:-100}
+APPLY_RETRIES=${APPLY_RETRIES:-4}
+APPLY_RETRY_SLEEP_SECONDS=${APPLY_RETRY_SLEEP_SECONDS:-0.35}
+HIGH_LOAD_RETRY_SECONDS=${HIGH_LOAD_RETRY_SECONDS:-8}
+BALANCED_MIN_PCT=${BALANCED_MIN_PCT:-18}
+BALANCED_MAX_PCT=${BALANCED_MAX_PCT:-90}
+BALANCED_BOOST=${BALANCED_BOOST:-0}
+BALANCED_EPP=${BALANCED_EPP:-balance_performance}
+BALANCED_UP_RATE_US=${BALANCED_UP_RATE_US:-4000}
+BALANCED_DOWN_RATE_US=${BALANCED_DOWN_RATE_US:-65000}
+BALANCED_IOWAIT_BOOST=${BALANCED_IOWAIT_BOOST:-1}
+CPU_HOT_TEMP_MILLIC=${CPU_HOT_TEMP_MILLIC:-85000}
+BALANCED_HOT_MAX_PCT=${BALANCED_HOT_MAX_PCT:-80}
+BALANCED_HOT_EPP=${BALANCED_HOT_EPP:-balance_power}
 PKEXEC_CMD=(pkexec --disable-internal-agent)
 
 log() {
@@ -31,8 +44,10 @@ get_profile_priority() {
 is_upscaling() {
   local current="$1"
   local new="$2"
-  local current_priority=$(get_profile_priority "$current")
-  local new_priority=$(get_profile_priority "$new")
+  local current_priority
+  local new_priority
+  current_priority=$(get_profile_priority "$current")
+  new_priority=$(get_profile_priority "$new")
   [[ $new_priority -gt $current_priority ]]
 }
 
@@ -40,9 +55,80 @@ get_scaling_driver() {
   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver 2>/dev/null || echo "unknown"
 }
 
-is_passive_mode() {
-  local driver=$(get_scaling_driver)
-  [[ "$driver" == "intel_cpufreq" ]]
+get_available_governors() {
+  cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors 2>/dev/null || echo ""
+}
+
+get_available_epp_values() {
+  cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences 2>/dev/null || echo ""
+}
+
+has_word() {
+  local haystack="$1"
+  local needle="$2"
+  [[ " $haystack " == *" $needle "* ]]
+}
+
+choose_governor() {
+  local preferred="$1"
+  local fallback="$2"
+  local available
+
+  available=$(get_available_governors)
+  if has_word "$available" "$preferred"; then
+    echo "$preferred"
+    return
+  fi
+  if has_word "$available" "$fallback"; then
+    echo "$fallback"
+    return
+  fi
+  if has_word "$available" "schedutil"; then
+    echo "schedutil"
+    return
+  fi
+  if has_word "$available" "performance"; then
+    echo "performance"
+    return
+  fi
+  echo "$preferred"
+}
+
+choose_epp() {
+  local preferred="$1"
+  local fallback="$2"
+  local available
+
+  available=$(get_available_epp_values)
+  if [ -z "$available" ]; then
+    echo ""
+    return
+  fi
+  if has_word "$available" "$preferred"; then
+    echo "$preferred"
+    return
+  fi
+  if has_word "$available" "$fallback"; then
+    echo "$fallback"
+    return
+  fi
+  if has_word "$available" "balance_power"; then
+    echo "balance_power"
+    return
+  fi
+  if has_word "$available" "balance_performance"; then
+    echo "balance_performance"
+    return
+  fi
+  if has_word "$available" "performance"; then
+    echo "performance"
+    return
+  fi
+  if has_word "$available" "power"; then
+    echo "power"
+    return
+  fi
+  echo ""
 }
 
 get_helper_path() {
@@ -67,78 +153,133 @@ get_helper_path() {
 
 set_governor() {
   local governor="$1"
-  local helper=$(get_helper_path)
 
   log "Setting CPU governor to: $governor"
 
-  if [ -n "$helper" ]; then
-    "${PKEXEC_CMD[@]}" "$helper" set-governor "$governor" 2>&1 | logger -t power-profile-fix || true
-  fi
+  run_helper set-governor "$governor" || log "Failed to set governor to: $governor"
 }
 
 set_epp() {
   local epp="$1"
-  local helper=$(get_helper_path)
+
+  if [ -z "$epp" ]; then
+    log "No supported EPP value found, skipping"
+    return
+  fi
 
   log "Setting EPP to: $epp"
 
-  if [ -n "$helper" ]; then
-    "${PKEXEC_CMD[@]}" "$helper" set-epp "$epp" 2>&1 | logger -t power-profile-fix || true
-  fi
+  run_helper set-epp "$epp" || log "Failed to set EPP to: $epp"
 }
 
 set_pstate_limits() {
   local min_perf="$1"
   local max_perf="$2"
-  local helper=$(get_helper_path)
 
-  if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ] && [ -n "$helper" ]; then
+  if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
     log "Setting Intel P-state limits: min=$min_perf%, max=$max_perf%"
-    "${PKEXEC_CMD[@]}" "$helper" set-pstate-limits "$min_perf" "$max_perf" 2>&1 | logger -t power-profile-fix || true
+    run_helper set-pstate-limits "$min_perf" "$max_perf" || log "Failed to set Intel P-state limits"
   fi
 }
 
 set_policy_freqs() {
   local min_pct="$1"
   local max_pct="$2"
-  local helper=$(get_helper_path)
 
-  if [ -n "$helper" ]; then
-    log "Setting policy freqs: min=${min_pct}%, max=${max_pct}%"
-    "${PKEXEC_CMD[@]}" "$helper" set-policy-freqs "$min_pct" "$max_pct" 2>&1 | logger -t power-profile-fix || true
-  fi
+  log "Setting policy freqs: min=${min_pct}%, max=${max_pct}%"
+  run_helper set-policy-freqs "$min_pct" "$max_pct" || log "Failed to set policy freqs"
 }
 
 set_policy_min_freqs() {
   local min_pct="$1"
-  local helper=$(get_helper_path)
 
-  if [ -n "$helper" ]; then
-    log "Setting policy min freqs: min=${min_pct}%"
-    "${PKEXEC_CMD[@]}" "$helper" set-policy-min "$min_pct" 2>&1 | logger -t power-profile-fix || true
-  fi
+  log "Setting policy min freqs: min=${min_pct}%"
+  run_helper set-policy-min "$min_pct" || log "Failed to set policy min freqs"
 }
 
 set_schedutil_tunables() {
   local up_rate_us="$1"
   local down_rate_us="$2"
   local iowait_enable="$3"
-  local helper=$(get_helper_path)
 
-  if [ -n "$helper" ]; then
-    log "Setting schedutil tunables: up=${up_rate_us}us down=${down_rate_us}us iowait=${iowait_enable}"
-    "${PKEXEC_CMD[@]}" "$helper" set-schedutil "$up_rate_us" "$down_rate_us" "$iowait_enable" 2>&1 | logger -t power-profile-fix || true
-  fi
+  log "Setting schedutil tunables: up=${up_rate_us}us down=${down_rate_us}us iowait=${iowait_enable}"
+  run_helper set-schedutil "$up_rate_us" "$down_rate_us" "$iowait_enable" || log "Failed to set schedutil tunables"
 }
 
 set_boost() {
   local enable="$1"
-  local helper=$(get_helper_path)
 
-  if [ -n "$helper" ]; then
-    log "Setting turbo/boost to: $enable"
-    "${PKEXEC_CMD[@]}" "$helper" set-boost "$enable" 2>&1 | logger -t power-profile-fix || true
+  log "Setting turbo/boost to: $enable"
+  run_helper set-boost "$enable" || log "Failed to set turbo/boost to: $enable"
+}
+
+run_helper() {
+  local helper
+
+  helper=$(get_helper_path)
+  if [ -z "$helper" ]; then
+    log "Helper script not found"
+    return 1
   fi
+
+  if ! "${PKEXEC_CMD[@]}" "$helper" "$@" 2>&1 | logger -t power-profile-fix; then
+    log "Helper command failed: $*"
+    return 1
+  fi
+}
+
+is_floor_applied() {
+  local min_pct="$1"
+  local tolerance_khz=100000
+
+  for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+    local max_khz cur_min_khz target_min_khz
+    [ -d "$policy" ] || continue
+    max_khz=$(cat "$policy/cpuinfo_max_freq" 2>/dev/null || echo "")
+    cur_min_khz=$(cat "$policy/scaling_min_freq" 2>/dev/null || echo "")
+    [ -n "$max_khz" ] || continue
+    [ -n "$cur_min_khz" ] || continue
+    target_min_khz=$((max_khz * min_pct / 100))
+    if [ $((cur_min_khz + tolerance_khz)) -lt "$target_min_khz" ]; then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
+enforce_min_floor() {
+  local profile="$1"
+  local min_pct="$2"
+  local attempt
+
+  for ((attempt = 1; attempt <= APPLY_RETRIES; attempt++)); do
+    if is_floor_applied "$min_pct"; then
+      return 0
+    fi
+    log "Floor below target for $profile (attempt ${attempt}/${APPLY_RETRIES}), reapplying min floor"
+    set_policy_min_freqs "$min_pct"
+    if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
+      set_pstate_limits "$min_pct" 100
+    fi
+    sleep "$APPLY_RETRY_SLEEP_SECONDS"
+  done
+
+  log "Unable to fully enforce min floor for $profile after ${APPLY_RETRIES} attempts"
+}
+
+log_policy_state() {
+  local policy="/sys/devices/system/cpu/cpufreq/policy0"
+  local gov min max cur epp driver
+
+  [ -d "$policy" ] || return
+  gov=$(cat "$policy/scaling_governor" 2>/dev/null || echo "n/a")
+  min=$(cat "$policy/scaling_min_freq" 2>/dev/null || echo "n/a")
+  max=$(cat "$policy/scaling_max_freq" 2>/dev/null || echo "n/a")
+  cur=$(cat "$policy/scaling_cur_freq" 2>/dev/null || echo "n/a")
+  epp=$(cat "$policy/energy_performance_preference" 2>/dev/null || echo "n/a")
+  driver=$(get_scaling_driver)
+  log "Policy state driver=$driver gov=$gov min=${min}kHz max=${max}kHz cur=${cur}kHz epp=$epp"
 }
 
 apply_startup_warmup() {
@@ -174,13 +315,35 @@ is_high_load() {
   awk -v l="$load" -v c="$cores" 'BEGIN { exit (l >= c*0.7 ? 0 : 1) }'
 }
 
+get_max_temp_millic() {
+  local max_temp=0
+  local temp
+
+  for zone in /sys/class/thermal/thermal_zone*; do
+    [ -f "$zone/temp" ] || continue
+    temp=$(cat "$zone/temp" 2>/dev/null || echo "")
+    [[ "$temp" =~ ^[0-9]+$ ]] || continue
+    if [ "$temp" -gt "$max_temp" ]; then
+      max_temp="$temp"
+    fi
+  done
+
+  echo "$max_temp"
+}
+
+is_hot() {
+  local max_temp
+  max_temp=$(get_max_temp_millic)
+  [ "$max_temp" -ge "$CPU_HOT_TEMP_MILLIC" ]
+}
+
 get_profile_min_pct() {
   local profile="$1"
   case "$profile" in
-  power-saver) echo 10 ;;
-  balanced) echo 30 ;;
-  performance) echo 85 ;;
-  *) echo 10 ;;
+  power-saver) echo 8 ;;
+  balanced) echo "$BALANCED_MIN_PCT" ;;
+  performance) echo 35 ;;
+  *) echo 8 ;;
   esac
 }
 
@@ -195,95 +358,86 @@ apply_min_floor() {
   if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
     set_pstate_limits "$min_pct" 100
   fi
+  enforce_min_floor "$profile" "$min_pct"
+  log_policy_state
 }
 
 apply_profile_fix() {
   local profile="$1"
 
-  # Defaults
-  local gov="schedutil"
-  local epp="balance_power"
-  local min_pct=10
+  local gov_pref="schedutil"
+  local gov_fallback="powersave"
+  local epp_pref="balance_power"
+  local epp_fallback="balance_performance"
+  local gov
+  local epp
+  local min_pct=8
   local max_pct=100
   local boost=1
 
-  if is_passive_mode; then
-    case "$profile" in
-    power-saver)
-      gov="schedutil"
-      epp="power"
-      min_pct=10
-      max_pct=70
-      boost=0
-      ;;
-    balanced)
-      gov="schedutil"
-      epp="balance_performance"
-      min_pct=30
-      max_pct=100
-      boost=1
-      ;;
-    performance)
-      gov="performance"
-      epp="performance"
-      min_pct=85
-      max_pct=100
-      boost=1
-      ;;
-    *)
-      log "Unknown profile: $profile, skipping"
-      return
-      ;;
-    esac
-  else
-    case "$profile" in
-    power-saver)
-      gov="schedutil"
-      epp="balance_power"
-      min_pct=10
-      max_pct=70
-      boost=0
-      ;;
-    balanced)
-      gov="schedutil"
-      epp="balance_performance"
-      min_pct=30
-      max_pct=100
-      boost=1
-      ;;
-    performance)
-      gov="performance"
-      epp="performance"
-      min_pct=85
-      max_pct=100
-      boost=1
-      ;;
-    *)
-      log "Unknown profile: $profile, skipping"
-      return
-      ;;
-    esac
-  fi
+  case "$profile" in
+  power-saver)
+    gov_pref="schedutil"
+    gov_fallback="schedutil"
+    epp_pref="power"
+    epp_fallback="balance_power"
+    min_pct=8
+    max_pct=60
+    boost=0
+    ;;
+  balanced)
+    gov_pref="schedutil"
+    gov_fallback="schedutil"
+    epp_pref="$BALANCED_EPP"
+    epp_fallback="balance_power"
+    min_pct=$BALANCED_MIN_PCT
+    max_pct=$BALANCED_MAX_PCT
+    boost=$BALANCED_BOOST
+    if is_hot; then
+      max_pct=$BALANCED_HOT_MAX_PCT
+      epp_pref="$BALANCED_HOT_EPP"
+      log "Thermal guard active for balanced: max=${max_pct}% epp=${epp_pref}"
+    fi
+    ;;
+  performance)
+    gov_pref="performance"
+    gov_fallback="performance"
+    epp_pref="performance"
+    epp_fallback="balance_performance"
+    min_pct=35
+    max_pct=100
+    boost=1
+    ;;
+  *)
+    log "Unknown profile: $profile, skipping"
+    return
+    ;;
+  esac
+
+  gov=$(choose_governor "$gov_pref" "$gov_fallback")
+  epp=$(choose_epp "$epp_pref" "$epp_fallback")
 
   set_governor "$gov"
   set_epp "$epp"
   set_policy_freqs "$min_pct" "$max_pct"
   set_pstate_limits "$min_pct" "$max_pct"
   set_boost "$boost"
+  enforce_min_floor "$profile" "$min_pct"
   if [ "$gov" = "schedutil" ]; then
     case "$profile" in
     power-saver)
-      set_schedutil_tunables 30000 80000 0
+      set_schedutil_tunables 40000 120000 0
       ;;
     balanced)
-      set_schedutil_tunables 20000 60000 0
+      set_schedutil_tunables "$BALANCED_UP_RATE_US" "$BALANCED_DOWN_RATE_US" "$BALANCED_IOWAIT_BOOST"
       ;;
     performance)
-      set_schedutil_tunables 5000 20000 1
+      set_schedutil_tunables 2000 15000 1
       ;;
     esac
   fi
   log "Applied profile=$profile gov=$gov epp=$epp min=${min_pct}% max=${max_pct}% boost=$boost"
+  log_policy_state
 }
 
 # If called with a profile argument, apply it once
@@ -304,7 +458,7 @@ apply_startup_warmup "$current_profile"
 # Monitor for profile changes using dbus-monitor
 dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/net/hadess/PowerProfiles'" 2>/dev/null |
   while read -r line; do
-    if echo "$line" | grep -q "ActiveProfile"; then
+    if [[ "$line" == *"ActiveProfile"* ]]; then
       sleep 0.5 # Brief delay to ensure the profile change is complete
       old_profile="$current_profile"
       new_profile=$(get_current_profile)
@@ -318,13 +472,13 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
         else
           case "$new_profile" in
           performance)
-            delay=30 # Long delay for performance downscaling
+            delay=15
             ;;
           balanced)
-            delay=10 # Moderate delay for balanced downscaling
+            delay=5
             ;;
           power-saver | *)
-            delay=3 # Short delay for power-saver downscaling
+            delay=2
             ;;
           esac
 
@@ -344,7 +498,15 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
           fi
 
           if is_high_load; then
-            log "Skipping downscale to $new_profile due to high load"
+            log "High load detected; deferring full apply for $new_profile by ${HIGH_LOAD_RETRY_SECONDS}s"
+            (
+              sleep "$HIGH_LOAD_RETRY_SECONDS"
+              if [[ "$(get_current_profile)" = "$new_profile" ]] && ! is_high_load; then
+                log "Retrying deferred apply for $new_profile"
+                apply_profile_fix "$new_profile"
+              fi
+            ) &
+            current_profile="$new_profile"
             continue
           fi
 

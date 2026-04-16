@@ -8,16 +8,61 @@ write_value() {
     local file="$1"
     local value="$2"
 
-    if [ -f "$file" ] && [ -w "$file" ]; then
-        echo "$value" > "$file"
+    if [ -f "$file" ]; then
+        if ! printf '%s' "$value" > "$file"; then
+            echo "write failed: $file <= $value" >&2
+            return 1
+        fi
     fi
+}
+
+governor_supported() {
+    local policy="$1"
+    local requested="$2"
+    local available
+    available=$(cat "$policy/scaling_available_governors" 2>/dev/null || echo "")
+    [[ " $available " == *" $requested "* ]]
+}
+
+resolve_governor() {
+    local policy="$1"
+    local requested="$2"
+
+    if governor_supported "$policy" "$requested"; then
+        echo "$requested"
+        return
+    fi
+
+    if [ "$requested" = "schedutil" ] && governor_supported "$policy" "powersave"; then
+        echo "powersave"
+        return
+    fi
+
+    if [ "$requested" = "performance" ] && governor_supported "$policy" "schedutil"; then
+        echo "schedutil"
+        return
+    fi
+
+    if governor_supported "$policy" "performance"; then
+        echo "performance"
+        return
+    fi
+
+    if governor_supported "$policy" "powersave"; then
+        echo "powersave"
+        return
+    fi
+
+    echo "$requested"
 }
 
 case "${1:-}" in
     set-governor)
         # Set governor for all CPUs
         for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-            write_value "$cpu" "$2"
+            policy=$(dirname "$cpu")
+            resolved=$(resolve_governor "$policy" "$2")
+            write_value "$cpu" "$resolved"
         done
         ;;
     set-epp)
@@ -68,8 +113,16 @@ case "${1:-}" in
         for policy in /sys/devices/system/cpu/cpufreq/policy*; do
             [ -d "$policy" ] || continue
             max_khz=$(cat "$policy/cpuinfo_max_freq" 2>/dev/null || echo "")
+            min_hw_khz=$(cat "$policy/cpuinfo_min_freq" 2>/dev/null || echo "")
+            current_max_khz=$(cat "$policy/scaling_max_freq" 2>/dev/null || echo "")
             [ -n "$max_khz" ] || continue
             min_khz=$((max_khz * min_pct / 100))
+            if [ -n "$min_hw_khz" ] && [ "$min_khz" -lt "$min_hw_khz" ]; then
+                min_khz="$min_hw_khz"
+            fi
+            if [ -n "$current_max_khz" ] && [ "$min_khz" -gt "$current_max_khz" ]; then
+                min_khz="$current_max_khz"
+            fi
             write_value "$policy/scaling_min_freq" "$min_khz"
         done
         ;;
