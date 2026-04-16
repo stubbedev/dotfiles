@@ -71,6 +71,17 @@ if is_binary starship; then
 fi
 
 if is_binary pyenv; then
-    eval "$(pyenv init -)"
-    eval "$(pyenv virtualenv-init -)"
+    export PYENV_ROOT="$HOME/.pyenv"
+    if [[ ! ":$PATH:" == *":$PYENV_ROOT/bin:"* ]]; then
+        PATH="$PYENV_ROOT/bin:$PATH"
+    fi
+    if [[ ! ":$PATH:" == *":$PYENV_ROOT/shims:"* ]]; then
+        PATH="$PYENV_ROOT/shims:$PATH"
+    fi
+    function pyenv {
+        unfunction pyenv
+        eval "$(command pyenv init -)"
+        eval "$(command pyenv virtualenv-init -)"
+        pyenv "$@"
+    }
 fi

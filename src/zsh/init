@@ -37,6 +37,8 @@ if [ -d "$HOME/.stubbe" ]; then
   zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
   if [[ -f $zcompdump ]]; then
     compinit -C -d "$zcompdump"
+  else
+    compinit -d "$zcompdump"
   fi
 
   # Source remaining files AFTER compinit

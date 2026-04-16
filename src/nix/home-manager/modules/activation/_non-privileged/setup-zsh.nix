@@ -8,7 +8,6 @@ _: {
     }:
     {
       actionScript = ''
-        echo "Regenerating zsh completion cache..."
         rm -f "${config.home.homeDirectory}/.zcompdump" "${config.home.homeDirectory}/.zcompdump.zwc"
         ${pkgs.zsh}/bin/zsh <<'ZSHEOF'
         export HOME='${config.home.homeDirectory}'
@@ -29,6 +28,7 @@ _: {
 
         autoload -Uz compinit
         compinit -d '${config.home.homeDirectory}/.zcompdump'
+        zcompile '${config.home.homeDirectory}/.zcompdump'
         ZSHEOF
       '';
     };
