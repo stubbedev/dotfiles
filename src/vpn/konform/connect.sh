@@ -18,7 +18,17 @@ COOKIE_FILE="$CONFIG_DIR/cookie"
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 LOG_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.log"
 OPENCONNECT_BIN="$(command -v openconnect || true)"
-SETSID_BIN="$(command -v setsid || true)"
+SETSID_BIN=""
+for _setsid_candidate in /usr/bin/setsid /bin/setsid /run/current-system/sw/bin/setsid; do
+  if [ -x "$_setsid_candidate" ] && [ "$(realpath "$_setsid_candidate")" = "$_setsid_candidate" ]; then
+    SETSID_BIN="$_setsid_candidate"
+    break
+  fi
+done
+if [ -z "$SETSID_BIN" ]; then
+  SETSID_BIN="$(command -v setsid || true)"
+fi
+unset _setsid_candidate
 
 iface_name() {
   local raw="oc-${PROVIDER_NAME}"
