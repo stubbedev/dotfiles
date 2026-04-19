@@ -55,12 +55,12 @@ _: {
         };
         php = lib.mkOption {
           type = lib.types.bool;
-          default = false;
+          default = true;
           description = "Enable php installation.";
         };
         k8s = lib.mkOption {
           type = lib.types.bool;
-          default = false;
+          default = true;
           description = "Enable Kubernetes tools (kubectl, minikube).";
         };
         claudeCode = lib.mkOption {

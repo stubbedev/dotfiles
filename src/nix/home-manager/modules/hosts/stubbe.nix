@@ -17,6 +17,7 @@ in
         vpn = true;
         opencode = true;
         srv = true;
+        php = false;
         k8s = true;
         claudeCode = true;
       };
