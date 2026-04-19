@@ -183,7 +183,7 @@ if are_binary git bat fzf; then
 
     # Fixed 3-item list + preview scaled to terminal height
     local _list_h=4  # prompt(1) + items(3)
-    local _prev_h=$(( ${LINES:-40} * 80 / 100 ))
+    local _prev_h=$(( ${LINES:-40} * 50 / 100 ))
     local _gcb_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
@@ -729,7 +729,7 @@ if are_binary git fzf; then
 
     # Fixed 3-item list + preview scaled to terminal height
     local _list_h=4  # prompt(1) + items(3)
-    local _prev_h=$(( ${LINES:-40} * 80 / 100 ))
+    local _prev_h=$(( ${LINES:-40} * 50 / 100 ))
     local selected=$(echo "$display_list" |
       fzf --prompt="(Enter: switch/create worktree, Ctrl+C: cancel)> " \
         --print-query \
