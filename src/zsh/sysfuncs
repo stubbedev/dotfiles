@@ -6,7 +6,9 @@ function is_binary {
 }
 
 function is_nix {
-  grep -q '^ID=nixos' /etc/os-release 2>/dev/null
+  [[ -r /etc/os-release ]] || return 1
+  local content=$(<"/etc/os-release")
+  [[ "$content" == *$'\n'ID=nixos* ]] || [[ "$content" == ID=nixos* ]]
 }
 
 function are_binary {
@@ -46,7 +48,9 @@ function are_file {
 }
 
 function has_string {
-  grep -q "$2" "$1"
+  [[ -r "$1" ]] || return 1
+  local content=$(<"$1")
+  [[ "$content" == *"$2"* ]]
 }
 
 function is_elevated_shell {

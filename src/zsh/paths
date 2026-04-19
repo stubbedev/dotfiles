@@ -23,9 +23,12 @@ STUBBE_PATHS=(
   "/sbin"
 )
 
-for STUBBE_PATH in "${STUBBE_PATHS[@]}"; do
-  if [ -d "$STUBBE_PATH" ] && [[ ! ":$PATH:" == *":$STUBBE_PATH:"* ]]; then
-    PATH="$STUBBE_PATH:$PATH"
-  fi
+local p
+local -a new_paths=()
+for p in "${STUBBE_PATHS[@]}"; do
+  [[ -d "$p" ]] || continue
+  [[ ":$PATH:" == *":$p:"* ]] && continue
+  new_paths+=("$p")
 done
+(( ${#new_paths} )) && PATH="${(j/:/)new_paths}:$PATH"
 export PATH
