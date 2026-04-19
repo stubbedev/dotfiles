@@ -79,7 +79,7 @@ _hm() {
         remove-generations)
           # Get generation IDs
           local -a generations
-          if [[ -n $(command -v home-manager) ]]; then
+          if (( ${+commands[home-manager]} )); then
             generations=(${(f)"$(home-manager generations 2>/dev/null | grep -o '^[0-9]\+' || true)"})
             if [[ ${#generations} -gt 0 ]]; then
               _describe 'generation IDs' generations

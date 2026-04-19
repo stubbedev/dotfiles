@@ -3,7 +3,7 @@
 # Clean up any zombie jobs from previous sessions
 disown 2>/dev/null
 
-if [ -d "$HOME/.stubbe" ]; then
+if [[ -d "$HOME/.stubbe" ]]; then
   [[ -f "$HOME/.zsh_history" ]] || >>$HOME/.zsh_history
   STBDIR="$HOME/.stubbe/src/zsh"
 
@@ -28,7 +28,7 @@ if [ -d "$HOME/.stubbe" ]; then
 
   # Source files that define functions BEFORE compinit
   for SZP in "${STBZSHSOURCES_PRE[@]}"; do
-    if [ -f "$STBDIR/$SZP" ]; then
+    if [[ -f "$STBDIR/$SZP" ]]; then
       source "$STBDIR/$SZP"
     fi
   done
@@ -43,8 +43,10 @@ if [ -d "$HOME/.stubbe" ]; then
 
   # Source remaining files AFTER compinit
   for SZP in "${STBZSHSOURCES_POST[@]}"; do
-    if [ -f "$STBDIR/$SZP" ]; then
+    if [[ -f "$STBDIR/$SZP" ]]; then
       source "$STBDIR/$SZP"
     fi
   done
+
+  unset STBZSHSOURCES_PRE STBZSHSOURCES_POST SZP STBDIR zcompdump
 fi

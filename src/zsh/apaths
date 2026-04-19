@@ -15,3 +15,4 @@ for _ap in "${STUBBE_APP_PATHS[@]}"; do
 done
 (( ${#new_apaths} )) && XDG_DATA_DIRS="${(j/:/)new_apaths}:$XDG_DATA_DIRS"
 export XDG_DATA_DIRS
+unset STUBBE_APP_PATHS _ap new_apaths

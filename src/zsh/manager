@@ -12,7 +12,7 @@ function source_github_plugins() {
   local -a args=("$@")
   local parent_dir=${args[-1]}
   local -a urls=("${args[@]:0:${#args[@]}-1}")
-  mkdir -p "$parent_dir"
+  [[ -d "$parent_dir" ]] || mkdir -p "$parent_dir"
 
   local url repo target
 

@@ -10,3 +10,4 @@ fpath+=(
   "$STUBBE_ZSH_FPATHS_DIR"
   "$HOME/.nix-profile/share/zsh/site-functions"
 )
+unset STUBBE_ZSH_FPATHS_DIR STUBBE_ZSH_FPATHS_DEFAULT_DIR

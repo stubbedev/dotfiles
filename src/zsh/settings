@@ -81,10 +81,18 @@ if is_binary fzf; then
 fi
 
 if is_binary starship; then
-    type starship_zle-keymap-select >/dev/null || \
-      {
-        eval "$(starship init zsh)"
-      }
+    type starship_zle-keymap-select >/dev/null || {
+      local _starship_cache="${XDG_CACHE_HOME:-$HOME/.cache}/starship_init.zsh"
+      local _starship_cache_ver="${_starship_cache}.ver"
+      local _starship_resolved="${commands[starship]:A}"
+      local _starship_cached_resolved=""
+      [[ -f "$_starship_cache_ver" ]] && _starship_cached_resolved=$(<"$_starship_cache_ver")
+      if [[ ! -f "$_starship_cache" || "$_starship_cached_resolved" != "$_starship_resolved" ]]; then
+        starship init zsh >| "$_starship_cache"
+        print -r -- "$_starship_resolved" >| "$_starship_cache_ver"
+      fi
+      source "$_starship_cache"
+    }
 fi
 
 if is_binary pyenv; then
@@ -102,3 +110,5 @@ if is_binary pyenv; then
         pyenv "$@"
     }
 fi
+
+unset fzf_zsh_init _starship_cache _starship_cache_ver _starship_resolved _starship_cached_resolved

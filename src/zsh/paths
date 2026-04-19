@@ -32,3 +32,4 @@ for p in "${STUBBE_PATHS[@]}"; do
 done
 (( ${#new_paths} )) && PATH="${(j/:/)new_paths}:$PATH"
 export PATH
+unset STUBBE_PATHS p new_paths
