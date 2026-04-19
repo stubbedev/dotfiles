@@ -3,15 +3,17 @@ _git_shortcuts() {
     gcb|gd|gcd|ggo|gwt)
       local now=$EPOCHSECONDS
       if (( now - ${_gsc_br_time:-0} > 5 )) || [[ ${_gsc_br_pwd:-} != $PWD ]]; then
-        local -a _raw=(${(f)"$(git branch --all 2>/dev/null)"})
         local -a _arr=()
         local _b
-        for _b in "${_raw[@]}"; do
-          _b=${_b:2}
-          _b=${_b#remotes/origin/}
-          [[ $_b == HEAD* || -z $_b ]] && continue
-          _arr+=("$_b")
-        done
+        while IFS= read -r _b; do
+          if [[ $_b == refs/heads/* ]]; then
+            _arr+=("${_b#refs/heads/}")
+          elif [[ $_b == refs/remotes/origin/* ]]; then
+            local _rb=${_b#refs/remotes/origin/}
+            [[ $_rb == HEAD ]] && continue
+            _arr+=("$_rb")
+          fi
+        done < <(git branch --all --format='%(refname)' 2>/dev/null)
         typeset -ga _gsc_br_cache=(${(ou)_arr})
         typeset -g _gsc_br_time=$now _gsc_br_pwd=$PWD
       fi

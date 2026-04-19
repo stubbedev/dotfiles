@@ -57,16 +57,19 @@ function in_git_repo {
 }
 
 # Fork-free branch listing: sets $reply to sorted-unique branch array.
+# Uses %(refname) to avoid parsing git's marker/color output entirely.
 function _list_git_branches {
-  local -a _raw=(${(f)"$(git branch --all 2>/dev/null)"})
   local -a _arr=()
   local _b
-  for _b in "${_raw[@]}"; do
-    _b=${_b:2}
-    _b=${_b#remotes/origin/}
-    [[ $_b == HEAD* || -z $_b ]] && continue
-    _arr+=("$_b")
-  done
+  while IFS= read -r _b; do
+    if [[ $_b == refs/heads/* ]]; then
+      _arr+=("${_b#refs/heads/}")
+    elif [[ $_b == refs/remotes/origin/* ]]; then
+      local _rb=${_b#refs/remotes/origin/}
+      [[ $_rb == HEAD ]] && continue
+      _arr+=("$_rb")
+    fi
+  done < <(git branch --all --format='%(refname)' 2>/dev/null)
   reply=(${(ou)_arr})
 }
 
@@ -122,7 +125,7 @@ if are_binary git bat fzf; then
           --no-input \
           --header="[WARN] Protected Branch: Confirm Push" \
           --reverse \
-          --height=3 \
+          --height=4 \
           --no-info \
           --no-multi \
           --exit-0)
@@ -141,7 +144,7 @@ if are_binary git bat fzf; then
     current_tag=${$(git tag --sort=version:refname)[-1]}
     local increment_action=$(printf 'Major\nMinor\nPatch\n' |
       fzf --prompt="(Enter: select action)> " \
-        --height=3 \
+        --height=4 \
         --no-input \
         --no-info)
 
@@ -178,6 +181,9 @@ if are_binary git bat fzf; then
     _list_git_branches
     local git_branches=${(F)reply}
 
+    # Fixed 3-item list + preview scaled to terminal height
+    local _list_h=4  # prompt(1) + items(3)
+    local _prev_h=$(( ${LINES:-40} * 80 / 100 ))
     local _gcb_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
@@ -188,8 +194,8 @@ if are_binary git bat fzf; then
         --print-query \
         --no-info \
         --preview='git log --oneline --color=always -15 {} 2>/dev/null' \
-        --preview-window='down:50%:wrap:nohidden' \
-        --height=50%)
+        --preview-window="down:${_prev_h}:wrap:nohidden" \
+        --height=$(( _list_h + _prev_h )))
     local branch_name=${_gcb_out##*$'\n'}
 
     if [[ -n "$branch_name" && ${reply[(r)$branch_name]} == "$branch_name" ]]; then
@@ -218,7 +224,7 @@ if are_binary git bat fzf; then
 
     local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
       fzf --prompt="(Enter: select prefix)> " \
-        --height=3 \
+        --height=4 \
         --no-input \
         --no-info)
 
@@ -498,7 +504,7 @@ if are_binary git bat fzf; then
         --no-input \
         --header="[WARN] Local Branch: Wipe Non-Pushed Changes" \
         --reverse \
-        --height=3 \
+        --height=4 \
         --no-info \
         --no-multi \
         --exit-0)
@@ -520,7 +526,7 @@ if are_binary git bat fzf; then
         --no-input \
         --header="[WARN] Local Branch: Wipe Non-Pushed Changes" \
         --reverse \
-        --height=3 \
+        --height=4 \
         --no-info \
         --no-multi \
         --exit-0)
@@ -721,12 +727,15 @@ if are_binary git fzf; then
       return 0
     fi
 
+    # Fixed 3-item list + preview scaled to terminal height
+    local _list_h=4  # prompt(1) + items(3)
+    local _prev_h=$(( ${LINES:-40} * 80 / 100 ))
     local selected=$(echo "$display_list" |
       fzf --prompt="(Enter: switch/create worktree, Ctrl+C: cancel)> " \
         --print-query \
         --exit-0 \
         --no-info \
-        --height=50% \
+        --height=$(( _list_h + _prev_h )) \
         --preview='
           line={}
           if [[ ${line%% *} == "[worktree]" ]]; then
@@ -737,7 +746,7 @@ if are_binary git fzf; then
             git log --oneline --color=always -10 "$b" 2>/dev/null
           fi
         ' \
-        --preview-window='down:50%:wrap:nohidden')
+        --preview-window="down:${_prev_h}:wrap:nohidden")
 
     local query=${selected%%$'\n'*}
     local match=${selected##*$'\n'}
