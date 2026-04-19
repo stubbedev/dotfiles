@@ -1,13 +1,15 @@
 #!/usr/bin/env zsh
 
-STUBBE_ZSH_FPATHS_DIR="$HOME/.stubbe/src/zsh/fpaths.d"
-[[ -d "$STUBBE_ZSH_FPATHS_DIR" ]] || mkdir -p "$STUBBE_ZSH_FPATHS_DIR"
-STUBBE_ZSH_FPATHS_DEFAULT_DIR="$HOME/.stubbe/src/zsh/fpaths.default.d"
-[[ -d "$STUBBE_ZSH_FPATHS_DEFAULT_DIR" ]] || mkdir -p "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"
-
-fpath+=(
-  "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"
-  "$STUBBE_ZSH_FPATHS_DIR"
-  "$HOME/.nix-profile/share/zsh/site-functions"
-)
-unset STUBBE_ZSH_FPATHS_DIR STUBBE_ZSH_FPATHS_DEFAULT_DIR
+function _fpaths_init {
+  local dir="$HOME/.stubbe/src/zsh/fpaths.d"
+  [[ -d "$dir" ]] || mkdir -p "$dir"
+  local default_dir="$HOME/.stubbe/src/zsh/fpaths.default.d"
+  [[ -d "$default_dir" ]] || mkdir -p "$default_dir"
+  fpath+=(
+    "$default_dir"
+    "$dir"
+    "$HOME/.nix-profile/share/zsh/site-functions"
+  )
+}
+_fpaths_init
+unfunction _fpaths_init

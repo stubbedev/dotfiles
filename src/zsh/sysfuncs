@@ -57,6 +57,16 @@ function is_elevated_shell {
   [[ "$EUID" -eq 0 ]]
 }
 
+# Returns true if a shell init cache file is missing or stale.
+# Staleness is determined by comparing the resolved binary path (nix store path)
+# against the path stored in the companion .ver file.
+function _init_cache_stale {
+  local _cache=$1 _resolved=$2 _cached=""
+  [[ -f "$_cache" ]] || return 0
+  [[ -f "${_cache}.ver" ]] && _cached=$(<"${_cache}.ver")
+  [[ "$_cached" != "$_resolved" ]]
+}
+
 function src_zsh {
   is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
 }

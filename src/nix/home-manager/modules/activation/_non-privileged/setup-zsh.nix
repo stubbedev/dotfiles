@@ -41,6 +41,11 @@ _: {
         for plugin_file in "$STBDIR/plugins.d"/**/*.plugin.zsh(N); do
           zcompile "$plugin_file" 2>/dev/null
         done
+
+        # Compile source files for faster parsing on startup
+        for src_file in init paths fpaths apaths sysfuncs manager funcs aliases settings env; do
+          [[ -f "$STBDIR/$src_file" ]] && zcompile "$STBDIR/$src_file" 2>/dev/null
+        done
         ZSHEOF
       '';
     };

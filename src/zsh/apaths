@@ -1,18 +1,20 @@
 #!/usr/bin/env zsh
 # EXPAND LIST WITH DESIRED APPLICATION PATHS
 
-STUBBE_APP_PATHS=(
-  "$HOME/.local/share/applications"
-  "$HOME/.local/share/flatpak/exports/share"
-)
-
-local -a new_apaths=()
-local _ap
-for _ap in "${STUBBE_APP_PATHS[@]}"; do
-  [[ -d "$_ap" ]] || continue
-  [[ ":$XDG_DATA_DIRS:" == *":$_ap:"* ]] && continue
-  new_apaths+=("$_ap")
-done
-(( ${#new_apaths} )) && XDG_DATA_DIRS="${(j/:/)new_apaths}:$XDG_DATA_DIRS"
-export XDG_DATA_DIRS
-unset STUBBE_APP_PATHS _ap new_apaths
+function _apaths_init {
+  local -a STUBBE_APP_PATHS=(
+    "$HOME/.local/share/applications"
+    "$HOME/.local/share/flatpak/exports/share"
+  )
+  local -a new_apaths=()
+  local _ap
+  for _ap in "${STUBBE_APP_PATHS[@]}"; do
+    [[ -d "$_ap" ]] || continue
+    [[ ":$XDG_DATA_DIRS:" == *":$_ap:"* ]] && continue
+    new_apaths+=("$_ap")
+  done
+  (( ${#new_apaths} )) && XDG_DATA_DIRS="${(j/:/)new_apaths}:$XDG_DATA_DIRS"
+  export XDG_DATA_DIRS
+}
+_apaths_init
+unfunction _apaths_init

@@ -1,114 +1,108 @@
 #!/usr/bin/env zsh
 
-bindkey "^Xa" _expand_alias
-bindkey -s "^[r" "src_zsh^M"
-bindkey -s "^[o" "nvim^M"
-bindkey -s "^[O" "nvim .^M"
-function _git_shorthand_descriptions() {
-  (( CURRENT != 1 )) && return 1
-  (( ${#_git_shorthand_docs} == 0 )) && return 1
+function _settings_init {
+  bindkey "^Xa" _expand_alias
+  bindkey -s "^[r" "src_zsh^M"
+  bindkey -s "^[o" "nvim^M"
+  bindkey -s "^[O" "nvim .^M"
+  function _git_shorthand_descriptions() {
+    (( CURRENT != 1 )) && return 1
+    (( ${#_git_shorthand_docs} == 0 )) && return 1
 
-  local -a git_cmds
-  local func
-  for func in "${(@k)_git_shorthand_docs}"; do
-    git_cmds+=("${func}:${_git_shorthand_docs[$func]}")
-  done
+    local -a git_cmds
+    local func
+    for func in "${(@k)_git_shorthand_docs}"; do
+      git_cmds+=("${func}:${_git_shorthand_docs[$func]}")
+    done
 
-  _describe -t git-shortcuts 'git shortcuts' git_cmds
-}
+    _describe -t git-shortcuts 'git shortcuts' git_cmds
+  }
 
-zstyle ':completion:*' completer _expand _expand_alias _git_shorthand_descriptions _complete _ignored
-zstyle ':completion:*' fzf-tab true
-zstyle ':completion:*' complete-options true
-zstyle ':completion:*' complete-aliases true
-zstyle ':completion:*' regular true
-zstyle ':completion:*' sort false
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+  zstyle ':completion:*' completer _expand _expand_alias _git_shorthand_descriptions _complete _ignored
+  zstyle ':completion:*' fzf-tab true
+  zstyle ':completion:*' complete-options true
+  zstyle ':completion:*' complete-aliases true
+  zstyle ':completion:*' regular true
+  zstyle ':completion:*' sort false
+  zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 
-# disable sort when completing `git checkout`
-zstyle ':completion:*:git-checkout:*' sort false
-# set descriptions format to enable group support
-zstyle ':completion:*:descriptions' format '[%d]'
-# set list-colors to enable filename colorizing
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-# force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
-zstyle ':completion:*' menu no
-if is_binary eza; then
-    # preview directory's content with eza when completing cd
-    zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
-fi
-# custom fzf flags
-zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept --height=40% --reverse --info=inline
-# switch group using `<` and `>`
-zstyle ':fzf-tab:*' switch-group '<' '>'
-zstyle ':fzf-tab:*' fuzzy-search true
+  # disable sort when completing `git checkout`
+  zstyle ':completion:*:git-checkout:*' sort false
+  # set descriptions format to enable group support
+  zstyle ':completion:*:descriptions' format '[%d]'
+  # set list-colors to enable filename colorizing
+  zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+  # force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
+  zstyle ':completion:*' menu no
+  if is_binary eza; then
+      zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+  fi
+  zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept --height=40% --reverse --info=inline
+  zstyle ':fzf-tab:*' switch-group '<' '>'
+  zstyle ':fzf-tab:*' fuzzy-search true
 
-HYPHEN_INSENSITIVE=false
-DISABLE_AUTO_TITLE=true
-ENABLE_CORRECTION=true
-VIM_MODE_NO_DEFAULT_BINDINGS=true
-ARTISAN_OPEN_ON_MAKE_EDITOR=nvim
-HISTFILE="$HOME/.zsh_history"
-HISTTIMEFORMAT="[%F %T] "
-SAVEHIST=10000
-HISTSIZE=10000
-ZSH_FZF_HISTORY_SEARCH_BIND='^r'
+  HYPHEN_INSENSITIVE=false
+  DISABLE_AUTO_TITLE=true
+  ENABLE_CORRECTION=true
+  VIM_MODE_NO_DEFAULT_BINDINGS=true
+  ARTISAN_OPEN_ON_MAKE_EDITOR=nvim
+  HISTFILE="$HOME/.zsh_history"
+  HISTTIMEFORMAT="[%F %T] "
+  SAVEHIST=10000
+  HISTSIZE=10000
+  ZSH_FZF_HISTORY_SEARCH_BIND='^r'
 
-setopt APPEND_HISTORY
-setopt SHARE_HISTORY
-setopt EXTENDED_HISTORY
-setopt HIST_IGNORE_ALL_DUPS
-setopt COMPLETE_ALIASES
+  setopt APPEND_HISTORY
+  setopt SHARE_HISTORY
+  setopt EXTENDED_HISTORY
+  setopt HIST_IGNORE_ALL_DUPS
+  setopt COMPLETE_ALIASES
 
-bindkey -s "^[A" "tmux-lazy-docker^M"
-bindkey -s "^[t" "tmux-new-session^M"
-bindkey -s "^[g" "tmux-lazy-git^M"
-bindkey -s "^[a" "tmux-system-monitor^M"
-bindkey -s "^[h" "tmux-opencode^M"
+  bindkey -s "^[A" "tmux-lazy-docker^M"
+  bindkey -s "^[t" "tmux-new-session^M"
+  bindkey -s "^[g" "tmux-lazy-git^M"
+  bindkey -s "^[a" "tmux-system-monitor^M"
+  bindkey -s "^[h" "tmux-opencode^M"
 
-if is_binary fzf; then
-    bindkey -s "^[f" "fzf-tmux-project-picker^M"
-    bindkey -s "^[F" "fzf-project-picker^M"
-    bindkey -s "^[d" "fzf-tmux-session-picker^M"
-    bindkey -s "^[D" "fzf-directory-picker^M"
-    # Load fzf shell integration (but don't let it bind TAB, we use fzf-tab instead)
-    # We'll load it without completion bindings
-    local fzf_zsh_init
-    fzf_zsh_init=$(fzf --zsh 2>/dev/null)
-    if [[ -n "$fzf_zsh_init" ]]; then
-      eval "${(F)${(f)fzf_zsh_init:#bindkey '^I'*}}"
-    fi
-fi
-
-if is_binary starship; then
-    type starship_zle-keymap-select >/dev/null || {
-      local _starship_cache="${XDG_CACHE_HOME:-$HOME/.cache}/starship_init.zsh"
-      local _starship_cache_ver="${_starship_cache}.ver"
-      local _starship_resolved="${commands[starship]:A}"
-      local _starship_cached_resolved=""
-      [[ -f "$_starship_cache_ver" ]] && _starship_cached_resolved=$(<"$_starship_cache_ver")
-      if [[ ! -f "$_starship_cache" || "$_starship_cached_resolved" != "$_starship_resolved" ]]; then
-        starship init zsh >| "$_starship_cache"
-        print -r -- "$_starship_resolved" >| "$_starship_cache_ver"
+  if is_binary fzf; then
+      bindkey -s "^[f" "fzf-tmux-project-picker^M"
+      bindkey -s "^[F" "fzf-project-picker^M"
+      bindkey -s "^[d" "fzf-tmux-session-picker^M"
+      bindkey -s "^[D" "fzf-directory-picker^M"
+      local _fzf_cache="${XDG_CACHE_HOME:-$HOME/.cache}/fzf_init.zsh"
+      local _fzf_resolved="${commands[fzf]:A}"
+      if _init_cache_stale "$_fzf_cache" "$_fzf_resolved"; then
+        local _fzf_init
+        _fzf_init=$(fzf --zsh 2>/dev/null)
+        print -r -- "${(F)${(f)_fzf_init:#bindkey '^I'*}}" >| "$_fzf_cache"
+        print -r -- "$_fzf_resolved" >| "${_fzf_cache}.ver"
       fi
-      source "$_starship_cache"
-    }
-fi
+      source "$_fzf_cache"
+  fi
 
-if is_binary pyenv; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    if [[ ! ":$PATH:" == *":$PYENV_ROOT/bin:"* ]]; then
-        PATH="$PYENV_ROOT/bin:$PATH"
-    fi
-    if [[ ! ":$PATH:" == *":$PYENV_ROOT/shims:"* ]]; then
-        PATH="$PYENV_ROOT/shims:$PATH"
-    fi
-    function pyenv {
-        unfunction pyenv
-        eval "$(command pyenv init -)"
-        eval "$(command pyenv virtualenv-init -)"
-        pyenv "$@"
-    }
-fi
+  if is_binary starship; then
+      type starship_zle-keymap-select >/dev/null || {
+        local _starship_cache="${XDG_CACHE_HOME:-$HOME/.cache}/starship_init.zsh"
+        local _starship_resolved="${commands[starship]:A}"
+        if _init_cache_stale "$_starship_cache" "$_starship_resolved"; then
+          starship init zsh >| "$_starship_cache"
+          print -r -- "$_starship_resolved" >| "${_starship_cache}.ver"
+        fi
+        source "$_starship_cache"
+      }
+  fi
 
-unset fzf_zsh_init _starship_cache _starship_cache_ver _starship_resolved _starship_cached_resolved
+  if is_binary pyenv; then
+      export PYENV_ROOT="$HOME/.pyenv"
+      [[ ":$PATH:" == *":$PYENV_ROOT/bin:"* ]]    || PATH="$PYENV_ROOT/bin:$PATH"
+      [[ ":$PATH:" == *":$PYENV_ROOT/shims:"* ]] || PATH="$PYENV_ROOT/shims:$PATH"
+      function pyenv {
+          unfunction pyenv
+          eval "$(command pyenv init -)"
+          eval "$(command pyenv virtualenv-init -)"
+          pyenv "$@"
+      }
+  fi
+}
+_settings_init
+unfunction _settings_init
