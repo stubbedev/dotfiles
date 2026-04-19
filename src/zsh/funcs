@@ -42,15 +42,44 @@ typeset -gA _git_shorthand_docs=(
   gwtd 'remove a git worktree'
 )
 
-if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
+# Walk up directory tree looking for .git (handles regular repos and worktrees).
+# Sets _git_root to the repo/worktree root. No git fork needed.
+function in_git_repo {
+  local dir=$PWD
+  while [[ $dir != / ]]; do
+    if [[ -e $dir/.git ]]; then
+      _git_root=$dir
+      return 0
+    fi
+    dir=${dir:h}
+  done
+  return 1
+}
+
+# Fork-free branch listing: sets $reply to sorted-unique branch array.
+function _list_git_branches {
+  local -a _raw=(${(f)"$(git branch --all 2>/dev/null)"})
+  local -a _arr=()
+  local _b
+  for _b in "${_raw[@]}"; do
+    _b=${_b:2}
+    _b=${_b#remotes/origin/}
+    [[ $_b == HEAD* || -z $_b ]] && continue
+    _arr+=("$_b")
+  done
+  reply=(${(ou)_arr})
+}
+
+if are_binary git bat fzf; then
   function gcm {
     in_git_repo || return 1
 
     local initial_query="$*"
 
     local commit_prompt
-    local commit_prefix=$(git branch --show-current |
-      awk 'match($0, /[A-Z]+-[0-9]+/) { print substr($0, RSTART, RLENGTH) }')
+    local _branch=$(git branch --show-current)
+    local commit_prefix=""
+    [[ $_branch =~ '([A-Z]+-[0-9]+)' ]] && commit_prefix=$match[1]
     if [[ -z "$commit_prefix" ]]; then
       commit_prompt="(Enter: commit message)> "
     else
@@ -109,16 +138,17 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
   function gcr {
     in_git_repo || return 1
 
-    current_tag=$(git tag --sort=version:refname | awk '{print $1}' | tail -n 1)
-    local increment_action=$(echo -e "Major\nMinor\nPatch" |
+    current_tag=${$(git tag --sort=version:refname)[-1]}
+    local increment_action=$(printf 'Major\nMinor\nPatch\n' |
       fzf --prompt="(Enter: select action)> " \
         --height=3 \
         --no-input \
         --no-info)
 
-    local major=$(echo "$current_tag" | grep -oP '^\d+')
-    local minor=$(echo "$current_tag" | grep -oP '(?<=\.)\d+(?=\.)')
-    local patch=$(echo "$current_tag" | grep -oP '\d+$')
+    [[ $current_tag =~ '^([0-9]+)\.([0-9]+)\.([0-9]+)' ]]
+    local major=$match[1]
+    local minor=$match[2]
+    local patch=$match[3]
 
     case $increment_action in
     "Major")
@@ -145,9 +175,10 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       initial_query="$1"
     fi
 
-    local git_branches=$(git branch --all | awk '{sub(/^remotes\/origin\//, "", $1); print $1}' | sort -u)
+    _list_git_branches
+    local git_branches=${(F)reply}
 
-    local branch_name=$(echo -e $git_branches |
+    local _gcb_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
         --bind 'enter:accept' \
@@ -158,10 +189,10 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-info \
         --preview='git log --oneline --color=always -15 {} 2>/dev/null' \
         --preview-window='down:50%:wrap:nohidden' \
-        --height=50% |
-      tail -n1)
+        --height=50%)
+    local branch_name=${_gcb_out##*$'\n'}
 
-    if [[ -n "$branch_name" && $(echo -e $git_branches | grep -Fx "$branch_name") ]]; then
+    if [[ -n "$branch_name" && ${reply[(r)$branch_name]} == "$branch_name" ]]; then
       git checkout "$branch_name"
       return 0
     fi
@@ -201,11 +232,11 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       --reverse \
       --no-info \
       --print-query \
-      --prompt="(Enter: select suffix)> " </dev/null |
-      head -1)
+      --prompt="(Enter: select suffix)> " </dev/null)
 
     if [[ -n "$branch_suffix" ]]; then
-      branch_suffix=$(echo "$branch_suffix" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g')
+      branch_suffix=${branch_suffix:l}
+      branch_suffix=${branch_suffix// /-}
       new_branch_name="$branch_prefix/$branch_name-$branch_suffix"
     else
       new_branch_name="$branch_prefix/$branch_name"
@@ -224,12 +255,39 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       git add "$@"
     fi
     local temp_pwd="$PWD"
-    cd $(git rev-parse --show-toplevel)
+    cd "$_git_root"
 
     local git_status=$(git status --porcelain)
-    local tracked_files=$(echo -e "$git_status" | awk '/^.M|^MM|^R.M/ {if ($4 != "") print $4; else print $2}' | sort -u)
-    local deleted_files=$(echo -e "$git_status" | awk '/^.D/ {print $2}')
-    local untracked_files=$(echo -e "$git_status" | awk '/^\?\?/ {print $2}' | xargs -I {} find "{}" -type f -print)
+    local -a _tracked_arr=() _deleted_arr=() _untracked_arr=()
+    local _gs_line _xy _rest
+    while IFS= read -r _gs_line; do
+      [[ -z $_gs_line ]] && continue
+      _xy=${_gs_line:0:2}
+      _rest=${_gs_line:3}
+      if [[ $_xy == '??' ]]; then
+        # Untracked: expand directories to files
+        if [[ -d $_rest ]]; then
+          _untracked_arr+=(${_rest}**/*(.N))
+        else
+          _untracked_arr+=("$_rest")
+        fi
+      elif [[ ${_xy:1:1} == D ]]; then
+        # Working-tree deleted (second char D)
+        _deleted_arr+=("$_rest")
+      elif [[ ${_xy:1:1} == M ]]; then
+        # Working-tree modified (second char M), includes MM and RM
+        # Renamed entries: "RM old -> new" → take new name after " -> "
+        if [[ $_rest == *' -> '* ]]; then
+          _tracked_arr+=("${_rest##* -> }")
+        else
+          _tracked_arr+=("$_rest")
+        fi
+      fi
+    done <<< "$git_status"
+    _tracked_arr=(${(ou)_tracked_arr})
+    local tracked_files=${(F)_tracked_arr}
+    local deleted_files=${(F)_deleted_arr}
+    local untracked_files=${(F)_untracked_arr}
 
     if [[ -n "$tracked_files" ]]; then
       local tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
@@ -244,7 +302,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --exit-0)
 
       if [[ -n "$tracked_selected" ]]; then
-        local tracked_selection=($(echo "$tracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
+        local -a tracked_selection=(${(f)tracked_selected})
         for file in "${tracked_selection[@]}"; do
           git add "$file" -p
         done
@@ -265,7 +323,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
           --exit-0)
 
       if [[ -n "$deleted_selected" ]]; then
-        local deleted_selection=($(echo "$deleted_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
+        local -a deleted_selection=(${(f)deleted_selected})
         for file in "${deleted_selection[@]}"; do
           git add "$file"
         done
@@ -286,7 +344,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
           --exit-0)
 
       if [[ -n "$untracked_selected" ]]; then
-        local untracked_selection=($(echo "$untracked_selected" | awk '{for(i=1; i<=NF; i++) print $i}'))
+        local -a untracked_selection=(${(f)untracked_selected})
         for file in "${untracked_selection[@]}"; do
           git add "$file"
         done
@@ -313,11 +371,9 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
     fi
 
     local current_branch=$(git branch --show-current)
-    local git_branches=$(git branch --all |
-      awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' |
-      grep -v '^HEAD' | sort -u)
+    _list_git_branches; local git_branches=${(F)reply}
 
-    local remote_branch=$(echo "$git_branches" |
+    local _gd_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: select comparison branch)> " \
         --query="$initial_query" \
         --select-1 \
@@ -326,8 +382,8 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-info \
         --preview="git diff ${current_branch}..{} 2>/dev/null | bat --style=numbers --color=always -l diff" \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50% |
-      tail -n1)
+        --height=50%)
+    local remote_branch=${_gd_out##*$'\n'}
 
     if [[ -z "$remote_branch" ]]; then
       return 0
@@ -345,24 +401,24 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
     fi
 
     local current_branch=$(git branch --show-current)
-    local git_branches=$(git branch --all | awk '{print $1}')
-    local target_branch=$(echo -e $git_branches |
+    _list_git_branches; local git_branches=${(F)reply}
+    local _gcd_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: select target branch for diff)> " \
         --query="$initial_query" \
         --select-1 \
         --exit-0 \
         --print-query \
         --no-info \
-        --height=5 |
-      tail -n1)
+        --height=5)
+    local target_branch=${_gcd_out##*$'\n'}
 
     if [[ -z "$target_branch" ]]; then
       return 0
     fi
 
     # Clean branch names for filename (remove remotes/origin/ prefix and special chars)
-    local clean_current=$(echo "$current_branch" | sed 's/remotes\/origin\///' | sed 's/\//-/g')
-    local clean_target=$(echo "$target_branch" | sed 's/remotes\/origin\///' | sed 's/\//-/g')
+    local clean_current=${${current_branch#remotes/origin/}//\//-}
+    local clean_target=${${target_branch#remotes/origin/}//\//-}
     local patch_file="${clean_current}--${clean_target}.diff"
 
     git diff $current_branch..$target_branch >"$patch_file"
@@ -486,7 +542,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       initial_query="$1"
     fi
 
-    local git_branches=$(git branch --all | awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' | grep -v '^HEAD' | sort -u)
+    _list_git_branches; local git_branches=${(F)reply}
 
     local selected_branch=$(echo -e "$git_branches" |
       fzf --prompt="(Enter: select branch to pull from origin)> " \
@@ -496,16 +552,10 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-info \
         --height=10)
 
-    if [[ -n "$selected_branch" && $(echo -e "$git_branches" | grep -Fx "$selected_branch") ]]; then
+    if [[ -n "$selected_branch" ]]; then
       git pull origin "$selected_branch"
     fi
   }
-  function in_git_repo {
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      return 1
-    fi
-  }
-
   function gl {
     in_git_repo || return 1
 
@@ -514,7 +564,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       initial_query="$1"
     fi
 
-    local commit=$(git log --oneline --color=always |
+    local _commit_line=$(git log --oneline --color=always |
       fzf --ansi \
         --prompt="(Enter: show commit, Ctrl+C: cancel)> " \
         --query="$initial_query" \
@@ -524,8 +574,8 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-info \
         --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50% |
-      awk '{print $1}')
+        --height=50%)
+    local commit=${_commit_line%% *}
 
     if [[ -n "$commit" ]]; then
       git show --stat --patch --color=always "$commit" | bat --style=numbers --color=always -l diff
@@ -546,7 +596,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --no-sort \
         --exit-0 \
         --no-info \
-        --preview='git stash show -p --color=always "$(echo {} | awk -F: "{print \$1}")" 2>/dev/null | bat --style=numbers --color=always -l diff' \
+        --preview='line={}; git stash show -p --color=always "${line%%:*}" 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
         --height=50%)
 
@@ -554,7 +604,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       return 0
     fi
 
-    local stash_ref=$(echo "$selected" | awk -F: '{print $1}')
+    local stash_ref=${selected%%:*}
     git stash pop "$stash_ref"
   }
 
@@ -566,7 +616,7 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
       initial_query="$1"
     fi
 
-    local commits=$(git log --oneline --color=always --all |
+    local _selected=$(git log --oneline --color=always --all |
       fzf --ansi \
         --multi \
         --prompt="(Tab: toggle commit, Enter: cherry-pick selection, Ctrl+C: cancel)> " \
@@ -578,27 +628,32 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --bind 'shift-tab:toggle-all' \
         --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50% |
-      awk '{print $1}')
+        --height=50%)
 
-    if [[ -z "$commits" ]]; then
+    if [[ -z "$_selected" ]]; then
       return 0
     fi
 
-    # Reverse so oldest commit applies first (log is newest-first)
-    local commits_ordered=$(echo "$commits" | awk '{lines[NR]=$0} END {for(i=NR;i>=1;i--) print lines[i]}')
-    echo "$commits_ordered" | xargs git cherry-pick
+    # Extract hashes, reverse so oldest commit applies first (log is newest-first)
+    local -a _lines=(${(f)_selected})
+    local -a _hashes=("${_lines[@]%% *}")
+    local -a _reversed=()
+    local _i
+    for (( _i=${#_hashes[@]}; _i>=1; _i-- )); do
+      _reversed+=("${_hashes[$_i]}")
+    done
+    git cherry-pick "${_reversed[@]}"
   }
 
 fi
 
-if are_binary git fzf awk sed; then
+if are_binary git fzf; then
   function gwt {
     in_git_repo || return 1
 
-    local repo_root=$(git rev-parse --show-toplevel)
+    local current_worktree="$_git_root"
     local git_common_dir=$(git rev-parse --git-common-dir)
-    local current_worktree=$(git rev-parse --show-toplevel)
+    local repo_root="$current_worktree"
 
     if [[ "$git_common_dir" != /* ]]; then
       git_common_dir="$(cd "$git_common_dir" && pwd -P)"
@@ -609,23 +664,41 @@ if are_binary git fzf awk sed; then
 
     local worktrees_dir="$repo_root/.worktrees"
 
-    local worktree_entries=$(git worktree list --porcelain |
-      awk '
-        /^worktree / { path = $2; branch = "" }
-        /^branch /   { sub("refs/heads/", "", $2); branch = $2 }
-        /^$/         { if (branch != "" && path != "") print path "  " branch }
-      ' | grep -v "^$current_worktree ")
+    # Parse worktree list once, extract both entries and occupied branches
+    # Append a blank line so the EOF-flush logic fires for the last entry too
+    local _wt_raw=$(git worktree list --porcelain; echo)
+    local worktree_entries=""
+    local occupied_branches=""
+    local _wt_path="" _wt_branch=""
+    while IFS= read -r _wt_line; do
+      if [[ $_wt_line == worktree\ * ]]; then
+        _wt_path=${_wt_line#worktree }
+        _wt_branch=""
+      elif [[ $_wt_line == branch\ * ]]; then
+        _wt_branch=${_wt_line#branch refs/heads/}
+      elif [[ -z $_wt_line ]]; then
+        if [[ -n $_wt_branch && -n $_wt_path && $_wt_path != "$current_worktree" ]]; then
+          worktree_entries+="$_wt_path  $_wt_branch"$'\n'
+        fi
+        if [[ -n $_wt_branch ]]; then
+          occupied_branches+="$_wt_branch"$'\n'
+        fi
+        _wt_path="" _wt_branch=""
+      fi
+    done <<< "$_wt_raw"
 
-    local occupied_branches=$(git worktree list --porcelain |
-      awk '/^branch / { sub("refs/heads/", "", $2); print $2 }')
-
-    local all_branches=$(git branch --all |
-      awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' |
-      grep -v '^HEAD' | sort -u)
+    _list_git_branches; local all_branches=${(F)reply}
 
     local available_branches
     if [[ -n "$occupied_branches" ]]; then
-      available_branches=$(echo "$all_branches" | grep -vxF "$occupied_branches" 2>/dev/null || echo "$all_branches")
+      local -a _occ=(${(f)occupied_branches})
+      local -a _avail=()
+      local _b
+      while IFS= read -r _b; do
+        [[ -z $_b ]] && continue
+        [[ ${_occ[(r)$_b]} == "$_b" ]] || _avail+=("$_b")
+      done <<< "$all_branches"
+      available_branches=${(F)_avail}
     else
       available_branches="$all_branches"
     fi
@@ -633,8 +706,8 @@ if are_binary git fzf awk sed; then
     local display_list=""
     while IFS= read -r line; do
       [[ -z "$line" ]] && continue
-      local wt_path=$(echo "$line" | awk '{print $1}')
-      local wt_branch=$(echo "$line" | awk '{print $2}')
+      local wt_path=${line%% *}
+      local wt_branch=${line##* }
       display_list+="[worktree] $wt_branch  →  $wt_path"$'\n'
     done <<< "$worktree_entries"
 
@@ -660,23 +733,21 @@ if are_binary git fzf awk sed; then
             p=${line##*  →  }
             git -C "$p" log --oneline --color=always -10 2>/dev/null
           else
-            b=$(echo "$line" | awk "{print \$2}")
+            b=${line#"[branch]   "}
             git log --oneline --color=always -10 "$b" 2>/dev/null
           fi
         ' \
         --preview-window='down:50%:wrap:nohidden')
 
-    local query=$(echo "$selected" | head -n1)
-    local match=$(echo "$selected" | tail -n1)
+    local query=${selected%%$'\n'*}
+    local match=${selected##*$'\n'}
 
     if [[ -z "$match" || "$match" == "$query" ]]; then
       if [[ -z "$query" ]]; then
         return 0
       fi
       local new_branch_name="$query"
-      local base_branch=$(git branch --all |
-        awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' |
-        grep -v '^HEAD' | sort -u |
+      local base_branch=$(echo "$all_branches" |
         fzf --prompt="(Enter: select base branch for '$new_branch_name')> " \
           --select-1 \
           --exit-0 \
@@ -685,7 +756,7 @@ if are_binary git fzf awk sed; then
       if [[ -z "$base_branch" ]]; then
         return 0
       fi
-      local sanitized=$(echo "$new_branch_name" | sed 's/\//-/g')
+      local sanitized=${new_branch_name//\//-}
       local worktree_path="$worktrees_dir/$sanitized"
       mkdir -p "$worktrees_dir"
       git worktree add -b "$new_branch_name" "$worktree_path" "$base_branch" || return 1
@@ -693,14 +764,14 @@ if are_binary git fzf awk sed; then
       return 0
     fi
 
-    local entry_type=$(echo "$match" | awk '{print $1}')
+    local entry_type=${match%% *}
 
     if [[ "$entry_type" == "[worktree]" ]]; then
-      local target_path=$(echo "$match" | awk -F'  →  ' '{print $2}')
+      local target_path=${match##*  →  }
       cd "$target_path" || return 1
     else
-      local branch_name=$(echo "$match" | awk '{print $2}')
-      local sanitized=$(echo "$branch_name" | sed 's/\//-/g')
+      local branch_name=${match#"[branch]   "}
+      local sanitized=${branch_name//\//-}
       local worktree_path="$worktrees_dir/$sanitized"
       mkdir -p "$worktrees_dir"
       git worktree add "$worktree_path" "$branch_name" || return 1
@@ -711,7 +782,7 @@ if are_binary git fzf awk sed; then
   function gwtd {
     in_git_repo || return 1
 
-    local repo_root=$(git rev-parse --show-toplevel)
+    local repo_root="$_git_root"
     local git_common_dir=$(git rev-parse --git-common-dir)
     local target="$1"
 
@@ -723,12 +794,21 @@ if are_binary git fzf awk sed; then
       repo_root="${git_common_dir%/.git}"
     fi
 
-    local linked_worktrees=$(git worktree list --porcelain |
-      awk '
-        /^worktree / { path = $2; branch = "" }
-        /^branch /   { sub("refs/heads/", "", $2); branch = $2 }
-        /^$/ { if (branch != "") print branch "  →  " path }
-      ' | grep -v "  →  $repo_root$" || true)
+    local linked_worktrees=""
+    local _wt_path2="" _wt_branch2=""
+    while IFS= read -r _wt_line2; do
+      if [[ $_wt_line2 == worktree\ * ]]; then
+        _wt_path2=${_wt_line2#worktree }
+        _wt_branch2=""
+      elif [[ $_wt_line2 == branch\ * ]]; then
+        _wt_branch2=${_wt_line2#branch refs/heads/}
+      elif [[ -z $_wt_line2 ]]; then
+        if [[ -n $_wt_branch2 && "$_wt_path2" != "$repo_root" ]]; then
+          linked_worktrees+="$_wt_branch2  →  $_wt_path2"$'\n'
+        fi
+        _wt_path2="" _wt_branch2=""
+      fi
+    done < <(git worktree list --porcelain; echo)
 
     if [[ -z "$linked_worktrees" ]]; then
       echo "No linked worktrees found."
@@ -737,7 +817,15 @@ if are_binary git fzf awk sed; then
 
     local selected=""
     if [[ -n "$target" ]]; then
-      selected=$(echo "$linked_worktrees" | awk -F'  →  ' -v t="$target" '$1 == t || $2 == t { print; exit }')
+      local _entry
+      while IFS= read -r _entry; do
+        local _ebranch=${_entry%%  →  *}
+        local _epath=${_entry##*  →  }
+        if [[ "$_ebranch" == "$target" || "$_epath" == "$target" ]]; then
+          selected="$_entry"
+          break
+        fi
+      done <<< "$linked_worktrees"
     else
       selected=$(echo "$linked_worktrees" |
         fzf --prompt="(Enter: select worktree to remove)> " \
@@ -751,7 +839,7 @@ if are_binary git fzf awk sed; then
       return 0
     fi
 
-    local worktree_path=$(echo "$selected" | awk -F'  →  ' '{print $2}')
+    local worktree_path=${selected##*  →  }
 
     if [[ "$PWD" == "$worktree_path"* ]]; then
       cd "$repo_root" || return 1
