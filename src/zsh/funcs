@@ -13,6 +13,35 @@ if is_binary php; then
   }
 fi
 
+typeset -gA _git_shorthand_docs=(
+  gcm  'git commit with auto ticket prefix from branch name'
+  gp   'git push (warns on protected branches)'
+  gcb  'checkout or create branch (feature/bugfix/hotfix prefixes)'
+  gcr  'create release branch with semver bump (major/minor/patch)'
+  ga   'interactively stage files with diff preview'
+  gsd  'show working tree diff'
+  gd   'diff current branch against another branch'
+  gcd  'export branch diff to a patch file'
+  gst  'git status (short format)'
+  gg   'git pull current branch from origin'
+  gga  'git pull --all'
+  gf   'git fetch'
+  gfa  'git fetch --all'
+  ghr  'hard reset HEAD~ (discard last commit and changes)'
+  ghrn 'hard reset HEAD~N (discard last N commits and changes)'
+  gr   'soft reset HEAD~ (undo last commit, keep changes staged)'
+  grn  'soft reset HEAD~N (undo last N commits, keep changes staged)'
+  gsa  'stash all local changes'
+  gw   'wipe local changes (stash + drop)'
+  gwa  'wipe all local changes including stash (stash + clear)'
+  ggo  'pull from a selected origin branch'
+  gl   'interactive git log browser with commit preview'
+  gsp  'interactive stash pop (fzf select from stash list)'
+  gcp  'interactive cherry-pick from log (multi-select, oldest first)'
+  gwt  'switch to or create git worktree'
+  gwtd 'remove a git worktree'
+)
+
 if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
   function gcm {
     in_git_repo || return 1
@@ -127,7 +156,9 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
         --exit-0 \
         --print-query \
         --no-info \
-        --height=5 |
+        --preview='git log --oneline --color=always -15 {} 2>/dev/null' \
+        --preview-window='down:50%:wrap:nohidden' \
+        --height=50% |
       tail -n1)
 
     if [[ -n "$branch_name" && $(echo -e $git_branches | grep -Fx "$branch_name") ]]; then
@@ -282,18 +313,27 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
     fi
 
     local current_branch=$(git branch --show-current)
-    local git_branches=$(git branch --all | awk '{print $1}')
-    local remote_branch=$(echo -e $git_branches |
+    local git_branches=$(git branch --all |
+      awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' |
+      grep -v '^HEAD' | sort -u)
+
+    local remote_branch=$(echo "$git_branches" |
       fzf --prompt="(Enter: select comparison branch)> " \
         --query="$initial_query" \
         --select-1 \
         --exit-0 \
         --print-query \
         --no-info \
-        --height=5 |
+        --preview="git diff ${current_branch}..{} 2>/dev/null | bat --style=numbers --color=always -l diff" \
+        --preview-window='up:90%:wrap:nohidden' \
+        --height=50% |
       tail -n1)
 
-    git diff $current_branch..$remote_branch --color
+    if [[ -z "$remote_branch" ]]; then
+      return 0
+    fi
+
+    git diff "$current_branch".."$remote_branch" --color | bat --style=numbers --color=always -l diff
   }
 
   function gcd {
@@ -466,26 +506,115 @@ if are_binary git bat fzf awk sed xargs find sort tail head tr grep; then
     fi
   }
 
+  function gl {
+    in_git_repo || return 1
+
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
+    fi
+
+    local commit=$(git log --oneline --color=always |
+      fzf --ansi \
+        --prompt="(Enter: show commit, Ctrl+C: cancel)> " \
+        --query="$initial_query" \
+        --no-sort \
+        --exact \
+        --exit-0 \
+        --no-info \
+        --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
+        --preview-window='up:90%:wrap:nohidden' \
+        --height=50% |
+      awk '{print $1}')
+
+    if [[ -n "$commit" ]]; then
+      git show --stat --patch --color=always "$commit" | bat --style=numbers --color=always -l diff
+    fi
+  }
+
+  function gsp {
+    in_git_repo || return 1
+
+    local stash_list=$(git stash list)
+    if [[ -z "$stash_list" ]]; then
+      echo "No stashes found."
+      return 0
+    fi
+
+    local selected=$(echo "$stash_list" |
+      fzf --prompt="(Enter: pop stash, Ctrl+C: cancel)> " \
+        --no-sort \
+        --exit-0 \
+        --no-info \
+        --preview='git stash show -p --color=always "$(echo {} | awk -F: "{print \$1}")" 2>/dev/null | bat --style=numbers --color=always -l diff' \
+        --preview-window='up:90%:wrap:nohidden' \
+        --height=50%)
+
+    if [[ -z "$selected" ]]; then
+      return 0
+    fi
+
+    local stash_ref=$(echo "$selected" | awk -F: '{print $1}')
+    git stash pop "$stash_ref"
+  }
+
+  function gcp {
+    in_git_repo || return 1
+
+    local initial_query=""
+    if [[ -n "$1" ]]; then
+      initial_query="$1"
+    fi
+
+    local commits=$(git log --oneline --color=always --all |
+      fzf --ansi \
+        --multi \
+        --prompt="(Tab: toggle commit, Enter: cherry-pick selection, Ctrl+C: cancel)> " \
+        --query="$initial_query" \
+        --no-sort \
+        --exit-0 \
+        --no-info \
+        --bind 'tab:toggle' \
+        --bind 'shift-tab:toggle-all' \
+        --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
+        --preview-window='up:90%:wrap:nohidden' \
+        --height=50% |
+      awk '{print $1}')
+
+    if [[ -z "$commits" ]]; then
+      return 0
+    fi
+
+    # Reverse so oldest commit applies first (log is newest-first)
+    local commits_ordered=$(echo "$commits" | awk '{lines[NR]=$0} END {for(i=NR;i>=1;i--) print lines[i]}')
+    echo "$commits_ordered" | xargs git cherry-pick
+  }
+
 fi
 
 if are_binary git fzf awk sed; then
-  function gwta {
+  function gwt {
     in_git_repo || return 1
 
     local repo_root=$(git rev-parse --show-toplevel)
     local git_common_dir=$(git rev-parse --git-common-dir)
-    local branch_name="$1"
-    local base_branch="$2"
+    local current_worktree=$(git rev-parse --show-toplevel)
 
     if [[ "$git_common_dir" != /* ]]; then
       git_common_dir="$(cd "$git_common_dir" && pwd -P)"
     fi
-
     if [[ "$git_common_dir" == */.git ]]; then
       repo_root="${git_common_dir%/.git}"
     fi
 
     local worktrees_dir="$repo_root/.worktrees"
+
+    local worktree_entries=$(git worktree list --porcelain |
+      awk '
+        /^worktree / { path = $2; branch = "" }
+        /^branch /   { sub("refs/heads/", "", $2); branch = $2 }
+        /^$/         { if (branch != "" && path != "") print path "  " branch }
+      ' | grep -v "^$current_worktree ")
 
     local occupied_branches=$(git worktree list --porcelain |
       awk '/^branch / { sub("refs/heads/", "", $2); print $2 }')
@@ -501,69 +630,82 @@ if are_binary git fzf awk sed; then
       available_branches="$all_branches"
     fi
 
-    if [[ -z "$branch_name" ]]; then
-      branch_name=$(echo "$available_branches" |
-        fzf --prompt="(Enter: select or type branch name)> " \
-          --print-query \
-          --exact \
-          --select-1 \
-          --exit-0 \
-          --no-info \
-          --height=10 |
-        tail -n1)
-    fi
+    local display_list=""
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      local wt_path=$(echo "$line" | awk '{print $1}')
+      local wt_branch=$(echo "$line" | awk '{print $2}')
+      display_list+="[worktree] $wt_branch  →  $wt_path"$'\n'
+    done <<< "$worktree_entries"
 
-    if [[ -z "$branch_name" ]]; then
+    while IFS= read -r branch; do
+      [[ -z "$branch" ]] && continue
+      display_list+="[branch]   $branch"$'\n'
+    done <<< "$available_branches"
+
+    if [[ -z "$display_list" ]]; then
+      echo "No worktrees or available branches found."
       return 0
     fi
 
-    local sanitized=$(echo "$branch_name" | sed 's/\//-/g')
-    local worktree_path="$worktrees_dir/$sanitized"
+    local selected=$(echo "$display_list" |
+      fzf --prompt="(Enter: switch/create worktree, Ctrl+C: cancel)> " \
+        --print-query \
+        --exit-0 \
+        --no-info \
+        --height=50% \
+        --preview='
+          line={}
+          if [[ ${line%% *} == "[worktree]" ]]; then
+            p=${line##*  →  }
+            git -C "$p" log --oneline --color=always -10 2>/dev/null
+          else
+            b=$(echo "$line" | awk "{print \$2}")
+            git log --oneline --color=always -10 "$b" 2>/dev/null
+          fi
+        ' \
+        --preview-window='down:50%:wrap:nohidden')
 
-    mkdir -p "$worktrees_dir"
+    local query=$(echo "$selected" | head -n1)
+    local match=$(echo "$selected" | tail -n1)
 
-    if echo "$available_branches" | grep -qFx "$branch_name"; then
-      git worktree add "$worktree_path" "$branch_name" || return 1
-    else
-      if [[ -z "$base_branch" ]]; then
-        base_branch=$(git branch --show-current)
+    if [[ -z "$match" || "$match" == "$query" ]]; then
+      if [[ -z "$query" ]]; then
+        return 0
       fi
-
+      local new_branch_name="$query"
+      local base_branch=$(git branch --all |
+        awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' |
+        grep -v '^HEAD' | sort -u |
+        fzf --prompt="(Enter: select base branch for '$new_branch_name')> " \
+          --select-1 \
+          --exit-0 \
+          --no-info \
+          --height=30%)
       if [[ -z "$base_branch" ]]; then
         return 0
       fi
-
-      git worktree add -b "$branch_name" "$worktree_path" "$base_branch" || return 1
-    fi
-
-    cd "$worktree_path" || return 1
-  }
-
-  function gwt {
-    in_git_repo || return 1
-
-    local current_worktree=$(git rev-parse --show-toplevel)
-    local target="$1"
-
-    local worktrees=$(git worktree list | grep -v "^$current_worktree ")
-    local selected=""
-
-    if [[ -n "$target" ]]; then
-      selected=$(echo "$worktrees" | awk -v t="$target" '$1 == t || $3 == "[" t "]" { print; exit }')
-    else
-      selected=$(echo "$worktrees" |
-        fzf --prompt="(Enter: switch to worktree)> " \
-          --select-1 \
-          --exit-0 \
-          --no-info \
-          --height=10)
-    fi
-
-    if [[ -z "$selected" ]]; then
+      local sanitized=$(echo "$new_branch_name" | sed 's/\//-/g')
+      local worktree_path="$worktrees_dir/$sanitized"
+      mkdir -p "$worktrees_dir"
+      git worktree add -b "$new_branch_name" "$worktree_path" "$base_branch" || return 1
+      cd "$worktree_path" || return 1
       return 0
     fi
 
-    cd "$(echo "$selected" | awk '{print $1}')"
+    local entry_type=$(echo "$match" | awk '{print $1}')
+
+    if [[ "$entry_type" == "[worktree]" ]]; then
+      local target_path=$(echo "$match" | awk -F'  →  ' '{print $2}')
+      cd "$target_path" || return 1
+    else
+      local branch_name=$(echo "$match" | awk '{print $2}')
+      local sanitized=$(echo "$branch_name" | sed 's/\//-/g')
+      local worktree_path="$worktrees_dir/$sanitized"
+      mkdir -p "$worktrees_dir"
+      git worktree add "$worktree_path" "$branch_name" || return 1
+      cd "$worktree_path" || return 1
+    fi
   }
 
   function gwtd {

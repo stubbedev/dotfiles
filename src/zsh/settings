@@ -4,7 +4,20 @@ bindkey "^Xa" _expand_alias
 bindkey -s "^[r" "src_zsh^M"
 bindkey -s "^[o" "nvim^M"
 bindkey -s "^[O" "nvim .^M"
-zstyle ':completion:*' completer _expand _expand_alias _complete _ignored
+function _git_shorthand_descriptions() {
+  (( CURRENT != 1 )) && return 1
+  (( ${#_git_shorthand_docs} == 0 )) && return 1
+
+  local -a git_cmds
+  local func
+  for func in "${(@k)_git_shorthand_docs}"; do
+    git_cmds+=("${func}:${_git_shorthand_docs[$func]}")
+  done
+
+  _describe -t git-shortcuts 'git shortcuts' git_cmds
+}
+
+zstyle ':completion:*' completer _expand _expand_alias _git_shorthand_descriptions _complete _ignored
 zstyle ':completion:*' fzf-tab true
 zstyle ':completion:*' complete-options true
 zstyle ':completion:*' complete-aliases true

@@ -28,6 +28,13 @@ _: {
 
         autoload -Uz compinit
         compinit -d '${config.home.homeDirectory}/.zcompdump'
+
+        # Append dynamic autoload + compdef registrations that can't be captured by #compdef directives
+        {
+          print -r -- "autoload -Uz _git_shortcuts"
+          print -r -- "compdef _git_shortcuts ''${(k)_git_shorthand_docs}"
+        } >> '${config.home.homeDirectory}/.zcompdump'
+
         zcompile '${config.home.homeDirectory}/.zcompdump'
         ZSHEOF
       '';

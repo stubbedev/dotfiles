@@ -1,0 +1,22 @@
+_git_shortcuts() {
+  case $service in
+    gcb|gd|gcd|ggo|gwt)
+      local -a branches
+      branches=(${(f)"$(git branch --all 2>/dev/null | awk '{sub(/^[* ] */, ""); sub(/^remotes\/origin\//, ""); print $1}' | grep -v '^HEAD' | sort -u)"})
+      _describe 'branches' branches
+      ;;
+    gwtd)
+      local -a worktrees
+      worktrees=(${(f)"$(git worktree list --porcelain 2>/dev/null | awk '/^branch / {sub("refs/heads/", "", $2); print $2}')"})
+      _describe 'worktrees' worktrees
+      ;;
+    ghrn|grn)
+      _arguments '1:commits to reset:(1 2 3 4 5 6 7 8 9 10)'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+_git_shortcuts "$@"
