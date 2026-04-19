@@ -79,6 +79,7 @@ _: {
           Service = {
             Type = "simple";
             ExecStart = "${constants.paths.hypr}/scripts/power.profile.fix.sh";
+            ExecStop = "${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -TERM -f dbus-monitor.*PowerProfiles || true'";
             Restart = "on-failure";
             RestartSec = "5s";
           };
