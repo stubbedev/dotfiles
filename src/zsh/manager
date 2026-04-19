@@ -11,83 +11,67 @@ function source_github_plugins() {
 
   local -a args=("$@")
   local parent_dir=${args[-1]}
-  local urls=("${args[@]:0:${#args[@]}-1}")
+  local -a urls=("${args[@]:0:${#args[@]}-1}")
   mkdir -p "$parent_dir"
+
+  local url repo target
 
   # Build list of expected repo names
   local -a expected_repos=()
   for url in $urls; do
-    if [[ ! "$url" =~ ^https?: ]]; then
-      url="https://github.com/$url"
-    fi
-    local repo="${url:t:r}"
-    expected_repos+=("$repo")
+    [[ $url == http* ]] || url="https://github.com/$url"
+    expected_repos+=("${url:t:r}")
   done
 
   # Remove directories that aren't in the expected list
-  if [[ -d "$parent_dir" ]]; then
-    for existing_dir in "$parent_dir"/*(/N); do
-      local existing_repo="${existing_dir:t}"
-      if [[ ! " ${expected_repos[@]} " =~ " $existing_repo " ]]; then
-        echo "\033[31mREMOVING: $existing_repo\033[0m"
-        rm -rf "$existing_dir"
-      fi
-    done
-  fi
-
-  local tmpdir=$(mktemp -d)
-  local pids=()
-  local tmpfiles=()
-
-  for url in $urls; do
-    local repo="${url:t:r}"
-    local out="$tmpdir/$repo.out"
-    (
-      if [[ ! "$url" =~ ^https?: ]]; then
-        url="https://github.com/$url"
-      fi
-      local target="$parent_dir/$repo"
-      {
-        if ! is_directory "$target"; then
-          echo "\033[32mADDING: $repo\033[0m"
-          git clone "$url.git" "$target" >/dev/null 2>&1
-        fi
-      } >"$out" 2>&1
-    ) &
-    pids+=($!)
-    tmpfiles+=("$out")
+  local existing_dir existing_repo
+  for existing_dir in "$parent_dir"/*(/N); do
+    existing_repo="${existing_dir:t}"
+    if [[ ${expected_repos[(r)$existing_repo]} != "$existing_repo" ]]; then
+      print -P "%F{red}REMOVING: $existing_repo%f"
+      rm -rf "$existing_dir"
+    fi
   done
 
-  # Wait for all clone jobs to finish
+  # Clone any missing plugins in background; defer tmpdir until actually needed
+  local tmpdir=""
+  local -a pids=() tmpfiles=()
+  for url in $urls; do
+    [[ $url == http* ]] || url="https://github.com/$url"
+    repo="${url:t:r}"
+    target="$parent_dir/$repo"
+    if [[ ! -d "$target" ]]; then
+      [[ -n "$tmpdir" ]] || tmpdir=$(mktemp -d)
+      local out="$tmpdir/$repo.out"
+      tmpfiles+=("$out")
+      (
+        print -P "%F{green}ADDING: $repo%f"
+        git clone "$url.git" "$target" >/dev/null 2>&1
+      ) >"$out" 2>&1 &
+      pids+=($!)
+    fi
+  done
+
   for pid in $pids; do
     wait "$pid" 2>/dev/null
   done
-
   disown 2>/dev/null
 
-  # Output only status messages (ADDING/REMOVING)
+  local tmp
   for tmp in $tmpfiles; do
-    if [[ -f "$tmp" ]]; then
-      grep -E "^$(echo -e '\033')\[[0-9]+m(ADDING|REMOVING):" "$tmp" 2>/dev/null
-    fi
+    [[ -f "$tmp" ]] && cat "$tmp"
   done
+  [[ -n "$tmpdir" ]] && rm -rf "$tmpdir"
 
   # Source plugin files in the foreground after all jobs are done
+  local plugin_file
   for url in $urls; do
-    if [[ ! "$url" =~ ^https?: ]]; then
-      url="https://github.com/$url"
-    fi
-    local repo="${url:t:r}"
-    local target="$parent_dir/$repo"
+    [[ $url == http* ]] || url="https://github.com/$url"
+    target="$parent_dir/${url:t:r}"
     if [[ -d "$target" ]]; then
-      local plugin_files=(${target}/*.plugin.zsh)
-      for plugin_file in $plugin_files; do
-        if [[ -f "$plugin_file" ]]; then
-          source "$plugin_file"
-        fi
+      for plugin_file in ${target}/*.plugin.zsh(.N); do
+        source "$plugin_file"
       done
     fi
   done
-
-  rm -rf "$tmpdir"
 }

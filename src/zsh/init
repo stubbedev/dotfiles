@@ -4,7 +4,7 @@
 disown 2>/dev/null
 
 if [ -d "$HOME/.stubbe" ]; then
-  touch "$HOME/.zsh_history"
+  [[ -f "$HOME/.zsh_history" ]] || >>$HOME/.zsh_history
   STBDIR="$HOME/.stubbe/src/zsh"
 
   # Files to source BEFORE compinit (must define functions that have completions)

@@ -1,9 +1,9 @@
 #!/usr/bin/env zsh
 
 STUBBE_ZSH_FPATHS_DIR="$HOME/.stubbe/src/zsh/fpaths.d"
-mkdir -p "$STUBBE_ZSH_FPATHS_DIR"
+[[ -d "$STUBBE_ZSH_FPATHS_DIR" ]] || mkdir -p "$STUBBE_ZSH_FPATHS_DIR"
 STUBBE_ZSH_FPATHS_DEFAULT_DIR="$HOME/.stubbe/src/zsh/fpaths.default.d"
-mkdir -p "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"
+[[ -d "$STUBBE_ZSH_FPATHS_DEFAULT_DIR" ]] || mkdir -p "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"
 
 fpath+=(
   "$STUBBE_ZSH_FPATHS_DEFAULT_DIR"

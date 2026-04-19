@@ -39,6 +39,7 @@ _: {
           if [[ ! -d "$target" ]]; then
             echo "ADDING: $repo"
             ${pkgs.git}/bin/git clone --depth=1 "$url.git" "$target"
+            ${pkgs.zsh}/bin/zsh -c 'for f in '"$target"'/*.plugin.zsh(N); do zcompile "$f"; done' 2>/dev/null || true
           else
             ${pkgs.git}/bin/git -C "$target" fetch --quiet
             local_ref=$(${pkgs.git}/bin/git -C "$target" rev-parse @)
@@ -46,6 +47,7 @@ _: {
             if [[ -n "$remote_ref" && "$local_ref" != "$remote_ref" ]]; then
               echo "UPDATING: $repo"
               ${pkgs.git}/bin/git -C "$target" pull --force --quiet
+              ${pkgs.zsh}/bin/zsh -c 'for f in '"$target"'/*.plugin.zsh(N); do zcompile "$f"; done' 2>/dev/null || true
             fi
           fi
         done

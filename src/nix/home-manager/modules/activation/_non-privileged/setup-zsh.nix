@@ -36,6 +36,11 @@ _: {
         } >> '${config.home.homeDirectory}/.zcompdump'
 
         zcompile '${config.home.homeDirectory}/.zcompdump'
+
+        # Compile plugin files for faster startup
+        for plugin_file in "$STBDIR/plugins.d"/**/*.plugin.zsh(N); do
+          zcompile "$plugin_file" 2>/dev/null
+        done
         ZSHEOF
       '';
     };

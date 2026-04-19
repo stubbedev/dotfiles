@@ -6,9 +6,12 @@ STUBBE_APP_PATHS=(
   "$HOME/.local/share/flatpak/exports/share"
 )
 
-for STUBBE_APP_PATH in "${STUBBE_APP_PATHS[@]}"; do
-  if [ -d "$STUBBE_APP_PATH" ] && [[ ! ":$XDG_DATA_DIRS:" == *":$STUBBE_APP_PATH:"* ]]; then
-    XDG_DATA_DIRS="$STUBBE_APP_PATH:$XDG_DATA_DIRS"
-  fi
+local -a new_apaths=()
+local _ap
+for _ap in "${STUBBE_APP_PATHS[@]}"; do
+  [[ -d "$_ap" ]] || continue
+  [[ ":$XDG_DATA_DIRS:" == *":$_ap:"* ]] && continue
+  new_apaths+=("$_ap")
 done
+(( ${#new_apaths} )) && XDG_DATA_DIRS="${(j/:/)new_apaths}:$XDG_DATA_DIRS"
 export XDG_DATA_DIRS
