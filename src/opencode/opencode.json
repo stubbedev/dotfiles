@@ -19,6 +19,10 @@
 				"--no-usage-statistics",
 				"--autoConnect"
 			]
+		},
+		"atlassian-mcp": {
+			"type": "local",
+			"command": ["npx", "-y", "@stubbedev/atlassian-mcp"]
 		}
 	},
 	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"]

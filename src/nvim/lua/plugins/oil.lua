@@ -56,7 +56,20 @@ return {
         return vim.startswith(name, ".")
       end,
       is_always_hidden = function(name, bufnr)
-        return false
+        if vim.fn.executable("git") == 0 then
+          return false
+        end
+
+        local oil = require("oil")
+        local dir = oil.get_current_dir(bufnr)
+        if not dir then
+          return false
+        end
+
+        local path = vim.fs.joinpath(dir, name)
+        local result = vim.system({ "git", "-C", dir, "check-ignore", "-q", path }):wait()
+
+        return result.code == 0
       end,
       sort = {
         { "type", "asc" },
