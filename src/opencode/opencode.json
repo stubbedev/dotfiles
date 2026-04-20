@@ -21,6 +21,7 @@
 			]
 		},
 		"atlassian-mcp": {
+			"enabled": false,
 			"type": "local",
 			"command": ["npx", "-y", "@stubbedev/atlassian-mcp"]
 		}
