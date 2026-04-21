@@ -111,6 +111,33 @@ toggle_opencode_window() {
 	toggle_window "opencode" tmux-opencode
 }
 
+move_pane_to_window() {
+	local target_n="$1"
+	local current_window pane_width pane_height max_window
+
+	current_window=$(tmux display-message -p "#{window_index}")
+	if [ "${current_window}" = "${target_n}" ]; then
+		return
+	fi
+
+	if tmux list-windows -F "#{window_index}" | grep -q "^${target_n}$"; then
+		pane_width=$(tmux display-message -p "#{pane_width}")
+		pane_height=$(tmux display-message -p "#{pane_height}")
+		if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
+			tmux join-pane -h -t ":${target_n}"
+		else
+			tmux join-pane -t ":${target_n}"
+		fi
+	else
+		max_window=$(tmux list-windows -F "#{window_index}" | sort -n | tail -1)
+		if [ "${target_n}" -gt "$((max_window + 1))" ]; then
+			tmux break-pane -t ":$((max_window + 1))"
+		else
+			tmux break-pane -t ":${target_n}"
+		fi
+	fi
+}
+
 case "$1" in
 "toggle_lazygit_window")
 	toggle_lazygit_window
@@ -126,5 +153,8 @@ case "$1" in
 	;;
 "session_init")
 	session_init
+	;;
+"move_pane_to_window")
+	move_pane_to_window "$2"
 	;;
 esac
