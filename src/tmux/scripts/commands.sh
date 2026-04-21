@@ -111,6 +111,23 @@ toggle_opencode_window() {
 	toggle_window "opencode" tmux-opencode
 }
 
+reload_animation() {
+	local colors=("#cba6f7" "#89b4fa" "#a6e3a1" "#f9e2af" "#f38ba8")
+	local chars=("" "" "✶" "✸" "❄" "󰼪" "❅" "❆" "✹" "✺" "󰼪")
+	local original
+	original=$(tmux show-option -gv status-right 2>/dev/null)
+
+	for _ in 1 2 3; do
+		for i in "${!chars[@]}"; do
+			local color="${colors[$((i % ${#colors[@]}))]}"
+			tmux set -g status-right "#[fg=${color},bold]${chars[$i]}"
+			sleep 0.08
+		done
+	done
+
+	tmux set -g status-right "$original"
+}
+
 move_pane_to_window() {
 	local target_n="$1"
 	local current_window pane_width pane_height max_window
@@ -153,6 +170,9 @@ case "$1" in
 	;;
 "session_init")
 	session_init
+	;;
+"reload_animation")
+	reload_animation
 	;;
 "move_pane_to_window")
 	move_pane_to_window "$2"
