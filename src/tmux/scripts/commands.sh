@@ -112,20 +112,18 @@ toggle_opencode_window() {
 }
 
 reload_animation() {
-	local colors=("#cba6f7" "#89b4fa" "#a6e3a1" "#f9e2af" "#f38ba8")
+	local colors=("#f5e0dc" "#f2cdcd" "#f5c2e7" "#cba6f7" "#f38ba8" "#eba0ac" "#fab387" "#f9e2af" "#a6e3a1" "#94e2d5" "#89dceb" "#74c7ec" "#89b4fa" "#b4befe")
 	local chars=("" "" "✶" "✸" "❄" "󰼪" "❅" "❆" "✹" "✺" "󰼪")
 	local original
-	original=$(tmux show-option -gv status-right 2>/dev/null)
+	original=$(tmux show-option -gv status-left 2>/dev/null)
 
-	for _ in 1 2 3; do
-		for i in "${!chars[@]}"; do
-			local color="${colors[$((i % ${#colors[@]}))]}"
-			tmux set -g status-right "#[fg=${color},bold]${chars[$i]}"
-			sleep 0.08
-		done
+	for i in "${!chars[@]}"; do
+		local color="${colors[$((i % ${#colors[@]}))]}"
+		tmux set -g status-left "#[bg=default,bold,fg=${color}] ${chars[$i]} "
+		sleep 0.15
 	done
 
-	tmux set -g status-right "$original"
+	tmux set -g status-left "$original"
 }
 
 move_pane_to_window() {
