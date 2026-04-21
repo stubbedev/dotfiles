@@ -126,6 +126,21 @@ reload_animation() {
 	tmux set -g status-left "$original"
 }
 
+move_pane() {
+	local direction="$1"
+	local pane_id
+	pane_id=$(tmux display-message -p "#{pane_id}")
+
+	case "$direction" in
+		L) tmux swap-pane -t "{left-of}"  ;;
+		R) tmux swap-pane -t "{right-of}" ;;
+		U) tmux swap-pane -t "{up-of}"    ;;
+		D) tmux swap-pane -t "{down-of}"  ;;
+	esac
+
+	tmux select-pane -t "$pane_id"
+}
+
 move_pane_to_window() {
 	local target_n="$1"
 	local current_window pane_width pane_height max_window
@@ -165,6 +180,9 @@ case "$1" in
 	;;
 "toggle_opencode_window")
 	toggle_opencode_window
+	;;
+"move_pane")
+	move_pane "$2"
 	;;
 "session_init")
 	session_init
