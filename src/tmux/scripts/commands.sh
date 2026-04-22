@@ -227,8 +227,8 @@ move_pane_to_window() {
     fi
   else
     max_window=$(tmux list-windows -F "#{window_index}" | sort -n | tail -1)
-    if [ "${target_n}" -gt "$((max_window + 1))" ]; then
-      tmux break-pane -t ":$((max_window + 1))"
+    if [ "${target_n}" -gt "${max_window}" ]; then
+      tmux break-pane
     else
       tmux break-pane -t ":${target_n}"
     fi
