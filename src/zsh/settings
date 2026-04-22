@@ -2,7 +2,7 @@
 
 function _settings_init {
   bindkey "^Xa" _expand_alias
-  bindkey -s "^[r" "src_zsh^M"
+  bindkey -s "^[R" "src_zsh^M"
   bindkey -s "^[o" "nvim^M"
   bindkey -s "^[O" "nvim .^M"
   function _git_shorthand_descriptions() {
