@@ -68,6 +68,11 @@ _: {
           default = true;
           description = "Enable claude-code CLI from nixpkgs unstable.";
         };
+        browsers = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable web browsers (Firefox, Google Chrome).";
+        };
       };
     };
 }

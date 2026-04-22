@@ -6,7 +6,7 @@ _: {
       pkgs,
       ...
     }:
-    lib.mkIf config.features.desktop {
+    lib.mkIf config.features.browsers {
       programs.firefox = {
         enable = true;
       };
