@@ -15,5 +15,9 @@ _: {
       home.sessionVariables = {
         GOROOT = "${pkgs.go}/share/go";
       };
+
+      home.packages = [
+        pkgs.golangci-lint
+      ];
     };
 }
