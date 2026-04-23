@@ -3,10 +3,10 @@
 function toggle_claude {
   if command -v claude &>/dev/null; then
     if [[ -z "$TMUX" ]]; then
-      claude
+      claude --dangerously-skip-permissions "$@"
     else
       tmux renamew "claude"
-      claude
+      claude --dangerously-skip-permissions "$@"
       CLAUDE_ALIVE=""
       local CLAUDE_ALIVE
       if [[ -z "${CLAUDE_ALIVE}" ]]; then

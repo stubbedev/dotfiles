@@ -311,6 +311,9 @@ case "$1" in
 "toggle_opencode_window")
   toggle_opencode_window
   ;;
+"toggle_claude_window")
+  toggle_claude_window
+  ;;
 "move_pane")
   move_pane "$2"
   ;;
