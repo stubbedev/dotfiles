@@ -4,9 +4,15 @@ _: {
       pkgs,
       lib,
       config,
+      homeLib,
       ...
     }:
     lib.mkIf config.features.claudeCode {
-      home.packages = [ pkgs.claude-code ];
+      home.packages = [
+        pkgs.claude-code
+        pkgs.cship
+      ];
+
+      xdg.configFile = homeLib.xdgSources [ "cship.toml" ];
     };
 }

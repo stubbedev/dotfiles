@@ -66,6 +66,22 @@
         "type": "github"
       }
     },
+    "cship": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1776653246,
+        "narHash": "sha256-o3KRbmIoEqpl4cD3RwW9hnega4u0i/BFk6eInzRRGyU=",
+        "owner": "stephenleo",
+        "repo": "cship",
+        "rev": "237f538d1a9fdb039c21a6bbeb5a575543455af0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stephenleo",
+        "repo": "cship",
+        "type": "github"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -928,6 +944,7 @@
     },
     "root": {
       "inputs": {
+        "cship": "cship",
         "fenix": "fenix",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",

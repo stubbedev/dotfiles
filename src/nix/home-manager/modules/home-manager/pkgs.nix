@@ -36,6 +36,21 @@ let
       nixgl = import "${inputs.nixgl}/default.nix" nixglArgs;
     };
 
+  cshipOverlay =
+    final: prev:
+    let
+      src = inputs.cship;
+      cargoMeta = (builtins.fromTOML (builtins.readFile "${src}/Cargo.toml")).package;
+    in
+    {
+      cship = final.rustPlatform.buildRustPackage {
+        pname = cargoMeta.name;
+        version = cargoMeta.version;
+        inherit src;
+        cargoLock.lockFile = src + "/Cargo.lock";
+      };
+    };
+
   # Overlay that exposes the opencode package from the opencode flake input,
   # patching out the bun version check so it builds with whatever bun nixpkgs
   # provides. The check is a build-time guard that serves no runtime purpose.
@@ -77,6 +92,7 @@ let
       overlays = [
         nixglOverlay
         opencodeOverlay
+        cshipOverlay
       ];
     };
 in

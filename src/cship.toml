@@ -1,0 +1,5 @@
+[cship]
+lines = [
+  "$directory$git_branch$git_status $cship.model"
+]
+

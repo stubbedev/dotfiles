@@ -37,6 +37,10 @@
     tree-sitter.url = "github:tree-sitter/tree-sitter";
     opencode.url = "github:anomalyco/opencode/d6fc5f414b1f78994fffd550d4104627dbbfac51";
     srv.url = "github:stubbedev/srv";
+    cship = {
+      url = "github:stephenleo/cship";
+      flake = false;
+    };
   };
 
   outputs =
