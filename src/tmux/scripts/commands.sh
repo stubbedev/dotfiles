@@ -111,19 +111,82 @@ toggle_opencode_window() {
   toggle_window "opencode" tmux-opencode
 }
 
+toggle_claude_window() {
+  if ! command -v tmux-claude >/dev/null 2>&1; then
+    return
+  fi
+
+  toggle_window "claude" tmux-claude
+}
+
+pending_animation() {
+  local pane_id="$1"
+  local win_id="$2"
+  local scope="$3" # "pane" or "window"
+  local duration_us=300000
+  local fill_style="#[bg=#f38ba8,fg=#1e1e2e,bold]"
+
+  local flag_scope flag_target flag_name
+  case "$scope" in
+  pane)   flag_scope=-p ; flag_target="$pane_id" ; flag_name=@kill_pane_pending ;;
+  window) flag_scope=-w ; flag_target="$win_id"  ; flag_name=@kill_window_pending ;;
+  esac
+  trap "tmux set -wu -t '$win_id' window-status-current-format 2>/dev/null; \
+        tmux set $flag_scope -t '$flag_target' $flag_name 0 2>/dev/null" EXIT INT TERM
+
+  shopt -s extglob
+  local raw base_style template
+  raw=$(tmux show-options -gqv window-status-current-format)
+  [[ "$raw" =~ ^(#\[[^]]*\]) ]] && base_style="${BASH_REMATCH[1]}"
+  template="${raw//#\[*([^]])\]/}"
+
+  local rendered
+  rendered=$(tmux display-message -p -t "$win_id" "$template")
+
+  local -a chars=()
+  while IFS= read -r c; do
+    chars+=("$c")
+  done < <(LC_ALL=C.UTF-8 grep -o . <<<"$rendered")
+
+  local per_cell total=${#chars[@]}
+  if (( total == 0 )); then
+    printf -v per_cell "0.%06d" "$duration_us"
+    sleep "$per_cell"
+    return
+  fi
+  printf -v per_cell "0.%06d" "$((duration_us / total))"
+
+  local i j frame style
+  for ((i = 1; i <= total; i++)); do
+    frame=""
+    for ((j = 0; j < total; j++)); do
+      ((j < i)) && style="$fill_style" || style="$base_style"
+      frame+="${style}${chars[$j]}"
+    done
+    tmux set -wt "$win_id" window-status-current-format "$frame" 2>/dev/null
+    sleep "$per_cell"
+  done
+}
+
 reload_animation() {
-  local colors=("#f5e0dc" "#f2cdcd" "#f5c2e7" "#cba6f7" "#f38ba8" "#eba0ac" "#fab387" "#f9e2af" "#a6e3a1" "#94e2d5" "#89dceb" "#74c7ec" "#89b4fa" "#b4befe")
-  local chars=("" "" "✶" "✸" "❄" "󰼪" "❅" "❆" "✹" "✺" "󰼪")
+  local chars=("⡿" "⣟" "⣯" "⣷" "⣾" "⣽" "⣻" "⢿")
   local original
   original=$(tmux show-option -gv status-left 2>/dev/null)
+  trap "tmux set -g status-left '$original' 2>/dev/null" EXIT INT TERM
 
-  for i in "${!chars[@]}"; do
-    local color="${colors[$((i % ${#colors[@]}))]}"
-    tmux set -g status-left "#[bg=default,bold,fg=${color}] ${chars[$i]} "
-    sleep 0.15
+  local n=${#chars[@]}
+  local total=$((n * 2))
+  local peak=$((n - 1))
+  local i t r g b color
+  for ((i = 0; i < total; i++)); do
+    (( i < n )) && t=$i || t=$((total - 1 - i))
+    r=$((243 + 6 * t / peak))
+    g=$((139 + 87 * t / peak))
+    b=$((168 + 7 * t / peak))
+    printf -v color "#%02x%02x%02x" "$r" "$g" "$b"
+    tmux set -g status-left "#[bg=default,bold,fg=${color}] ${chars[i % n]} "
+    sleep 0.08
   done
-
-  tmux set -g status-left "$original"
 }
 
 move_pane() {
@@ -259,5 +322,8 @@ case "$1" in
   ;;
 "move_pane_to_window")
   move_pane_to_window "$2"
+  ;;
+"pending_animation")
+  pending_animation "$2" "$3" "$4"
   ;;
 esac
