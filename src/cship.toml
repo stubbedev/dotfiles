@@ -1,6 +1,6 @@
 [cship]
 lines = [
-  "$directory$git_branch$git_status $cship.usage_limits $cship.model.display_name"
+  "$directory$git_branch$git_status $cship.usage_limits $cship.model.id"
 ]
 
 [cship.usage_limits]
