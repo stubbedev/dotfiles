@@ -13,7 +13,7 @@ _: {
         if [ ! -f "$settingsFile" ]; then
           printf '{}' > "$settingsFile"
         fi
-        tmp=$(${pkgs.jq}/bin/jq '. + {"statusLine": {"type": "command", "command": "cship"}}' "$settingsFile")
+        tmp=$(${pkgs.jq}/bin/jq '. + {"statusLine": {"type": "command", "command": "cship", "refreshInterval": 5}}' "$settingsFile")
         printf '%s\n' "$tmp" > "$settingsFile"
       '';
     };
