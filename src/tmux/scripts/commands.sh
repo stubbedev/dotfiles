@@ -103,20 +103,112 @@ toggle_lazydocker_window() {
   toggle_window "lazydocker" tmux-lazy-docker
 }
 
-toggle_opencode_window() {
-  if ! command -v tmux-opencode >/dev/null 2>&1; then
-    return
-  fi
-
-  toggle_window "opencode" tmux-opencode
-}
-
 toggle_claude_window() {
   if ! command -v tmux-claude >/dev/null 2>&1; then
     return
   fi
 
   toggle_window "claude" tmux-claude
+}
+
+pane_is_pinned() {
+  [ "$(tmux show-options -t "$1" -pqv @pinned)" = "1" ]
+}
+
+toggle_pin() {
+  local pane_id
+  pane_id=$(tmux display-message -p "#{pane_id}")
+  if pane_is_pinned "$pane_id"; then
+    tmux set -p -t "$pane_id" @pinned 0
+  else
+    tmux set -p -t "$pane_id" @pinned 1
+  fi
+}
+
+kill_pane() {
+  local pending pane_id window_id
+
+  pane_id=$(tmux display-message -p "#{pane_id}")
+  if ! pane_is_pinned "$pane_id"; then
+    tmux kill-pane
+    return
+  fi
+
+  pending=$(tmux display-message -p "#{@kill_pane_pending}")
+  if [ "$pending" = "1" ]; then
+    tmux kill-pane
+    return
+  fi
+
+  window_id=$(tmux display-message -p "#{window_id}")
+  tmux set -p -t "$pane_id" @kill_pane_pending 1
+  pending_animation "$pane_id" "$window_id" pane
+}
+
+kill_window() {
+  local pending pane_id window_id any_pinned pid
+
+  window_id=$(tmux display-message -p "#{window_id}")
+
+  any_pinned=0
+  while IFS= read -r pid; do
+    if pane_is_pinned "$pid"; then
+      any_pinned=1
+      break
+    fi
+  done < <(tmux list-panes -t "$window_id" -F "#{pane_id}")
+
+  if [ "$any_pinned" != "1" ]; then
+    tmux kill-window
+    return
+  fi
+
+  pending=$(tmux display-message -p "#{@kill_window_pending}")
+  if [ "$pending" = "1" ]; then
+    tmux kill-window
+    return
+  fi
+
+  pane_id=$(tmux display-message -p "#{pane_id}")
+  tmux set -w -t "$window_id" @kill_window_pending 1
+  pending_animation "$pane_id" "$window_id" window
+}
+
+kill_server_confirm() {
+  local pending
+  pending=$(tmux show-option -gv @kill_server_pending 2>/dev/null)
+  if [ "$pending" = "1" ]; then
+    tmux kill-server
+    return
+  fi
+
+  tmux set -g @kill_server_pending 1
+  sleep 1.5
+  tmux set -g @kill_server_pending 0 2>/dev/null
+}
+
+toggle_mark_join() {
+  local pane_marked pane_marked_set pane_width pane_height
+
+  pane_marked=$(tmux display-message -p "#{pane_marked}")
+  if [ "$pane_marked" = "1" ]; then
+    tmux select-pane -M
+    return
+  fi
+
+  pane_marked_set=$(tmux display-message -p "#{pane_marked_set}")
+  if [ "$pane_marked_set" != "1" ]; then
+    tmux select-pane -m
+    return
+  fi
+
+  pane_width=$(tmux display-message -p "#{pane_width}")
+  pane_height=$(tmux display-message -p "#{pane_height}")
+  if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
+    tmux join-pane -h
+  else
+    tmux join-pane
+  fi
 }
 
 pending_animation() {
@@ -299,34 +391,18 @@ move_pane_to_window() {
 }
 
 case "$1" in
-"toggle_lazygit_window")
-  toggle_lazygit_window
-  ;;
-"toggle_sysmon_window")
-  toggle_sysmon_window
-  ;;
-"toggle_lazydocker_window")
-  toggle_lazydocker_window
-  ;;
-"toggle_opencode_window")
-  toggle_opencode_window
-  ;;
-"toggle_claude_window")
-  toggle_claude_window
-  ;;
-"move_pane")
-  move_pane "$2"
-  ;;
-"session_init")
-  session_init
-  ;;
-"reload_animation")
-  reload_animation
-  ;;
-"move_pane_to_window")
-  move_pane_to_window "$2"
-  ;;
-"pending_animation")
-  pending_animation "$2" "$3" "$4"
-  ;;
+"toggle_pin")               toggle_pin ;;
+"kill_pane")                kill_pane ;;
+"kill_window")              kill_window ;;
+"kill_server_confirm")      kill_server_confirm ;;
+"toggle_mark_join")         toggle_mark_join ;;
+"toggle_lazygit_window")    toggle_lazygit_window ;;
+"toggle_sysmon_window")     toggle_sysmon_window ;;
+"toggle_lazydocker_window") toggle_lazydocker_window ;;
+"toggle_claude_window")     toggle_claude_window ;;
+"move_pane")                move_pane "$2" ;;
+"move_pane_to_window")      move_pane_to_window "$2" ;;
+"session_init")             session_init ;;
+"reload_animation")         reload_animation ;;
+"pending_animation")        pending_animation "$2" "$3" "$4" ;;
 esac
