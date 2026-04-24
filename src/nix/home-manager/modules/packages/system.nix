@@ -46,6 +46,9 @@ _: {
 
         # file manager
         yazi
+
+        # Note-taking / knowledge base (Electron, GPU accelerated)
+        (homeLib.gfx logseq)
       ];
     };
 }
