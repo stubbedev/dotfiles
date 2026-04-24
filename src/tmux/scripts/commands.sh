@@ -258,6 +258,10 @@ pending_animation() {
     tmux set -wt "$win_id" window-status-current-format "$frame" 2>/dev/null
     sleep "$per_cell"
   done
+
+  # Keep the filled bar on screen briefly so the keypress window extends
+  # visibly past the animation's final frame.
+  sleep 0.2
 }
 
 reload_animation() {
