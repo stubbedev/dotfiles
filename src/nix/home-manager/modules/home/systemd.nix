@@ -85,6 +85,23 @@ _: {
           };
         };
 
+        hyprpaper = {
+          Unit = {
+            Description = "Hyprpaper wallpaper daemon";
+            After = [ "hyprland-session.target" ];
+            PartOf = [ "hyprland-session.target" ];
+          };
+          Install = {
+            WantedBy = [ "hyprland-session.target" ];
+          };
+          Service = {
+            Type = "simple";
+            ExecStart = "${constants.paths.nixBin}/hyprpaper";
+            Restart = "on-failure";
+            RestartSec = "2s";
+          };
+        };
+
         waybar = {
           Unit = {
             Description = "Waybar - Highly customizable Wayland bar";
