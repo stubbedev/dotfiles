@@ -14,31 +14,31 @@ if is_binary php; then
 fi
 
 typeset -gA _git_shorthand_docs=(
-  gcm  'git commit with auto ticket prefix from branch name'
-  gp   'git push (warns on protected branches)'
-  gcb  'checkout or create branch (feature/bugfix/hotfix prefixes)'
-  gcr  'create release branch with semver bump (major/minor/patch)'
-  ga   'interactively stage files with diff preview'
-  gsd  'show working tree diff'
-  gd   'diff current branch against another branch'
-  gcd  'export branch diff to a patch file'
-  gst  'git status (short format)'
-  gg   'git pull current branch from origin'
-  gga  'git pull --all'
-  gf   'git fetch'
-  gfa  'git fetch --all'
-  ghr  'hard reset HEAD~ (discard last commit and changes)'
+  gcm 'git commit with auto ticket prefix from branch name'
+  gp 'git push (warns on protected branches)'
+  gcb 'checkout or create branch (feature/bugfix/hotfix prefixes)'
+  gcr 'create release branch with semver bump (major/minor/patch)'
+  ga 'interactively stage files with diff preview'
+  gsd 'show working tree diff'
+  gd 'diff current branch against another branch'
+  gcd 'export branch diff to a patch file'
+  gst 'git status (short format)'
+  gg 'git pull current branch from origin'
+  gga 'git pull --all'
+  gf 'git fetch'
+  gfa 'git fetch --all'
+  ghr 'hard reset HEAD~ (discard last commit and changes)'
   ghrn 'hard reset HEAD~N (discard last N commits and changes)'
-  gr   'soft reset HEAD~ (undo last commit, keep changes staged)'
-  grn  'soft reset HEAD~N (undo last N commits, keep changes staged)'
-  gsa  'stash all local changes'
-  gw   'wipe local changes (stash + drop)'
-  gwa  'wipe all local changes including stash (stash + clear)'
-  ggo  'pull from a selected origin branch'
-  gl   'interactive git log browser with commit preview'
-  gsp  'interactive stash pop (fzf select from stash list)'
-  gcp  'interactive cherry-pick from log (multi-select, oldest first)'
-  gwt  'switch to or create git worktree'
+  gr 'soft reset HEAD~ (undo last commit, keep changes staged)'
+  grn 'soft reset HEAD~N (undo last N commits, keep changes staged)'
+  gsa 'stash all local changes'
+  gw 'wipe local changes (stash + drop)'
+  gwa 'wipe all local changes including stash (stash + clear)'
+  ggo 'pull from a selected origin branch'
+  gl 'interactive git log browser with commit preview'
+  gsp 'interactive stash pop (fzf select from stash list)'
+  gcp 'interactive cherry-pick from log (multi-select, oldest first)'
+  gwt 'switch to or create git worktree'
   gwtd 'remove a git worktree'
 )
 
@@ -53,6 +53,47 @@ function in_git_repo {
     fi
     dir=${dir:h}
   done
+  return 1
+}
+
+# In a linked worktree, $_git_root/.git is a file (gitlink). In the main repo
+# it's a directory. Requires _git_root to be set (call in_git_repo first).
+function _in_linked_worktree {
+  [[ -f "$_git_root/.git" ]]
+}
+
+# Remove the previous worktree if we've moved out of it. Caller must have
+# already verified it was clean before the switch.
+function _gwt_remove_if_clean {
+  local _prev="$1"
+  [[ -z "$_prev" ]] && return 0
+  [[ "$PWD" == "$_prev" || "$PWD" == "$_prev"/* ]] && return 0
+  if git worktree remove "$_prev" 2>/dev/null; then
+    echo "Removed clean worktree: $_prev"
+    git worktree prune --expire now >/dev/null 2>&1
+  fi
+}
+
+# Print the path of the worktree that has $1 checked out, or nothing if none.
+function _worktree_path_for_branch {
+  local _target="$1" _wt_path="" _wt_branch="" _wt_line
+  while IFS= read -r _wt_line; do
+    if [[ $_wt_line == worktree\ * ]]; then
+      _wt_path=${_wt_line#worktree }
+      _wt_branch=""
+    elif [[ $_wt_line == branch\ * ]]; then
+      _wt_branch=${_wt_line#branch refs/heads/}
+    elif [[ -z $_wt_line ]]; then
+      if [[ "$_wt_branch" == "$_target" ]]; then
+        echo "$_wt_path"
+        return 0
+      fi
+      _wt_path="" _wt_branch=""
+    fi
+  done < <(
+    git worktree list --porcelain 2>/dev/null
+    echo
+  )
   return 1
 }
 
@@ -140,6 +181,10 @@ if are_binary git bat fzf; then
   }
   function gcr {
     in_git_repo || return 1
+    if _in_linked_worktree; then
+      echo "Within a worktree — use gwt to switch branches" >&2
+      return 1
+    fi
 
     current_tag=${$(git tag --sort=version:refname)[-1]}
     local increment_action=$(printf 'Major\nMinor\nPatch\n' |
@@ -172,6 +217,10 @@ if are_binary git bat fzf; then
   }
   function gcb {
     in_git_repo || return 1
+    if _in_linked_worktree; then
+      echo "Within a worktree — use gwt to switch branches" >&2
+      return 1
+    fi
 
     local initial_query=""
     if [[ -n "$1" ]]; then
@@ -182,8 +231,8 @@ if are_binary git bat fzf; then
     local git_branches=${(F)reply}
 
     # Fixed 3-item list + preview scaled to terminal height
-    local _list_h=4  # prompt(1) + items(3)
-    local _prev_h=$(( ${LINES:-40} * 50 / 100 ))
+    local _list_h=4 # prompt(1) + items(3)
+    local _prev_h=$((${LINES:-40} * 50 / 100))
     local _gcb_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
@@ -195,11 +244,17 @@ if are_binary git bat fzf; then
         --no-info \
         --preview='git log --oneline --color=always -15 {} 2>/dev/null' \
         --preview-window="down:${_prev_h}:wrap:nohidden" \
-        --height=$(( _list_h + _prev_h )))
+        --height=$((_list_h + _prev_h)))
     local branch_name=${_gcb_out##*$'\n'}
 
     if [[ -n "$branch_name" && ${reply[(r)$branch_name]} == "$branch_name" ]]; then
-      git checkout "$branch_name"
+      local _existing_wt=$(_worktree_path_for_branch "$branch_name")
+      if [[ -n "$_existing_wt" && "$_existing_wt" != "$_git_root" ]]; then
+        cd "$_existing_wt" || return 1
+        echo "Switched to worktree: $_existing_wt"
+      else
+        git checkout "$branch_name"
+      fi
       return 0
     fi
 
@@ -289,7 +344,7 @@ if are_binary git bat fzf; then
           _tracked_arr+=("$_rest")
         fi
       fi
-    done <<< "$git_status"
+    done <<<"$git_status"
     _tracked_arr=(${(ou)_tracked_arr})
     local tracked_files=${(F)_tracked_arr}
     local deleted_files=${(F)_deleted_arr}
@@ -377,7 +432,8 @@ if are_binary git bat fzf; then
     fi
 
     local current_branch=$(git branch --show-current)
-    _list_git_branches; local git_branches=${(F)reply}
+    _list_git_branches
+    local git_branches=${(F)reply}
 
     local _gd_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: select comparison branch)> " \
@@ -407,7 +463,8 @@ if are_binary git bat fzf; then
     fi
 
     local current_branch=$(git branch --show-current)
-    _list_git_branches; local git_branches=${(F)reply}
+    _list_git_branches
+    local git_branches=${(F)reply}
     local _gcd_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: select target branch for diff)> " \
         --query="$initial_query" \
@@ -548,7 +605,8 @@ if are_binary git bat fzf; then
       initial_query="$1"
     fi
 
-    _list_git_branches; local git_branches=${(F)reply}
+    _list_git_branches
+    local git_branches=${(F)reply}
 
     local selected_branch=$(echo -e "$git_branches" |
       fzf --prompt="(Enter: select branch to pull from origin)> " \
@@ -645,7 +703,7 @@ if are_binary git bat fzf; then
     local -a _hashes=("${_lines[@]%% *}")
     local -a _reversed=()
     local _i
-    for (( _i=${#_hashes[@]}; _i>=1; _i-- )); do
+    for ((_i = ${#_hashes[@]}; _i >= 1; _i--)); do
       _reversed+=("${_hashes[$_i]}")
     done
     git cherry-pick "${_reversed[@]}"
@@ -661,6 +719,12 @@ if are_binary git fzf; then
     local git_common_dir=$(git rev-parse --git-common-dir)
     local repo_root="$current_worktree"
 
+    # If we're leaving a clean linked worktree, remove it after the switch.
+    local _prev_clean_worktree=""
+    if _in_linked_worktree && [[ -z "$(git status --porcelain)" ]]; then
+      _prev_clean_worktree="$current_worktree"
+    fi
+
     if [[ "$git_common_dir" != /* ]]; then
       git_common_dir="$(cd "$git_common_dir" && pwd -P)"
     fi
@@ -672,7 +736,10 @@ if are_binary git fzf; then
 
     # Parse worktree list once, extract both entries and occupied branches
     # Append a blank line so the EOF-flush logic fires for the last entry too
-    local _wt_raw=$(git worktree list --porcelain; echo)
+    local _wt_raw=$(
+      git worktree list --porcelain
+      echo
+    )
     local worktree_entries=""
     local occupied_branches=""
     local _wt_path="" _wt_branch=""
@@ -691,9 +758,10 @@ if are_binary git fzf; then
         fi
         _wt_path="" _wt_branch=""
       fi
-    done <<< "$_wt_raw"
+    done <<<"$_wt_raw"
 
-    _list_git_branches; local all_branches=${(F)reply}
+    _list_git_branches
+    local all_branches=${(F)reply}
 
     local available_branches
     if [[ -n "$occupied_branches" ]]; then
@@ -703,7 +771,7 @@ if are_binary git fzf; then
       while IFS= read -r _b; do
         [[ -z $_b ]] && continue
         [[ ${_occ[(r)$_b]} == "$_b" ]] || _avail+=("$_b")
-      done <<< "$all_branches"
+      done <<<"$all_branches"
       available_branches=${(F)_avail}
     else
       available_branches="$all_branches"
@@ -715,12 +783,12 @@ if are_binary git fzf; then
       local wt_path=${line%% *}
       local wt_branch=${line##* }
       display_list+="[worktree] $wt_branch  →  $wt_path"$'\n'
-    done <<< "$worktree_entries"
+    done <<<"$worktree_entries"
 
     while IFS= read -r branch; do
       [[ -z "$branch" ]] && continue
       display_list+="[branch]   $branch"$'\n'
-    done <<< "$available_branches"
+    done <<<"$available_branches"
 
     if [[ -z "$display_list" ]]; then
       echo "No worktrees or available branches found."
@@ -728,14 +796,14 @@ if are_binary git fzf; then
     fi
 
     # Fixed 3-item list + preview scaled to terminal height
-    local _list_h=4  # prompt(1) + items(3)
-    local _prev_h=$(( ${LINES:-40} * 50 / 100 ))
+    local _list_h=4 # prompt(1) + items(3)
+    local _prev_h=$((${LINES:-40} * 50 / 100))
     local selected=$(echo "$display_list" |
       fzf --prompt="(Enter: switch/create worktree, Ctrl+C: cancel)> " \
         --print-query \
         --exit-0 \
         --no-info \
-        --height=$(( _list_h + _prev_h )) \
+        --height=$((_list_h + _prev_h)) \
         --preview='
           line={}
           if [[ ${line%% *} == "[worktree]" ]]; then
@@ -770,6 +838,7 @@ if are_binary git fzf; then
       mkdir -p "$worktrees_dir"
       git worktree add -b "$new_branch_name" "$worktree_path" "$base_branch" || return 1
       cd "$worktree_path" || return 1
+      _gwt_remove_if_clean "$_prev_clean_worktree"
       return 0
     fi
 
@@ -786,6 +855,7 @@ if are_binary git fzf; then
       git worktree add "$worktree_path" "$branch_name" || return 1
       cd "$worktree_path" || return 1
     fi
+    _gwt_remove_if_clean "$_prev_clean_worktree"
   }
 
   function gwtd {
@@ -817,7 +887,10 @@ if are_binary git fzf; then
         fi
         _wt_path2="" _wt_branch2=""
       fi
-    done < <(git worktree list --porcelain; echo)
+    done < <(
+      git worktree list --porcelain
+      echo
+    )
 
     if [[ -z "$linked_worktrees" ]]; then
       echo "No linked worktrees found."
@@ -834,7 +907,7 @@ if are_binary git fzf; then
           selected="$_entry"
           break
         fi
-      done <<< "$linked_worktrees"
+      done <<<"$linked_worktrees"
     else
       selected=$(echo "$linked_worktrees" |
         fzf --prompt="(Enter: select worktree to remove)> " \
