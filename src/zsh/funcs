@@ -97,6 +97,22 @@ function _worktree_path_for_branch {
   return 1
 }
 
+# Checkout $1, but if it's active in another worktree, cd there instead.
+# Requires _git_root to be set (call in_git_repo first).
+function _checkout_branch_or_worktree {
+  local _target="$1"
+  [[ -z "$_target" ]] && return 1
+
+  local _existing_wt=$(_worktree_path_for_branch "$_target")
+  if [[ -n "$_existing_wt" && "$_existing_wt" != "$_git_root" ]]; then
+    cd "$_existing_wt" || return 1
+    echo "Switched to worktree: $_existing_wt"
+    return 0
+  fi
+
+  git checkout "$_target"
+}
+
 # Fork-free branch listing: sets $reply to sorted-unique branch array.
 # Uses %(refname) to avoid parsing git's marker/color output entirely.
 function _list_git_branches {
@@ -248,13 +264,7 @@ if are_binary git bat fzf; then
     local branch_name=${_gcb_out##*$'\n'}
 
     if [[ -n "$branch_name" && ${reply[(r)$branch_name]} == "$branch_name" ]]; then
-      local _existing_wt=$(_worktree_path_for_branch "$branch_name")
-      if [[ -n "$_existing_wt" && "$_existing_wt" != "$_git_root" ]]; then
-        cd "$_existing_wt" || return 1
-        echo "Switched to worktree: $_existing_wt"
-      else
-        git checkout "$branch_name"
-      fi
+      _checkout_branch_or_worktree "$branch_name"
       return 0
     fi
 
@@ -273,7 +283,8 @@ if are_binary git bat fzf; then
 
     local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
     if [[ $branch_name =~ $tag_mask ]]; then
-      git checkout -b "release/$branch_name" || git checkout "release/$branch_name"
+      local _release_branch="release/$branch_name"
+      git checkout -b "$_release_branch" || _checkout_branch_or_worktree "$_release_branch"
       return 0
     fi
 
@@ -304,7 +315,7 @@ if are_binary git bat fzf; then
     fi
 
     if [[ "$new_branch_name" != "/" ]]; then
-      git checkout -b "$new_branch_name" || git checkout "$new_branch_name"
+      git checkout -b "$new_branch_name" || _checkout_branch_or_worktree "$new_branch_name"
     fi
   }
 
