@@ -62,16 +62,29 @@ function _in_linked_worktree {
   [[ -f "$_git_root/.git" ]]
 }
 
+# Path of the main repo root, regardless of which worktree we're in.
+function _git_main_root {
+  local _common=$(git rev-parse --git-common-dir 2>/dev/null)
+  [[ -z "$_common" ]] && return 1
+  [[ "$_common" != /* ]] && _common="$(cd "$_common" && pwd -P)"
+  if [[ "$_common" == */.git ]]; then
+    echo "${_common%/.git}"
+  else
+    echo "$_common"
+  fi
+}
+
 # Remove the previous worktree if we've moved out of it. Caller must have
 # already verified it was clean before the switch.
 function _gwt_remove_if_clean {
   local _prev="$1"
   [[ -z "$_prev" ]] && return 0
   [[ "$PWD" == "$_prev" || "$PWD" == "$_prev"/* ]] && return 0
-  if git worktree remove "$_prev" 2>/dev/null; then
-    echo "Removed clean worktree: $_prev"
-    git worktree prune --expire now >/dev/null 2>&1
-  fi
+  (
+    if git worktree remove "$_prev" 2>/dev/null; then
+      git worktree prune --expire now >/dev/null 2>&1
+    fi
+  ) &!
 }
 
 # Print the path of the worktree that has $1 checked out, or nothing if none.
@@ -97,10 +110,16 @@ function _worktree_path_for_branch {
   return 1
 }
 
-# Checkout $1, but if it's active in another worktree, cd there instead.
+# Switch to or create a branch with worktree-aware routing.
+# Args: $1 branch, $2 mode ("checkout" default | "create"), $3 base for create
+# Strategy:
+#   1. Branch already in another worktree → cd there
+#   2. In a linked worktree and main repo clean → cd to main, checkout/create there
+#   3. In a linked worktree and main dirty → create a new worktree for the branch
+#   4. Otherwise → checkout/create in place
 # Requires _git_root to be set (call in_git_repo first).
 function _checkout_branch_or_worktree {
-  local _target="$1"
+  local _target="$1" _mode="${2:-checkout}" _base="$3"
   [[ -z "$_target" ]] && return 1
 
   local _existing_wt=$(_worktree_path_for_branch "$_target")
@@ -110,7 +129,49 @@ function _checkout_branch_or_worktree {
     return 0
   fi
 
-  git checkout "$_target"
+  # If asked to create but branch exists locally, fall back to checkout
+  if [[ "$_mode" == "create" ]] && git rev-parse --verify --quiet "refs/heads/$_target" >/dev/null 2>&1; then
+    _mode="checkout"
+    _base=""
+  fi
+
+  local -a _action
+  if [[ "$_mode" == "create" ]]; then
+    if [[ -n "$_base" ]]; then
+      _action=(git checkout -b "$_target" "$_base")
+    else
+      _action=(git checkout -b "$_target")
+    fi
+  else
+    _action=(git checkout "$_target")
+  fi
+
+  if ! _in_linked_worktree; then
+    "${_action[@]}"
+    return $?
+  fi
+
+  local _main=$(_git_main_root)
+  if [[ -z "$(git -C "$_main" status --porcelain 2>/dev/null)" ]]; then
+    cd "$_main" || return 1
+    "${_action[@]}"
+    return $?
+  fi
+
+  local _wt_dir="$_main/.worktrees"
+  local _sanitized=${_target//\//-}
+  local _wt_path="$_wt_dir/$_sanitized"
+  mkdir -p "$_wt_dir"
+  if [[ "$_mode" == "create" ]]; then
+    if [[ -n "$_base" ]]; then
+      git worktree add -b "$_target" "$_wt_path" "$_base" || return 1
+    else
+      git worktree add -b "$_target" "$_wt_path" || return 1
+    fi
+  else
+    git worktree add "$_wt_path" "$_target" || return 1
+  fi
+  cd "$_wt_path" || return 1
 }
 
 # Fork-free branch listing: sets $reply to sorted-unique branch array.
@@ -197,10 +258,6 @@ if are_binary git bat fzf; then
   }
   function gcr {
     in_git_repo || return 1
-    if _in_linked_worktree; then
-      echo "Within a worktree — use gwt to switch branches" >&2
-      return 1
-    fi
 
     current_tag=${$(git tag --sort=version:refname)[-1]}
     local increment_action=$(printf 'Major\nMinor\nPatch\n' |
@@ -229,14 +286,10 @@ if are_binary git bat fzf; then
       ;;
     esac
     local release_branch="$major.$minor.$patch"
-    git checkout -b "release/$release_branch"
+    _checkout_branch_or_worktree "release/$release_branch" create
   }
   function gcb {
     in_git_repo || return 1
-    if _in_linked_worktree; then
-      echo "Within a worktree — use gwt to switch branches" >&2
-      return 1
-    fi
 
     local initial_query=""
     if [[ -n "$1" ]]; then
@@ -283,8 +336,7 @@ if are_binary git bat fzf; then
 
     local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
     if [[ $branch_name =~ $tag_mask ]]; then
-      local _release_branch="release/$branch_name"
-      git checkout -b "$_release_branch" || _checkout_branch_or_worktree "$_release_branch"
+      _checkout_branch_or_worktree "release/$branch_name" create
       return 0
     fi
 
@@ -315,7 +367,7 @@ if are_binary git bat fzf; then
     fi
 
     if [[ "$new_branch_name" != "/" ]]; then
-      git checkout -b "$new_branch_name" || _checkout_branch_or_worktree "$new_branch_name"
+      _checkout_branch_or_worktree "$new_branch_name" create
     fi
   }
 
