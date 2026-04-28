@@ -13,6 +13,6 @@ _: {
         pkgs.cship
       ];
 
-      xdg.configFile = homeLib.xdgSources [ "cship.toml" ];
+      xdg.configFile = homeLib.xdgSourceAt "cship.toml" "cship/cship.toml";
     };
 }

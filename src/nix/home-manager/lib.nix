@@ -26,7 +26,7 @@ rec {
       if lib.hasPrefix "/" pathString then /. + pathString else ./. + pathString;
 
   xdgSource =
-    path:
+    path: extra:
     let
       baseDir = ./../..;
       fullPath = stringToPath (toString baseDir + "/${path}");
@@ -35,10 +35,28 @@ rec {
       "${path}" = {
         source = fullPath;
         force = true;
-      };
+      } // extra;
     };
 
-  xdgSources = paths: lib.foldl' (acc: path: acc // xdgSource path) { } paths;
+  xdgSources = paths: lib.foldl' (acc: path: acc // (xdgSource path { })) { } paths;
+
+  xdgSourceWith = path: extra: xdgSource path extra;
+
+  # Like xdgSource, but lets the target path under ~/.config differ from the
+  # source path under src/. Use when an upstream tool refuses to look in a
+  # subdirectory (e.g. cship reads ~/.config/cship.toml only).
+  xdgSourceAt =
+    target: source:
+    let
+      baseDir = ./../..;
+      fullPath = stringToPath (toString baseDir + "/${source}");
+    in
+    {
+      "${target}" = {
+        source = fullPath;
+        force = true;
+      };
+    };
 
   sudoPromptScript =
     {

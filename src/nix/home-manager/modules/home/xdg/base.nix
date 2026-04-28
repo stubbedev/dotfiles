@@ -7,17 +7,26 @@ _: {
       ...
     }:
     lib.mkIf config.features.desktop {
-      xdg.configFile = homeLib.xdgSources [
-        "lazygit/config.yml"
-        "alacritty"
-        "rofi"
-        "btop/themes/catppuccin_frappe.theme"
-        "btop/themes/catppuccin_latte.theme"
-        "btop/themes/catppuccin_macchiato.theme"
-        "btop/themes/catppuccin_mocha.theme"
-        "swaync"
-        "waybar"
-      ];
+      xdg.configFile =
+        homeLib.xdgSources [
+          "lazygit/config.yml"
+          "alacritty"
+          "rofi"
+          "btop/themes/catppuccin_frappe.theme"
+          "btop/themes/catppuccin_latte.theme"
+          "btop/themes/catppuccin_macchiato.theme"
+          "btop/themes/catppuccin_mocha.theme"
+          "swaync"
+        ]
+        // homeLib.xdgSourceWith "waybar" {
+          onChange = ''
+            if command -v systemctl >/dev/null 2>&1; then
+              if systemctl --user is-active --quiet waybar.service 2>/dev/null; then
+                systemctl --user restart waybar.service || true
+              fi
+            fi
+          '';
+        };
 
       # PCManFM desktop entry: shown as "Files" in rofi. DBusActivatable is
       # omitted so rofi launches via Exec only — keeping it true would make
