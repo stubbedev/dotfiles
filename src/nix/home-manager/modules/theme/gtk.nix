@@ -10,11 +10,20 @@ _: {
       gtk = {
         enable = true;
 
-        # Don't set theme - let GTK4 use default with dark preference
+        theme = {
+          name = "catppuccin-mocha-mauve-standard";
+          package = pkgs.catppuccin-gtk.override {
+            variant = "mocha";
+            accents = [ "mauve" ];
+            size = "standard";
+          };
+        };
 
         iconTheme = {
-          name = "Vimix-dark";
-          package = pkgs.vimix-icon-theme;
+          name = "Tela-circle-purple-dark";
+          package = pkgs.tela-circle-icon-theme.override {
+            colorVariants = [ "purple" ];
+          };
         };
 
         cursorTheme = {

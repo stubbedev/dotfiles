@@ -16,7 +16,6 @@ _: {
         # GTK themes and icons
         adwaita-icon-theme
         vimix-icon-theme
-        papirus-icon-theme
         hicolor-icon-theme
         rose-pine-gtk-theme
         gnome-themes-extra # Includes Adwaita-dark GTK theme

@@ -46,6 +46,7 @@ _: {
 
         # file manager
         yazi
+        pcmanfm
 
         # Note-taking / knowledge base (Electron, GPU accelerated)
         (homeLib.gfx logseq)
