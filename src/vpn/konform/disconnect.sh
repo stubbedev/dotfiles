@@ -56,10 +56,13 @@ if [ -z "$PKILL_BIN" ]; then
   exit 1
 fi
 
+# SIGKILL (instead of SIGTERM) so openconnect skips its /ssl-vpn/logout.esp call.
+# The gateway then leaves the cached cookie valid until its idle-timeout, which
+# lets a quick reconnect re-use the cookie and avoid a 2FA prompt.
 if is_running; then
-  run_as_root "$PKILL_BIN" -F "$PID_FILE" || true
+  run_as_root "$PKILL_BIN" -9 -F "$PID_FILE" || true
 else
-  run_as_root "$PKILL_BIN" -f "openconnect.*${PROVIDER_NAME}" || true
+  run_as_root "$PKILL_BIN" -9 -f "openconnect.*${PROVIDER_NAME}" || true
 fi
 
 if is_running; then

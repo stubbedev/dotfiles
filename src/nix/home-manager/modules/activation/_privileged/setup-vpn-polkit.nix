@@ -163,10 +163,14 @@ _: {
           }
 
           if (pathAllowed(program, pkillPrograms)) {
-            if (args.length === 3 && args[1] === "-F" && isPidFilePath(args[2])) {
+            var pkillModeIdx = 1;
+            if (args.length === 4 && (args[1] === "-9" || args[1] === "-KILL" || args[1] === "-SIGKILL")) {
+              pkillModeIdx = 2;
+            }
+            if (args.length === pkillModeIdx + 2 && args[pkillModeIdx] === "-F" && isPidFilePath(args[pkillModeIdx + 1])) {
               return polkit.Result.YES;
             }
-            if (args.length === 3 && args[1] === "-f" && /^openconnect\.\*[A-Za-z0-9_.-]+$/.test(args[2])) {
+            if (args.length === pkillModeIdx + 2 && args[pkillModeIdx] === "-f" && /^openconnect\.\*[A-Za-z0-9_.-]+$/.test(args[pkillModeIdx + 1])) {
               return polkit.Result.YES;
             }
             return;
