@@ -82,44 +82,52 @@ load_cookie() {
 
 # Authenticate via openconnect --authenticate to get a session cookie.
 # Outputs COOKIE, HOST, FINGERPRINT lines which we save to COOKIE_FILE.
+# VPN_USERGROUP defaults to "gateway" so we skip portal auth and only get one 2FA prompt
+# (https://www.infradead.org/openconnect/globalprotect.html). Set VPN_USERGROUP="" in
+# the config to fall back to portal auth if your deployment requires it.
 fetch_cookie() {
   local password="$1"
   local auth_output
+  local usergroup="${VPN_USERGROUP-gateway}"
 
   echo "Authenticating (2FA prompt expected)..." >&2
 
   auth_output=$(printf '%s\n' "$password" | "$OPENCONNECT_BIN" \
     --protocol=gp \
     --user "$VPN_USERNAME" \
+    ${usergroup:+--usergroup="$usergroup"} \
     --passwd-on-stdin \
     --authenticate \
-    "$VPN_GATEWAY" 2>/dev/null) || true
+    "$VPN_GATEWAY" 2>>"$LOG_FILE") || true
 
   if [ -z "$auth_output" ]; then
     echo "Authentication failed" >&2
     return 1
   fi
 
-  # openconnect --authenticate outputs: COOKIE=...\nHOST=...\nFINGERPRINT=...
-  # Remap to prefixed names to avoid polluting the environment with generic names.
-  local cookie host fingerprint
-  cookie=$(printf '%s\n' "$auth_output" | grep '^COOKIE=' | cut -d= -f2-)
-  host=$(printf '%s\n' "$auth_output" | grep '^HOST=' | cut -d= -f2-)
-  fingerprint=$(printf '%s\n' "$auth_output" | grep '^FINGERPRINT=' | cut -d= -f2-)
+  # openconnect --authenticate outputs shell-quoted assignments, e.g.
+  #   COOKIE='auth=...'
+  #   HOST='10.0.0.1'
+  #   FINGERPRINT='...'
+  # so we eval the matching lines to let bash strip openconnect's quoting,
+  # then re-emit with %q so a later `source "$COOKIE_FILE"` round-trips safely.
+  local COOKIE="" HOST="" FINGERPRINT=""
+  eval "$(printf '%s\n' "$auth_output" | grep -E '^(COOKIE|HOST|FINGERPRINT)=')"
 
-  if [ -z "$cookie" ] || [ -z "$host" ]; then
+  if [ -z "$COOKIE" ] || [ -z "$HOST" ]; then
     echo "Failed to parse authentication response" >&2
     return 1
   fi
 
   mkdir -p "$CONFIG_DIR"
-  printf 'VPN_COOKIE=%s\nVPN_HOST=%s\nVPN_FINGERPRINT=%s\n' \
-    "$cookie" "$host" "$fingerprint" > "$COOKIE_FILE"
+  printf 'VPN_COOKIE=%q\nVPN_HOST=%q\nVPN_FINGERPRINT=%q\n' \
+    "$COOKIE" "$HOST" "$FINGERPRINT" > "$COOKIE_FILE"
   chmod 600 "$COOKIE_FILE"
   return 0
 }
 
 connect_with_cookie() {
+  local usergroup="${VPN_USERGROUP-gateway}"
   local openconnect_args=(
     "$OPENCONNECT_BIN"
     --protocol=gp
@@ -129,9 +137,17 @@ connect_with_cookie() {
     --pid-file "$PID_FILE"
     --syslog
     --background
-    ${VPN_FINGERPRINT:+--servercert "$VPN_FINGERPRINT"}
-    "$VPN_HOST"
   )
+  # Cookie was issued via the gateway path, so the reconnect must use the same
+  # path. Without this, the gateway rejects the cookie and we fall back to
+  # full re-auth (extra 2FA prompt).
+  if [ -n "$usergroup" ]; then
+    openconnect_args+=(--usergroup="$usergroup")
+  fi
+  if [ -n "${VPN_FINGERPRINT:-}" ]; then
+    openconnect_args+=(--servercert "$VPN_FINGERPRINT")
+  fi
+  openconnect_args+=("$VPN_HOST")
 
   if [ -n "$SETSID_BIN" ]; then
     printf '' | run_as_root "$SETSID_BIN" "${openconnect_args[@]}"

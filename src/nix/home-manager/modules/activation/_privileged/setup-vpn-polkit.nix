@@ -13,7 +13,7 @@ _: {
         tmpfile=$(mktemp)
         trap 'rm -f "$tmpfile"' EXIT
         cat > "$tmpfile" << 'EOF'
-        // managed-by: home-manager vpn-polkit v2
+        // managed-by: home-manager vpn-polkit v3
         polkit.addRule(function(action, subject) {
           if (action.id !== "org.freedesktop.policykit.exec") {
             return;
@@ -124,6 +124,15 @@ _: {
               if (token.indexOf("--servercert=") === 0) {
                 var certValue = token.substring("--servercert=".length);
                 if (!/^\S+$/.test(certValue)) {
+                  return false;
+                }
+                i += 1;
+                continue;
+              }
+
+              if (token.indexOf("--usergroup=") === 0) {
+                var ugValue = token.substring("--usergroup=".length);
+                if (!/^[A-Za-z0-9_./:-]+$/.test(ugValue)) {
                   return false;
                 }
                 i += 1;

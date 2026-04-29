@@ -212,6 +212,11 @@ label:focus {
 	color: @base;
 }
 
+#custom-konform-vpn.connecting {
+	background-color: @yellow;
+	color: @base;
+}
+
 #custom-konform-vpn.disconnected {
 	background-color: @surface0;
 	color: @subtext0;

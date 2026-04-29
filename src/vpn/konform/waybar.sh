@@ -5,10 +5,13 @@ PROVIDER_NAME="konform"
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
 PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
-PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+PID_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.pid"
+CONNECTING_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.connecting"
+LOG_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}-waybar.log"
 CONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-connect"
 DISCONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-disconnect"
-TERMINAL="${TERMINAL:-alacritty}"
+CONNECT_TIMEOUT=30
 
 iface_name() {
   local raw="oc-${PROVIDER_NAME}"
@@ -62,6 +65,47 @@ is_running() {
   return 1
 }
 
+# Returns 0 if a connect attempt is currently in flight (and within the timeout window).
+# On timeout, kills the wrapper process group and triggers disconnect to clean up any
+# half-started openconnect daemon, then returns 1.
+connecting_active() {
+  [ -f "$CONNECTING_FILE" ] || return 1
+
+  local PID="" START=0
+  # shellcheck source=/dev/null
+  source "$CONNECTING_FILE" 2>/dev/null || {
+    rm -f "$CONNECTING_FILE"
+    return 1
+  }
+
+  if [ -z "$PID" ] || [ "$START" -eq 0 ]; then
+    rm -f "$CONNECTING_FILE"
+    return 1
+  fi
+
+  # Stale marker (process gone, trap didn't run for some reason)
+  if ! kill -0 "$PID" 2>/dev/null; then
+    rm -f "$CONNECTING_FILE"
+    return 1
+  fi
+
+  local now age
+  now=$(date +%s)
+  age=$(( now - START ))
+
+  if (( age >= CONNECT_TIMEOUT )); then
+    kill -TERM -- "-$PID" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
+    rm -f "$CONNECTING_FILE"
+    if [ -f "$PID_FILE" ]; then
+      setsid "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
+      disown
+    fi
+    return 1
+  fi
+
+  return 0
+}
+
 status() {
   local text class tooltip
 
@@ -73,6 +117,11 @@ status() {
     text="󰦝"
     class="connected"
     tooltip="${PROVIDER_NAME} VPN connected"
+    rm -f "$CONNECTING_FILE"
+  elif connecting_active; then
+    text="󱦛"
+    class="connecting"
+    tooltip="${PROVIDER_NAME} VPN connecting..."
   else
     text="󱦚"
     class="disconnected"
@@ -93,44 +142,46 @@ connect() {
     exit 1
   fi
 
-  # Launch via terminal to allow password/privilege prompts if needed
-  local title="VPN: ${PROVIDER_NAME}"
-  case "$TERMINAL" in
-    alacritty)
-      alacritty --class vpn-prompt --title "$title" -e bash -lc "${CONNECT_SCRIPT@Q}"
-      ;;
-    kitty)
-      kitty --class vpn-prompt --title "$title" -e bash -lc "${CONNECT_SCRIPT@Q}"
-      ;;
-    foot)
-      foot -a vpn-prompt -T "$title" -e bash -lc "${CONNECT_SCRIPT@Q}"
-      ;;
-    *)
-      "$TERMINAL" -e bash -lc "${CONNECT_SCRIPT@Q}"
-      ;;
-  esac
+  rm -f "$CONNECTING_FILE"
+
+  local now
+  now=$(date +%s)
+
+  # Spawn the connect script in its own session so we can kill the whole group
+  # on timeout. The wrapper writes a marker file with its PID + start timestamp
+  # and clears it on exit (success, failure, or SIGTERM).
+  setsid bash -c '
+    marker="$1"
+    start="$2"
+    script="$3"
+    trap "rm -f \"$marker\"" EXIT
+    printf "PID=%s\nSTART=%s\n" "$$" "$start" > "$marker"
+    exec "$script"
+  ' _ "$CONNECTING_FILE" "$now" "$CONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
+  disown
 }
 
 disconnect() {
-  local title="VPN: ${PROVIDER_NAME}"
-  case "$TERMINAL" in
-    alacritty)
-      alacritty --class vpn-prompt --title "$title" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
-      ;;
-    kitty)
-      kitty --class vpn-prompt --title "$title" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
-      ;;
-    foot)
-      foot -a vpn-prompt -T "$title" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
-      ;;
-    *)
-      "$TERMINAL" -e bash -lc "${DISCONNECT_SCRIPT@Q}"
-      ;;
-  esac
+  # Cancel any in-flight connect attempt
+  if [ -f "$CONNECTING_FILE" ]; then
+    local PID="" START=0
+    # shellcheck source=/dev/null
+    source "$CONNECTING_FILE" 2>/dev/null || true
+    if [ -n "$PID" ]; then
+      kill -TERM -- "-$PID" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
+    fi
+    rm -f "$CONNECTING_FILE"
+  fi
+
+  setsid "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
+  disown
 }
 
 toggle() {
   if is_running; then
+    disconnect
+  elif connecting_active; then
+    # User clicked while connecting — treat as cancel
     disconnect
   else
     connect
