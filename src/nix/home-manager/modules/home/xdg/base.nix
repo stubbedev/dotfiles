@@ -11,6 +11,7 @@ _: {
         homeLib.xdgSources [
           "lazygit/config.yml"
           "alacritty"
+          "pcmanfm/default/pcmanfm.conf"
           "rofi"
           "btop/themes/catppuccin_frappe.theme"
           "btop/themes/catppuccin_latte.theme"

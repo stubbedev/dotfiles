@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import fcntl
 import json
 import socket
 import shutil
@@ -12,6 +13,7 @@ from pathlib import Path
 # Paths and icons
 ACCOUNTS_CONF = Path.home() / ".config/aerc/accounts.conf"
 STATE_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.state")
+LOCK_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.lock")
 ICON_OPEN = "\U000f06ee "   # Open envelope (no unread)
 ICON_CLOSED = "\U000f0d8d "  # Closed envelope (has unread)
 
@@ -242,7 +244,7 @@ def main():
 
         prev_uids = previous.get(account_name, set())
         current_set = set(uids)
-        new_uids = current_set if not prev_uids else current_set - prev_uids
+        new_uids = current_set - prev_uids if account_name in previous else current_set
 
         if new_uids:
             for uid in sorted(new_uids):
@@ -290,4 +292,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with LOCK_FILE.open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        main()
