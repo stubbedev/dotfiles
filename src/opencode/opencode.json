@@ -10,16 +10,6 @@
 		"@franlol/opencode-md-table-formatter@latest"
 	],
 	"mcp": {
-		"chrome-devtools": {
-			"type": "local",
-			"command": [
-				"npx",
-				"-y",
-				"chrome-devtools-mcp@latest",
-				"--no-usage-statistics",
-				"--autoConnect"
-			]
-		},
 		"atlassian": {
 			"type": "local",
 			"command": [

@@ -42,6 +42,17 @@ rec {
 
   xdgSourceWith = path: extra: xdgSource path extra;
 
+  # Read the contents of a source file under src/ at evaluation time. Pair
+  # with builtins.fromJSON / fromTOML when you need parsed data, e.g.:
+  #   builtins.fromJSON (homeLib.xdgContent "opencode/opencode.json")
+  xdgContent =
+    path:
+    let
+      baseDir = ./../..;
+      fullPath = stringToPath (toString baseDir + "/${path}");
+    in
+    builtins.readFile fullPath;
+
   # Like xdgSource, but lets the target path under ~/.config differ from the
   # source path under src/. Use when an upstream tool refuses to look in a
   # subdirectory (e.g. cship reads ~/.config/cship.toml only).
