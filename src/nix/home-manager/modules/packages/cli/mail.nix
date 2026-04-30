@@ -12,7 +12,6 @@ _: {
         msmtp
         w3m
         pandoc
-        elinks
         lynx
         chafa
         catimg
