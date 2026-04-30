@@ -9,18 +9,22 @@
 #                               (e.g. when a Thunderbolt dock is unplugged)
 
 apply_toggle() {
-  local builtin_monitor state
-  builtin_monitor=$(hyprctl monitors all -j | jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -n1)
+  local monitors builtin_monitor state currently_disabled current_scale
+  monitors=$(hyprctl monitors all -j)
+  builtin_monitor=$(echo "$monitors" | jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -n1)
 
   [ -z "$builtin_monitor" ] && return 0
 
   state=$(grep -oEi 'open|closed' /proc/acpi/button/lid/*/state 2>/dev/null | head -n1 | tr '[:upper:]' '[:lower:]' || echo "open")
 
-  if [ "$state" = "open" ]; then
+  currently_disabled=$(echo "$monitors" | jq -r --arg m "$builtin_monitor" '.[] | select(.name == $m) | .disabled')
+  current_scale=$(echo "$monitors" | jq -r --arg m "$builtin_monitor" '.[] | select(.name == $m) | .scale')
+
+  if [ "$state" = "open" ] && { [ "$currently_disabled" = "true" ] || [ "$current_scale" != "1.50" ]; }; then
     hyprctl keyword monitor "$builtin_monitor", preferred, auto, 1.5
   fi
 
-  if [ "$state" = "closed" ]; then
+  if [ "$state" = "closed" ] && [ "$currently_disabled" != "true" ]; then
     hyprctl keyword monitor "$builtin_monitor", disable
   fi
 }
