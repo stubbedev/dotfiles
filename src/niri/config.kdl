@@ -6,6 +6,9 @@ prefer-no-csd
 screenshot-path "~/Pictures/Screenshots/niri-%Y-%m-%d_%H-%M-%S.png"
 
 input {
+    // Match Hyprland's focus-follows-mouse behavior.
+    focus-follows-mouse
+
     keyboard {
         xkb {
             layout "us,dk,es"
@@ -186,10 +189,13 @@ binds {
     Mod+Shift+Down  { move-window-down; }
 
     // COLUMN / WINDOW RESIZE
-    Mod+Ctrl+Left  { set-column-width "-50"; }
-    Mod+Ctrl+Right { set-column-width "+50"; }
-    Mod+Ctrl+Up    { set-window-height "-50"; }
-    Mod+Ctrl+Down  { set-window-height "+50"; }
+    // Resize binds dispatch via resize-clamped.sh which caps growth at
+    // the focused output's logical dimensions — niri's set-column-width
+    // / set-window-height have no built-in monitor clamp.
+    Mod+Ctrl+Left  { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "column" "-50"; }
+    Mod+Ctrl+Right { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "column" "+50"; }
+    Mod+Ctrl+Up    { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "window-height" "-50"; }
+    Mod+Ctrl+Down  { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "window-height" "+50"; }
 
     // WORKSPACE SWITCHING
     Mod+1 { focus-workspace 1; }
