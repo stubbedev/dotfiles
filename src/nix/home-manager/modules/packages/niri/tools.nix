@@ -9,7 +9,7 @@ _: {
     }:
     lib.mkIf config.features.niri {
       home.packages = with pkgs; [
-        awww
+        (homeLib.gfx awww)
         xwayland-satellite
       ];
     };

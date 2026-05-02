@@ -8,9 +8,8 @@ rec {
   gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo; };
   inherit (gfxLib)
     gfx
+    gfxName
     gfxExe
-    gfxBinIncDrivers
-    gfxBinExeIncDrivers
     gfxDirectWithDrivers
     ;
 

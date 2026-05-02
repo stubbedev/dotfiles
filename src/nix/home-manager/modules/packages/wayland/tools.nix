@@ -22,7 +22,7 @@ _: {
         hyprsunset
 
         # Color picker (screencopy protocol)
-        hyprpicker
+        (homeLib.gfx hyprpicker)
 
         # Cursor theme tool
         hyprcursor

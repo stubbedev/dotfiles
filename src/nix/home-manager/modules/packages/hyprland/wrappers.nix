@@ -32,7 +32,7 @@ _: {
       # Create custom Hyprland wrapper with build-time GPU detection
       # This is needed because Nix's mesa-libgbm doesn't include GBM backends
       # The nixGL wrapper is pre-selected in systemInfo based on GPU detection
-      hyprland-wrapped = homeLib.gfxBinIncDrivers "hyprland" hyprlandPkg;
+      hyprland-wrapped = homeLib.gfxName "hyprland" hyprlandPkg;
 
       # Create a package with both hyprland (lowercase) and Hyprland (uppercase) symlink
       # start-hyprland expects "Hyprland" but we prefer lowercase everywhere else
@@ -107,7 +107,7 @@ _: {
 
       # Create custom Xwayland wrapper with nixGL for NVIDIA support
       # This replaces the Xwayland binary completely so KDE will use it
-      xwayland-wrapped = homeLib.gfxBinExeIncDrivers "Xwayland" pkgs.xwayland;
+      xwayland-wrapped = homeLib.gfxExe "Xwayland" pkgs.xwayland;
     in
     lib.mkIf config.features.hyprland {
       home.packages = [

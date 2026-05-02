@@ -40,19 +40,16 @@ let
     LD_LIBRARY_PATHS = lib.concatStringsSep ":" ldPaths;
   };
 
+  # Wrap a Nix-built GUI binary in nixGL and inject system driver search
+  # paths (Mesa GBM backends, DRI drivers) so loaders find /usr/lib/gbm,
+  # /usr/lib/dri, etc. on non-NixOS hosts. --suffix lets user-set env
+  # values take precedence; missing paths in the list are silently skipped.
   mkNixGLWrapper =
     name: programPath:
     requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
       makeWrapper ${requireSystemInfo.nixGLBin} $out/bin/${name} \
-        --add-flag "${programPath}"
-    '';
-
-  mkNixGLWrapperWithDrivers =
-    name: programPath:
-    requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
-      makeWrapper ${requireSystemInfo.nixGLBin} $out/bin/${name} \
-        --set GBM_BACKENDS_PATH "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
-        --set LIBGL_DRIVERS_PATH "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
+        --suffix GBM_BACKENDS_PATH : "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
+        --suffix LIBGL_DRIVERS_PATH : "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
         --add-flag "${programPath}"
     '';
 
@@ -76,9 +73,9 @@ in
       name = builtins.baseNameOf programPath;
     in
     mkNixGLWrapper name programPath;
+
   gfxName = name: program: mkNixGLWrapper name (lib.getExe program);
-  gfxBinIncDrivers = name: program: mkNixGLWrapperWithDrivers name (lib.getExe program);
-  gfxDirectWithDrivers = name: program: mkDirectWrapperWithDrivers name (lib.getExe program);
+
   gfxExe =
     exeName: program:
     let
@@ -86,24 +83,6 @@ in
       name = builtins.baseNameOf programPath;
     in
     mkNixGLWrapper name programPath;
-  gfxBinExeIncDrivers =
-    exeName: program:
-    let
-      programPath = lib.getExe' program exeName;
-      name = builtins.baseNameOf programPath;
-    in
-    mkNixGLWrapperWithDrivers name programPath;
-  gfxNameExe =
-    name: exeName: program:
-    mkNixGLWrapper name (lib.getExe' program exeName);
-  gfxList =
-    programs:
-    map (
-      program:
-      let
-        programPath = lib.getExe program;
-        name = builtins.baseNameOf programPath;
-      in
-      mkNixGLWrapper name programPath
-    ) programs;
+
+  gfxDirectWithDrivers = name: program: mkDirectWrapperWithDrivers name (lib.getExe program);
 }
