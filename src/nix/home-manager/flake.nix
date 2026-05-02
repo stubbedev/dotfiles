@@ -3,7 +3,11 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixgl.url = "github:nix-community/nixGL";
+    # Pinned to KeeTraxx PR #221 (https://github.com/nix-community/nixGL/pull/221)
+    # Drops `kernel = null` override removed from nixpkgs nvidia-x11/generic.nix
+    # and fixes version regex for NVIDIA Open Kernel Module 595.71.05+
+    # Switch back to github:nix-community/nixGL once #221 is merged
+    nixgl.url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 
