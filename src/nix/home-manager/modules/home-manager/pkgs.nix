@@ -52,6 +52,28 @@ let
       };
     };
 
+  # html-to-markdown ships from a polyglot workspace whose Cargo.lock is
+  # gitignored, so the github tarball is unbuildable. The crates.io tarball
+  # for `html-to-markdown-cli` ships its own resolved Cargo.lock for just
+  # the binary subcrate — fetch that directly.
+  htmlToMarkdownOverlay =
+    final: prev:
+    let
+      pname = "html-to-markdown-cli";
+      version = "3.4.0-rc.25";
+      src = final.fetchCrate {
+        inherit pname version;
+        hash = "sha256-aEe5qbl2UUum0bnBMVuJr6E2Yl0fsia2i0yLMnMTd2s=";
+      };
+    in
+    {
+      html-to-markdown = final.rustPlatform.buildRustPackage {
+        inherit pname version src;
+        cargoLock.lockFile = src + "/Cargo.lock";
+        doCheck = false;
+      };
+    };
+
   # Overlay that exposes the opencode package from the opencode flake input,
   # patching out the bun version check so it builds with whatever bun nixpkgs
   # provides. The check is a build-time guard that serves no runtime purpose.
@@ -94,6 +116,7 @@ let
         nixglOverlay
         opencodeOverlay
         cshipOverlay
+        htmlToMarkdownOverlay
       ];
     };
 in

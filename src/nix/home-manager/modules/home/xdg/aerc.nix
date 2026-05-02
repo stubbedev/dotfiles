@@ -10,6 +10,7 @@ _: {
       xdg.configFile = homeLib.xdgSources [
         "aerc/aerc.conf"
         "aerc/binds.conf"
+        "aerc/scripts"
       ];
     };
 }
