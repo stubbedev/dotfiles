@@ -25,7 +25,46 @@ _: {
       pathPrefix = lib.concatStringsSep ":" desiredPaths;
       dataDirsPrefix = lib.concatStringsSep ":" desiredDataDirs;
 
-      niri-wrapped = homeLib.gfxDirectWithDrivers "niri" pkgs.niri;
+      niri-gfx-wrapped = homeLib.gfxDirectWithDrivers "niri" pkgs.niri;
+
+      # Auto-detect NIRI_SOCKET so `niri msg ...` works in shells started
+      # before niri (e.g. tmux sessions, terminals from a previous DM
+      # session). Mirrors the hyprctl-wrapped pattern. niri's socket lives
+      # at /run/user/$UID/niri.<wayland-display>.<pid>.sock.
+      niri-wrapped = pkgs.writeShellScriptBin "niri" ''
+        uid="''${UID:-$(id -u)}"
+        sock_dir="/run/user/$uid"
+
+        _socket_ok() {
+          [ -S "$1" ]
+        }
+
+        if [ -n "$NIRI_SOCKET" ] && _socket_ok "$NIRI_SOCKET"; then
+          : # current value still valid
+        else
+          # Pick the newest live niri socket. Filename ends with the
+          # compositor PID, so we can verify the process is still alive.
+          newest_socket=""
+          newest_mtime=0
+          for sock in "$sock_dir"/niri.*.sock; do
+            _socket_ok "$sock" || continue
+            base="''${sock##*/}"
+            pid="''${base%.sock}"
+            pid="''${pid##*.}"
+            [ -d "/proc/$pid" ] || continue
+            mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$sock" 2>/dev/null || echo 0)
+            if [ "$mtime" -gt "$newest_mtime" ]; then
+              newest_mtime="$mtime"
+              newest_socket="$sock"
+            fi
+          done
+          if [ -n "$newest_socket" ]; then
+            export NIRI_SOCKET="$newest_socket"
+          fi
+        fi
+
+        exec ${niri-gfx-wrapped}/bin/niri "$@"
+      '';
 
       start-niri = pkgs.runCommand "start-niri" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         makeWrapper ${pkgs.writeShellScript "start-niri-inner" ''
@@ -47,9 +86,9 @@ _: {
           ''}
 
           if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
-            exec ${pkgs.dbus}/bin/dbus-run-session -- ${niri-wrapped}/bin/niri --session
+            exec ${pkgs.dbus}/bin/dbus-run-session -- ${niri-gfx-wrapped}/bin/niri --session
           else
-            exec ${niri-wrapped}/bin/niri --session
+            exec ${niri-gfx-wrapped}/bin/niri --session
           fi
         ''} $out/bin/start-niri \
           --prefix PATH : "${pathPrefix}" \

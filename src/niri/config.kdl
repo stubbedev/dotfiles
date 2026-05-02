@@ -100,6 +100,7 @@ spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 spawn-at-startup "nm-applet" "--indicator"
 spawn-at-startup "blueman-applet"
 spawn-at-startup "hyprpolkitagent"
+spawn-at-startup "/home/stubbe/.config/niri/scripts/refocus-on-close.sh"
 
 window-rule {
     match title="Select what to share"
