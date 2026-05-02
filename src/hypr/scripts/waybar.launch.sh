@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Launch waybar with proper Hyprland environment detection
-# This ensures waybar can communicate with Hyprland for workspace updates
+# Launch waybar with proper Wayland environment detection.
+# Sets HYPRLAND_INSTANCE_SIGNATURE only when an active Hyprland socket is
+# found; on niri (or any other Wayland compositor) we skip Hyprland detection
+# and proceed — waybar's hyprland module just stays inactive there.
 
-# Auto-detect the current active Hyprland instance (wait briefly if needed)
 CURRENT_INSTANCE=""
 attempt=0
 
@@ -14,30 +15,30 @@ if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
   fi
 fi
 
-while [ $attempt -lt 50 ] && [ -z "$CURRENT_INSTANCE" ]; do
-  CURRENT_INSTANCE=""
-  for lockfile in $(ls -t /run/user/$(id -u)/hypr/*/hyprland.lock 2>/dev/null); do
-    instance_dir=$(dirname "$lockfile")
-    instance_name=$(basename "$instance_dir")
-    socket_path="$instance_dir/.socket.sock"
+# Only spend time scanning for a Hyprland instance if we look like a
+# Hyprland session; otherwise jump straight to launching waybar.
+if [ -z "$CURRENT_INSTANCE" ] && [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
+  while [ $attempt -lt 50 ] && [ -z "$CURRENT_INSTANCE" ]; do
+    for lockfile in $(ls -t /run/user/$(id -u)/hypr/*/hyprland.lock 2>/dev/null); do
+      instance_dir=$(dirname "$lockfile")
+      instance_name=$(basename "$instance_dir")
+      socket_path="$instance_dir/.socket.sock"
 
-    if [ -S "$socket_path" ]; then
-      CURRENT_INSTANCE="$instance_name"
-      break
+      if [ -S "$socket_path" ]; then
+        CURRENT_INSTANCE="$instance_name"
+        break
+      fi
+    done
+
+    if [ -z "$CURRENT_INSTANCE" ]; then
+      sleep 0.1
     fi
+    attempt=$((attempt + 1))
   done
-
-  if [ -z "$CURRENT_INSTANCE" ]; then
-    sleep 0.1
-  fi
-  attempt=$((attempt + 1))
-done
+fi
 
 if [ -n "$CURRENT_INSTANCE" ]; then
   export HYPRLAND_INSTANCE_SIGNATURE="$CURRENT_INSTANCE"
-else
-  echo "No Hyprland socket found, retrying via systemd" >&2
-  exit 1
 fi
 
 # Auto-detect WAYLAND_DISPLAY if not set or if the socket no longer exists

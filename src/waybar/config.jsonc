@@ -6,10 +6,13 @@
 	// "width": 1280, // Waybar width
 	"spacing": 4, // Gaps between modules (4px)
 	// Choose the order of the modules
-	"modules-left": ["hyprland/workspaces", "hyprland/submap"],
+	// Both compositors' workspace widgets are listed; waybar disables
+	// whichever module has no live IPC and renders only the active one.
+	"modules-left": ["hyprland/workspaces", "niri/workspaces", "hyprland/submap"],
 	"modules-center": ["custom/mail", "custom/tmux"],
 	"modules-right": [
 		"hyprland/language",
+    "niri/language",
 		"pulseaudio",
 		"bluetooth",
 		"backlight",
@@ -63,7 +66,35 @@
 		"format": "{class}",
 		"max-length": 50,
 	},
+	"niri/workspaces": {
+		"format": "{index} {icon}",
+		"format-icons": {
+			"1": "<span foreground='#89B4FA'> </span>",
+			"2": "<span foreground='#F0C6C6'> </span>",
+			"3": "<span foreground='#DDB6F2'> </span>",
+			"4": "<span foreground='#F5BDE6'> </span>",
+			"5": "<span foreground='#F28D8C'> </span>",
+			"6": "<span foreground='#E8A2A1'> </span>",
+			"7": "<span foreground='#F8BD96'> </span>",
+			"8": "<span foreground='#FAE3B0'> </span>",
+			"9": "<span foreground='#A6D189'> </span>",
+			"10": "<span foreground='#81C8BE'> </span>",
+			"default": "<span> </span>",
+			"focused": "<span> </span>",
+			"urgent": "<span> </span>",
+		},
+	},
+	"niri/window": {
+		"format": "{title}",
+		"max-length": 50,
+	},
 	"hyprland/language": {
+		"format": "{}",
+		"format-en": " EN",
+		"format-da": " DA",
+		"format-es": " ES",
+	},
+	"niri/language": {
 		"format": "{}",
 		"format-en": " EN",
 		"format-da": " DA",

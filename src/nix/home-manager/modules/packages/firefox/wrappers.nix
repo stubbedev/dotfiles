@@ -20,8 +20,14 @@ _: {
         pkgs.runCommand "firefox-${pkgs.firefox.version}-xdg"
           { nativeBuildInputs = [ pkgs.makeWrapper ]; }
           ''
+            # libxul.so links against libpng-apng (animated PNG fork) which has
+            # png_get_next_frame_delay_num. nixpkgs' firefox wrapper doesn't put
+            # libpng-apng on LD_LIBRARY_PATH, and ld.so.cache happens to find
+            # /usr/lib/libpng16.so.16 (stock libpng, no APNG symbols) before
+            # libxul.so's RUNPATH is consulted. --prefix forces the right one.
             makeWrapper ${gfxFirefox}/bin/firefox $out/bin/firefox \
-              --unset MOZ_LEGACY_PROFILES
+              --unset MOZ_LEGACY_PROFILES \
+              --prefix LD_LIBRARY_PATH : "${pkgs.libpng.out}/lib"
           '';
 
       # Combine wrapper bin/firefox with upstream's share/ (icons, desktop
