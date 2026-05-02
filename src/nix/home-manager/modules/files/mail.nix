@@ -10,8 +10,11 @@ _: {
       home.file = {
         ".local/bin/open-mail" = {
           text = ''
+            #!/usr/bin/env bash
             if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
               hyprctl dispatch exec "${constants.paths.term} -e aerc"
+            elif [[ "$XDG_CURRENT_DESKTOP" == "niri" ]] && command -v niri &> /dev/null; then
+              niri msg action spawn -- ${constants.paths.term} -e aerc
             else
               ${constants.paths.term} -e aerc
             fi

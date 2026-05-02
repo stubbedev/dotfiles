@@ -30,10 +30,25 @@ input {
     }
 }
 
-// Monitor configuration
-// Outputs are matched by connector name (e.g. eDP-1, DP-1, HDMI-A-1).
-// Run `niri msg outputs` to list connected outputs and find connector names.
+// Niri picks the EDID-preferred mode by default, which is often not the
+// highest — pin external monitors explicitly. Omitting the refresh rate
+// makes niri pick the highest available refresh for that resolution.
 output "eDP-1" {
+    scale 1.5
+}
+
+output "Samsung Electric Company LC32G5xT HNAT600370" {
+    mode "2560x1440"
+    scale 1
+}
+
+output "LG Electronics LG HDR WQHD 207NTXRAJ498" {
+    mode "3440x1440"
+    scale 1
+}
+
+output "LG Electronics LG HDR 4K 0x00016261" {
+    mode "3840x2160"
     scale 1.5
 }
 
@@ -99,7 +114,7 @@ xwayland-satellite {
 // systemd session bootstrap: import env, stop any leftover hyprland-session
 // target (so its hyprpaper/portal services don't keep restarting), then
 // activate niri-session.target which pulls in waybar/swaync/secrets.
-spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
+spawn-at-startup "dbus-update-activation-environment" "--systemd" "DBUS_SESSION_BUS_ADDRESS" "PATH" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
 spawn-at-startup "sh" "-c" "systemctl --user stop hyprland-session.target 2>/dev/null; systemctl --user start niri-session.target"
 
 spawn-at-startup "hypridle" "--config" "/home/stubbe/.config/niri/hypridle.conf"
@@ -154,6 +169,13 @@ window-rule {
 window-rule {
     match app-id="^steam$" title="^Steam$"
     open-floating false
+}
+
+// Niri's default draws the border as a background behind the window; CSD
+// apps (firefox, chrome, …) paint over it and the focus color only shows
+// after a resize. Render as an outline around the window instead.
+window-rule {
+    draw-border-with-background false
 }
 
 binds {
