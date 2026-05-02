@@ -29,8 +29,8 @@ let
   ];
 
   ldPaths = lib.unique [
-    "usr/lib"
-    "usr/lib64"
+    "/usr/lib"
+    "/usr/lib64"
   ];
 
   gfxDriverEnv = {
@@ -39,6 +39,18 @@ let
     EGL_VENDOR_LIBRARY_DIRS = lib.concatStringsSep ":" eglVendorPaths;
     LD_LIBRARY_PATHS = lib.concatStringsSep ":" ldPaths;
   };
+
+  # NVIDIA's libEGL_nvidia.so dlopens libnvidia-egl-wayland.so.1 and
+  # libnvidia-egl-gbm.so.1 to expose the Wayland EGL and GBM platforms.
+  # nixGL's NVIDIA bundle does NOT include these external platform libs,
+  # so on non-NixOS hosts Nix-built Wayland clients fail with "provided
+  # display handle is not supported". We add the lib paths to LD_LIBRARY_PATH
+  # and register their JSON configs via __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES.
+  nvidiaEglPlatformLibs = lib.optionalString requireSystemInfo.hasNvidia
+    "${requirePkgs.egl-wayland}/lib:${requirePkgs.egl-gbm}/lib";
+
+  nvidiaEglPlatformConfigs = lib.optionalString requireSystemInfo.hasNvidia
+    "${requirePkgs.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json:${requirePkgs.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json";
 
   # Wrap a Nix-built GUI binary in nixGL and inject system driver search
   # paths (Mesa GBM backends, DRI drivers) so loaders find /usr/lib/gbm,
@@ -50,7 +62,10 @@ let
       makeWrapper ${requireSystemInfo.nixGLBin} $out/bin/${name} \
         --suffix GBM_BACKENDS_PATH : "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
         --suffix LIBGL_DRIVERS_PATH : "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
-        --add-flag "${programPath}"
+        ${lib.optionalString requireSystemInfo.hasNvidia ''
+          --suffix LD_LIBRARY_PATH : "${nvidiaEglPlatformLibs}" \
+          --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${nvidiaEglPlatformConfigs}" \
+        ''}--add-flag "${programPath}"
     '';
 
   # Direct wrapper without nixGL - for DRM/KMS mode where we need host EGL
