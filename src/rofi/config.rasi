@@ -1,3 +1,10 @@
 @import "catppuccin-mocha"
-configuration {}
+configuration {
+    matching:          "fuzzy";
+    sort:              true;
+    levenshtein-sort:  true;
+    drun-show-actions: true;
+    show-icons:        true;
+    icon-theme:        "Tela-circle-purple-dark";
+}
 @theme "catppuccin-default"
