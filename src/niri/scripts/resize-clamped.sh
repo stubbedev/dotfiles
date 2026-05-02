@@ -12,7 +12,11 @@
 #
 # set-column-width / set-window-height take inner-window pixels, while
 # we compare in tile space (which includes borders), so the script
-# converts at dispatch time.
+# converts at dispatch time. The per-axis border total comes from the
+# focused window's IPC (tile_size - window_size); a hardcoded value
+# would be wrong on fractional-scale outputs where niri rounds the
+# border to integer physical pixels (e.g. 1px logical border becomes
+# ~1.33px logical at scale 1.5).
 #
 # Usage:
 #   resize-clamped.sh column <delta>          # +N or -N
@@ -20,9 +24,6 @@
 set -euo pipefail
 
 SNAP_PX=${NIRI_RESIZE_SNAP_PX:-30}
-# Each tile reserves border width on every side (layout.border.width in config.kdl).
-# Tile dimensions = window dimensions + 2*BORDER_PX per axis.
-BORDER_PX=${NIRI_RESIZE_BORDER_PX:-1}
 
 target=$1
 delta=$2
@@ -39,6 +40,20 @@ focused_col=$(printf '%s' "$window_json" | jq -r '.layout.pos_in_scrolling_layou
 focused_row=$(printf '%s' "$window_json" | jq -r '.layout.pos_in_scrolling_layout[1] // empty')
 cur_w=$(printf '%s' "$window_json" | jq -r '.layout.tile_size[0] // 0 | floor')
 cur_h=$(printf '%s' "$window_json" | jq -r '.layout.tile_size[1] // 0 | floor')
+
+# Total border thickness per axis (left+right or top+bottom). Read from
+# the focused window so it tracks the real rendered geometry, including
+# fractional-scale rounding. Falls back to 0 if either size is missing.
+border_w=$(printf '%s' "$window_json" | jq -r '
+  if .layout.tile_size and .layout.window_size
+  then (.layout.tile_size[0] - .layout.window_size[0]) | ceil
+  else 0 end
+')
+border_h=$(printf '%s' "$window_json" | jq -r '
+  if .layout.tile_size and .layout.window_size
+  then (.layout.tile_size[1] - .layout.window_size[1]) | ceil
+  else 0 end
+')
 
 # Strip leading + so $((...)) handles signed arithmetic uniformly.
 delta_n=${delta#+}
@@ -78,14 +93,14 @@ others_tile_h=$(printf '%s' "$windows_json" | jq -r --argjson ws "${ws_id:-0}" -
 dispatch_width() {
   # arg: target tile width — convert to inner window width for set-column-width.
   local tile=$1
-  local win=$((tile - 2 * BORDER_PX))
+  local win=$((tile - border_w))
   [ "$win" -lt 1 ] && win=1
   niri msg action set-column-width "$win"
 }
 
 dispatch_height() {
   local tile=$1
-  local win=$((tile - 2 * BORDER_PX))
+  local win=$((tile - border_h))
   [ "$win" -lt 1 ] && win=1
   niri msg action set-window-height "$win"
 }
