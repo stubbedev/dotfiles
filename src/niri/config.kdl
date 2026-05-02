@@ -58,6 +58,12 @@ animations {
     // defaults: niri ships sane spring-based animations out of the box
 }
 
+gestures {
+    hot-corners {
+        off
+    }
+}
+
 cursor {
     xcursor-theme "Vimix-cursors"
     xcursor-size 24
@@ -169,6 +175,7 @@ binds {
     Mod+C { spawn "bash" "-c" "wl-copy \"$(wl-paste -p)\" && notify-send 'Copied selection'"; }
 
     // GENERAL
+    Mod+W { toggle-overview; }
     Mod+Shift+Q { close-window; }
     Mod+F { fullscreen-window; }
     Mod+Shift+F { maximize-column; }
