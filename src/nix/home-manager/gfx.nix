@@ -8,7 +8,11 @@ let
   requirePkgs = if pkgs == null then throw "gfx: pkgs is required" else pkgs;
   requireSystemInfo = if systemInfo == null then throw "gfx: systemInfo is required" else systemInfo;
 
+  # Mesa probes these paths literally — non-existent entries are skipped,
+  # but if none exist EGL/GBM init fails. Cover RHEL/Arch (lib64), generic
+  # (lib), and Debian/Ubuntu multiarch (lib/x86_64-linux-gnu) layouts.
   gbmPaths = lib.unique [
+    "/usr/lib/x86_64-linux-gnu/gbm"
     "/usr/lib64/gbm"
     "/usr/lib/gbm"
     "/run/opengl-driver/lib/gbm"
@@ -16,6 +20,7 @@ let
   ];
 
   driPaths = lib.unique [
+    "/usr/lib/x86_64-linux-gnu/dri"
     "/usr/lib64/dri"
     "/usr/lib/dri"
     "/run/opengl-driver/lib/dri"

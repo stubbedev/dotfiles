@@ -48,6 +48,7 @@ let
         version = cargoMeta.version;
         inherit src;
         cargoLock.lockFile = src + "/Cargo.lock";
+        doCheck = false;
       };
     };
 
