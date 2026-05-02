@@ -145,7 +145,7 @@ inputbar {
     padding:    1px ;
     spacing:    0px ;
     text-color: @normal-foreground;
-    children:   [ "prompt","textbox-prompt-colon","entry","num-filtered-rows","textbox-num-sep","num-rows","case-indicator" ];
+    children:   [ "prompt", "textbox-prompt-colon", "entry", "case-indicator" ];
 }
 case-indicator {
     spacing:    0;
