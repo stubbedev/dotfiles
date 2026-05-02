@@ -25,7 +25,10 @@ _: {
       pathPrefix = lib.concatStringsSep ":" desiredPaths;
       dataDirsPrefix = lib.concatStringsSep ":" desiredDataDirs;
 
-      niri-gfx-wrapped = homeLib.gfxDirectWithDrivers "niri" pkgs.niri;
+      # Same nixGL wrapping as Hyprland — host Mesa drivers can be older
+      # than Nix's libgbm (e.g. Ubuntu 25.2 vs Nix 26.x), so we need
+      # nixGL's bundled drivers for ABI match.
+      niri-gfx-wrapped = homeLib.gfxName "niri" pkgs.niri;
 
       # Auto-detect NIRI_SOCKET so `niri msg ...` works in shells started
       # before niri (e.g. tmux sessions, terminals from a previous DM
