@@ -8,7 +8,21 @@ _: {
       ...
     }:
     let
-      firefox-wrapped = homeLib.gfx pkgs.firefox;
+      # Wrap firefox in nixGL, then strip MOZ_LEGACY_PROFILES so the binary
+      # falls back to its built-in XDG-compliant default (Firefox 147+).
+      # nixpkgs hardcodes MOZ_LEGACY_PROFILES=1 in its wrapper to keep the
+      # historical ~/.mozilla/firefox path; we want ~/.config/mozilla/firefox
+      # to match the previous programs.firefox setup.
+      firefox-wrapped =
+        let
+          gfxFirefox = homeLib.gfx pkgs.firefox;
+        in
+        pkgs.runCommand "firefox-${pkgs.firefox.version}-xdg"
+          { nativeBuildInputs = [ pkgs.makeWrapper ]; }
+          ''
+            makeWrapper ${gfxFirefox}/bin/firefox $out/bin/firefox \
+              --unset MOZ_LEGACY_PROFILES
+          '';
 
       # Combine wrapper bin/firefox with upstream's share/ (icons, desktop
       # entry, MIME registrations). symlinkJoin links earlier paths first,
