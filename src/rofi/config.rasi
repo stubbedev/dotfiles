@@ -6,5 +6,6 @@ configuration {
     drun-show-actions: true;
     show-icons:        true;
     icon-theme:        "Tela-circle-purple-dark";
+    lines:             10;
 }
 @theme "catppuccin-default"

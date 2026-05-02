@@ -35,6 +35,9 @@ window {
     background-color: @mantle;
     border:           1;
     border-color:     @mauve;
+    location:         north;
+    anchor:           north;
+    y-offset:         33%;
 }
 
 mainbox {
@@ -86,11 +89,12 @@ textbox {
 }
 
 listview {
-    padding:   4 0;
-    scrollbar: false;
-    border:    0;
-    spacing:   2;
-    lines:     10;
+    padding:       4 0;
+    scrollbar:     false;
+    border:        0;
+    spacing:       2;
+    fixed-height:  false;
+    lines:         10;
 }
 
 element {
