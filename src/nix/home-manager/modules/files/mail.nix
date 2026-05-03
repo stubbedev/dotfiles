@@ -17,22 +17,27 @@ _: {
             # aerc updates the displayed folder/count.
             APP_ID="aerc-mail"
 
+            spawn_term() {
+              ${constants.paths.term} msg create-window --class "$APP_ID" -e aerc \
+                || ${constants.paths.term} --class "$APP_ID" -e aerc
+            }
+
             if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
               addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
               if [[ -n "$addr" ]]; then
                 hyprctl dispatch focuswindow "address:$addr"
               else
-                hyprctl dispatch exec "${constants.paths.term} --class $APP_ID -e aerc"
+                spawn_term
               fi
             elif [[ "$XDG_CURRENT_DESKTOP" == "niri" ]] && command -v niri &> /dev/null; then
               id=$(niri msg --json windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
               if [[ -n "$id" ]]; then
                 niri msg action focus-window --id "$id"
               else
-                niri msg action spawn -- ${constants.paths.term} --class "$APP_ID" -e aerc
+                spawn_term
               fi
             else
-              ${constants.paths.term} --class "$APP_ID" -e aerc
+              spawn_term
             fi
           '';
           executable = true;

@@ -34,7 +34,7 @@ def _join_wrapped_lines(lines):
         stripped = line.strip()
         if not text:
             text = stripped
-        elif text.endswith((" ", "-", "/")) or stripped.startswith((".", ",", ":", ";", "!", "?", ")", "]")):
+        elif text.endswith((" ", "-")) or stripped.startswith((".", ",", ":", ";", "!", "?", ")", "]")):
             text += stripped
         else:
             text += " " + stripped
