@@ -41,27 +41,31 @@ _: {
         sock_dir="/run/user/$uid"
         stable_sock="$sock_dir/niri-current.sock"
 
-        _socket_ok() {
-          [ -S "$1" ]
+        # Validate a niri socket path: it has to be a socket, and the PID
+        # encoded in the filename has to still be a running process. We
+        # readlink first so the niri-current.sock symlink resolves to its
+        # PID-named target.
+        _niri_alive() {
+          local target base pid
+          target=$(readlink -f "$1" 2>/dev/null) || target="$1"
+          [ -S "$target" ] || return 1
+          base="''${target##*/}"
+          pid="''${base%.sock}"
+          pid="''${pid##*.}"
+          case "$pid" in [0-9]*) [ -d "/proc/$pid" ] ;; *) return 1 ;; esac
         }
 
-        if [ -n "$NIRI_SOCKET" ] && _socket_ok "$NIRI_SOCKET"; then
+        if [ -n "$NIRI_SOCKET" ] && _niri_alive "$NIRI_SOCKET"; then
           : # current value still valid
-        elif _socket_ok "$stable_sock"; then
+        elif _niri_alive "$stable_sock"; then
           export NIRI_SOCKET="$stable_sock"
         else
           # Fallback: niri is up but the spawn-at-startup symlink hasn't
-          # landed yet (or got removed). Pick the newest live niri socket
-          # — filename ends with the compositor PID, so we can verify the
-          # process is still alive.
+          # landed yet (or got removed). Pick the newest live niri socket.
           newest_socket=""
           newest_mtime=0
           for sock in "$sock_dir"/niri.*.sock; do
-            _socket_ok "$sock" || continue
-            base="''${sock##*/}"
-            pid="''${base%.sock}"
-            pid="''${pid##*.}"
-            [ -d "/proc/$pid" ] || continue
+            _niri_alive "$sock" || continue
             mtime=$(${pkgs.coreutils}/bin/stat -c %Y "$sock" 2>/dev/null || echo 0)
             if [ "$mtime" -gt "$newest_mtime" ]; then
               newest_mtime="$mtime"
@@ -71,6 +75,46 @@ _: {
           if [ -n "$newest_socket" ]; then
             export NIRI_SOCKET="$newest_socket"
           fi
+        fi
+
+        # Guard against accidentally starting a nested compositor inside a
+        # live niri session. A bare `niri` (or `niri --session`, `niri -c
+        # somecfg`, …) launches a new compositor, libwayland falls back
+        # to wayland-N, and the leftover stale socket breaks waybar and
+        # friends on next start. niri itself has no built-in for this.
+        #
+        # niri's CLI is `niri [OPTIONS] [-- COMMAND...]` or `niri
+        # SUBCOMMAND`. So instead of enumerating subcommands (which drift
+        # between niri versions), we walk the args: the first non-option
+        # positional encountered before `--` is a subcommand and means no
+        # compositor starts. Help / version flags exit early; -c/--config
+        # consumes its value. Bare args, only options, or `--` mean
+        # compositor.
+        # NIRI_ALLOW_NESTED=1 bypasses the guard.
+        _starts_compositor() {
+          local arg expecting_value=0
+          for arg in "$@"; do
+            if [ "$expecting_value" -eq 1 ]; then
+              expecting_value=0
+              continue
+            fi
+            case "$arg" in
+              -h|--help|-V|--version) return 1 ;;
+              -c|--config) expecting_value=1 ;;
+              --) return 0 ;;
+              -*) ;;
+              *) return 1 ;;
+            esac
+          done
+          return 0
+        }
+
+        if [ -n "$NIRI_SOCKET" ] && [ -z "''${NIRI_ALLOW_NESTED:-}" ] \
+           && _starts_compositor "$@"; then
+          echo "niri: a live niri session is already running ($NIRI_SOCKET)" >&2
+          echo "      refusing to start a nested compositor; use 'niri msg …' for IPC" >&2
+          echo "      (set NIRI_ALLOW_NESTED=1 to override)" >&2
+          exit 1
         fi
 
         exec ${niri-gfx-wrapped}/bin/niri "$@"
