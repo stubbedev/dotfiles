@@ -55,7 +55,7 @@ output "LG Electronics LG HDR 4K 0x00016261" {
 layout {
     gaps 0
 
-    default-column-width { proportion 0.5; }
+    default-column-width { proportion 0.33333; }
 
     focus-ring {
         off
@@ -70,7 +70,9 @@ layout {
 }
 
 animations {
-    // defaults: niri ships sane spring-based animations out of the box
+    // Resize binds already step manually; animating every step makes clients
+    // redraw repeatedly and makes keyboard resizing feel sluggish.
+    window-resize { off; }
 }
 
 gestures {

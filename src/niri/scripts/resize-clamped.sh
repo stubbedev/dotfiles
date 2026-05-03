@@ -3,8 +3,8 @@
 #
 #  - Soft snap: when a delta crosses into ±SNAP_PX of the "all-tiles-fit"
 #    point (output minus the other on-screen tiles), the result snaps to
-#    that point. Pressing again past the snap exits the zone and resumes
-#    normal stepping, so you can still grow beyond it.
+#    that point from either direction. Pressing again past the snap exits the
+#    zone and resumes normal stepping, so you can still grow/shrink beyond it.
 #
 #  - Hard cap: a single column or window can never exceed the focused
 #    output's logical dimensions. Within SNAP_PX of the cap, the result
@@ -113,8 +113,8 @@ case "$target" in
     soft=$((out_w - others_tile_w))
     # Hard boundary: a single column can never exceed the monitor itself.
     hard=$out_w
+    diff_soft=$((new_tile - soft)); [ "$diff_soft" -lt 0 ] && diff_soft=$((-diff_soft))
     if [ "$delta_n" -gt 0 ]; then
-      diff_soft=$((new_tile - soft)); [ "$diff_soft" -lt 0 ] && diff_soft=$((-diff_soft))
       if [ "$cur_w" -lt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
         dispatch_width "$soft"
       elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$SNAP_PX" ]; then
@@ -122,6 +122,8 @@ case "$target" in
       else
         niri msg action set-column-width "$delta"
       fi
+    elif [ "$cur_w" -gt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
+      dispatch_width "$soft"
     else
       niri msg action set-column-width "$delta"
     fi
@@ -131,8 +133,8 @@ case "$target" in
     new_tile=$((cur_h + delta_n))
     soft=$((out_h - others_tile_h))
     hard=$out_h
+    diff_soft=$((new_tile - soft)); [ "$diff_soft" -lt 0 ] && diff_soft=$((-diff_soft))
     if [ "$delta_n" -gt 0 ]; then
-      diff_soft=$((new_tile - soft)); [ "$diff_soft" -lt 0 ] && diff_soft=$((-diff_soft))
       if [ "$cur_h" -lt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
         dispatch_height "$soft"
       elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$SNAP_PX" ]; then
@@ -140,6 +142,8 @@ case "$target" in
       else
         niri msg action set-window-height "$delta"
       fi
+    elif [ "$cur_h" -gt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
+      dispatch_height "$soft"
     else
       niri msg action set-window-height "$delta"
     fi
