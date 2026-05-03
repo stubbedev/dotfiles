@@ -117,6 +117,12 @@ xwayland-satellite {
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "DBUS_SESSION_BUS_ADDRESS" "PATH" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
 spawn-at-startup "sh" "-c" "systemctl --user stop hyprland-session.target 2>/dev/null; systemctl --user start niri-session.target"
 
+// Stable IPC socket symlink. niri's real socket name embeds its PID
+// (niri.<wayland-display>.<pid>.sock) so it changes on every niri restart.
+// Wrappers and activation scripts read this fixed path instead of scanning
+// /run/user/$UID for the newest live socket.
+spawn-at-startup "sh" "-c" "ln -sfn \"$NIRI_SOCKET\" \"$XDG_RUNTIME_DIR/niri-current.sock\""
+
 spawn-at-startup "hypridle" "--config" "/home/stubbe/.config/niri/hypridle.conf"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.sh"  // uses awww (renamed from swww)
 spawn-at-startup "wl-clip-persist" "--clipboard" "regular"

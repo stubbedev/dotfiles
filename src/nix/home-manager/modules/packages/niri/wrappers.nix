@@ -32,11 +32,14 @@ _: {
 
       # Auto-detect NIRI_SOCKET so `niri msg ...` works in shells started
       # before niri (e.g. tmux sessions, terminals from a previous DM
-      # session). Mirrors the hyprctl-wrapped pattern. niri's socket lives
-      # at /run/user/$UID/niri.<wayland-display>.<pid>.sock.
+      # session). Mirrors the hyprctl-wrapped pattern. niri's real socket
+      # name embeds its PID (niri.<wayland-display>.<pid>.sock); a niri
+      # spawn-at-startup hook keeps a stable niri-current.sock symlink to
+      # the live socket so we don't have to scan and pick the newest.
       niri-wrapped = pkgs.writeShellScriptBin "niri" ''
         uid="''${UID:-$(id -u)}"
         sock_dir="/run/user/$uid"
+        stable_sock="$sock_dir/niri-current.sock"
 
         _socket_ok() {
           [ -S "$1" ]
@@ -44,9 +47,13 @@ _: {
 
         if [ -n "$NIRI_SOCKET" ] && _socket_ok "$NIRI_SOCKET"; then
           : # current value still valid
+        elif _socket_ok "$stable_sock"; then
+          export NIRI_SOCKET="$stable_sock"
         else
-          # Pick the newest live niri socket. Filename ends with the
-          # compositor PID, so we can verify the process is still alive.
+          # Fallback: niri is up but the spawn-at-startup symlink hasn't
+          # landed yet (or got removed). Pick the newest live niri socket
+          # — filename ends with the compositor PID, so we can verify the
+          # process is still alive.
           newest_socket=""
           newest_mtime=0
           for sock in "$sock_dir"/niri.*.sock; do

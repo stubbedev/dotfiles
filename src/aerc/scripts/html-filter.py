@@ -17,6 +17,55 @@ import sys
 
 from bs4 import BeautifulSoup, Comment
 
+
+def _is_structural_markdown_line(line):
+    stripped = line.lstrip()
+    return bool(
+        re.match(r"^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|[-*_]{3,}\s*$)", stripped)
+        or re.match(r"^\[[^\]]+\]:\s", stripped)
+        or stripped.startswith("|")
+        or line.startswith("    ")
+    )
+
+
+def _join_wrapped_lines(lines):
+    text = ""
+    for line in lines:
+        stripped = line.strip()
+        if not text:
+            text = stripped
+        elif text.endswith((" ", "-", "/")) or stripped.startswith((".", ",", ":", ";", "!", "?", ")", "]")):
+            text += stripped
+        else:
+            text += " " + stripped
+    return text
+
+
+def _reflow_markdown_paragraphs(markdown):
+    output = []
+    paragraph = []
+    in_fence = False
+
+    def flush_paragraph():
+        if paragraph:
+            output.append(_join_wrapped_lines(paragraph))
+            paragraph.clear()
+
+    for line in markdown.splitlines():
+        if line.startswith("```") or line.startswith("~~~"):
+            flush_paragraph()
+            in_fence = not in_fence
+            output.append(line)
+        elif in_fence or not line.strip() or _is_structural_markdown_line(line):
+            flush_paragraph()
+            output.append(line)
+        else:
+            paragraph.append(line)
+
+    flush_paragraph()
+    return "\n".join(output) + ("\n" if markdown.endswith("\n") else "")
+
+
 soup = BeautifulSoup(sys.stdin.read(), "html.parser")
 
 # Strip every HTML comment — catches MSO conditionals like
@@ -71,4 +120,5 @@ result = subprocess.run(
 
 # Layout tables and stripped <br>s leave behind long runs of empty lines.
 # Collapse any stretch of 3+ blank lines to a single blank line.
-sys.stdout.write(re.sub(r"\n{3,}", "\n\n", result.stdout))
+markdown = _reflow_markdown_paragraphs(result.stdout)
+sys.stdout.write(re.sub(r"\n{3,}", "\n\n", markdown))
