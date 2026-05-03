@@ -70,9 +70,7 @@ layout {
 }
 
 animations {
-    // Resize binds already step manually; animating every step makes clients
-    // redraw repeatedly and makes keyboard resizing feel sluggish.
-    window-resize { off; }
+    // defaults: niri ships sane spring-based animations out of the box
 }
 
 gestures {

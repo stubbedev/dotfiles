@@ -24,6 +24,7 @@
 set -euo pipefail
 
 SNAP_PX=${NIRI_RESIZE_SNAP_PX:-30}
+MIN_TILE_PX=${NIRI_RESIZE_MIN_PX:-100}
 
 target=$1
 delta=$2
@@ -113,16 +114,17 @@ case "$target" in
     soft=$((out_w - others_tile_w))
     # Hard boundary: a single column can never exceed the monitor itself.
     hard=$out_w
-    diff_soft=$((new_tile - soft)); [ "$diff_soft" -lt 0 ] && diff_soft=$((-diff_soft))
     if [ "$delta_n" -gt 0 ]; then
-      if [ "$cur_w" -lt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
+      if [ "$cur_w" -lt "$soft" ] && [ "$new_tile" -ge $((soft - SNAP_PX)) ]; then
         dispatch_width "$soft"
       elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$SNAP_PX" ]; then
         dispatch_width "$hard"
       else
         niri msg action set-column-width "$delta"
       fi
-    elif [ "$cur_w" -gt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
+    elif [ "$new_tile" -le "$MIN_TILE_PX" ]; then
+      dispatch_width "$MIN_TILE_PX"
+    elif [ "$cur_w" -gt "$soft" ] && [ "$new_tile" -le $((soft + SNAP_PX)) ]; then
       dispatch_width "$soft"
     else
       niri msg action set-column-width "$delta"
@@ -133,16 +135,17 @@ case "$target" in
     new_tile=$((cur_h + delta_n))
     soft=$((out_h - others_tile_h))
     hard=$out_h
-    diff_soft=$((new_tile - soft)); [ "$diff_soft" -lt 0 ] && diff_soft=$((-diff_soft))
     if [ "$delta_n" -gt 0 ]; then
-      if [ "$cur_h" -lt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
+      if [ "$cur_h" -lt "$soft" ] && [ "$new_tile" -ge $((soft - SNAP_PX)) ]; then
         dispatch_height "$soft"
       elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$SNAP_PX" ]; then
         dispatch_height "$hard"
       else
         niri msg action set-window-height "$delta"
       fi
-    elif [ "$cur_h" -gt "$soft" ] && [ "$diff_soft" -le "$SNAP_PX" ]; then
+    elif [ "$new_tile" -le "$MIN_TILE_PX" ]; then
+      dispatch_height "$MIN_TILE_PX"
+    elif [ "$cur_h" -gt "$soft" ] && [ "$new_tile" -le $((soft + SNAP_PX)) ]; then
       dispatch_height "$soft"
     else
       niri msg action set-window-height "$delta"
