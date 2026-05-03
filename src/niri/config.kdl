@@ -55,7 +55,7 @@ output "LG Electronics LG HDR 4K 0x00016261" {
 layout {
     gaps 0
 
-    default-column-width { proportion 0.33333; }
+    default-column-width { proportion 0.5; }
 
     focus-ring {
         off
