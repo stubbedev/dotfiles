@@ -8,10 +8,39 @@ _: {
       config,
       ...
     }:
+    let
+      alacrittyReal = homeLib.gfxName "alacritty-real" pkgs.alacritty;
+      alacrittyWrapped = pkgs.writeShellScriptBin "alacritty" ''
+        real="${alacrittyReal}/bin/alacritty-real"
+
+        case "''${1:-}" in
+          --daemon|msg|--help|-h|--version|-V)
+            exec "$real" "$@"
+            ;;
+        esac
+
+        if "$real" msg create-window "$@" >/dev/null 2>&1; then
+          exit 0
+        fi
+
+        "$real" --daemon >/dev/null 2>&1 &
+
+        attempts=0
+        while [ "$attempts" -lt 25 ]; do
+          attempts=$((attempts + 1))
+          if "$real" msg create-window "$@" >/dev/null 2>&1; then
+            exit 0
+          fi
+          sleep 0.04
+        done
+
+        exec "$real" "$@"
+      '';
+    in
     lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
         # Terminal emulator (GPU accelerated)
-        (homeLib.gfx alacritty)
+        alacrittyWrapped
 
         # Network management (GUI applets)
         networkmanagerapplet

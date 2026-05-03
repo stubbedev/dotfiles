@@ -127,7 +127,6 @@ spawn-at-startup "hypridle" "--config" "/home/stubbe/.config/niri/hypridle.conf"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.sh"  // uses awww (renamed from swww)
 spawn-at-startup "wl-clip-persist" "--clipboard" "regular"
 spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
-spawn-at-startup "alacritty" "--daemon"
 spawn-at-startup "nm-applet" "--indicator"
 spawn-at-startup "blueman-applet"
 spawn-at-startup "hyprpolkitagent"
@@ -187,7 +186,7 @@ window-rule {
 
 binds {
     // LAUNCHERS
-    Mod+Return { spawn "sh" "-c" "alacritty msg create-window || alacritty"; }
+    Mod+Return { spawn "alacritty"; }
     Mod+Shift+E { spawn "bash" "-c" "nautilus || thunar || dolphin"; }
     Mod+Space { spawn "rofi" "-drun-reload-desktop-cache" "-drun-use-desktop-cache" "-show" "drun"; }
     Mod+Shift+Space { spawn "rofi" "-show" "combi" "-combi-modes" "run" "-modes" "combi"; }

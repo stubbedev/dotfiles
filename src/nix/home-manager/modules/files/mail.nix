@@ -18,8 +18,7 @@ _: {
             APP_ID="aerc-mail"
 
             spawn_term() {
-              ${constants.paths.term} msg create-window --class "$APP_ID" -e aerc \
-                || ${constants.paths.term} --class "$APP_ID" -e aerc
+              ${constants.paths.term} --class "$APP_ID" -e aerc
             }
 
             if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
