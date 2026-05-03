@@ -40,9 +40,13 @@ in
         fi
       done
 
+      # Reload rules so new plug events pick them up. Do NOT re-trigger
+      # add events on already-attached devices: that re-enumerates the
+      # Thunderbolt dock and can wedge the HDA codec's DP audio MUX
+      # (kernel ELD valid, codec ELDV=0, MUX stuck on a phantom Dev).
+      # New rules apply automatically on next replug or reboot.
       if command -v udevadm >/dev/null 2>&1; then
         sudo udevadm control --reload-rules >/dev/null 2>&1 || true
-        sudo udevadm trigger --subsystem-match=usb --action=add >/dev/null 2>&1 || true
       fi
     '';
     skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
