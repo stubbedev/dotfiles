@@ -187,7 +187,7 @@ window-rule {
 binds {
     // LAUNCHERS
     Mod+Return { spawn "alacritty"; }
-    Mod+Shift+E { spawn "bash" "-c" "nautilus || thunar || dolphin"; }
+    Mod+Shift+E { spawn "bash" "-c" "pcmanfm"; }
     Mod+Space { spawn "rofi" "-drun-reload-desktop-cache" "-drun-use-desktop-cache" "-show" "drun"; }
     Mod+Shift+Space { spawn "rofi" "-show" "combi" "-combi-modes" "run" "-modes" "combi"; }
     Mod+Ctrl+Space { spawn "rofi" "-show" "combi" "-combi-modes" "window" "-modes" "combi"; }
