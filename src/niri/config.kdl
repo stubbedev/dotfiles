@@ -227,8 +227,8 @@ binds {
     // Resize binds dispatch via resize-clamped.sh which caps growth at
     // the focused output's logical dimensions — niri's set-column-width
     // / set-window-height have no built-in monitor clamp.
-    Mod+Ctrl+Left  { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "column" "-50"; }
-    Mod+Ctrl+Right { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "column" "+50"; }
+    Mod+Ctrl+Left  { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "column" "-20%"; }
+    Mod+Ctrl+Right { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "column" "+20%"; }
     Mod+Ctrl+Up    { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "window-height" "-50"; }
     Mod+Ctrl+Down  { spawn "/home/stubbe/.config/niri/scripts/resize-clamped.sh" "window-height" "+50"; }
 

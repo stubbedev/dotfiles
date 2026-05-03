@@ -23,7 +23,7 @@
 #   resize-clamped.sh window-height <delta>
 set -euo pipefail
 
-SNAP_PX=${NIRI_RESIZE_SNAP_PX:-30}
+SNAP=${NIRI_RESIZE_SNAP_PX:-10%}
 MIN_TILE_PX=${NIRI_RESIZE_MIN_PX:-100}
 
 target=$1
@@ -35,6 +35,42 @@ windows_json=$(niri msg --json windows 2>/dev/null || printf '[]')
 
 out_w=$(printf '%s' "$output_json" | jq -r '.logical.width // empty')
 out_h=$(printf '%s' "$output_json" | jq -r '.logical.height // empty')
+
+case "$delta" in
+  *%)
+    percent=${delta%\%}
+    percent_n=${percent#[-+]}
+    case "$target" in
+      column)
+        [ -n "$out_w" ] || { echo "cannot use percentage width without focused output" >&2; exit 1; }
+        delta=$(((out_w * percent_n) / 100))
+        ;;
+      window-height)
+        [ -n "$out_h" ] || { echo "cannot use percentage height without focused output" >&2; exit 1; }
+        delta=$(((out_h * percent_n) / 100))
+        ;;
+    esac
+    if [ "${percent#-}" != "$percent" ]; then
+      delta=-$delta
+    else
+      delta=+$delta
+    fi
+    ;;
+esac
+
+snap_for_axis() {
+  local axis_size=$1
+
+  case "$SNAP" in
+    *%)
+      local percent=${SNAP%\%}
+      printf '%s\n' "$(((axis_size * percent) / 100))"
+      ;;
+    *)
+      printf '%s\n' "$SNAP"
+      ;;
+  esac
+}
 
 ws_id=$(printf '%s' "$window_json" | jq -r '.workspace_id // empty')
 focused_col=$(printf '%s' "$window_json" | jq -r '.layout.pos_in_scrolling_layout[0] // empty')
@@ -109,22 +145,23 @@ dispatch_height() {
 case "$target" in
   column)
     [ -n "$out_w" ] || { niri msg action set-column-width "$delta"; exit 0; }
+    snap_px=$(snap_for_axis "$out_w")
     new_tile=$((cur_w + delta_n))
     # Soft boundary: tile width that lets every column on this workspace fit.
     soft=$((out_w - others_tile_w))
     # Hard boundary: a single column can never exceed the monitor itself.
     hard=$out_w
     if [ "$delta_n" -gt 0 ]; then
-      if [ "$cur_w" -lt "$soft" ] && [ "$new_tile" -ge $((soft - SNAP_PX)) ]; then
+      if [ "$cur_w" -lt "$soft" ] && [ "$new_tile" -ge $((soft - snap_px)) ]; then
         dispatch_width "$soft"
-      elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$SNAP_PX" ]; then
+      elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$snap_px" ]; then
         dispatch_width "$hard"
       else
         niri msg action set-column-width "$delta"
       fi
     elif [ "$new_tile" -le "$MIN_TILE_PX" ]; then
       dispatch_width "$MIN_TILE_PX"
-    elif [ "$cur_w" -gt "$soft" ] && [ "$new_tile" -le $((soft + SNAP_PX)) ]; then
+    elif [ "$cur_w" -gt "$soft" ] && [ "$new_tile" -le $((soft + snap_px)) ]; then
       dispatch_width "$soft"
     else
       niri msg action set-column-width "$delta"
@@ -132,20 +169,21 @@ case "$target" in
     ;;
   window-height)
     [ -n "$out_h" ] || { niri msg action set-window-height "$delta"; exit 0; }
+    snap_px=$(snap_for_axis "$out_h")
     new_tile=$((cur_h + delta_n))
     soft=$((out_h - others_tile_h))
     hard=$out_h
     if [ "$delta_n" -gt 0 ]; then
-      if [ "$cur_h" -lt "$soft" ] && [ "$new_tile" -ge $((soft - SNAP_PX)) ]; then
+      if [ "$cur_h" -lt "$soft" ] && [ "$new_tile" -ge $((soft - snap_px)) ]; then
         dispatch_height "$soft"
-      elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$SNAP_PX" ]; then
+      elif [ "$new_tile" -ge "$hard" ] || [ $((hard - new_tile)) -le "$snap_px" ]; then
         dispatch_height "$hard"
       else
         niri msg action set-window-height "$delta"
       fi
     elif [ "$new_tile" -le "$MIN_TILE_PX" ]; then
       dispatch_height "$MIN_TILE_PX"
-    elif [ "$cur_h" -gt "$soft" ] && [ "$new_tile" -le $((soft + SNAP_PX)) ]; then
+    elif [ "$cur_h" -gt "$soft" ] && [ "$new_tile" -le $((soft + snap_px)) ]; then
       dispatch_height "$soft"
     else
       niri msg action set-window-height "$delta"
