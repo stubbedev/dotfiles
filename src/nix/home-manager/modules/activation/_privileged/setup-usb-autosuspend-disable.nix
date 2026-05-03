@@ -1,26 +1,38 @@
-_: {
+_:
+let
+  usbAudioPowerRules = builtins.readFile ../../../../../udev/rules.d/90-usb-audio-power.rules;
+in
+{
   enableIf = { config, ... }: config.features.desktop;
   args = _: {
-    promptTitle = "Installing USB autosuspend disable rule";
+    promptTitle = "Installing USB power management rules";
     promptBody = ''
-      This keeps USB devices in full-power mode (power/control=on)
-      to avoid missed first keypresses after idle.
+      This keeps USB devices in full-power mode and disables autosuspend
+      for USB audio devices to avoid missed first keypresses and audio pops.
     '';
-    promptQuestion = "Install USB autosuspend disable rule?";
+    promptQuestion = "Install USB power management rules?";
     actionScript = ''
       rulesDir=/etc/udev/rules.d
-      ruleFile="$rulesDir/90-usb-autosuspend-disable.rules"
+      autosuspendRuleFile="$rulesDir/90-usb-autosuspend-disable.rules"
+      audioRuleFile="$rulesDir/90-usb-audio-power.rules"
 
-      tmpfile=$(mktemp)
-      trap 'rm -f "$tmpfile"' EXIT
-      cat > "$tmpfile" << 'EOF'
+      autosuspendTmpfile=$(mktemp)
+      audioTmpfile=$(mktemp)
+      trap 'rm -f "$autosuspendTmpfile" "$audioTmpfile"' EXIT
+
+      cat > "$autosuspendTmpfile" << 'EOF'
       # managed-by: home-manager usb-autosuspend-disable v1
       ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="on"
       EOF
 
+      cat > "$audioTmpfile" << 'EOF'
+      ${usbAudioPowerRules}
+      EOF
+
       sudo install -d -m 0755 "$rulesDir"
-      sudo install -m 0644 "$tmpfile" "$ruleFile"
-      sudo chown root:root "$ruleFile"
+      sudo install -m 0644 "$autosuspendTmpfile" "$autosuspendRuleFile"
+      sudo install -m 0644 "$audioTmpfile" "$audioRuleFile"
+      sudo chown root:root "$autosuspendRuleFile" "$audioRuleFile"
 
       for control in /sys/bus/usb/devices/*/power/control; do
         if [ -w "$control" ]; then
