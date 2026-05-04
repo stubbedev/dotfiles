@@ -8,7 +8,19 @@ _: {
       ...
     }:
     let
+      # vncviewer is FLTK, not GTK — it can't read the GTK theme, but
+      # FLTK accepts -scheme/-fg/-bg/-bg2 and Fl::args() consumes them
+      # before app args. Match Catppuccin Mocha (see src/hypr/theme.conf):
+      #   base #1e1e2e, text #cdd6f4, surface0 #313244.
+      # makeWrapper --add-flags prepends, so user-supplied flags override.
       vncviewerGfx = homeLib.gfxExe "vncviewer" pkgs.tigervnc;
+      vncviewerThemed =
+        pkgs.runCommand "vncviewer-themed"
+          { nativeBuildInputs = [ pkgs.makeWrapper ]; }
+          ''
+            makeWrapper ${vncviewerGfx}/bin/vncviewer $out/bin/vncviewer \
+              --add-flags "-scheme gtk+ -bg '#1e1e2e' -fg '#cdd6f4' -bg2 '#313244'"
+          '';
 
       # Upstream's vncviewer.desktop bakes an absolute /nix/store path
       # into Exec=, so launching from the menu would skip the nixGL
@@ -34,7 +46,7 @@ _: {
       tigervnc-package = pkgs.symlinkJoin {
         name = "tigervnc-${pkgs.tigervnc.version}";
         paths = [
-          vncviewerGfx
+          vncviewerThemed
           vncviewerDesktop
           pkgs.tigervnc
         ];
