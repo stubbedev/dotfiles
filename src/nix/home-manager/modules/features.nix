@@ -73,6 +73,11 @@ _: {
           default = true;
           description = "Enable web browsers (Firefox, Google Chrome).";
         };
+        slack = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable Slack desktop client.";
+        };
       };
     };
 }

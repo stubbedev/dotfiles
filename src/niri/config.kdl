@@ -111,11 +111,11 @@ xwayland-satellite {
     path "xwayland-satellite"
 }
 
-// systemd session bootstrap: import env, stop any leftover hyprland-session
-// target (so its hyprpaper/portal services don't keep restarting), then
-// activate niri-session.target which pulls in waybar/swaync/secrets.
+// systemd session bootstrap: import env, then activate niri-session.target
+// (pulls in waybar/swaync/secrets) while stopping any leftover
+// hyprland-session services.
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "DBUS_SESSION_BUS_ADDRESS" "PATH" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
-spawn-at-startup "sh" "-c" "systemctl --user stop hyprland-session.target 2>/dev/null; systemctl --user start niri-session.target"
+spawn-at-startup "compositor-session" "niri"
 
 // Stable IPC socket symlink. niri's real socket name embeds its PID
 // (niri.<wayland-display>.<pid>.sock) so it changes on every niri restart.

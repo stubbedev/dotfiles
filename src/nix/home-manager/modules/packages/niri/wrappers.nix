@@ -11,8 +11,7 @@ _: {
     let
       inherit (pkgs) lib;
       homeDir = config.home.homeDirectory;
-      desiredPaths =
-        map (path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path) config.home.sessionPath;
+      desiredPaths = map (path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path) config.home.sessionPath;
 
       desiredDataDirs =
         let
@@ -133,17 +132,41 @@ _: {
           unset DISPLAY
 
           ${lib.optionalString systemInfo.hasNvidia ''
-          export __GLX_VENDOR_LIBRARY_NAME=nvidia
-          export LIBVA_DRIVER_NAME=nvidia
-          export MOZ_DISABLE_RDD_SANDBOX=1
-          export NVD_BACKEND=direct
+            export __GLX_VENDOR_LIBRARY_NAME=nvidia
+            export LIBVA_DRIVER_NAME=nvidia
+            export MOZ_DISABLE_RDD_SANDBOX=1
+            export NVD_BACKEND=direct
           ''}
 
-          if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
-            exec ${pkgs.dbus}/bin/dbus-run-session -- ${niri-gfx-wrapped}/bin/niri --session
-          else
-            exec ${niri-gfx-wrapped}/bin/niri --session
-          fi
+          # Tear down the compositor's session target on every exit path so
+          # waybar/swaync/secrets-service (PartOf niri-session.target) come
+          # down with niri, and unset NIRI_SOCKET in the systemd-user manager
+          # so later `niri msg` calls don't hit a dead socket. Runs from a
+          # trap so it covers crashes and forwarded signals as well as
+          # clean Mod+Delete exits.
+          cleanup() {
+            ${pkgs.systemd}/bin/systemctl --user stop niri-session.target 2>/dev/null || true
+            ${pkgs.systemd}/bin/systemctl --user unset-environment NIRI_SOCKET 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ${niri-gfx-wrapped}/bin/niri --session &
+          niri_pid=$!
+
+          # Forward shutdown signals to niri so it can exit cleanly when
+          # logind tears down the session (system shutdown, switch user,
+          # reboot from greeter). Without this, bash exits on SIGTERM and
+          # leaves niri orphaned.
+          trap 'kill -TERM "$niri_pid" 2>/dev/null || true' TERM
+          trap 'kill -INT  "$niri_pid" 2>/dev/null || true' INT
+
+          # wait may return early when a trap fires; loop until niri is gone.
+          status=0
+          while kill -0 "$niri_pid" 2>/dev/null; do
+            wait "$niri_pid" 2>/dev/null
+            status=$?
+          done
+          exit "$status"
         ''} $out/bin/start-niri \
           --prefix PATH : "${pathPrefix}" \
           --prefix XDG_DATA_DIRS : "${dataDirsPrefix}"

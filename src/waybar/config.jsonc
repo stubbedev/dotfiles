@@ -59,6 +59,7 @@
 			"10": "<span foreground='#81C8BE'> </span>",
 			"default": "<span> </span>",
 			"focused": "<span> </span>",
+			"active": "<span> </span>",
 			"urgent": "<span> </span>",
 		},
 	},

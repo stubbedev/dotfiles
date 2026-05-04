@@ -20,6 +20,7 @@ in
         php = false;
         k8s = true;
         claudeCode = true;
+        slack = true;
       };
     };
   };
