@@ -37,6 +37,10 @@ _: {
         # Wayland debug/inspection tools
         wlprop
         wayland-utils
+
+        # Nested single-app Wayland compositor — useful for debugging
+        # screen-locking, kiosk-style apps without locking the host session.
+        (homeLib.gfx cage)
       ];
     };
 }
