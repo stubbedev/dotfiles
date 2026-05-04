@@ -18,6 +18,17 @@ _: {
         (lib.optional hyprlandEnabled "hyprland-session.target")
         ++ (lib.optional niriEnabled "niri-session.target");
 
+      compositorActiveCondition =
+        lib.concatMapStringsSep " || "
+          (target: "${pkgs.systemd}/bin/systemctl --user is-active --quiet ${target}")
+          compositorTargets;
+
+      restartWaybarIfCompositorActive = pkgs.writeShellScript "restart-waybar-if-compositor-active" ''
+        if ${compositorActiveCondition}; then
+          exec ${pkgs.systemd}/bin/systemctl --user restart waybar.service
+        fi
+      '';
+
       secretsExec =
         if builtins.pathExists /usr/bin/ksecretd then
           "/usr/bin/ksecretd"
@@ -121,7 +132,7 @@ _: {
             Install.WantedBy = [ "default.target" ];
             Service = {
               Type = "oneshot";
-              ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
+              ExecStart = "${restartWaybarIfCompositorActive}";
               Restart = "no";
             };
           };
@@ -137,7 +148,7 @@ _: {
             Install.WantedBy = [ "default.target" ];
             Service = {
               Type = "oneshot";
-              ExecStart = "${pkgs.systemd}/bin/systemctl --user restart waybar.service";
+              ExecStart = "${restartWaybarIfCompositorActive}";
               Restart = "no";
             };
           };

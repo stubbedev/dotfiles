@@ -36,6 +36,24 @@ _: {
 
         exec "$real" "$@"
       '';
+      logseqWrapped =
+        let
+          gfxLogseq = homeLib.gfx pkgs.logseq;
+        in
+        pkgs.runCommand "logseq-no-suid" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
+          makeWrapper ${gfxLogseq}/bin/logseq $out/bin/logseq \
+            --add-flags "--disable-setuid-sandbox"
+        '';
+      logseqPackage = pkgs.symlinkJoin {
+        name = "logseq-${pkgs.logseq.version}";
+        paths = [
+          logseqWrapped
+          pkgs.logseq
+        ];
+        meta = pkgs.logseq.meta // {
+          mainProgram = "logseq";
+        };
+      };
     in
     lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
@@ -78,7 +96,7 @@ _: {
         pcmanfm
 
         # Note-taking / knowledge base (Electron, GPU accelerated)
-        (homeLib.gfx logseq)
+        logseqPackage
       ];
     };
 }

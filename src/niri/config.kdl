@@ -111,11 +111,10 @@ xwayland-satellite {
     path "xwayland-satellite"
 }
 
-// systemd session bootstrap: import env, then activate niri-session.target
-// (pulls in waybar/swaync/secrets) while stopping any leftover
-// hyprland-session services.
-spawn-at-startup "dbus-update-activation-environment" "--systemd" "DBUS_SESSION_BUS_ADDRESS" "PATH" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "XDG_SESSION_TYPE"
-spawn-at-startup "compositor-session" "niri"
+// systemd session bootstrap: clear stale display variables, import niri's
+// environment, restart portals that may be pinned to a previous compositor,
+// then activate niri-session.target (pulls in waybar/swaync/secrets).
+spawn-at-startup "sh" "-c" "systemctl --user unset-environment DISPLAY HYPRLAND_INSTANCE_SIGNATURE; dbus-update-activation-environment --systemd DBUS_SESSION_BUS_ADDRESS PATH XDG_DATA_DIRS SSH_AUTH_SOCK WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP NIRI_SOCKET; systemctl --user restart xdg-desktop-portal.service xdg-desktop-portal-gtk.service 2>/dev/null || true; compositor-session niri"
 
 // Stable IPC socket symlink. niri's real socket name embeds its PID
 // (niri.<wayland-display>.<pid>.sock) so it changes on every niri restart.
@@ -131,6 +130,14 @@ spawn-at-startup "nm-applet" "--indicator"
 spawn-at-startup "blueman-applet"
 spawn-at-startup "hyprpolkitagent"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/refocus-on-close.sh"
+
+// Generic rules first; app-specific rules below can still override them.
+window-rule {
+    // Restored maximized-to-edges state bypasses default-column-width and
+    // removes borders at the screen edge; keep new windows in the layout.
+    open-maximized-to-edges false
+    draw-border-with-background false
+}
 
 window-rule {
     match title="Select what to share"
@@ -175,13 +182,6 @@ window-rule {
 window-rule {
     match app-id="^steam$" title="^Steam$"
     open-floating false
-}
-
-// Niri's default draws the border as a background behind the window; CSD
-// apps (firefox, chrome, …) paint over it and the focus color only shows
-// after a resize. Render as an outline around the window instead.
-window-rule {
-    draw-border-with-background false
 }
 
 binds {
