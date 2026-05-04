@@ -128,8 +128,8 @@
 	"backlight": {
 		"format": "{percent}% {icon}",
 		"format-icons": ["🌑", "🌘", "🌗", "🌖", "🌕"],
-		"on-scroll-up": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh increase",
-		"on-scroll-down": "~/.stubbe/src/hypr/scripts/monitor.brightness.sh decrease",
+		"on-scroll-up": "~/.stubbe/src/_shared/scripts/monitor.brightness.sh increase",
+		"on-scroll-down": "~/.stubbe/src/_shared/scripts/monitor.brightness.sh decrease",
 	},
 	"battery": {
 		"states": {

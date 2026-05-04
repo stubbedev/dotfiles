@@ -72,10 +72,8 @@ install_nix_home_manager() {
   /nix/var/nix/profiles/default/bin/nix-channel --update
   /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
 
-  conf_nix_home_manager
-
   local flake_path
-  flake_path=$(realpath "$HOME/.stubbe/src/nix/home-manager")
+  flake_path=$(realpath "$HOME/.stubbe")
   "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
 }
 
@@ -154,12 +152,6 @@ conf_nix() {
     sudo cp -f "$tmpfile" "$conf"
     sudo chmod "$original_perms" "$conf"
   fi
-}
-
-conf_nix_home_manager() {
-  mkdir -p "$HOME/.config"
-  rm -rf "$HOME/.config/home-manager"
-  ln -sf "$PWD/src/nix/home-manager" "$HOME/.config"
 }
 
 license_intelephense() {

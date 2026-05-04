@@ -21,44 +21,31 @@ The structure is as follows:
 
 ```tree
 .stubbe/
+├── flake.nix              # dendritic flake-parts entrypoint
+├── flake.lock
+├── lib.nix                # shared lib helpers (xdgSource, sudoPromptScript, ...)
+├── lib/                   # extra shared libs (system-info)
+├── constants.nix          # path constants (paths.dotfiles, paths.shared, ...)
+├── gfx.nix
+├── modules/               # dendritic modules tree (auto-loaded via import-tree)
+│   ├── activation/        # home-manager activation scripts (privileged + non-privileged)
+│   ├── files/             # home.file declarations
+│   ├── home/              # home-manager core (context, systemd, xdg, ...)
+│   ├── home-manager/      # home configurations + pkgs
+│   ├── hosts/             # per-host definitions
+│   ├── packages/          # package sets
+│   ├── programs/          # programs.* declarations
+│   ├── theme/
+│   └── features.nix
 ├── bin/
-│   ├── fzf-directory-picker-util*
-│   ├── fzf-project-picker-util*
-│   ├── fzf-tmux-directory-picker*
-│   ├── fzf-tmux-project-picker*
-│   ├── fzf-tmux-session-picker*
-│   ├── stb*
-│   ├── stb-install*
-│   ├── tmux-lazy-docker*
-│   ├── tmux-lazy-git*
-│   ├── tmux-new-session*
-│   ├── tmux-opencode*
-│   └── tmux-system-monitor*
+│   ├── stb*  stb-install*
+│   ├── fzf-*  tmux-*
+│   └── ...
 ├── src/
-│   ├── aerc/
-│   ├── alacritty/
-│   ├── btop/
-│   ├── fonts/
-│   ├── greetd/
-│   ├── hypr/
-│   ├── ideavim/
-│   ├── lazygit/
-│   ├── ly/
-│   ├── nix/
-│   ├── nvim/
-│   ├── opencode/
-│   ├── pipewire/
-│   ├── rofi/
-│   ├── starship/
-│   ├── swaync/
-│   ├── tmux/
-│   ├── udev/
-│   ├── vpn/
-│   ├── w3m/
-│   ├── wallpapers/
-│   ├── waybar/
-│   ├── wireplumber/
-│   ├── xdg-desktop-portal/
+│   ├── _shared/scripts/   # cross-app scripts (waybar.launch.sh, monitor.brightness.sh, ...)
+│   ├── aerc/  alacritty/  btop/
+│   ├── hypr/  niri/  waybar/
+│   ├── ...
 │   └── zsh/
 └── README.md
 ```
@@ -84,5 +71,18 @@ After installation you can use the `stb` followed by an option to add stuff to
 your config.
 
 If you provide no option the wizard will list the available options.
+
+## APPLYING THE NIX/HOME-MANAGER CONFIG
+
+The flake lives at the repo root. Apply with:
+
+`hm switch --flake "path:$HOME/.stubbe"`
+
+Or directly with home-manager:
+
+`home-manager switch --flake .#stubbe --impure`
+
+The `--impure` is required because activation scripts read `$HOME` and detect
+the host distribution at evaluation time.
 
 ![This is the caption for the next figure link (or table)](./src/wallpapers/traffic.png)
