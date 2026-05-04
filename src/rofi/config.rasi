@@ -2,7 +2,8 @@
 configuration {
     matching:          "fuzzy";
     sort:              true;
-    levenshtein-sort:  true;
+    sorting-method:    "fzf";
+    drun-match-fields: "name,generic,keywords";
     drun-show-actions: true;
     show-icons:        true;
     icon-theme:        "Tela-circle-purple-dark";
