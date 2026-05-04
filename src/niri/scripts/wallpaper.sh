@@ -4,7 +4,7 @@
 # an explicit `awww img` is dispatched.
 set -euo pipefail
 
-WALLPAPER="$HOME/.stubbe/src/wallpapers/ballet.png"
+WALLPAPER="$HOME/.stubbe/src/wallpapers/ballet.jpg"
 
 awww-daemon &
 
