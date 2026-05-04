@@ -278,6 +278,6 @@ binds {
     XF86AudioMute          allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
 
     // BRIGHTNESS KEYS
-    XF86MonBrightnessUp   { spawn "brightnessctl" "s" "5%+"; }
-    XF86MonBrightnessDown { spawn "brightnessctl" "s" "5%-"; }
+    XF86MonBrightnessUp   { spawn "/home/stubbe/.stubbe/src/hypr/scripts/monitor.brightness.sh" "increase"; }
+    XF86MonBrightnessDown { spawn "/home/stubbe/.stubbe/src/hypr/scripts/monitor.brightness.sh" "decrease"; }
 }
