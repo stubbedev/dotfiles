@@ -91,8 +91,8 @@ _: {
                                   - hm trust <name> <pubkey>
                                   - hm trust <pubkey>           (auto-named)
                                   - cmd | hm trust              (e.g. ssh other hm whoami | hm trust)
-            secret edit <name>  Open secrets/<name>.yaml in $EDITOR via sops (creates if absent)
-            secret rotate <name>  Re-roll the data key for secrets/<name>.yaml
+            secret edit <name>  Open secrets/<name> in $EDITOR via sops, binary mode (creates if absent)
+            secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
             help                Show this help message
 
           Other args are passed through to home-manager.
@@ -218,7 +218,8 @@ _: {
             # Any failure rolls .sops.yaml back so the repo isn't left half-edited.
             shopt -s nullglob
             local secret count=0
-            for secret in "$hm_flake_dir"/secrets/*.yaml; do
+            for secret in "$hm_flake_dir"/secrets/*; do
+              [ -f "$secret" ] || continue
               echo "Re-wrapping $(basename "$secret")"
               if ! ${pkgs.sops}/bin/sops updatekeys --yes "$secret"; then
                 rollback
@@ -244,21 +245,23 @@ _: {
               echo "Usage: hm secret {edit|rotate} <name>" >&2
               return 2
             fi
-            # Accept either "intelephense" or "intelephense.yaml"; canonicalise to the .yaml form.
-            local file="''${name%.yaml}.yaml"
-            local path="$hm_flake_dir/secrets/$file"
+            # All secrets are binary-mode single-blob files under secrets/<name>.
+            local path="$hm_flake_dir/secrets/$name"
             case "$action" in
               edit)
-                # sops handles both create and edit transparently — no exists-check.
-                ${pkgs.sops}/bin/sops "$path"
+                # sops handles both create and edit transparently. Pass binary
+                # input/output types so creating a new secret opens an empty
+                # buffer (no yaml starter template).
+                ${pkgs.sops}/bin/sops --input-type binary --output-type binary "$path"
                 ;;
               rotate)
                 if [ ! -f "$path" ]; then
                   echo "hm secret rotate: $path does not exist" >&2
                   return 1
                 fi
-                ${pkgs.sops}/bin/sops --rotate -i "$path"
-                echo "Re-rolled data key for $file. Recipients unchanged."
+                ${pkgs.sops}/bin/sops --rotate -i \
+                  --input-type binary --output-type binary "$path"
+                echo "Re-rolled data key for $name. Recipients unchanged."
                 ;;
               *)
                 echo "hm secret: unknown action '$action' (want edit|rotate)" >&2

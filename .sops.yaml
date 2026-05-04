@@ -4,7 +4,8 @@
 #   2. On any existing machine:   hm trust <name> <pubkey>
 #   3. Commit and push so the new machine can pull and decrypt.
 creation_rules:
-  - path_regex: secrets/.*\.yaml$
+  # Every file under secrets/ is one opaque blob, encrypted in binary mode.
+  - path_regex: secrets/[^/]+$
     key_groups:
       - age:
           - age1ph82fy2jgjsmcsaufsrlzsql65g0ca954elacmqlsesz9ladwd0sgxsxj8  # stubbe

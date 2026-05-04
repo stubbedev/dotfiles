@@ -115,24 +115,24 @@ _hm() {
           ;;
         secret)
           # `hm secret edit|rotate <name>`. Complete <name> from existing
-          # secrets/*.yaml entries in the flake dir.
+          # entries under secrets/ (one binary blob per file).
           case $CURRENT in
             2)
               local -a actions
               actions=(
-                'edit:Open secrets/<name>.yaml in $EDITOR via sops'
+                'edit:Open secrets/<name> in $EDITOR via sops (binary mode)'
                 'rotate:Re-roll the data key (recipients unchanged)'
               )
               _describe -t actions 'secret action' actions
               ;;
             3)
-              local flake_dir="''${HM_FLAKE_DIR:-$HOME/.stubbe}"
+              local flake_dir="${HM_FLAKE_DIR:-$HOME/.stubbe}"
               if [[ -L "$flake_dir" ]]; then
                 flake_dir=$(readlink -f "$flake_dir")
               fi
               local -a names
               if [[ -d "$flake_dir/secrets" ]]; then
-                names=(${(f)"$(cd "$flake_dir/secrets" && print -l *.yaml(N:r))"})
+                names=(${(f)"$(cd "$flake_dir/secrets" && print -l *(N.))"})
               fi
               if (( ${#names} )); then
                 _describe -t secrets 'secret file' names

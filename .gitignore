@@ -16,11 +16,11 @@ src/aerc/accounts/*/*/password.gpg
 src/vpn/*/password.gpg
 src/vpn/*/config
 
-# Encrypted secrets under secrets/*.yaml ARE tracked (sops-nix decrypts at
-# activation). Anything else under secrets/ — plaintext drafts, intermediate
-# files — is not.
-secrets/*
-!secrets/*.yaml
+# All files under secrets/ are sops-encrypted (binary mode) and tracked.
+# Plaintext drafts that escape into secrets/ at edit time stay in the
+# editor's unsaved buffer or in /tmp — sops never writes plaintext to disk
+# under secrets/, and there's no extension cue to keep them separate, so
+# we trust the workflow rather than try to filter by name.
 
 # Build artifacts from `nix build` and `home-manager build`.
 result
