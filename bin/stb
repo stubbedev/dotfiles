@@ -1,4 +1,16 @@
 #!/usr/bin/env zsh
+set -euo pipefail
+
+# stb — small fzf picker for things you want to do often.
+# Edit ${HOME}/.stubbe/src/zsh/* config files, clear nvim caches, refresh zsh.
+
+if ! command -v fzf >/dev/null 2>&1; then
+  echo "stb: requires fzf on PATH" >&2
+  exit 1
+fi
+
+EDITOR="${EDITOR:-nvim}"
+ZSH_DIR="${HOME}/.stubbe/src/zsh"
 
 run_options() {
   echo "Welcome to the STUBBEDEV CLI"
@@ -14,42 +26,42 @@ run_options() {
     "Clear Nvim Cache"
     "Update Zsh"
   )
-  chosen_option=$(printf "%s\n" "${stb_options[@]}" | fzf --prompt="Select an option: " --height=10 --border --no-info --reverse --cycle)
+  chosen_option=$(printf "%s\n" "${stb_options[@]}" | fzf --prompt="Select an option: " --height=10 --border --no-info --reverse --cycle) || return 0
 
   echo "Running: $chosen_option"
   case "$chosen_option" in
-  "Edit Nix")
-    sudo $(which nvim) "/etc/nix/nix.conf"
-    ;;
-  "Edit Secrets")
-    nvim "$HOME/.stubbe/src/zsh/secrets"
-    ;;
-  "Edit Aliases")
-    nvim "$HOME/.stubbe/src/zsh/aliases"
-    ;;
-  "Edit Functions")
-    nvim "$HOME/.stubbe/src/zsh/funcs"
-    ;;
-  "Edit Paths")
-    nvim "$HOME/.stubbe/src/zsh/paths"
-    ;;
-  "Edit Settings")
-    nvim "$HOME/.stubbe/src/zsh/settings"
-    ;;
-  "Clear Nvim Cache")
-    rm -rf "$HOME/.local/share/nvim" && mkdir -p "$HOME/.local/share/nvim"
-    rm -rf "$HOME/.local/state/nvim" && mkdir -p "$HOME/.local/state/nvim"
-    rm -rf "$HOME/.cache/nvim" && mkdir -p "$HOME/.cache/nvim"
-    ;;
-  "Update Zsh")
-    rm -rf "$HOME/.stubbe/src/zsh/plugins.d"
-    rm -rf "$HOME/.stubbe/src/zsh/fpaths.d"
-    rm -f "$HOME/.zcompdump"
-    source "$HOME/.zshrc"
-    ;;
-  *)
-    exit
-    ;;
+    "Edit Nix")
+      sudo "$(command -v "$EDITOR")" /etc/nix/nix.conf
+      ;;
+    "Edit Secrets")
+      "$EDITOR" "$ZSH_DIR/secrets"
+      ;;
+    "Edit Aliases")
+      "$EDITOR" "$ZSH_DIR/aliases"
+      ;;
+    "Edit Functions")
+      "$EDITOR" "$ZSH_DIR/funcs"
+      ;;
+    "Edit Paths")
+      "$EDITOR" "$ZSH_DIR/paths"
+      ;;
+    "Edit Settings")
+      "$EDITOR" "$ZSH_DIR/settings"
+      ;;
+    "Clear Nvim Cache")
+      rm -rf "$HOME/.local/share/nvim" && mkdir -p "$HOME/.local/share/nvim"
+      rm -rf "$HOME/.local/state/nvim" && mkdir -p "$HOME/.local/state/nvim"
+      rm -rf "$HOME/.cache/nvim"       && mkdir -p "$HOME/.cache/nvim"
+      ;;
+    "Update Zsh")
+      rm -rf "$ZSH_DIR/plugins.d"
+      rm -rf "$ZSH_DIR/fpaths.d"
+      rm -f "$HOME/.zcompdump"
+      source "$HOME/.zshrc"
+      ;;
+    *)
+      exit 0
+      ;;
   esac
 }
 

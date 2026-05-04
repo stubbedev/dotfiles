@@ -13,6 +13,11 @@ _: {
           default = true;
           description = "Enable development tools and languages.";
         };
+        docker = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Install Docker via the host package manager and add the user to the docker group. On NixOS, set virtualisation.docker.enable instead.";
+        };
         hyprland = lib.mkOption {
           type = lib.types.bool;
           default = true;

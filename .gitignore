@@ -16,4 +16,14 @@ src/aerc/accounts/*/*/password.gpg
 src/vpn/*/password.gpg
 src/vpn/*/config
 
+# Encrypted secrets under secrets/*.yaml ARE tracked (sops-nix decrypts at
+# activation). Anything else under secrets/ — plaintext drafts, intermediate
+# files — is not.
+secrets/*
+!secrets/*.yaml
+
+# Build artifacts from `nix build` and `home-manager build`.
+result
+result-*
+
 .claude/

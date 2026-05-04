@@ -7,6 +7,11 @@ _: {
       ...
     }:
     lib.mkIf config.features.theming {
+      # Symlinks fonts from home.packages into ~/.local/share/fonts and runs
+      # fc-cache on activation. Without this, fontconfig only sees fonts in
+      # /usr/share — Nix-installed fonts are invisible on non-NixOS hosts.
+      fonts.fontconfig.enable = true;
+
       home.packages = with pkgs; [
         # Fonts
         nerd-fonts.jetbrains-mono

@@ -1,5 +1,5 @@
 {
-  description = "Home Manager Config";
+  description = "stubbedev dotfiles: home-manager (non-NixOS) + NixOS configurations + installer ISO";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -48,6 +48,12 @@
     # Used by the installer ISO build for partitioning declaration.
     disko = {
       url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # Secrets management. Encrypted secrets live under secrets/, keyed to
+    # per-machine age recipients in .sops.yaml. Decrypted at HM activation.
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

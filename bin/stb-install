@@ -1,152 +1,96 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-is_elevated_shell() {
+# stb-install — bootstrap script for non-NixOS hosts.
+#
+# Steps:
+#   1. Symlink ${HOME}/.stubbe to this repo (the rest of the config assumes it).
+#   2. Install lix (nix) if missing.
+#   3. Configure /etc/nix/nix.conf for flakes + this user as trusted.
+#   4. Bootstrap home-manager and run `home-manager switch` against the
+#      flake at ${HOME}/.stubbe#stubbe.
+#
+# Everything else (fonts, docker, dev tools, IDE licenses, ...) is owned
+# by home-manager modules under modules/ — don't add it here.
+
+is_root() {
   [ "$(id -u)" -eq 0 ]
 }
 
-is_nix() {
+is_nixos() {
   grep -q '^ID=nixos' /etc/os-release 2>/dev/null
 }
 
-is_arch() {
-  grep -q '^ID=arch' /etc/os-release 2>/dev/null
-}
+main() {
+  echo "STUBBEDEV DOTFILES INSTALLER"
 
-is_file() {
-  [ -f "$1" ]
-}
-
-# INFO: INSTALL FUNCTION
-installer_prompt() {
-  echo "WELCOME TO THE STUBBEDEV DOTFILES INSTALLER"
-
-  if is_elevated_shell; then
-    echo "Please do not run this script with sudo."
-    echo "Execute it normally and any functions which need sudo will prompt for it."
-    exit 0
+  if is_root; then
+    echo "Do not run this with sudo. Run it as your user; sudo is requested per-step." >&2
+    exit 1
   fi
 
-  echo "Please enter your desired option:"
-  printf "(I)nstall Mandatory or (C)ancel? "
-  read -r REPLY
-  printf "\n"
-  case "$REPLY" in
-  i | I)
-    install_all_nix
-    exit
-    ;;
-  c | C)
-    echo "Cancelling!"
-    exit
-    ;;
-  *)
-    echo "Unrecognized option."
-    exit
-    ;;
+  if is_nixos; then
+    echo "This installer targets non-NixOS hosts. On NixOS, build the flake directly:" >&2
+    echo "  nixos-rebuild switch --flake \"$PWD#<host>\"" >&2
+    exit 1
+  fi
+
+  read -rp "Bootstrap home-manager from this repo? [y/N] " reply
+  case "$reply" in
+    y | Y) ;;
+    *)
+      echo "Cancelling."
+      exit 0
+      ;;
   esac
+
+  link_dotfiles
+  install_nix
+  configure_nix
+  install_home_manager
+  switch_home_manager
 }
 
-install_all_nix() {
+link_dotfiles() {
+  if [ -L "$HOME/.stubbe" ] && [ "$(readlink -f "$HOME/.stubbe")" = "$PWD" ]; then
+    return 0
+  fi
   rm -rf "$HOME/.stubbe"
   ln -sf "$PWD" "$HOME/.stubbe"
-  install_nix
-  install_docker
-  conf_fonts
-  license_intelephense
 }
 
 install_nix() {
+  # The lix installer is idempotent: a fresh run on an existing install
+  # upgrades it in place. Run unconditionally so every `stb-install` also
+  # picks up the latest lix.
   curl -sSf -L https://install.lix.systems/lix | sh -s -- install
-  conf_nix
-  install_nix_home_manager
 }
 
-install_nix_home_manager() {
-  if is_nix; then
-    return 0
-  fi
-
-  export NIXPKGS_ALLOW_UNFREE=1
-  rm -rf "$HOME/.config/home-manager"
-  /nix/var/nix/profiles/default/bin/nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
-  /nix/var/nix/profiles/default/bin/nix-channel --update
-  /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
-
-  local flake_path
-  flake_path=$(realpath "$HOME/.stubbe")
-  "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
-}
-
-install_docker() {
-  if is_arch; then
-    sudo pacman -Sy docker docker-compose docker-buildx
-    sudo systemctl enable docker
-    sudo systemctl start docker
-  else
-    DOCKERTMPDIR=$(mktemp -d)
-    "$HOME/.nix-profile/bin/curl" -fsSL https://get.docker.com -o "$DOCKERTMPDIR/get-docker.sh"
-    sudo sh "$DOCKERTMPDIR/get-docker.sh"
-    rm -rf "$DOCKERTMPDIR"
-  fi
-  sudo groupadd docker 2>/dev/null || true
-  sudo usermod -aG docker "$USER"
-}
-
-conf_fonts() {
-  SOURCE_FONT="$PWD/src/fonts"
-  mkdir -p "$HOME/.fonts"
-  mkdir -p "$HOME/.local/share/fonts"
-  cp -rf "$SOURCE_FONT/." "$HOME/.fonts"
-  cp -rf "$SOURCE_FONT/." "$HOME/.local/share/fonts"
-}
-
-conf_nix() {
-  if is_nix; then
-    return 0
-  fi
-
+configure_nix() {
   local conf="/etc/nix/nix.conf"
-  local needs_update=false
-  local tmpfile original_perms
+  local tmpfile original_perms needs_update=false
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' RETURN
   original_perms=$(stat -c '%a' "$conf")
   cp -f "$conf" "$tmpfile"
 
-  # experimental-features
-  if ! grep -Fxq "experimental-features = nix-command flakes" "$tmpfile"; then
-    sed -i '/^experimental-features/d' "$tmpfile"
-    echo "experimental-features = nix-command flakes" >>"$tmpfile"
-    needs_update=true
-  fi
+  # Settings the flake-based setup depends on. trusted-users lets this user
+  # add substituters / use the daemon. keep-outputs/keep-derivations stop GC
+  # from evicting build inputs the dev workflow keeps re-using.
+  ensure_setting() {
+    local key="$1" line="$2"
+    if ! grep -Fxq "$line" "$tmpfile"; then
+      sed -i "/^${key}/d" "$tmpfile"
+      printf '%s\n' "$line" >> "$tmpfile"
+      needs_update=true
+    fi
+  }
 
-  # trusted-users
-  if ! grep -Fxq "trusted-users = root $USER" "$tmpfile"; then
-    sed -i '/^trusted-users/d' "$tmpfile"
-    echo "trusted-users = root $USER" >>"$tmpfile"
-    needs_update=true
-  fi
-
-  # sandbox
-  if ! grep -Fxq "sandbox = relaxed" "$tmpfile"; then
-    sed -i '/^sandbox/d' "$tmpfile"
-    echo "sandbox = relaxed" >>"$tmpfile"
-    needs_update=true
-  fi
-
-  # keep-outputs (prevent GC from deleting cached source trees)
-  if ! grep -Fxq "keep-outputs = true" "$tmpfile"; then
-    sed -i '/^keep-outputs/d' "$tmpfile"
-    echo "keep-outputs = true" >>"$tmpfile"
-    needs_update=true
-  fi
-
-  # keep-derivations
-  if ! grep -Fxq "keep-derivations = true" "$tmpfile"; then
-    sed -i '/^keep-derivations/d' "$tmpfile"
-    echo "keep-derivations = true" >>"$tmpfile"
-    needs_update=true
-  fi
+  ensure_setting "experimental-features" "experimental-features = nix-command flakes"
+  ensure_setting "trusted-users"         "trusted-users = root $USER"
+  ensure_setting "sandbox"               "sandbox = relaxed"
+  ensure_setting "keep-outputs"          "keep-outputs = true"
+  ensure_setting "keep-derivations"      "keep-derivations = true"
 
   if [ "$needs_update" = true ]; then
     sudo cp -f "$tmpfile" "$conf"
@@ -154,14 +98,21 @@ conf_nix() {
   fi
 }
 
-license_intelephense() {
-  TMPDIR=$(mktemp -d)
-  "$HOME/.nix-profile/bin/git" clone --depth=1 git@gist.github.com:c69e23e23d5c52521f6603c39a001645.git "$TMPDIR" --quiet
-  mkdir -p "$HOME/intelephense"
-  if ! is_file "$HOME/intelephense/license.txt"; then
-    cat "$TMPDIR/INTELEPHENSE" >"$HOME/intelephense/license.txt"
+install_home_manager() {
+  if [ -x "$HOME/.nix-profile/bin/home-manager" ]; then
+    return 0
   fi
-  rm -rf "$TMPDIR"
+  export NIXPKGS_ALLOW_UNFREE=1
+  /nix/var/nix/profiles/default/bin/nix-channel --add \
+    https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
+  /nix/var/nix/profiles/default/bin/nix-channel --update
+  /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
 }
 
-installer_prompt
+switch_home_manager() {
+  local flake_path
+  flake_path=$(readlink -f "$HOME/.stubbe")
+  "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
+}
+
+main "$@"
