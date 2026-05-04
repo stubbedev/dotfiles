@@ -1,0 +1,6 @@
+;; Global Logseq config — applies to every graph (overridden per-graph by
+;; <graph>/logseq/config.edn).
+{:preferred-format :markdown
+ :date-formatter "yyyy-MM-dd"
+ :journal/page-title-format "yyyy-MM-dd"
+ :journal/file-name-format "yyyy_MM_dd"}

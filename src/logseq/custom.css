@@ -1,0 +1,7 @@
+@import url('https://logseq.catppuccin.com/ctp-mocha.css');
+
+/* Mocha mauve accent (#cba6f7). The catppuccin theme uses
+   rgb(var(--ctp-accent)), so the override is given as raw R, G, B. */
+:root {
+  --ctp-accent: 203, 166, 247;
+}
