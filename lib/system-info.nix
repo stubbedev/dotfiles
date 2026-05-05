@@ -15,13 +15,10 @@ let
       builtins.readFile (stringToPath osReleasePath)
     else
       "";
-  isFedora = builtins.match ".*ID=fedora.*" osReleaseContent != null;
 
   nixGLWrapper = if hasNvidia then pkgs.nixgl.nixGLNvidia else pkgs.nixgl.nixGLIntel;
   nixGLBin = "${nixGLWrapper}/bin/${nixGLWrapper.name}";
 in
 {
-  inherit hasNvidia isFedora;
-  libPath = if isFedora then "lib64" else "lib";
-  inherit nixGLWrapper nixGLBin;
+  inherit hasNvidia nixGLWrapper nixGLBin;
 }
