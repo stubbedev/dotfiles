@@ -130,6 +130,7 @@ spawn-at-startup "nm-applet" "--indicator"
 spawn-at-startup "blueman-applet"
 spawn-at-startup "hyprpolkitagent"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/refocus-on-close.sh"
+spawn-at-startup "/home/stubbe/.config/niri/scripts/focus-on-urgent.sh"
 
 // Generic rules first; app-specific rules below can still override them.
 window-rule {
