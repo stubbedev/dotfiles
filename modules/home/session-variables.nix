@@ -33,8 +33,10 @@ _: {
           SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
 
-          # Go configuration
-          GOPATH = "${config.home.homeDirectory}/go";
+          # pnpm global install dir. pnpm reads this and lands binaries
+          # directly under PNPM_HOME (no /bin subdir); base.nix sessionPath
+          # adds the same path so the bins resolve.
+          PNPM_HOME = "${config.home.homeDirectory}/.local/share/pnpm";
 
           # Theme and custom variables
           DEPLOYER_REMOTE_USER = "abs";

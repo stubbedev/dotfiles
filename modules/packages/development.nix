@@ -22,9 +22,14 @@ _: {
         # JavaScript/TypeScript runtimes (CLI tools)
         nodejs
         bun
+        pnpm
         yarn
         deno
-        volta
+
+        # JS/TS formatters and linters (replaces former `bun add --global …`)
+        prettier
+        oxlint
+        oxfmt
 
         # Editor and Lua runtimes
         neovim

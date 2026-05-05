@@ -1,24 +1,23 @@
 #!/usr/bin/env zsh
-# EXPAND LIST WITH DESIRED PATHS
+# PATH initialisation for interactive zsh.
+#
+# home-manager already exports the canonical PATH via home.sessionPath
+# (see modules/home/base.nix). This file just guarantees the order is
+# right when zsh starts from contexts that bypass the profile (e.g. tmux
+# panes attaching across reboots) and adds the few dirs Nix doesn't own.
+#
+# The list is deliberately minimal — every CLI tool we use is installed
+# via Nix and reached through ~/.nix-profile/bin. Tool-managed install
+# dirs (~/.cargo/bin, ~/.bun/bin, ~/.go/bin, ~/.deno/bin, ~/.opencode/bin,
+# ~/.local/share/nvim/mason/bin, …) stay off PATH so we don't shadow the
+# pinned versions.
 
 function _paths_init {
   local -a STUBBE_PATHS=(
     "$HOME/.nix-profile/bin"
-    "$HOME/.stubbe/src/go/bin"
-    "$HOME/.stubbe/src/go/packages/bin"
     "$HOME/.local/bin"
-    "$HOME/.config/composer/vendor/bin"
-    "$HOME/.config/emacs/bin"
-    "$HOME/.bun/bin"
-    "$HOME/.volta/bin"
-    "$HOME/.local/share/nvim/mason/bin"
-    "$HOME/.opencode/bin"
-    "$HOME/.cargo/bin"
-    "$HOME/.deno/bin"
-    "$HOME/.go/bin"
-    "$HOME/go/bin"
-    "$HOME/bin"
-    "$HOME/.pyenv/bin"
+    "$HOME/.config/composer/vendor/bin"  # PHP composer global
+    "$HOME/.local/share/pnpm"             # pnpm global (PNPM_HOME)
     "/sbin"
   )
   local p

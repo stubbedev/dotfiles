@@ -1,23 +1,25 @@
 _: {
-  flake.modules.homeManager.base =
-    { constants, ... }:
-    {
-      home = {
-        username = constants.user.name;
-        homeDirectory = "/home/${constants.user.name}";
-        stateVersion = "25.11";
-        sessionPath = [
-          "$HOME/.nix-profile/bin"
-          "$HOME/.cargo/bin"
-          "$HOME/.bun/bin"
-          "$HOME/.local/bin"
-          "$HOME/.local/share/flatpak/exports/bin"
-          "/var/lib/flatpak/exports/bin"
-          "/usr/local/bin"
-          "/usr/bin"
-          "/bin"
-          "/sbin"
-        ];
-      };
+  flake.modules.homeManager.base = _: {
+    home = {
+      username = "stubbe";
+      homeDirectory = "/home/stubbe";
+      stateVersion = "26.05";
+      # User-level PATH. Keep this minimal — every tool we use lands in
+      # ~/.nix-profile/bin via Nix. Two exceptions:
+      #   - ~/.config/composer/vendor/bin: PHP composer global packages.
+      #   - ~/.local/share/pnpm:           pnpm global installs (PNPM_HOME).
+      # Tool-managed dirs (~/.cargo/bin, ~/.bun/bin, ~/.go/bin, …) stay
+      # off PATH so we don't shadow the Nix-pinned versions.
+      sessionPath = [
+        "$HOME/.nix-profile/bin"
+        "$HOME/.local/bin"
+        "$HOME/.config/composer/vendor/bin"
+        "$HOME/.local/share/pnpm"
+        "/usr/local/bin"
+        "/usr/bin"
+        "/bin"
+        "/sbin"
+      ];
     };
+  };
 }

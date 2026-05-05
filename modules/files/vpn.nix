@@ -1,7 +1,6 @@
 _: {
   flake.modules.homeManager.filesVpn =
     {
-      self,
       lib,
       config,
       homeLib,
@@ -33,18 +32,16 @@ _: {
     in
     lib.mkIf config.features.vpn {
       # Two binary-mode secrets per provider: the VPN gateway/username
-      # config (rotates rarely, edited via `hm secret edit vpn-konform-config`)
-      # and the password (rotates often, edited via `hm secret set
-      # vpn-konform`). Both decrypt to ~/.config/vpn/konform/, which the
+      # config (rotates rarely, `hm secret edit vpn-konform-config`)
+      # and the password (rotates often, `hm secret set vpn-konform`).
+      # Both decrypt under ~/.config/vpn/konform/, which the
       # connect/waybar scripts source/read at runtime.
-      sops.secrets.vpn-konform-config = {
-        sopsFile = self + "/secrets/vpn-konform-config";
-        format = "binary";
+      sops.secrets.vpn-konform-config = homeLib.mkBinarySecret {
+        name = "vpn-konform-config";
         path = "${config.home.homeDirectory}/.config/vpn/konform/config";
       };
-      sops.secrets.vpn-konform = {
-        sopsFile = self + "/secrets/vpn-konform";
-        format = "binary";
+      sops.secrets.vpn-konform = homeLib.mkBinarySecret {
+        name = "vpn-konform";
         path = "${config.home.homeDirectory}/.config/vpn/konform/password";
       };
 

@@ -1,11 +1,12 @@
 _: {
   enableIf = { config, ... }: config.features.desktop;
   args =
-    { config, ... }:
+    { config, homeLib, ... }:
     {
-      actionScript = ''
-        mkdir -p "${config.home.homeDirectory}/.config/btop"
-        cat "${config.home.homeDirectory}/.stubbe/src/btop/btop.conf" > "${config.home.homeDirectory}/.config/btop/btop.conf"
-      '';
+      actionScript = homeLib.mkLiveCopy {
+        inherit config;
+        src = "btop/btop.conf";
+        target = ".config/btop/btop.conf";
+      };
     };
 }

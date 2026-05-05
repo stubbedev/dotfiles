@@ -4,19 +4,18 @@ _: {
       self,
       lib,
       config,
+      homeLib,
       ...
     }:
     lib.mkIf config.features.desktop {
-      # Decrypted at activation. accounts.conf below references these paths
-      # via `cat`, so aerc reads the password directly without a wrapper.
-      sops.secrets.aerc-gmail = {
-        sopsFile = self + "/secrets/aerc-gmail";
-        format = "binary";
+      # accounts.conf below references these paths via `cat`, so aerc reads
+      # the password directly without a shell wrapper.
+      sops.secrets.aerc-gmail = homeLib.mkBinarySecret {
+        name = "aerc-gmail";
         path = "${config.home.homeDirectory}/.config/aerc/passwords/gmail";
       };
-      sops.secrets.aerc-kontainer = {
-        sopsFile = self + "/secrets/aerc-kontainer";
-        format = "binary";
+      sops.secrets.aerc-kontainer = homeLib.mkBinarySecret {
+        name = "aerc-kontainer";
         path = "${config.home.homeDirectory}/.config/aerc/passwords/kontainer";
       };
 

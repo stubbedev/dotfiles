@@ -51,6 +51,26 @@ rec {
   xdgContent = path: builtins.readFile (self + "/src/${path}");
 
   # ============================================================
+  # SOPS secrets
+  # ============================================================
+
+  # Declare a binary-mode sops secret that lives at <repo>/secrets/<name>
+  # and decrypts to `path` at activation. Returns the value for
+  # sops.secrets.<key>; the caller picks the attrset key.
+  #
+  #   sops.secrets.foo = homeLib.mkBinarySecret {
+  #     name = "foo";   # secrets/foo
+  #     path = "${config.home.homeDirectory}/.config/foo";
+  #   };
+  mkBinarySecret =
+    { name, path }:
+    {
+      sopsFile = self + "/secrets/${name}";
+      format = "binary";
+      inherit path;
+    };
+
+  # ============================================================
   # Template substitution
   # ============================================================
 
@@ -270,6 +290,26 @@ rec {
       mkdir -p "$(dirname "${targetPath}")"
       rm -rf "${targetPath}"
       ln -s "${sourcePath}" "${targetPath}"
+    '';
+
+  # Copy a file from the live src/ tree to a target under $HOME. Use this
+  # for config files that the owning app rewrites at runtime (btop.conf,
+  # lazygit state.yml, …) — a symlink would be modified in place inside
+  # the dotfiles checkout, which we don't want. The activation runs on
+  # every switch, so the dotfiles version is authoritative on switch.
+  mkLiveCopy =
+    {
+      config,
+      src, # subpath under ~/.stubbe/src/
+      target, # path under $HOME (no leading slash)
+    }:
+    let
+      sourcePath = "${config.home.homeDirectory}/.stubbe/src/${src}";
+      targetPath = "${config.home.homeDirectory}/${target}";
+    in
+    ''
+      mkdir -p "$(dirname "${targetPath}")"
+      cat "${sourcePath}" > "${targetPath}"
     '';
 
   # ============================================================
