@@ -1,11 +1,12 @@
 _: {
   enableIf = { config, ... }: config.features.desktop;
   args =
-    { config, ... }:
+    { config, homeLib, ... }:
     {
-      actionScript = ''
-        rm -rf "${config.home.homeDirectory}/.config/nvim"
-        ln -sf "${config.home.homeDirectory}/.stubbe/src/nvim" "${config.home.homeDirectory}/.config/nvim"
-      '';
+      actionScript = homeLib.mkLiveSymlink {
+        inherit config;
+        src = "nvim";
+        target = ".config/nvim";
+      };
     };
 }

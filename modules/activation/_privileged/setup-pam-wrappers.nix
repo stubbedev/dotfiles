@@ -38,6 +38,5 @@ _: {
         sudo systemctl daemon-reload
         sudo systemctl enable --now nix-pam-wrappers.service
       '';
-      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

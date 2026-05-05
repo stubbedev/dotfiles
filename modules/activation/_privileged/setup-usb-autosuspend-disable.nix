@@ -3,13 +3,12 @@
   enableIf = { config, ... }: config.features.desktop;
   args =
     { homeLib, ... }:
-    {
-      promptTitle = "Installing USB power management rules";
-      promptBody = ''
+    homeLib.mkInstallPrompt {
+      subject = "USB power management rules";
+      body = ''
         This keeps USB devices in full-power mode and disables autosuspend
         for USB audio devices to avoid missed first keypresses and audio pops.
       '';
-      promptQuestion = "Install USB power management rules?";
       actionScript = ''
         sudo install -d -m 0755 /etc/udev/rules.d
 
@@ -41,6 +40,5 @@
           sudo udevadm control --reload-rules >/dev/null 2>&1 || true
         fi
       '';
-      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

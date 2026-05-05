@@ -11,6 +11,7 @@
           config,
           lib,
           pkgs,
+          homeLib,
           ...
         }@moduleArgs:
         let

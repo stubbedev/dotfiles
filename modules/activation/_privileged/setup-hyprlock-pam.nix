@@ -14,6 +14,5 @@
         target = "/etc/pam.d/hyprlock";
         content = builtins.readFile (self + "/src/pam.d/hyprlock");
       };
-      skipMessage = "Skipped. You can create it later by running: home-manager switch --flake . --impure";
     };
 }

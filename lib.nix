@@ -121,6 +121,147 @@ rec {
       sudo apparmor_parser -r "${target}"
     '';
 
+  # preCheck snippet for AppArmor setups: skip the activation entirely
+  # when apparmor_status is not on the host (i.e. distros without
+  # AppArmor). PATH is restored because activations run with a stripped
+  # one and apparmor_status lives under /sbin or /usr/sbin.
+  apparmorPreCheck = ''
+    PATH="/sbin:/usr/sbin:$PATH"
+    if ! command -v apparmor_status >/dev/null 2>&1; then
+      exit 0
+    fi
+  '';
+
+  # Build the prompt args for an AppArmor profile setup. Returns the
+  # attrset that mkSudoSetupModule expects. Distros like Ubuntu 24.04+
+  # require a matching AppArmor profile for unprivileged user namespaces
+  # used by Chromium-based sandboxes; Nix-store paths aren't covered by
+  # the stock profiles, so we install one per app keyed on its store
+  # path glob.
+  mkAppArmorSetup =
+    {
+      appName, # human label, e.g. "Chrome"
+      profileName, # /etc/apparmor.d/<profileName>
+      programGlob, # path glob the profile applies to
+      managedBy, # marker comment for the profile body
+    }:
+    {
+      preCheck = apparmorPreCheck;
+      promptTitle = "Installing AppArmor profile for Nix-installed ${appName}";
+      promptBody = ''
+        Ubuntu 24.04 restricts unprivileged user namespaces (required by
+        Chromium-based sandboxes) to binaries with a matching AppArmor
+        profile. Nix-store paths aren't covered by Ubuntu's stock profiles,
+        so ${appName} aborts on launch with "No usable sandbox!".
+
+        This installs an AppArmor profile that whitelists the Nix-store
+        ${appName} binary (and its sandbox helper) for unprivileged userns.
+      '';
+      promptQuestion = "Install AppArmor profile for Nix ${appName}?";
+      actionScript = installApparmorProfile {
+        name = profileName;
+        content = ''
+          # managed-by: ${managedBy}
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile ${profileName} ${programGlob} flags=(unconfined) {
+            userns,
+            @{exec_path} mr,
+            include if exists <local/${profileName}>
+          }
+        '';
+      };
+    };
+
+  # Build the prompt args for an SDDM/GDM Wayland session entry under
+  # /usr/share/wayland-sessions/<name>.desktop. The body is a Desktop
+  # Entry rendered via lib.generators.toINI so callers pass attrs
+  # rather than heredoc text.
+  mkSddmSession =
+    {
+      config,
+      name, # filename basename (without .desktop)
+      displayName, # "Hyprland (Nix)"
+      comment,
+      execName, # binary in ~/.nix-profile/bin
+      desktopNames,
+      extraEntries ? { }, # additional Desktop Entry keys
+    }:
+    let
+      target = "/usr/share/wayland-sessions/${name}.desktop";
+      content = lib.generators.toINI { } {
+        "Desktop Entry" = {
+          Name = displayName;
+          Comment = comment;
+          Exec = "${config.home.homeDirectory}/.nix-profile/bin/${execName}";
+          Type = "Application";
+          DesktopNames = desktopNames;
+        }
+        // extraEntries;
+      };
+    in
+    {
+      promptTitle = "⚠️  SDDM ${displayName} session entry missing";
+      promptBody = ''
+        SDDM needs a desktop entry to show ${displayName} in the session menu.
+        This will create the session entry.
+      '';
+      promptQuestion = "Create ${target}?";
+      actionScript = ''
+        sudo install -d -m 0755 /usr/share/wayland-sessions
+        ${installSystemFile { inherit target content; }}
+      '';
+    };
+
+  # ============================================================
+  # Live symlinks (point ~/.config/<x> at ~/.stubbe/src/<y>)
+  # ============================================================
+
+  # Render an idempotent symlink-replacement snippet. Used in non-
+  # privileged activations to point a config dir at the live src/ tree
+  # in the dotfiles checkout, so edits are reflected without re-running
+  # home-manager. mkdir -p covers the parent; rm -rf covers both stale
+  # symlinks and previously-materialised directories.
+  mkLiveSymlink =
+    {
+      config,
+      src, # subpath under ~/.stubbe/src/
+      target, # path under $HOME (no leading slash)
+    }:
+    let
+      sourcePath = "${config.home.homeDirectory}/.stubbe/src/${src}";
+      targetPath = "${config.home.homeDirectory}/${target}";
+    in
+    ''
+      mkdir -p "$(dirname "${targetPath}")"
+      rm -rf "${targetPath}"
+      ln -s "${sourcePath}" "${targetPath}"
+    '';
+
+  # ============================================================
+  # Sudo-prompt scaffolding (consistent "Install X" / "Install X?")
+  # ============================================================
+
+  # Build the prompt fields from a single `subject`, then merge any
+  # extra fields the caller supplies (preCheck, actionScript, body, …).
+  # Title and question follow the "Installing <subject>" / "Install
+  # <subject>?" form, matching the most common sudo-prompt setups.
+  mkInstallPrompt =
+    {
+      subject,
+      body,
+      ...
+    }@extra:
+    removeAttrs extra [
+      "subject"
+      "body"
+    ]
+    // {
+      promptTitle = "Installing ${subject}";
+      promptQuestion = "Install ${subject}?";
+      promptBody = body;
+    };
+
   # ============================================================
   # Compositor session-path resolution
   # ============================================================
@@ -244,7 +385,7 @@ rec {
       promptBody,
       promptQuestion,
       actionScript,
-      skipMessage ? "Skipped.",
+      skipMessage ? "Skipped. Re-run 'hm switch' to retry.",
     }:
     let
       actionHash = builtins.hashString "sha256" actionScript;

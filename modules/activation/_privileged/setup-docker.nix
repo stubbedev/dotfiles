@@ -1,10 +1,10 @@
 _: {
   enableIf = { config, ... }: config.features.docker;
   args =
-    { config, ... }:
-    {
-      promptTitle = "Installing Docker";
-      promptBody = ''
+    { config, homeLib, ... }:
+    homeLib.mkInstallPrompt {
+      subject = "Docker";
+      body = ''
         Install Docker (engine + compose) via the host's package manager,
         enable the docker.service systemd unit, and add ${config.home.username}
         to the docker group so non-root containers work without sudo.
@@ -12,7 +12,6 @@ _: {
         On NixOS, set virtualisation.docker.enable = true in the system
         config instead — this activation is gated off there.
       '';
-      promptQuestion = "Install Docker?";
       actionScript = ''
         # Activation scripts run with a stripped PATH; bring the standard
         # system paths back so command -v can find dnf/apt-get/pacman.
@@ -47,6 +46,5 @@ _: {
           sudo systemctl enable --now docker.service >/dev/null 2>&1 || true
         fi
       '';
-      skipMessage = "Skipped. Docker won't be available until you re-run home-manager switch and accept this prompt.";
     };
 }

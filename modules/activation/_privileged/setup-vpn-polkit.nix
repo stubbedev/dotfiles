@@ -3,13 +3,12 @@
   enableIf = { config, ... }: config.features.vpn;
   args =
     { config, homeLib, ... }:
-    {
-      promptTitle = "Installing polkit rule for VPN (passwordless pkexec)";
-      promptBody = ''
+    homeLib.mkInstallPrompt {
+      subject = "polkit rule for VPN (passwordless pkexec)";
+      body = ''
         This allows ${config.home.username} to run openconnect/pkill via pkexec
         without a password prompt.
       '';
-      promptQuestion = "Install VPN polkit rule?";
       actionScript = homeLib.installPolkitRule {
         target = "/etc/polkit-1/rules.d/49-openconnect.rules";
         content = homeLib.substituteFile {
@@ -20,6 +19,5 @@
           };
         };
       };
-      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

@@ -20,6 +20,5 @@ _: {
         sudo cp -a "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark" "$ICON_DIR/"
         sudo cp -a "${pkgs.vimix-cursors}/share/icons/Vimix-cursors" "$ICON_DIR/"
       '';
-      skipMessage = "Skipped. You can install them later by running: home-manager switch --flake . --impure";
     };
 }

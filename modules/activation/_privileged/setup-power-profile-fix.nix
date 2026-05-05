@@ -3,13 +3,12 @@
   enableIf = { config, ... }: config.features.desktop;
   args =
     { config, homeLib, ... }:
-    {
-      promptTitle = "Installing polkit rule for CPU frequency scaling fix";
-      promptBody = ''
+    homeLib.mkInstallPrompt {
+      subject = "polkit rule for CPU frequency scaling fix";
+      body = ''
         This allows ${config.home.username} to adjust CPU energy performance
         preferences when power profile changes, fixing the 400MHz lock issue.
       '';
-      promptQuestion = "Install power profile fix polkit rule?";
       actionScript = homeLib.installPolkitRule {
         target = "/etc/polkit-1/rules.d/50-power-profile-fix.rules";
         content = homeLib.substituteFile {
@@ -20,6 +19,5 @@
           };
         };
       };
-      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }

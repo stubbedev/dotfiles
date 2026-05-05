@@ -1,12 +1,12 @@
 _: {
   enableIf = { config, ... }: config.features.desktop;
   args =
-    { config, ... }:
+    { config, homeLib, ... }:
     {
-      actionScript = ''
-        mkdir -p "${config.home.homeDirectory}/.config/aerc"
-        rm -rf "${config.home.homeDirectory}/.config/aerc/stylesets"
-        ln -s "${config.home.homeDirectory}/.stubbe/src/aerc/stylesets" "${config.home.homeDirectory}/.config/aerc/stylesets"
-      '';
+      actionScript = homeLib.mkLiveSymlink {
+        inherit config;
+        src = "aerc/stylesets";
+        target = ".config/aerc/stylesets";
+      };
     };
 }

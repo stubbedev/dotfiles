@@ -23,6 +23,5 @@ _: {
         grep -qF "$sessionLine" "$file" || printf '%s\n' "$sessionLine" | sudo tee -a "$file" > /dev/null
       done
     '';
-    skipMessage = "Skipped. You can add them later by running: home-manager switch --flake . --impure";
   };
 }

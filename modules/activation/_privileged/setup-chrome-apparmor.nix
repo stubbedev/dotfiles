@@ -2,37 +2,10 @@ _: {
   enableIf = { config, ... }: config.features.browsers;
   args =
     { homeLib, ... }:
-    {
-      preCheck = ''
-        PATH="/sbin:/usr/sbin:$PATH"
-        if ! command -v apparmor_status >/dev/null 2>&1; then
-          exit 0
-        fi
-      '';
-      promptTitle = "Installing AppArmor profile for Nix-installed Chrome";
-      promptBody = ''
-        Ubuntu 24.04 restricts unprivileged user namespaces (required by
-        Chrome's sandbox) to binaries with a matching AppArmor profile.
-        Nix-store paths aren't covered by Ubuntu's stock chrome profile,
-        so Chrome aborts on launch with "No usable sandbox!".
-
-        This installs an AppArmor profile that whitelists the Nix-store
-        Chrome binary (and its sandbox helper) for unprivileged userns.
-      '';
-      promptQuestion = "Install AppArmor profile for Nix Chrome?";
-      actionScript = homeLib.installApparmorProfile {
-        name = "nix-google-chrome-stable";
-        content = ''
-          # managed-by: home-manager chrome-apparmor v1
-          abi <abi/4.0>,
-          include <tunables/global>
-          profile nix-google-chrome-stable /nix/store/*/share/google/chrome/{chrome,chrome-sandbox} flags=(unconfined) {
-            userns,
-            @{exec_path} mr,
-            include if exists <local/nix-google-chrome-stable>
-          }
-        '';
-      };
-      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
+    homeLib.mkAppArmorSetup {
+      appName = "Chrome";
+      profileName = "nix-google-chrome-stable";
+      programGlob = "/nix/store/*/share/google/chrome/{chrome,chrome-sandbox}";
+      managedBy = "home-manager chrome-apparmor v1";
     };
 }

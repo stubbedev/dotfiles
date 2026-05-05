@@ -2,7 +2,15 @@ _: {
   enableIf = { config, ... }: config.features.desktop;
   args =
     { homeLib, ... }:
-    {
+    homeLib.mkInstallPrompt {
+      subject = "GRUB config for intel_pstate passive mode";
+      body = ''
+        This configures the kernel to use intel_pstate in passive mode,
+        allowing software governors (schedutil, performance, etc.) to
+        control CPU frequency scaling instead of hardware (HWP).
+
+        Will take effect after reboot.
+      '';
       preCheck = ''
         if ! command -v update-grub >/dev/null 2>&1; then
           if [ ! -x /usr/sbin/update-grub ] && [ ! -x /usr/bin/update-grub ]; then
@@ -10,15 +18,6 @@ _: {
           fi
         fi
       '';
-      promptTitle = "Installing GRUB config for intel_pstate passive mode";
-      promptBody = ''
-        This configures the kernel to use intel_pstate in passive mode,
-        allowing software governors (schedutil, performance, etc.) to
-        control CPU frequency scaling instead of hardware (HWP).
-
-        Will take effect after reboot.
-      '';
-      promptQuestion = "Install GRUB config for intel_pstate passive mode?";
       actionScript = ''
         sudo install -d -m 0755 /etc/default/grub.d
         ${homeLib.installSystemFile {
@@ -30,6 +29,5 @@ _: {
         }}
         sudo update-grub
       '';
-      skipMessage = "Skipped. You can install it later by running: home-manager switch --flake . --impure";
     };
 }
