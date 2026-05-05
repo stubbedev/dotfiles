@@ -22,15 +22,15 @@ history = 0
 size = 12
 
 [font.normal]
-family = "JetBrains Mono Nerd Font"
+family = "JetBrainsMono Nerd Font"
 style = "Regular"
 
 [font.bold]
-family = "JetBrains Mono Nerd Font"
+family = "JetBrainsMono Nerd Font"
 style = "Bold"
 
 [font.italic]
-family = "JetBrains Mono Nerd Font"
+family = "JetBrainsMono Nerd Font"
 style = "Italic"
 
 [font.offset]

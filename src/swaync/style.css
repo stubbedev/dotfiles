@@ -2,7 +2,7 @@
 	all: unset;
 	font-size: 14px;
 	font-family:
-		'JetBrains Mono Nerd Font', 'Noto Sans Mono', 'Font Awesome 6 Free',
+		'JetBrainsMono Nerd Font', 'Noto Sans Mono', 'Font Awesome 6 Free',
 		'Font Awesome 6 Brands';
 	transition: 200ms;
 }

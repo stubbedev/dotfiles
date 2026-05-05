@@ -1,0 +1,9 @@
+[Context]
+filesystems=xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro
+
+[Environment]
+GTK_THEME=Adwaita-dark
+QT_QPA_PLATFORMTHEME=kde
+QT_STYLE=breeze
+COLOR_SCHEME=prefer-dark
+GDK_BACKEND=wayland,x11
