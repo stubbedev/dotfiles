@@ -13,7 +13,8 @@ _: {
       # Merge our managed keys into the existing on-disk JSON at eval time.
       # claude-code rewrites these files at runtime, so we deep-merge on top of
       # whatever is currently there rather than replacing it.
-      readJson = path: if builtins.pathExists path then builtins.fromJSON (builtins.readFile path) else { };
+      readJson =
+        path: if builtins.pathExists path then builtins.fromJSON (builtins.readFile path) else { };
       mkMerged =
         name: target: patch:
         pkgs.writeText name (builtins.toJSON (lib.recursiveUpdate (readJson target) patch));
@@ -31,16 +32,26 @@ _: {
       };
 
       configFile = mkMerged "claude-config.json" configTarget {
-        mcpServers.chrome-devtools = {
-          type = "stdio";
-          command = "npx";
-          args = [
-            "-y"
-            "chrome-devtools-mcp@latest"
-            "--no-usage-statistics"
-            "--executable-path"
-            chromeExecutable
-          ];
+        mcpServers = {
+          chrome-devtools = {
+            type = "stdio";
+            command = "npx";
+            args = [
+              "-y"
+              "chrome-devtools-mcp@latest"
+              "--no-usage-statistics"
+              "--executable-path"
+              chromeExecutable
+            ];
+          };
+          atlassian-mcp = {
+            type = "stdio";
+            command = "npx";
+            args = [
+              "-y"
+              "@stubbedev/atlassian-mcp@latest"
+            ];
+          };
         };
       };
 
