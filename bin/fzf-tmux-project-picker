@@ -19,8 +19,8 @@ if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
   tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
 fi
 
-# switch-client errors "no current client" when $TMUX is set but the client
-# has detached (stale env). Fall back to attach in this terminal; clear $TMUX
-# so tmux doesn't refuse the nested attach.
-tmux switch-client -t "$TMUXCLIENTNAME" 2>/dev/null \
-  || TMUX= tmux attach-session -t "$TMUXCLIENTNAME"
+if [[ -n $TMUX ]]; then
+  tmux switch-client -t "$TMUXCLIENTNAME"
+else
+  tmux attach-session -t "$TMUXCLIENTNAME"
+fi
