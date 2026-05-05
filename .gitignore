@@ -8,12 +8,9 @@ src/nvim/lazy-lock.json
 src/nvim/lazyvim.json
 src/btop/btop.log
 src/btop/btop.conf
-src/neomutt/accounts/*/*/password.gpg
 src/neomutt/accounts/*/*/cache/bodies/*
 src/neomutt/accounts/*/*/cache/headers/*
 src/neomutt/accounts/*/*/cert/*
-src/aerc/accounts/*/*/password.gpg
-src/vpn/*/password.gpg
 src/vpn/*/config
 
 # All files under secrets/ are sops-encrypted (binary mode) and tracked.

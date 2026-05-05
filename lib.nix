@@ -152,33 +152,4 @@ rec {
       allEntries = lib.flatten (map createScriptEntries (lib.attrNames vpnProviders));
     in
     builtins.listToAttrs allEntries;
-
-  # Load VPN config files from src/vpn/*/get-password.sh
-  # Returns attrset for xdg.configFile
-  # Note: config and password.gpg files are created by setup scripts in ~/.config/vpn/<provider>/
-  loadVpnConfigs =
-    vpnDir:
-    let
-      vpnProviders = lib.filterAttrs (name: type: type == "directory") (builtins.readDir vpnDir);
-
-      createConfigEntry =
-        providerName:
-        let
-          providerPath = vpnDir + "/${providerName}";
-          getPasswordPath = providerPath + "/get-password.sh";
-        in
-        if builtins.pathExists getPasswordPath then
-          {
-            name = "vpn/${providerName}/get-password.sh";
-            value = {
-              source = getPasswordPath;
-              executable = true;
-            };
-          }
-        else
-          null;
-
-      entries = map createConfigEntry (lib.attrNames vpnProviders);
-    in
-    builtins.listToAttrs (builtins.filter (x: x != null) entries);
 }

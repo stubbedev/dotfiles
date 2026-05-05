@@ -11,7 +11,7 @@ _hm() {
     'update:Update system packages and nix channels'
     'whoami:Print this machine'\''s age recipient pubkey for sops'
     'trust:Add an age recipient to .sops.yaml and re-wrap secrets/*'
-    'secret:Edit or rotate an encrypted file under secrets/'
+    'secret:Edit, set, or rotate an encrypted file under secrets/'
     'search:Search for nix packages'
 
     # Home Manager commands
@@ -114,13 +114,14 @@ _hm() {
           return 0
           ;;
         secret)
-          # `hm secret edit|rotate <name>`. Complete <name> from existing
+          # `hm secret edit|set|rotate <name>`. Complete <name> from existing
           # entries under secrets/ (one binary blob per file).
           case $CURRENT in
             2)
               local -a actions
               actions=(
                 'edit:Open secrets/<name> in $EDITOR via sops (binary mode)'
+                'set:Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)'
                 'rotate:Re-roll the data key (recipients unchanged)'
               )
               _describe -t actions 'secret action' actions

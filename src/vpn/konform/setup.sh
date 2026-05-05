@@ -46,5 +46,5 @@ chmod 600 "$CONFIG_FILE"
 echo "Configuration saved to: $CONFIG_FILE"
 echo ""
 echo "Next step: Set your password by running:"
-echo "  $SCRIPT_DIR/set-password.sh"
+echo "  hm secret set vpn-$PROVIDER_NAME && hm switch"
 

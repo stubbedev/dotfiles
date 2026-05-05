@@ -13,7 +13,7 @@ fi
 
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
-PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
+PASSWORD_FILE="$CONFIG_DIR/password"
 COOKIE_FILE="$CONFIG_DIR/cookie"
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 LOG_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.log"
@@ -175,9 +175,9 @@ if [ -z "${VPN_GATEWAY:-}" ] || [ -z "${VPN_USERNAME:-}" ]; then
   exit 1
 fi
 
-if [ ! -x "$PASSWORD_SCRIPT" ]; then
-  echo "Error: Password script not found at $PASSWORD_SCRIPT" >&2
-  echo "Run: $SCRIPT_DIR/set-password.sh" >&2
+if [ ! -f "$PASSWORD_FILE" ]; then
+  echo "Error: Password file not found at $PASSWORD_FILE" >&2
+  echo "Run: hm secret set vpn-${PROVIDER_NAME} && hm switch" >&2
   exit 1
 fi
 
@@ -198,9 +198,9 @@ if load_cookie; then
 fi
 
 # No valid cookie — fetch one (triggers 2FA once).
-password=$("$PASSWORD_SCRIPT")
+password=$(<"$PASSWORD_FILE")
 if [ -z "$password" ]; then
-  echo "Failed to retrieve password from secret service" >&2
+  echo "Password file $PASSWORD_FILE is empty" >&2
   exit 1
 fi
 

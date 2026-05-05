@@ -4,7 +4,7 @@ set -euo pipefail
 PROVIDER_NAME="konform"
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
-PASSWORD_SCRIPT="$CONFIG_DIR/get-password.sh"
+PASSWORD_FILE="$CONFIG_DIR/password"
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PID_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.pid"
 CONNECTING_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.connecting"
@@ -137,8 +137,8 @@ connect() {
     exit 1
   fi
 
-  if [ ! -x "$PASSWORD_SCRIPT" ]; then
-    echo "Missing password script at $PASSWORD_SCRIPT" >&2
+  if [ ! -f "$PASSWORD_FILE" ]; then
+    echo "Missing password file at $PASSWORD_FILE" >&2
     exit 1
   fi
 

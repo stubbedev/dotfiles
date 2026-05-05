@@ -14,8 +14,7 @@
 
       homeLib = import (self + "/lib.nix") { inherit lib pkgs systemInfo self; };
 
-      # Load VPN scripts/config dynamically
-      vpnConfigs = if config.features.vpn then homeLib.loadVpnConfigs (self + "/src/vpn") else { };
+      # Load VPN scripts dynamically
       vpnScripts = if config.features.vpn then homeLib.loadVpnScripts (self + "/src/vpn") else { };
     in
     {
@@ -24,7 +23,6 @@
           constants
           systemInfo
           homeLib
-          vpnConfigs
           vpnScripts
           self
           ;

@@ -92,6 +92,7 @@ _: {
                                   - hm trust <pubkey>           (auto-named)
                                   - cmd | hm trust              (e.g. ssh other hm whoami | hm trust)
             secret edit <name>  Open secrets/<name> in $EDITOR via sops, binary mode (creates if absent)
+            secret set <name>   Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)
             secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
             help                Show this help message
 
@@ -242,7 +243,7 @@ _: {
             local action="''${1:-}"
             local name="''${2:-}"
             if [ -z "$action" ] || [ -z "$name" ]; then
-              echo "Usage: hm secret {edit|rotate} <name>" >&2
+              echo "Usage: hm secret {edit|set|rotate} <name>" >&2
               return 2
             fi
             # All secrets are binary-mode single-blob files under secrets/<name>.
@@ -254,6 +255,46 @@ _: {
                 # buffer (no yaml starter template).
                 ${pkgs.sops}/bin/sops --input-type binary --output-type binary "$path"
                 ;;
+              set)
+                # Replace the secret value without opening an editor. On a TTY
+                # we prompt twice and confirm; piped input goes straight in
+                # (e.g. `secret-tool lookup ... | hm secret set vpn-konform`).
+                local pw=""
+                if [ -t 0 ]; then
+                  read -srp "New value for $name: " pw
+                  echo
+                  local pw2=""
+                  read -srp "Confirm: " pw2
+                  echo
+                  if [ "$pw" != "$pw2" ]; then
+                    echo "hm secret set: values do not match" >&2
+                    return 1
+                  fi
+                  unset pw2
+                else
+                  pw=$(cat)
+                fi
+                if [ -z "$pw" ]; then
+                  echo "hm secret set: refusing to write empty value" >&2
+                  return 1
+                fi
+                # --filename-override makes sops apply the creation_rules for
+                # secrets/<name> even though stdin doesn't have a real path.
+                # Write to a sibling tmp file then rename so a failure mid-
+                # encrypt can't truncate the existing secret.
+                local tmp="$path.new"
+                if ! printf '%s' "$pw" | ${pkgs.sops}/bin/sops --encrypt \
+                    --input-type binary --output-type binary \
+                    --filename-override "$path" /dev/stdin > "$tmp"; then
+                  rm -f "$tmp"
+                  unset pw
+                  echo "hm secret set: encryption failed" >&2
+                  return 1
+                fi
+                mv "$tmp" "$path"
+                unset pw
+                echo "Updated secrets/$name. Run 'hm switch' to deploy, then commit."
+                ;;
               rotate)
                 if [ ! -f "$path" ]; then
                   echo "hm secret rotate: $path does not exist" >&2
@@ -264,7 +305,7 @@ _: {
                 echo "Re-rolled data key for $name. Recipients unchanged."
                 ;;
               *)
-                echo "hm secret: unknown action '$action' (want edit|rotate)" >&2
+                echo "hm secret: unknown action '$action' (want edit|set|rotate)" >&2
                 return 2
                 ;;
             esac
