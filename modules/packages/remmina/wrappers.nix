@@ -8,9 +8,6 @@ _: {
       ...
     }:
     let
-      remminaGfx = homeLib.gfxName "remmina" pkgs.remmina;
-      remminaFileWrapperGfx = homeLib.gfxExe "remmina-file-wrapper" pkgs.remmina;
-
       # Upstream's org.remmina.Remmina.desktop bakes absolute /nix/store
       # paths into Exec=, so launching from the menu would bypass the
       # nixGL wrapper. Provide a replacement whose Exec= uses the bare
@@ -23,7 +20,11 @@ _: {
         exec = "remmina";
         icon = "org.remmina.Remmina";
         type = "Application";
-        categories = [ "GTK" "Network" "RemoteAccess" ];
+        categories = [
+          "GTK"
+          "Network"
+          "RemoteAccess"
+        ];
         mimeTypes = [
           "application/x-remmina"
           "x-scheme-handler/rdp"
@@ -48,21 +49,17 @@ _: {
           };
         };
       };
-
-      remmina-package = pkgs.symlinkJoin {
-        name = "remmina-${pkgs.remmina.version}";
-        paths = [
-          remminaGfx
-          remminaFileWrapperGfx
-          remminaDesktop
-          pkgs.remmina
-        ];
-        meta = pkgs.remmina.meta // {
-          mainProgram = "remmina";
-        };
-      };
     in
     lib.mkIf config.features.desktop {
-      home.packages = [ remmina-package ];
+      home.packages = [
+        (homeLib.mkWrappedPackage {
+          pkg = pkgs.remmina;
+          exes = [
+            "remmina"
+            "remmina-file-wrapper"
+          ];
+          extraPaths = [ remminaDesktop ];
+        })
+      ];
     };
 }

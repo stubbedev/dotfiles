@@ -1,13 +1,10 @@
 {
   lib,
-  pkgs ? null,
-  systemInfo ? null,
+  pkgs,
+  systemInfo,
   ...
 }:
 let
-  requirePkgs = if pkgs == null then throw "gfx: pkgs is required" else pkgs;
-  requireSystemInfo = if systemInfo == null then throw "gfx: systemInfo is required" else systemInfo;
-
   # Mesa probes these paths literally — non-existent entries are skipped,
   # but if none exist EGL/GBM init fails. Cover RHEL/Arch (lib64), generic
   # (lib), and Debian/Ubuntu multiarch (lib/x86_64-linux-gnu) layouts.
@@ -51,9 +48,9 @@ let
   # so on non-NixOS hosts Nix-built Wayland clients fail with "provided
   # display handle is not supported". We add the lib paths to LD_LIBRARY_PATH
   # and register their JSON configs via __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES.
-  nvidiaEglPlatformLibs = lib.optionalString requireSystemInfo.hasNvidia "${requirePkgs.egl-wayland}/lib:${requirePkgs.egl-gbm}/lib";
+  nvidiaEglPlatformLibs = lib.optionalString systemInfo.hasNvidia "${pkgs.egl-wayland}/lib:${pkgs.egl-gbm}/lib";
 
-  nvidiaEglPlatformConfigs = lib.optionalString requireSystemInfo.hasNvidia "${requirePkgs.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json:${requirePkgs.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json";
+  nvidiaEglPlatformConfigs = lib.optionalString systemInfo.hasNvidia "${pkgs.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json:${pkgs.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json";
 
   # Wrap a Nix-built GUI binary in nixGL and inject system driver search
   # paths (Mesa GBM backends, DRI drivers) so loaders find /usr/lib/gbm,
@@ -61,11 +58,11 @@ let
   # values take precedence; missing paths in the list are silently skipped.
   mkNixGLWrapper =
     name: programPath:
-    requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
-      makeWrapper ${requireSystemInfo.nixGLBin} $out/bin/${name} \
+    pkgs.runCommand name { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
+      makeWrapper ${systemInfo.nixGLBin} $out/bin/${name} \
         --suffix GBM_BACKENDS_PATH : "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
         --suffix LIBGL_DRIVERS_PATH : "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
-        ${lib.optionalString requireSystemInfo.hasNvidia ''
+        ${lib.optionalString systemInfo.hasNvidia ''
           --suffix LD_LIBRARY_PATH : "${nvidiaEglPlatformLibs}" \
           --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${nvidiaEglPlatformConfigs}" \
         ''}--add-flag "${programPath}"
@@ -74,7 +71,7 @@ let
   # Direct wrapper without nixGL - for DRM/KMS mode where we need host EGL
   mkDirectWrapperWithDrivers =
     name: programPath:
-    requirePkgs.runCommand name { nativeBuildInputs = [ requirePkgs.makeWrapper ]; } ''
+    pkgs.runCommand name { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
       makeWrapper ${programPath} $out/bin/${name} \
         --set GBM_BACKENDS_PATH "${gfxDriverEnv.GBM_BACKENDS_PATH}" \
         --set LIBGL_DRIVERS_PATH "${gfxDriverEnv.LIBGL_DRIVERS_PATH}" \
@@ -84,6 +81,8 @@ let
     '';
 in
 {
+  # Wrap `program` (a package) in nixGL using its mainProgram. Output
+  # name is the basename of the wrapped binary.
   gfx =
     program:
     let
@@ -92,15 +91,16 @@ in
     in
     mkNixGLWrapper name programPath;
 
+  # Wrap `program`'s mainProgram, exposing it under `name` (use to rename).
   gfxName = name: program: mkNixGLWrapper name (lib.getExe program);
 
+  # Wrap a specific binary `exeName` from `program` (not necessarily its
+  # mainProgram). Output name matches exeName.
   gfxExe =
     exeName: program:
-    let
-      programPath = lib.getExe' program exeName;
-      name = baseNameOf programPath;
-    in
-    mkNixGLWrapper name programPath;
+    mkNixGLWrapper exeName (lib.getExe' program exeName);
 
+  # Direct (no nixGL) wrapper that injects system driver search paths.
+  # For DRM/KMS contexts where we need the host's EGL implementation.
   gfxDirectWithDrivers = name: program: mkDirectWrapperWithDrivers name (lib.getExe program);
 }

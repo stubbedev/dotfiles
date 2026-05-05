@@ -9,19 +9,7 @@ _: {
       ...
     }:
     let
-      homeDir = config.home.homeDirectory;
-      desiredPaths = map (path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path) config.home.sessionPath;
-
-      desiredDataDirs =
-        let
-          rawDataDirs = lib.splitString ":" (config.home.sessionVariables.XDG_DATA_DIRS or "");
-          replaceHome = path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path;
-          isPlaceholder = value: value == "$XDG_DATA_DIRS" || value == "\${XDG_DATA_DIRS}";
-        in
-        map replaceHome (builtins.filter (value: value != "" && !isPlaceholder value) rawDataDirs);
-
-      pathPrefix = lib.concatStringsSep ":" desiredPaths;
-      dataDirsPrefix = lib.concatStringsSep ":" desiredDataDirs;
+      inherit (homeLib.resolveSessionPaths config) pathPrefix dataDirsPrefix;
 
       # Same nixGL wrapping as Hyprland — host Mesa drivers can be older
       # than Nix's libgbm (e.g. Ubuntu 25.2 vs Nix 26.x), so we need

@@ -12,21 +12,7 @@ _: {
     let
       inherit (pkgs.stdenv.hostPlatform) system;
       hyprlandPkg = hyprland.packages.${system}.hyprland;
-      homeDir = config.home.homeDirectory;
-      desiredPaths =
-        map (path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path) config.home.sessionPath;
-
-      desiredDataDirs =
-        let
-          rawDataDirs = lib.splitString ":" (config.home.sessionVariables.XDG_DATA_DIRS or "");
-          replaceHome = path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path;
-          isPlaceholder = value: value == "$XDG_DATA_DIRS" || value == "\${XDG_DATA_DIRS}";
-        in
-        map replaceHome (builtins.filter (value: value != "" && !isPlaceholder value) rawDataDirs);
-
-      pathPrefix = lib.concatStringsSep ":" desiredPaths;
-      dataDirsPrefix = lib.concatStringsSep ":" desiredDataDirs;
-
+      inherit (homeLib.resolveSessionPaths config) pathPrefix dataDirsPrefix;
 
       # Create custom Hyprland wrapper with build-time GPU detection
       # This is needed because Nix's mesa-libgbm doesn't include GBM backends

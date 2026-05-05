@@ -36,23 +36,12 @@ _: {
 
         exec "$real" "$@"
       '';
-      logseqWrapped =
-        let
-          gfxLogseq = homeLib.gfx pkgs.logseq;
-        in
-        pkgs.runCommand "logseq-no-suid" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
-          makeWrapper ${gfxLogseq}/bin/logseq $out/bin/logseq \
-            --add-flags "--disable-setuid-sandbox"
-        '';
-      logseqPackage = pkgs.symlinkJoin {
-        name = "logseq-${pkgs.logseq.version}";
-        paths = [
-          logseqWrapped
-          pkgs.logseq
-        ];
-        meta = pkgs.logseq.meta // {
-          mainProgram = "logseq";
-        };
+      # Logseq's bundled chrome-sandbox can't be SUID from /nix/store; pass
+      # --disable-setuid-sandbox so it falls back to userns. Matching
+      # AppArmor profile installed by setup-logseq-apparmor on Ubuntu 24.04+.
+      logseqPackage = homeLib.mkWrappedPackage {
+        pkg = pkgs.logseq;
+        flags = [ "--disable-setuid-sandbox" ];
       };
     in
     lib.mkIf config.features.desktop {

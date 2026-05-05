@@ -1,7 +1,7 @@
 _: {
   enableIf = { config, ... }: config.features.hyprland;
   args =
-    { lib, ... }:
+    { lib, homeLib, ... }:
     let
       unit = {
         Unit = {
@@ -22,7 +22,6 @@ _: {
           WantedBy = "sysinit.target";
         };
       };
-      unitText = lib.generators.toINI { listsAsDuplicateKeys = true; } unit;
     in
     {
       promptTitle = "⚠️  Nix PAM wrapper setup required for hyprlock authentication";
@@ -32,11 +31,10 @@ _: {
       '';
       promptQuestion = "Install nix-pam-wrappers.service?";
       actionScript = ''
-        tmpfile=$(mktemp)
-        trap 'rm -f "$tmpfile"' EXIT
-        cat > "$tmpfile" << 'EOF'
-        ${unitText}EOF
-        sudo install -m 0644 "$tmpfile" /etc/systemd/system/nix-pam-wrappers.service
+        ${homeLib.installSystemFile {
+          target = "/etc/systemd/system/nix-pam-wrappers.service";
+          content = lib.generators.toINI { listsAsDuplicateKeys = true; } unit;
+        }}
         sudo systemctl daemon-reload
         sudo systemctl enable --now nix-pam-wrappers.service
       '';

@@ -1,14 +1,13 @@
-{ inputs, self, ... }:
+{ inputs, ... }:
 let
-  homeLib = import (self + "/lib.nix") { inherit (inputs.nixpkgs) lib; inherit self; };
-
-  # Auto-detect NVIDIA driver version from /proc
-  # Works with both proprietary and Open kernel modules
+  # Auto-detect NVIDIA driver version from /proc. Works with both
+  # proprietary and Open kernel modules. Requires --impure (the flake
+  # already runs that way) so /proc reads succeed.
   nvidiaVersion =
     let
-      nvidiaVersionPath = "/proc/driver/nvidia/version";
+      nvidiaVersionPath = /. + "/proc/driver/nvidia/version";
     in
-    if builtins.pathExists (homeLib.stringToPath nvidiaVersionPath) then
+    if builtins.pathExists nvidiaVersionPath then
       let
         data = builtins.readFile nvidiaVersionPath;
         versionMatch = builtins.match ".*x86_64[[:space:]]+([0-9.]+)[[:space:]]+.*" data;

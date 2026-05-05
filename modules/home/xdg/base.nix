@@ -19,7 +19,7 @@ _: {
           "btop/themes/catppuccin_mocha.theme"
           "swaync"
         ]
-        // homeLib.xdgSourceWith "waybar" {
+        // homeLib.xdgSource "waybar" {
           onChange = ''
             if command -v systemctl >/dev/null 2>&1; then
               if systemctl --user is-active --quiet waybar.service 2>/dev/null; then

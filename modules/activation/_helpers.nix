@@ -40,20 +40,13 @@
         let
           resolvedArgs = if builtins.isFunction args then args moduleArgs else args;
           isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
-          withSudo =
-            text:
-            if text == "" then
-              text
-            else
-              ''
-                sudo() { "$SUDO" "$@"; }
-                ${text}
-              '';
+          # sudoPromptScript already injects a `sudo()` shell function around
+          # actionScript, so the script is free to call `sudo …` without
+          # locating the binary itself. No further wrapping needed here.
           setupScript = homeLib.sudoPromptScript (
             resolvedArgs
             // {
               inherit pkgs name;
-              actionScript = withSudo (resolvedArgs.actionScript or "");
             }
           );
         in
