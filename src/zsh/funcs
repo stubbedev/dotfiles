@@ -1015,6 +1015,26 @@ if is_binary ss; then
   }
 fi
 
+if are_binary ssh openssl; then
+  function remote_passwd {
+    local _user="$1" _host="$2"
+    if [[ -z "$_user" || -z "$_host" ]]; then
+      echo "usage: remote_passwd <user> <host>"
+      return 1
+    fi
+    local _oldpass _newpass _confirm
+    read -rs "_oldpass?Current password for $_user@$_host: "; echo
+    read -rs "_newpass?New password: "; echo
+    read -rs "_confirm?Confirm new password: "; echo
+    if [[ "$_newpass" != "$_confirm" ]]; then
+      echo "passwords do not match"
+      return 1
+    fi
+    local _hash=$(openssl passwd -6 "$_newpass") || return 1
+    echo "$_oldpass" | ssh "$_user@$_host" "sudo -S -p '' usermod -p '$_hash' '$_user'"
+  }
+fi
+
 if is_binary uv; then
   function pysrc {
     if ! is_file "$PWD/venv/bin/activate"; then
