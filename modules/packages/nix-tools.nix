@@ -15,6 +15,7 @@ _: {
         cachix
         nixd
         nixdoc
+        nil
       ];
     };
 }

@@ -101,12 +101,22 @@ return {
               nixpkgs = { expr = "import <nixpkgs> { }" },
             },
           },
-          on_new_config = function(new_config, new_root_dir)
-            if not new_root_dir then return end
-            if vim.fn.filereadable(new_root_dir .. "/flake.nix") == 0 then return end
-            new_config.settings = vim.tbl_deep_extend("force", new_config.settings or {}, {
-              nixd = nixd_settings_for_root(new_root_dir),
-            })
+          before_init = function(params, config)
+            local root
+            if params.workspaceFolders and params.workspaceFolders[1] then
+              root = vim.uri_to_fname(params.workspaceFolders[1].uri)
+            elseif params.rootUri then
+              root = vim.uri_to_fname(params.rootUri)
+            end
+            if not root or vim.fn.filereadable(root .. "/flake.nix") == 0 then return end
+            -- Mutate config.settings in place: vim.lsp.Client captures a reference at
+            -- create() time, so reassigning the table here would be ignored.
+            config.settings = config.settings or {}
+            config.settings.nixd = vim.tbl_deep_extend(
+              "force",
+              config.settings.nixd or {},
+              nixd_settings_for_root(root)
+            )
           end,
         },
         oxlint = {
