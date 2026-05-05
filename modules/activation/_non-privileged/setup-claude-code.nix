@@ -52,6 +52,13 @@ _: {
               "@stubbedev/atlassian-mcp@latest"
             ];
           };
+          nix-mcp = {
+            type = "stdio";
+            command = "uvx";
+            args = [
+              "mcp-nixos"
+            ];
+          };
         };
       };
 
