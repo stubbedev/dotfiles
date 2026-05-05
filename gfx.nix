@@ -51,11 +51,9 @@ let
   # so on non-NixOS hosts Nix-built Wayland clients fail with "provided
   # display handle is not supported". We add the lib paths to LD_LIBRARY_PATH
   # and register their JSON configs via __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES.
-  nvidiaEglPlatformLibs = lib.optionalString requireSystemInfo.hasNvidia
-    "${requirePkgs.egl-wayland}/lib:${requirePkgs.egl-gbm}/lib";
+  nvidiaEglPlatformLibs = lib.optionalString requireSystemInfo.hasNvidia "${requirePkgs.egl-wayland}/lib:${requirePkgs.egl-gbm}/lib";
 
-  nvidiaEglPlatformConfigs = lib.optionalString requireSystemInfo.hasNvidia
-    "${requirePkgs.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json:${requirePkgs.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json";
+  nvidiaEglPlatformConfigs = lib.optionalString requireSystemInfo.hasNvidia "${requirePkgs.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json:${requirePkgs.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json";
 
   # Wrap a Nix-built GUI binary in nixGL and inject system driver search
   # paths (Mesa GBM backends, DRI drivers) so loaders find /usr/lib/gbm,
@@ -90,7 +88,7 @@ in
     program:
     let
       programPath = lib.getExe program;
-      name = builtins.baseNameOf programPath;
+      name = baseNameOf programPath;
     in
     mkNixGLWrapper name programPath;
 
@@ -100,7 +98,7 @@ in
     exeName: program:
     let
       programPath = lib.getExe' program exeName;
-      name = builtins.baseNameOf programPath;
+      name = baseNameOf programPath;
     in
     mkNixGLWrapper name programPath;
 

@@ -10,7 +10,7 @@
     let
       constants = import (self + "/constants.nix") { inherit config; };
 
-      systemInfo = import (self + "/lib/system-info.nix") { inherit lib pkgs; };
+      systemInfo = import (self + "/lib/system-info.nix") { inherit pkgs; };
 
       homeLib = import (self + "/lib.nix") { inherit lib pkgs systemInfo self; };
 
