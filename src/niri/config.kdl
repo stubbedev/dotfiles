@@ -192,7 +192,7 @@ binds {
     Mod+Space { spawn "rofi" "-drun-reload-desktop-cache" "-drun-use-desktop-cache" "-show" "drun"; }
     Mod+Shift+Space { spawn "rofi" "-show" "combi" "-combi-modes" "run" "-modes" "combi"; }
     Mod+Ctrl+Space { spawn "rofi" "-show" "combi" "-combi-modes" "window" "-modes" "combi"; }
-    Mod+M { spawn "open-mail"; }
+    Mod+M { spawn "mail-open"; }
 
     // SCREENSHOTS (niri built-in)
     Print { screenshot; }
@@ -279,6 +279,6 @@ binds {
     XF86AudioMute          allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
 
     // BRIGHTNESS KEYS
-    XF86MonBrightnessUp   { spawn "/home/stubbe/.stubbe/src/_shared/scripts/monitor.brightness.sh" "increase"; }
-    XF86MonBrightnessDown { spawn "/home/stubbe/.stubbe/src/_shared/scripts/monitor.brightness.sh" "decrease"; }
+    XF86MonBrightnessUp   { spawn "monitor-brightness" "increase"; }
+    XF86MonBrightnessDown { spawn "monitor-brightness" "decrease"; }
 }

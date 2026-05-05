@@ -9,13 +9,8 @@
     }:
     let
       constants = import (self + "/constants.nix") { inherit config; };
-
       systemInfo = import (self + "/lib/system-info.nix") { inherit pkgs; };
-
       homeLib = import (self + "/lib.nix") { inherit lib pkgs systemInfo self; };
-
-      # Load VPN scripts dynamically
-      vpnScripts = if config.features.vpn then homeLib.loadVpnScripts (self + "/src/vpn") else { };
     in
     {
       _module.args = {
@@ -23,7 +18,6 @@
           constants
           systemInfo
           homeLib
-          vpnScripts
           self
           ;
         inherit (inputs) hyprland hy3 fenix opencode srv;

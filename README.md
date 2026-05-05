@@ -38,9 +38,11 @@ The structure is as follows:
 │   ├── theme/
 │   └── features.nix
 ├── bin/
-│   ├── stb*  stb-install*
-│   ├── fzf-*  tmux-*
-│   └── ...
+│   ├── stb*               # personal CLI (also installed into ~/.nix-profile/bin/)
+│   ├── stb-install*       # bootstrap (run from the checkout, before Nix exists)
+│   ├── tmux-*             # tmux launcher wrappers
+│   ├── tmux-pick-*        # interactive tmux picker (fzf+tmux)
+│   └── fzf-pick-*         # headless fzf pickers (return a string)
 ├── src/
 │   ├── _shared/scripts/   # cross-app scripts (waybar.launch.sh, monitor.brightness.sh, ...)
 │   ├── aerc/  alacritty/  btop/
@@ -50,9 +52,10 @@ The structure is as follows:
 └── README.md
 ```
 
-The bin directory contains `stb` and `stb-install` which are the 2 utility
-binaries. It may also contain other utilities binaries if directly included in
-the repo.
+The `bin/` directory holds the source for shell scripts that get built into
+Nix-managed binaries under `~/.nix-profile/bin/` via `modules/home/scripts.nix`.
+`stb-install` is the only one that actually runs from the checkout: it's the
+bootstrap that brings Nix and home-manager up on a fresh non-NixOS host.
 
 In the `src` directory we find various applications, each with their own
 directory. If an application such as `zsh` or `golang` install more packages,

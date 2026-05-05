@@ -33,14 +33,14 @@
 		"format": "{}",
 		"interval": 30,
 		"markup": "pango",
-		"on-click": "~/.local/bin/open-mail",
+		"on-click": "mail-open",
 	},
 	"custom/konform-vpn": {
-		"exec": "~/.local/bin/konform-vpn-waybar status",
+		"exec": "vpn-konform-waybar status",
 		"return-type": "json",
 		"format": "{}",
 		"interval": 3,
-		"on-click": "~/.local/bin/konform-vpn-waybar toggle",
+		"on-click": "vpn-konform-waybar toggle",
 	},
 	"hyprland/workspaces": {
 		"format": "{name} {icon}",
@@ -128,8 +128,8 @@
 	"backlight": {
 		"format": "{percent}% {icon}",
 		"format-icons": ["🌑", "🌘", "🌗", "🌖", "🌕"],
-		"on-scroll-up": "~/.stubbe/src/_shared/scripts/monitor.brightness.sh increase",
-		"on-scroll-down": "~/.stubbe/src/_shared/scripts/monitor.brightness.sh decrease",
+		"on-scroll-up": "monitor-brightness increase",
+		"on-scroll-down": "monitor-brightness decrease",
 	},
 	"battery": {
 		"states": {

@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-SELECTED=$(fzf-project-picker-util "$*")
+SELECTED=$(fzf-pick-project "$*")
 
 if [[ -z $SELECTED ]]; then
   exit 0

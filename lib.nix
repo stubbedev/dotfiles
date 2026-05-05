@@ -121,13 +121,21 @@ rec {
       sudo apparmor_parser -r "${target}"
     '';
 
-  # preCheck snippet for AppArmor setups: skip the activation entirely
-  # when apparmor_status is not on the host (i.e. distros without
-  # AppArmor). PATH is restored because activations run with a stripped
-  # one and apparmor_status lives under /sbin or /usr/sbin.
-  apparmorPreCheck = ''
-    PATH="/sbin:/usr/sbin:$PATH"
-    if ! command -v apparmor_status >/dev/null 2>&1; then
+  # Activation preCheck building blocks. These render shell snippets
+  # suitable for a sudoPromptScript preCheck: the activation exits 0
+  # (skipping the rest, including the sudo prompt) when the requested
+  # precondition isn't met. PATH is restored to a sane default because
+  # activations run with a stripped PATH and many tools (apparmor_status,
+  # update-grub, …) live under /sbin or /usr/sbin.
+  requireCommand = cmd: ''
+    PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
+    if ! command -v ${cmd} >/dev/null 2>&1; then
+      exit 0
+    fi
+  '';
+
+  requirePath = path: ''
+    if [ ! -e "${path}" ]; then
       exit 0
     fi
   '';
@@ -146,7 +154,7 @@ rec {
       managedBy, # marker comment for the profile body
     }:
     {
-      preCheck = apparmorPreCheck;
+      preCheck = requireCommand "apparmor_status";
       promptTitle = "Installing AppArmor profile for Nix-installed ${appName}";
       promptBody = ''
         Ubuntu 24.04 restricts unprivileged user namespaces (required by
@@ -211,6 +219,32 @@ rec {
         sudo install -d -m 0755 /usr/share/wayland-sessions
         ${installSystemFile { inherit target content; }}
       '';
+    };
+
+  # ============================================================
+  # Script binaries (live in ~/.nix-profile/bin/)
+  # ============================================================
+
+  # Read a script at <repo-root>/<source>, apply @KEY@ substitutions, and
+  # build it as an executable Nix derivation that lands under
+  # ~/.nix-profile/bin/<name>. Preserves the script's own shebang
+  # (so zsh stays zsh, bash stays bash). Use this instead of writing
+  # things to home.file.".local/bin/x" — keeps scripts on PATH and
+  # owned by the Nix profile.
+  mkScriptBin =
+    {
+      name,
+      source, # path relative to repo root, e.g. "src/aerc/scripts/x.sh" or "bin/y"
+      vars ? { },
+    }:
+    (requirePkgs "mkScriptBin").writeTextFile {
+      inherit name;
+      text = substituteFile {
+        file = self + "/${source}";
+        inherit vars;
+      };
+      executable = true;
+      destination = "/bin/${name}";
     };
 
   # ============================================================
@@ -435,42 +469,4 @@ rec {
       echo ""
     '';
 
-  # ============================================================
-  # VPN scripts
-  # ============================================================
-
-  # Load VPN scripts from src/vpn/<provider>/{connect,disconnect,status}.sh
-  # Returns attrset for home.file that maps VPN scripts to ~/.local/bin
-  loadVpnScripts =
-    vpnDir:
-    let
-      vpnProviders = lib.filterAttrs (_: type: type == "directory") (builtins.readDir vpnDir);
-
-      createScriptEntries =
-        providerName:
-        let
-          providerPath = vpnDir + "/${providerName}";
-          scripts = [
-            "connect"
-            "disconnect"
-            "status"
-          ];
-
-          createEntry =
-            scriptName:
-            let
-              scriptPath = providerPath + "/${scriptName}.sh";
-              binName = ".local/bin/${providerName}-vpn-${scriptName}";
-            in
-            if builtins.pathExists scriptPath then
-              {
-                name = binName;
-                value.source = scriptPath;
-              }
-            else
-              null;
-        in
-        builtins.filter (x: x != null) (map createEntry scripts);
-    in
-    builtins.listToAttrs (lib.flatten (map createScriptEntries (lib.attrNames vpnProviders)));
 }

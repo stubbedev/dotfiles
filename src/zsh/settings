@@ -65,9 +65,9 @@ function _settings_init {
   bindkey -s "^[h" "tmux-claude^M"
 
   if is_binary fzf; then
-      bindkey -s "^[f" "fzf-tmux-project-picker^M"
+      bindkey -s "^[f" "tmux-pick-project^M"
       bindkey -s "^[F" "fzf-project-picker^M"
-      bindkey -s "^[d" "fzf-tmux-session-picker^M"
+      bindkey -s "^[d" "tmux-pick-session^M"
       bindkey -s "^[D" "fzf-directory-picker^M"
       local _fzf_cache="${XDG_CACHE_HOME:-$HOME/.cache}/fzf_init.zsh"
       local _fzf_resolved="${commands[fzf]:A}"

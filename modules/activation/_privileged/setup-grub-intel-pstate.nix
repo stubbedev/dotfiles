@@ -11,13 +11,7 @@ _: {
 
         Will take effect after reboot.
       '';
-      preCheck = ''
-        if ! command -v update-grub >/dev/null 2>&1; then
-          if [ ! -x /usr/sbin/update-grub ] && [ ! -x /usr/bin/update-grub ]; then
-            exit 0
-          fi
-        fi
-      '';
+      preCheck = homeLib.requireCommand "update-grub";
       actionScript = ''
         sudo install -d -m 0755 /etc/default/grub.d
         ${homeLib.installSystemFile {

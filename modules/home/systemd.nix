@@ -5,6 +5,7 @@ _: {
       pkgs,
       lib,
       config,
+      scripts,
       ...
     }:
     let
@@ -96,7 +97,7 @@ _: {
             Install.WantedBy = compositorTargets;
             Service = {
               Type = "simple";
-              ExecStart = "${constants.paths.shared}/scripts/waybar.launch.sh";
+              ExecStart = "${scripts.waybar-launch}/bin/waybar-launch";
               ExecStopPost = "-${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -9 waybar || true; sleep 0.5'";
               Restart = "on-failure";
               RestartSec = "3s";
@@ -164,7 +165,7 @@ _: {
             Install.WantedBy = [ "default.target" ];
             Service = {
               Type = "simple";
-              ExecStart = "${constants.paths.shared}/scripts/power.profile.fix.sh";
+              ExecStart = "${scripts.power-profile-fix}/bin/power-profile-fix";
               ExecStop = "${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -TERM -f dbus-monitor.*PowerProfiles || true'";
               Restart = "on-failure";
               RestartSec = "5s";

@@ -2,23 +2,12 @@
 
 set -euo pipefail
 
-SCRIPT_NAME="$(basename "$0")"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-if [[ "$SCRIPT_NAME" == "status.sh" ]]; then
-  PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
-else
-  PROVIDER_NAME="${SCRIPT_NAME%-vpn-status}"
-fi
+PROVIDER_NAME="@PROVIDER_NAME@"
 
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 
-iface_name() {
-  local raw="oc-${PROVIDER_NAME}"
-  printf '%s' "${raw:0:15}"
-}
-
-IFACE_NAME="$(iface_name)"
+# Linux interface names cap at 15 chars; keep the same form as connect.sh.
+IFACE_NAME="$(printf '%s' "oc-${PROVIDER_NAME}" | cut -c1-15)"
 
 interface_up() {
   if [ -d "/sys/class/net/$IFACE_NAME" ]; then

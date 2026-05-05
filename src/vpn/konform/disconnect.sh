@@ -2,14 +2,7 @@
 
 set -euo pipefail
 
-SCRIPT_NAME="$(basename "$0")"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-if [[ "$SCRIPT_NAME" == "disconnect.sh" ]]; then
-  PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
-else
-  PROVIDER_NAME="${SCRIPT_NAME%-vpn-disconnect}"
-fi
+PROVIDER_NAME="@PROVIDER_NAME@"
 
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 PKILL_BIN="$(command -v pkill || true)"

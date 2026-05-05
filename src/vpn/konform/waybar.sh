@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROVIDER_NAME="konform"
+PROVIDER_NAME="@PROVIDER_NAME@"
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
 PASSWORD_FILE="$CONFIG_DIR/password"
@@ -9,16 +9,13 @@ RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PID_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.pid"
 CONNECTING_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.connecting"
 LOG_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}-waybar.log"
-CONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-connect"
-DISCONNECT_SCRIPT="$HOME/.local/bin/${PROVIDER_NAME}-vpn-disconnect"
+# Companion scripts share the nix-profile bin/ layout — resolve via PATH.
+CONNECT_SCRIPT="vpn-${PROVIDER_NAME}-connect"
+DISCONNECT_SCRIPT="vpn-${PROVIDER_NAME}-disconnect"
 CONNECT_TIMEOUT=30
 
-iface_name() {
-  local raw="oc-${PROVIDER_NAME}"
-  printf '%s' "${raw:0:15}"
-}
-
-IFACE_NAME="$(iface_name)"
+# Linux interface names cap at 15 chars; keep the same form as connect.sh.
+IFACE_NAME="$(printf '%s' "oc-${PROVIDER_NAME}" | cut -c1-15)"
 
 interface_up() {
   if [ -d "/sys/class/net/$IFACE_NAME" ]; then

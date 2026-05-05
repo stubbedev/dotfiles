@@ -2,14 +2,7 @@
 
 set -euo pipefail
 
-SCRIPT_NAME="$(basename "$0")"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-if [[ "$SCRIPT_NAME" == "connect.sh" ]]; then
-  PROVIDER_NAME="$(basename "$SCRIPT_DIR")"
-else
-  PROVIDER_NAME="${SCRIPT_NAME%-vpn-connect}"
-fi
+PROVIDER_NAME="@PROVIDER_NAME@"
 
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
@@ -30,12 +23,10 @@ if [ -z "$SETSID_BIN" ]; then
 fi
 unset _setsid_candidate
 
-iface_name() {
-  local raw="oc-${PROVIDER_NAME}"
-  printf '%s' "${raw:0:15}"
-}
-
-IFACE_NAME="$(iface_name)"
+# Linux interface names cap at 15 chars, so the iface is "oc-<provider>"
+# truncated to fit. Keeping it deterministic lets status / waybar agree
+# on which interface to probe.
+IFACE_NAME="$(printf '%s' "oc-${PROVIDER_NAME}" | cut -c1-15)"
 
 run_as_root() {
   if [ "${EUID:-$(id -u)}" -eq 0 ]; then
@@ -162,8 +153,8 @@ if [ -z "$OPENCONNECT_BIN" ]; then
 fi
 
 if [ ! -f "$CONFIG_FILE" ]; then
-  echo "Error: Configuration file not found at $CONFIG_FILE" >&2
-  echo "Run: cd ~/git/dotfiles/src/vpn/$PROVIDER_NAME && ./setup.sh" >&2
+  echo "Error: VPN config not found at $CONFIG_FILE" >&2
+  echo "Run: hm secret edit vpn-${PROVIDER_NAME}-config && hm switch" >&2
   exit 1
 fi
 
@@ -171,7 +162,7 @@ fi
 source "$CONFIG_FILE"
 
 if [ -z "${VPN_GATEWAY:-}" ] || [ -z "${VPN_USERNAME:-}" ]; then
-  echo "Error: Invalid configuration in $CONFIG_FILE" >&2
+  echo "Error: $CONFIG_FILE missing VPN_GATEWAY or VPN_USERNAME" >&2
   exit 1
 fi
 
