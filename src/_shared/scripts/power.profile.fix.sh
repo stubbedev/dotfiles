@@ -132,20 +132,10 @@ choose_epp() {
 }
 
 get_helper_path() {
-  # Prefer invocation path so polkit rules tied to symlink paths still match.
-  local script_dir helper resolved_dir resolved_helper
-
-  script_dir="$(dirname "$0")"
-  helper="$script_dir/power.profile.helper.sh"
+  # Substituted at build time; must match the path allowed by the polkit rule.
+  local helper="@HELPER_PATH@"
   if [ -f "$helper" ]; then
     echo "$helper"
-    return
-  fi
-
-  resolved_dir="$(dirname "$(readlink -f "$0")")"
-  resolved_helper="$resolved_dir/power.profile.helper.sh"
-  if [ -f "$resolved_helper" ]; then
-    echo "$resolved_helper"
   else
     echo ""
   fi

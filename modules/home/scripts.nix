@@ -49,7 +49,10 @@
         mail-pager.source = "src/aerc/scripts/nvim-pager.sh";
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
         waybar-launch.source = "src/_shared/scripts/waybar.launch.sh";
-        power-profile-fix.source = "src/_shared/scripts/power.profile.fix.sh";
+        power-profile-fix = {
+          source = "src/_shared/scripts/power.profile.fix.sh";
+          vars.HELPER_PATH = "${config.home.homeDirectory}/.stubbe/src/_shared/scripts/power.profile.helper.sh";
+        };
       };
 
       scripts = binScripts // srcScripts;
