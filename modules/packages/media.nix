@@ -19,6 +19,19 @@ _: {
 
         exec ${pkgs.pavucontrol}/bin/pavucontrol "$@"
       '';
+
+      # Bump ghostscript to 10.07.0 just for the user-facing `gs` CLI.
+      # Done at the use site (not via overlay) so reverse deps like libreoffice
+      # and imagemagick keep using cached pkgs.ghostscript.
+      ghostscript-latest = pkgs.ghostscript.overrideAttrs (_old: rec {
+        version = "10.07.0";
+        src = pkgs.fetchurl {
+          url = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${
+            lib.replaceStrings [ "." ] [ "" ] version
+          }/ghostscript-${version}.tar.xz";
+          hash = "sha256-3azk4XIflnpVA5uv9WSEAiXguqHU9UMiR8oczRRzt8E=";
+        };
+      });
     in
     lib.mkIf config.features.media {
       home.packages = with pkgs; [
@@ -29,7 +42,7 @@ _: {
         dcraw
         libraw
         librsvg
-        ghostscript
+        ghostscript-latest
 
         # Video/media (ffmpeg uses GPU acceleration)
         (homeLib.gfx ffmpeg-full)
