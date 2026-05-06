@@ -43,6 +43,7 @@ _: {
         libraw
         librsvg
         ghostscript-latest
+        mupdf
 
         # Video/media (ffmpeg uses GPU acceleration)
         (homeLib.gfx ffmpeg-full)
