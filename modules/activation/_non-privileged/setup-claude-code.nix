@@ -60,6 +60,14 @@ _: {
               "@stubbedev/sentry-mcp@latest"
             ];
           };
+          jenkins-mcp = {
+            type = "stdio";
+            command = "npx";
+            args = [
+              "-y"
+              "@stubbedev/jenkins-mcp@latest"
+            ];
+          };
           nix-mcp = {
             type = "stdio";
             command = "uvx";
