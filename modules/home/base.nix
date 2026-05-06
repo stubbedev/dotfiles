@@ -1,8 +1,11 @@
 _: {
-  flake.modules.homeManager.base = _: {
+  flake.modules.homeManager.base = { lib, ... }: {
     home = {
-      username = "stubbe";
-      homeDirectory = "/home/stubbe";
+      username = lib.mkDefault "stubbe";
+      # mkDefault so the HM-NixOS bridge can set this from
+      # users.users.<name>.home without a priority conflict; on standalone
+      # HM (non-NixOS) this default is the only definition.
+      homeDirectory = lib.mkDefault "/home/stubbe";
       stateVersion = "26.05";
       # User-level PATH. Keep this minimal — every tool we use lands in
       # ~/.nix-profile/bin via Nix. Two exceptions:

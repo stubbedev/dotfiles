@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# stb-install-nixos — live-ISO installer for the stubbe-nixos host.
+#
+# Detects every disk attached to the live system (excluding the USB
+# the ISO is booted from), formats them as ONE multi-device btrfs
+# volume labeled `stubbe`, lays down the subvolume structure that
+# modules/nixos/filesystems.nix expects, and runs `nixos-install`
+# against /etc/nixos#stubbe-nixos.
+#
+# Run as root from a tty in the live ISO.
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "stb-install-nixos: must run as root" >&2
+  exit 1
+fi
+
+require() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "stb-install-nixos: missing $1 in PATH" >&2
+    exit 1
+  }
+}
+
+require lsblk
+require sgdisk
+require wipefs
+require mkfs.btrfs
+require mkfs.vfat
+require nixos-install
+require findmnt
+
+# Disk where the live ISO is mounted — exclude it from the install set.
+live_disk="$(findmnt -no SOURCE /iso 2>/dev/null | sed 's/[0-9]*$//' | sed 's|/dev/||' || true)"
+
+mapfile -t candidates < <(
+  lsblk -dno NAME,TYPE,RM \
+    | awk -v live="$live_disk" '$2=="disk" && $1!=live { print $1 }'
+)
+
+if [ "${#candidates[@]}" -eq 0 ]; then
+  echo "stb-install-nixos: no eligible disks found" >&2
+  exit 1
+fi
+
+echo ""
+echo "Detected disks (live USB '$live_disk' excluded):"
+lsblk -dno NAME,SIZE,MODEL "${candidates[@]/#/\/dev\/}"
+echo ""
+read -r -p "Proceed and ERASE all listed disks? [y/N] " confirm
+case "$confirm" in
+  y|Y) ;;
+  *) echo "Aborted."; exit 0 ;;
+esac
+
+# First disk hosts the EFI System Partition; data partition + every other
+# disk become members of the btrfs volume.
+boot_disk="${candidates[0]}"
+boot_dev="/dev/${boot_disk}"
+
+echo ""
+echo "==> Wiping ${#candidates[@]} disk(s)"
+for d in "${candidates[@]}"; do
+  wipefs -a "/dev/$d"
+  sgdisk --zap-all "/dev/$d"
+done
+
+echo "==> Partitioning $boot_dev (1G EFI + remainder for btrfs)"
+sgdisk \
+  --new=1:0:+1G --typecode=1:ef00 --change-name=1:STBBOOT \
+  --new=2:0:0   --typecode=2:8300 --change-name=2:stubbe-data \
+  "$boot_dev"
+partprobe "$boot_dev" || sleep 2
+
+# Resolve the partition path for the boot disk. NVMe / mmc devices use
+# pN suffix; SATA / virtio use plain N.
+case "$boot_disk" in
+  nvme*|mmcblk*) boot_part="${boot_dev}p1"; first_data="${boot_dev}p2" ;;
+  *)             boot_part="${boot_dev}1";  first_data="${boot_dev}2"  ;;
+esac
+
+extra_data=()
+for d in "${candidates[@]:1}"; do
+  extra_data+=("/dev/$d")
+done
+
+echo "==> mkfs.vfat $boot_part (label STBBOOT)"
+mkfs.vfat -F32 -n STBBOOT "$boot_part"
+
+echo "==> mkfs.btrfs (label stubbe) over $first_data ${extra_data[*]:-}"
+# -d single keeps capacity = sum of disks; -m raid1 mirrors metadata so
+# losing one disk doesn't trash the filesystem header. On a single-disk
+# install raid1 metadata silently degrades to dup, which is fine.
+mkfs.btrfs -f -L stubbe -d single -m raid1 "$first_data" "${extra_data[@]}"
+
+echo "==> Creating subvolumes"
+mount -o compress=zstd,noatime "$first_data" /mnt
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@nix
+btrfs subvolume create /mnt/@var
+btrfs subvolume create /mnt/@snapshots
+umount /mnt
+
+mount_opts="compress=zstd,noatime"
+echo "==> Mounting subvolumes under /mnt"
+mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
+mkdir -p /mnt/{home,nix,var,.snapshots,boot}
+mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
+mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
+mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
+mount -o "${mount_opts},subvol=@snapshots"  "$first_data" /mnt/.snapshots
+mount "$boot_part" /mnt/boot
+
+# Mark the host as installed. modules/platform.nix reads this marker
+# (impurely) to flip host.installed = true, which activates the btrfs
+# fileSystems entries from modules/nixos/filesystems.nix and disables
+# the stub bootloader/root entries in modules/nixos/hosts/stubbe-nixos.nix.
+# Touch on both the live ISO (so install-time eval sees it) and on
+# /mnt/etc (so the installed system carries the marker forward).
+mkdir -p /mnt/etc
+touch /etc/stubbe-installed /mnt/etc/stubbe-installed
+
+echo "==> Running nixos-install --flake /etc/nixos#stubbe-nixos"
+nixos-install --root /mnt --flake /etc/nixos#stubbe-nixos --no-root-password
+
+echo ""
+echo "Install complete. Reboot into the new system; log in as the user"
+echo "declared in modules/nixos/users.nix (default: stubbe)."

@@ -1,5 +1,4 @@
 {
-  config,
   inputs,
   self,
   ...
@@ -10,13 +9,9 @@
     {
       imports = [ inputs.home-manager.nixosModules.home-manager ];
 
-      # Share the same overlays the standalone HM build uses, so HM modules
+      # nixpkgs.config + overlays live in modules/nixos/nix-settings.nix.
+      # useGlobalPkgs makes HM read those same overlaid pkgs, so HM modules
       # under home-manager.users.<name> see pkgs.nixgl, pkgs.cship, etc.
-      nixpkgs.overlays = builtins.attrValues config.flake.overlays;
-      nixpkgs.config = {
-        allowUnfree = true;
-        allowInsecure = true;
-      };
 
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;

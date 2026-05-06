@@ -2,6 +2,7 @@
   config,
   inputs,
   lib,
+  self,
   ...
 }:
 let
@@ -65,80 +66,107 @@ let
       };
     }) sshKeyFiles
   );
-
-  installerNixos = inputs.nixpkgs.lib.nixosSystem {
-    inherit system;
-    modules = [
-      (
-        { modulesPath, pkgs, ... }:
-        {
-          imports = [
-            "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix"
-          ];
-
-          nixpkgs.config.allowUnfree = true;
-
-          nix.settings.experimental-features = [
-            "nix-command"
-            "flakes"
-          ];
-
-          isoImage = {
-            makeEfiBootable = true;
-            makeUsbBootable = true;
-            squashfsCompression = "zstd -Xcompression-level 6";
-          };
-
-          boot.supportedFilesystems = [ "btrfs" ];
-          boot.zfs.forceImportRoot = false;
-
-          networking = {
-            hostName = "nixos-installer";
-            networkmanager.enable = true;
-          };
-
-          services.openssh = {
-            enable = true;
-            settings = {
-              PasswordAuthentication = false;
-              KbdInteractiveAuthentication = false;
-              PermitRootLogin = "prohibit-password";
-            };
-          };
-
-          users.users.root.openssh.authorizedKeys.keys = sshAuthorizedKeys;
-
-          environment.etc = sshEtcFiles;
-
-          systemd.tmpfiles.rules = [
-            "d /root/.ssh 0700 root root - -"
-          ]
-          ++ map (
-            file: "C /root/.ssh/${file.name} ${file.mode} root root - /etc/nixos-installer/ssh/${file.name}"
-          ) sshKeyFiles;
-
-          environment.systemPackages = with pkgs; [
-            btrfs-progs
-            curl
-            git
-            gptfdisk
-            parted
-            rsync
-            inputs.disko.packages.${system}.default
-          ];
-
-          system.stateVersion = "26.05";
-        }
-      )
-    ];
-  };
+  nixosMods = config.flake.modules.nixos;
+  hmMods = config.flake.modules.homeManager;
 in
 {
-  flake.nixosConfigurations.installer-iso = installerNixos;
+  configurations.nixos.installer-iso = {
+    inherit system;
+    extraSpecialArgs = { inherit self; };
+    module =
+      {
+        config,
+        lib,
+        modulesPath,
+        pkgs,
+        ...
+      }:
+      {
+        imports = [
+          "${modulesPath}/installer/cd-dvd/installation-cd-graphical-base.nix"
+        ] ++ builtins.attrValues nixosMods;
+
+        isoImage = {
+          makeEfiBootable = true;
+          makeUsbBootable = true;
+          squashfsCompression = "zstd -Xcompression-level 6";
+        };
+
+        boot.zfs.forceImportRoot = false;
+
+        networking.hostName = lib.mkForce "stubbe-iso";
+
+        services.openssh = {
+          enable = true;
+          settings = {
+            PasswordAuthentication = false;
+            KbdInteractiveAuthentication = false;
+            PermitRootLogin = "prohibit-password";
+          };
+        };
+
+        users.users.root.openssh.authorizedKeys.keys = sshAuthorizedKeys;
+
+        environment.etc = sshEtcFiles // {
+          # Surface the flake source at /etc/nixos so
+          # `nixos-install --flake /etc/nixos#stubbe-nixos`
+          # (run by stb-install-nixos) resolves without arguments.
+          "nixos".source = self;
+        };
+
+        systemd.tmpfiles.rules = [
+          "d /root/.ssh 0700 root root - -"
+        ]
+        ++ map (
+          file: "C /root/.ssh/${file.name} ${file.mode} root root - /etc/nixos-installer/ssh/${file.name}"
+        ) sshKeyFiles;
+
+        environment.systemPackages = with pkgs; [
+          btrfs-progs
+          curl
+          git
+          gptfdisk
+          parted
+          rsync
+          inputs.disko.packages.${system}.default
+          # Wrap bin/stb-install-nixos as a system package so root can call
+          # it from a tty without depending on the HM-user profile being
+          # built first.
+          (pkgs.writeShellScriptBin "stb-install-nixos" (
+            builtins.readFile (self + "/bin/stb-install-nixos")
+          ))
+        ];
+
+        # Stage the live ISO's HM user identically to the post-install
+        # stubbe-nixos host so live-boot drops you into the same desktop
+        # the installed system would. Activation scripts that are gated
+        # on `host.platform == "nixos"` stay no-op.
+        home-manager.users.${config.host.primaryUser} = {
+          imports = builtins.attrValues hmMods;
+          host.platform = "nixos";
+          features = {
+            desktop = true;
+            development = true;
+            hyprland = true;
+            theming = true;
+            media = true;
+            vpn = true;
+            opencode = true;
+            srv = true;
+            php = false;
+            k8s = true;
+            claudeCode = true;
+            slack = true;
+          };
+        };
+
+        system.stateVersion = "26.05";
+      };
+  };
 
   perSystem =
     { system, ... }:
     lib.optionalAttrs (system == "x86_64-linux") {
-      packages.installer-iso = installerNixos.config.system.build.isoImage;
+      packages.installer-iso = config.flake.nixosConfigurations.installer-iso.config.system.build.isoImage;
     };
 }

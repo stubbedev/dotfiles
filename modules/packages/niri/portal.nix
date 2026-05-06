@@ -1,5 +1,7 @@
 _: {
-  flake.modules.homeManager.packagesNiriPortal =
+  # Same reasoning as hyprland/portal.nix: on NixOS the portal binary is
+  # owned by the system xdg.portal extraPortals list.
+  linuxOnlyHomeModules.packagesNiriPortal =
     {
       pkgs,
       lib,
