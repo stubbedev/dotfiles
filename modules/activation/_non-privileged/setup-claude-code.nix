@@ -52,6 +52,14 @@ _: {
               "@stubbedev/atlassian-mcp@latest"
             ];
           };
+          sentry-mcp = {
+            type = "stdio";
+            command = "npx";
+            args = [
+              "-y"
+              "@stubbedev/sentry-mcp@latest"
+            ];
+          };
           nix-mcp = {
             type = "stdio";
             command = "uvx";
