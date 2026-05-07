@@ -1,4 +1,4 @@
-// managed-by: home-manager vpn-polkit v3
+// managed-by: home-manager vpn-polkit
 polkit.addRule(function(action, subject) {
   if (action.id !== "org.freedesktop.policykit.exec") {
     return;
@@ -13,23 +13,37 @@ polkit.addRule(function(action, subject) {
     return;
   }
 
+  // nixStore("procps", "pkill") matches /nix/store/<hash>-procps-<ver>/bin/pkill.
+  // Without this, `command -v pkill` resolving to /nix/store/...-procps-.../bin/pkill
+  // (because that's first in the user's PATH on this host) falls outside the
+  // whitelist and pkexec demands interactive auth — which silently fails for
+  // disconnect.sh when invoked from waybar's on-click.
+  var nixStore = function(pkg, bin) {
+    return new RegExp(
+      "^/nix/store/[a-z0-9]+-" + pkg + "-[A-Za-z0-9._+-]+/bin/" + bin + "$"
+    );
+  };
+
   var openconnectPrograms = [
     "/usr/bin/openconnect",
     "/bin/openconnect",
     "/run/current-system/sw/bin/openconnect",
-    "@HOME@/.nix-profile/bin/openconnect"
+    "@HOME@/.nix-profile/bin/openconnect",
+    nixStore("openconnect", "openconnect")
   ];
   var pkillPrograms = [
     "/usr/bin/pkill",
     "/bin/pkill",
     "/run/current-system/sw/bin/pkill",
-    "@HOME@/.nix-profile/bin/pkill"
+    "@HOME@/.nix-profile/bin/pkill",
+    nixStore("procps", "pkill")
   ];
   var setsidPrograms = [
     "/usr/bin/setsid",
     "/bin/setsid",
     "/run/current-system/sw/bin/setsid",
-    "@HOME@/.nix-profile/bin/setsid"
+    "@HOME@/.nix-profile/bin/setsid",
+    nixStore("util-linux", "setsid")
   ];
 
   var splitArgs = function(cmdline) {
@@ -40,7 +54,15 @@ polkit.addRule(function(action, subject) {
   };
 
   var pathAllowed = function(path, allowed) {
-    return allowed.indexOf(path) !== -1;
+    for (var i = 0; i < allowed.length; i++) {
+      var entry = allowed[i];
+      if (typeof entry === "string") {
+        if (entry === path) return true;
+      } else if (entry && typeof entry.test === "function") {
+        if (entry.test(path)) return true;
+      }
+    }
+    return false;
   };
 
   var isPidFilePath = function(path) {

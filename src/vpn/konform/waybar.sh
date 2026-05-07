@@ -128,6 +128,17 @@ status() {
   printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$text" "$class" "$tooltip"
 }
 
+# Wakes up every waybar with `"signal": 8` set on its konform-vpn module —
+# waybar then re-execs `vpn-konform-waybar status` and re-reads the line.
+# Pattern is `-f '/bin/waybar$'` rather than the bare process name `waybar`
+# because the latter also matches `waybar-launch` (the bash wrapper that
+# starts waybar). Bash's default action for unhandled real-time signals is
+# Term, so signaling the wrapper kills it and systemd tears the whole
+# service down.
+refresh_waybar() {
+  pkill -SIGRTMIN+8 -f '/bin/waybar$' 2>/dev/null || true
+}
+
 connect() {
   if ! load_config; then
     echo "Missing VPN config at $CONFIG_FILE" >&2
@@ -144,18 +155,38 @@ connect() {
   local now
   now=$(date +%s)
 
+  # Pre-write the connecting marker so the immediate refresh below sees the
+  # "connecting" state — without this, waybar's signal-driven re-exec races
+  # the wrapper bash and may briefly render "disconnected". PID=1 (init) is
+  # always alive, so connecting_active() doesn't clean the marker up while
+  # the wrapper is still spawning; the wrapper then overwrites with its own
+  # PID for the timeout-kill path.
+  printf 'PID=1\nSTART=%s\n' "$now" > "$CONNECTING_FILE"
+
   # Spawn the connect script in its own session so we can kill the whole group
-  # on timeout. The wrapper writes a marker file with its PID + start timestamp
-  # and clears it on exit (success, failure, or SIGTERM).
+  # on timeout. The wrapper overwrites the marker with its real PID, runs the
+  # connect script, then waits for the tunnel iface to actually come up before
+  # exiting. The EXIT trap removes the marker AND signals waybar so the pill
+  # flips green the moment the connection settles.
   setsid bash -c '
     marker="$1"
     start="$2"
     script="$3"
-    trap "rm -f \"$marker\"" EXIT
+    iface="$4"
+    trap "rm -f \"$marker\"; pkill -SIGRTMIN+8 -f '/bin/waybar\$' 2>/dev/null || true" EXIT
     printf "PID=%s\nSTART=%s\n" "$$" "$start" > "$marker"
-    exec "$script"
-  ' _ "$CONNECTING_FILE" "$now" "$CONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
+    "$script" || exit $?
+    for _ in $(seq 1 20); do
+      state=$(cat "/sys/class/net/$iface/operstate" 2>/dev/null || true)
+      if [ "$state" = "up" ] || [ "$state" = "unknown" ]; then
+        break
+      fi
+      sleep 0.5
+    done
+  ' _ "$CONNECTING_FILE" "$now" "$CONNECT_SCRIPT" "$IFACE_NAME" </dev/null >>"$LOG_FILE" 2>&1 &
   disown
+
+  refresh_waybar
 }
 
 disconnect() {
@@ -170,8 +201,17 @@ disconnect() {
     rm -f "$CONNECTING_FILE"
   fi
 
-  setsid "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
+  # Wrap the disconnect in a shell that signals waybar after pkill removes
+  # the pid file — that's the point at which is_running flips false and the
+  # pill should flip to grey. The leading refresh_waybar (below) covers the
+  # click-feedback case for the user who clicks while connecting.
+  setsid bash -c '
+    "$1"
+    pkill -SIGRTMIN+8 -f "/bin/waybar\$" 2>/dev/null || true
+  ' _ "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
   disown
+
+  refresh_waybar
 }
 
 toggle() {

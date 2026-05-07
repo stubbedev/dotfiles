@@ -26,13 +26,21 @@ _: {
         # layout tables (heuristic preserves real data tables), strips
         # MSO/Word noise, then renders Markdown via htmd. Single static
         # binary — replaces the prior python+bs4+html-to-markdown pipeline.
-        (rustPlatform.buildRustPackage {
-          pname = "aerc-html-filter";
-          version = "0.1.0";
-          src = self + "/src/aerc/scripts/aerc-html-filter";
-          cargoLock.lockFile = self + "/src/aerc/scripts/aerc-html-filter/Cargo.lock";
-          doCheck = false;
-        })
+        (rustPlatform.buildRustPackage (
+          let
+            pkgDir = self + "/src/aerc/scripts/aerc-html-filter";
+          in
+          {
+            pname = "aerc-html-filter";
+            version = "0.1.0";
+            src = builtins.path {
+              path = pkgDir;
+              name = "aerc-html-filter-src";
+            };
+            cargoLock.lockFile = pkgDir + "/Cargo.lock";
+            doCheck = false;
+          }
+        ))
       ];
     };
 }

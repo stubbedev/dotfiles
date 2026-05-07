@@ -39,7 +39,8 @@
 		"exec": "vpn-konform-waybar status",
 		"return-type": "json",
 		"format": "{}",
-		"interval": 3,
+		"interval": 5,
+		"signal": 8,
 		"on-click": "vpn-konform-waybar toggle",
 	},
 	"hyprland/workspaces": {

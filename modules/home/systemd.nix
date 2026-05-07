@@ -120,6 +120,29 @@ _: {
             };
           };
 
+          # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
+          # entry — so home-manager's bin-only linking can't surface it and
+          # `systemctl --user start hyprpolkitagent` (called from
+          # src/hypr/settings.conf and conceptually from niri) finds no
+          # unit. Defining the service here fixes both compositors and
+          # gives pkexec something to talk to when our 49-openconnect.rules
+          # rule doesn't match (e.g. nmcli, brightness, anything that
+          # escalates outside the VPN scripts).
+          hyprpolkitagent = {
+            Unit = {
+              Description = "Hyprland polkit authentication agent";
+              After = compositorTargets;
+              PartOf = compositorTargets;
+            };
+            Install.WantedBy = compositorTargets;
+            Service = {
+              Type = "simple";
+              ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
+              Restart = "on-failure";
+              RestartSec = "2s";
+            };
+          };
+
           # Independent of compositor target — these run under default.target
           # and only exist to bounce waybar when their dependent service starts.
           await-powerprofile = {

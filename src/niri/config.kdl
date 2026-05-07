@@ -128,7 +128,9 @@ spawn-at-startup "wl-clip-persist" "--clipboard" "regular"
 spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 spawn-at-startup "nm-applet" "--indicator"
 spawn-at-startup "blueman-applet"
-spawn-at-startup "hyprpolkitagent"
+// hyprpolkitagent runs as a user systemd unit pulled in by niri-session.target
+// (see modules/home/systemd.nix) — no spawn-at-startup needed, and the binary
+// lives in libexec/ so it isn't on PATH anyway.
 spawn-at-startup "/home/stubbe/.config/niri/scripts/refocus-on-close.sh"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/focus-on-urgent.sh"
 
