@@ -11,11 +11,20 @@ spawn_term() {
 
 if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
   addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
+  ws=$(hyprctl -j activeworkspace | jq -r '.id')
   if [[ -n "$addr" ]]; then
-    ws=$(hyprctl -j activeworkspace | jq -r '.id')
     hyprctl dispatch movetoworkspace "$ws,address:$addr"
   else
-    spawn_term
+    # Spawn detached and then move whichever workspace it lands on to
+    # the currently active one. We can't rely on dispatch exec workspace
+    # rules or initial_workspace_tracking — they're flaky in practice.
+    setsid -f @TERM@ --class "$APP_ID" -e aerc >/dev/null 2>&1
+    for _ in $(seq 50); do
+      addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
+      [[ -n "$addr" ]] && break
+      sleep 0.05
+    done
+    [[ -n "$addr" ]] && hyprctl dispatch movetoworkspace "$ws,address:$addr"
   fi
 elif [[ "$XDG_CURRENT_DESKTOP" == "niri" ]] && command -v niri &> /dev/null; then
   id=$(niri msg --json windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
