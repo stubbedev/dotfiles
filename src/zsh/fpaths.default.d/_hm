@@ -119,11 +119,11 @@ _hm() {
                 '*:block device:->blockdev'
               if [[ $state == blockdev ]]; then
                 local -a devs
-                devs=(${(f)"$(lsblk -d -n -o NAME,SIZE,MODEL 2>/dev/null | awk '{print "/dev/"$1":("$2") "$3}')"})
+                devs=(${(f)"$(lsblk -d -n -o NAME,SIZE,TRAN 2>/dev/null | awk '$3 == "usb" {print "/dev/"$1":("$2")"}')"})
                 if (( ${#devs} )); then
-                  _describe -t block-devices 'block device' devs
+                  _describe -t block-devices 'USB device' devs
                 else
-                  _message 'block device (e.g. /dev/sdb)'
+                  _message 'USB block device (e.g. /dev/sdb)'
                 fi
               fi
               ;;
