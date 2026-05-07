@@ -28,16 +28,23 @@ _: {
         # binary — replaces the prior python+bs4+html-to-markdown pipeline.
         (rustPlatform.buildRustPackage (
           let
-            pkgDir = self + "/src/aerc/scripts/aerc-html-filter";
+            # Pin the source to a content-addressed store path so the
+            # derivation hash doesn't depend on the wider flake's outPath
+            # (which churns whenever activation writes back into the tree
+            # — zsh `.zwc` recompiles, generated completions, etc. — since
+            # `path:` flakes ignore .gitignore). The filter also drops a
+            # local cargo `target/` from the hash.
+            src = builtins.path {
+              path = self + "/src/aerc/scripts/aerc-html-filter";
+              name = "aerc-html-filter-src";
+              filter = path: _type: builtins.baseNameOf path != "target";
+            };
           in
           {
             pname = "aerc-html-filter";
             version = "0.1.0";
-            src = builtins.path {
-              path = pkgDir;
-              name = "aerc-html-filter-src";
-            };
-            cargoLock.lockFile = pkgDir + "/Cargo.lock";
+            inherit src;
+            cargoLock.lockFile = src + "/Cargo.lock";
             doCheck = false;
           }
         ))
