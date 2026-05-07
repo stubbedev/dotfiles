@@ -1,6 +1,6 @@
 _: {
   flake.modules.nixos.hardware =
-    { config, lib, ... }:
+    { config, lib, pkgs, ... }:
     {
       # Broad initrd module set so the kernel can reach root on most
       # machines without per-host hardware-configuration.nix. Covers
@@ -48,9 +48,9 @@ _: {
       # the legacy script-based initrd.
       boot.initrd.systemd.enable = true;
 
-      # Udev rule so the primary user can adjust backlight without sudo.
-      # Also installs the brightnessctl binary system-wide.
-      hardware.brightnessctl.enable = true;
+      # Newer brightnessctl uses systemd-logind API instead of udev rules,
+      # so the NixOS module was removed. Install the package directly.
+      environment.systemPackages = [ pkgs.brightnessctl ];
 
       # Load i2c-dev kernel module + udev rules so ddcutil works without sudo.
       # The i2c group is created automatically; users.nix adds the primary user.
