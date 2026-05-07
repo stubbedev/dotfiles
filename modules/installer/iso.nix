@@ -110,7 +110,7 @@ in
       }:
       {
         imports = [
-          "${modulesPath}/installer/cd-dvd/installation-cd-graphical-base.nix"
+          "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix"
         ] ++ builtins.attrValues nixosMods;
 
         isoImage = {
@@ -199,11 +199,9 @@ in
         # modules/nixos/greetd.nix; this override is scoped to the ISO.
         services.greetd.enable = lib.mkForce false;
 
-        # graphics.nix adds nvidia to videoDrivers and enables nvidia-open.
-        # The nvidia kernel modules fail to load on machines without a
-        # supported GPU, crashing systemd-modules-load.service on first boot.
-        # Use modesetting/fbdev only on the live ISO.
-        services.xserver.videoDrivers = lib.mkForce [ "modesetting" "fbdev" ];
+        # graphics.nix enables nvidia-open; the minimal ISO has no X11 so the
+        # module would still be loaded at boot and fail on non-NVIDIA hardware.
+        services.xserver.enable = lib.mkForce false;
         hardware.nvidia = {
           modesetting.enable = lib.mkForce false;
           open = lib.mkForce false;
