@@ -96,6 +96,14 @@ in
 
         networking.hostName = lib.mkForce "stubbe-iso";
 
+        # The ISO's only job is to run stb-install-nixos. Skip greetd and
+        # autologin root on tty1 so the live boot lands directly at a root
+        # shell. The installed system still uses greetd from
+        # modules/nixos/greetd.nix; this override is scoped to the ISO.
+        services.greetd.enable = lib.mkForce false;
+        services.getty.autologinUser = lib.mkForce "root";
+        users.users.root.initialHashedPassword = lib.mkForce "";
+
         services.openssh = {
           enable = true;
           settings = {
