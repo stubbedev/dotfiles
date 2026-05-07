@@ -119,4 +119,56 @@ multi-device btrfs volume labeled `stubbe`, runs
 `/mnt/etc/nixos` over SSH, and prompts for the primary user's password
 before finishing.
 
+### Optional: Secure Boot (lanzaboote)
+
+After first boot, replace systemd-boot with the lanzaboote signed
+bootloader so the firmware verifies every kernel + initrd signature:
+
+```sh
+# 1. Put the firmware in Secure Boot setup mode (UEFI menu → Security →
+#    Secure Boot → Reset / Clear keys). Verify with `sudo sbctl status`:
+sudo sbctl status            # Expect: "Setup Mode: Enabled"
+
+# 2. Generate platform keys + enroll Microsoft + custom keys.
+sudo sbctl create-keys
+sudo sbctl enroll-keys --microsoft
+
+# 3. Flip the host flag and rebuild.
+# In modules/nixos/hosts/stubbe-nixos.nix add:  host.secureBoot = true;
+sudo nixos-rebuild switch --flake /etc/nixos#stubbe-nixos
+sudo sbctl verify           # Every closure path should report "signed"
+
+# 4. Re-enable Secure Boot in firmware and reboot.
+```
+
+Skipping any step bricks boot; recover by booting a live ISO,
+`mount -o subvol=@` the btrfs root, edit `flake.nix` / host file to
+unset `host.secureBoot`, and `nixos-install` again.
+
+### Optional: Impermanence
+
+The installer always creates an `@-blank` snapshot of the empty `@`
+subvol before populating it. To activate root-on-boot rollback (so
+every boot starts from a wiped `/`, with only paths declared in
+`modules/nixos/impermanence.nix` surviving via `/persist`):
+
+```sh
+# 1. Verify @-blank exists.
+sudo btrfs subvolume list /  | grep '@-blank'
+
+# 2. Audit the persistence list at modules/nixos/impermanence.nix —
+#    add anything host-specific (state directories, license files, …).
+
+# 3. Flip the host flag and rebuild.
+# In modules/nixos/hosts/stubbe-nixos.nix add:  host.impermanent = true;
+sudo nixos-rebuild boot --flake /etc/nixos#stubbe-nixos
+sudo reboot
+```
+
+After the first impermanent boot, anything in `/` that isn't covered
+by the persistence list is gone. State you forgot to declare can be
+recovered from `/persist/old/` on the running system OR by mounting
+`@-blank`'s pre-rollback parent (the previous boot's `@-old` if you
+keep one) — neither is automatic; treat the audit step as mandatory.
+
 ![This is the caption for the next figure link (or table)](./src/wallpapers/traffic.png)

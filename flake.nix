@@ -56,6 +56,16 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Signed bootloader for UEFI Secure Boot. Activated only when
+    # host.secureBoot = true; see modules/nixos/lanzaboote.nix.
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v0.4.2";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # Declarative bind-mounts + tmpfs root for stateless systems.
+    # Activated only when host.impermanent = true; see
+    # modules/nixos/impermanence.nix.
+    impermanence.url = "github:nix-community/impermanence";
   };
 
   outputs =

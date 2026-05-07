@@ -20,6 +20,10 @@ in
         # is what bin/stb-install-nixos provisions.
         boot.loader.systemd-boot.enable = true;
         boot.loader.efi.canTouchEfiVariables = true;
+        # Disable the boot menu's text editor — anyone with physical
+        # access could otherwise append `init=/bin/sh` and get a root
+        # shell without a password.
+        boot.loader.systemd-boot.editor = false;
 
         # Mark this host as the post-install target so
         # modules/nixos/filesystems.nix supplies the real btrfs layout.

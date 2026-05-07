@@ -170,15 +170,23 @@ btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@nix
 btrfs subvolume create /mnt/@var
+btrfs subvolume create /mnt/@persist
+# Snapshot @ while it's still empty. modules/nixos/impermanence.nix
+# rolls @ back to this snapshot on every boot when host.impermanent is
+# true, leaving /etc and /var blank for the activation script to refill.
+# Taken now (always) so flipping host.impermanent on later doesn't
+# require reinstalling.
+btrfs subvolume snapshot -r /mnt/@ /mnt/@-blank
 umount /mnt
 
 mount_opts="compress=zstd,noatime"
 echo "==> Mounting subvolumes under /mnt"
 mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
-mkdir -p /mnt/{home,nix,var,boot,etc}
+mkdir -p /mnt/{home,nix,var,persist,boot,etc}
 mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
 mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
 mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
+mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
 # fmask/dmask matches modules/nixos/filesystems.nix so the install-time
 # mount sees /boot the same way the installed system will.
 mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
@@ -215,6 +223,21 @@ mkdir -p "$home_dir"
 ln -sfn /etc/nixos "${home_dir}/.stubbe"
 chown -h "${user_uid}:${user_gid}" "${home_dir}/.stubbe"
 chown "${user_uid}:${user_gid}" "$home_dir"
+
+# Copy the user's SSH keys from /root/.ssh (where modules/installer/iso.nix
+# baked them on the live ISO) into the installed user's home. Required
+# for: git push/pull on the /etc/nixos clone, sops-nix decryption at HM
+# activation (modules/sops.nix reads ~/.ssh/id_ed25519 to derive an age
+# identity), and general SSH access from the new machine. cp -a preserves
+# the 0600/0644 modes the tmpfiles rule set.
+if [ -d /root/.ssh ]; then
+  echo "==> Copying /root/.ssh → ${home_dir}/.ssh"
+  ssh_dst="${home_dir}/.ssh"
+  mkdir -p "$ssh_dst"
+  cp -a /root/.ssh/. "$ssh_dst"/
+  chown -R "${user_uid}:${user_gid}" "$ssh_dst"
+  chmod 700 "$ssh_dst"
+fi
 
 # nixos-install ran with --no-root-password and modules/nixos/users.nix
 # doesn't set a password for the primary user, so without this prompt

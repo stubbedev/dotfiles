@@ -13,12 +13,16 @@ _: {
       ];
 
       # Subvolume name → mountpoint. Keep this list in lockstep with what
-      # bin/stb-install-nixos creates after `mkfs.btrfs` finishes.
+      # bin/stb-install-nixos creates after `mkfs.btrfs` finishes. The
+      # @persist subvol stores impermanence-survived state; on a non-
+      # impermanent host it's still mounted (cheap) so the layout stays
+      # forward-compatible when host.impermanent flips on.
       subvolumes = {
         "/" = "@";
         "/home" = "@home";
         "/nix" = "@nix";
         "/var" = "@var";
+        "/persist" = "@persist";
       };
 
       mkSubvolMount = name: {

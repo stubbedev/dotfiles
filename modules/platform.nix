@@ -46,5 +46,37 @@ _: {
           root mount.
         '';
       };
+
+      options.host.secureBoot = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Replace systemd-boot with lanzaboote (signed bootloader for
+          UEFI Secure Boot). DEFAULT FALSE: enabling without enrolling
+          Secure Boot keys (sbctl create-keys + sbctl enroll-keys) will
+          brick boot. Recommended flow:
+            1. Install with secureBoot = false; first-boot to verify.
+            2. Run `sudo sbctl create-keys` then `sudo sbctl enroll-keys
+               --microsoft` (or --custom) once firmware is in setup mode.
+            3. Flip this flag to true; rebuild; reboot.
+        '';
+      };
+
+      options.host.impermanent = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Wipe the root subvolume on every boot, persisting only
+          declared paths under /persist. DEFAULT FALSE: enabling on a
+          system that hasn't been laid out for impermanence will lose
+          state. Recommended flow:
+            1. Install with impermanent = false; the install script
+               creates an @-blank snapshot of the empty @ subvol so the
+               flag is safe to flip later.
+            2. Audit modules/nixos/impermanence.nix's persistence list;
+               add anything host-specific.
+            3. Flip this flag to true; rebuild; reboot.
+        '';
+      };
     };
 }
