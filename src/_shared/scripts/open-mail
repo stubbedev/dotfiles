@@ -12,13 +12,16 @@ spawn_term() {
 if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
   addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
   if [[ -n "$addr" ]]; then
-    hyprctl dispatch focuswindow "address:$addr"
+    ws=$(hyprctl -j activeworkspace | jq -r '.id')
+    hyprctl dispatch movetoworkspace "$ws,address:$addr"
   else
     spawn_term
   fi
 elif [[ "$XDG_CURRENT_DESKTOP" == "niri" ]] && command -v niri &> /dev/null; then
   id=$(niri msg --json windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
   if [[ -n "$id" ]]; then
+    ws=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .idx')
+    niri msg action move-window-to-workspace --window-id "$id" "$ws"
     niri msg action focus-window --id "$id"
   else
     spawn_term
