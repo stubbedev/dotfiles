@@ -198,6 +198,7 @@ in
         # shell. The installed system still uses greetd from
         # modules/nixos/greetd.nix; this override is scoped to the ISO.
         services.greetd.enable = lib.mkForce false;
+        services.displayManager.sddm.enable = lib.mkForce false;
 
         # graphics.nix enables nvidia-open; the minimal ISO has no X11 so the
         # module would still be loaded at boot and fail on non-NVIDIA hardware.
