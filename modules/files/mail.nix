@@ -117,23 +117,16 @@ _: {
             synchronize_flags=true
           '';
 
-          # post-new fires after `notmuch new`. Tag by maildir path so each
-          # account's queries can filter to its own mail; strip the default
-          # `inbox` tag from anything not actually in an INBOX folder so
-          # archive/sent/drafts don't pollute the inbox view.
-          # Queries use notmuch's `path:` (recursive) and `folder:` (exact)
-          # operators rather than `folder:/regex/` — regex delimiters can't
-          # contain spaces, which breaks on Gmail's `[Gmail]/All Mail`.
-          postNewHook = pkgs.writeShellScript "notmuch-post-new" ''
-            set -eu
-            export PATH="${pkgs.notmuch}/bin:$PATH"
-
-            notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer'
-            notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'
-
-            notmuch tag -inbox -- 'tag:inbox and not folder:kontainer/INBOX and not folder:gmail/INBOX'
-          '';
-
+          # Tagging used to live in a notmuch post-new hook, but the hook
+          # dir is inside ${maildir}/.notmuch/ which notmuch creates
+          # itself — home-manager refuses to symlink files into a
+          # directory it doesn't own, so the hook never landed on disk.
+          # Inlining here means the tags get applied on every sync,
+          # regardless of how home-manager activation went.
+          #
+          # path: (recursive) and folder: (exact) instead of regex —
+          # regex delimiters can't contain spaces, which breaks on
+          # Gmail's `[Gmail]/All Mail`.
           mailSync = pkgs.writeShellApplication {
             name = "mail-sync";
             runtimeInputs = [
@@ -148,55 +141,66 @@ _: {
                 mbsync "$@"
               fi
               notmuch new --quiet
+
+              notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer'
+              notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'
+              notmuch tag -inbox -- 'tag:inbox and not folder:kontainer/INBOX and not folder:gmail/INBOX'
             '';
           };
 
+          # maildir-account-path scopes each tab's dirlist (and the
+          # folder names used by copy-to/postpone/archive) to that
+          # account's subtree under maildir-store. Without it, aerc
+          # enumerates the shared maildir root and every tab shows
+          # both accounts' folders in the sidebar.
           aercAccountsConf = ''
             [kontainer]
             source=notmuch://${maildir}
             maildir-store=${maildir}
+            maildir-account-path=kontainer
             query-map=${home}/.config/aerc/queries-kontainer
             exclude-tags=deleted,spam
             default=INBOX
+            folders=INBOX,Sent
             from=Alexander Bugge Stage <abs@kontainer.com>
             outgoing=smtp+login://abs@kontainer.com@ex.konformit.com:587
             outgoing-cred-cmd=cat ${kontainerPw}
-            copy-to=kontainer/Sent
-            postpone=kontainer/Drafts
-            archive=kontainer/Archive
+            copy-to=Sent
+            postpone=Drafts
+            archive=Archive
             check-mail-cmd=${mailSync}/bin/mail-sync kontainer
             check-mail=5m
 
             [gmail]
             source=notmuch://${maildir}
             maildir-store=${maildir}
+            maildir-account-path=gmail
             query-map=${home}/.config/aerc/queries-gmail
             exclude-tags=deleted,spam,trash
             default=INBOX
+            folders=INBOX,Sent
             from=Alexander Bugge Stage <alexander.bugge.stage@gmail.com>
             outgoing=smtp+plain://alexander.bugge.stage@gmail.com@smtp.gmail.com:587
             outgoing-cred-cmd=cat ${gmailPw}
-            copy-to=gmail/[Gmail]/Sent Mail
-            postpone=gmail/[Gmail]/Drafts
-            archive=gmail/[Gmail]/All Mail
+            copy-to=[Gmail]/Sent Mail
+            postpone=[Gmail]/Drafts
+            archive=[Gmail]/All Mail
             check-mail-cmd=${mailSync}/bin/mail-sync gmail
             check-mail=5m
           '';
 
           # query-map: virtual folder name → notmuch query. aerc opens the
           # named folder by running its query against the local index.
+          # Sent is virtualised so the gmail sidebar shows "Sent" instead
+          # of "[Gmail]/Sent Mail".
           queriesKontainer = ''
-            INBOX   = tag:kontainer and tag:inbox
-            Sent    = folder:/^kontainer\/Sent$/
-            Drafts  = folder:/^kontainer\/Drafts$/
-            Archive = folder:/^kontainer\/Archive$/
+            INBOX = tag:kontainer and tag:inbox
+            Sent  = folder:/^kontainer\/Sent$/
           '';
 
           queriesGmail = ''
-            INBOX               = tag:gmail and tag:inbox
-            [Gmail]/Sent Mail   = folder:"gmail/[Gmail]/Sent Mail"
-            [Gmail]/Drafts      = folder:"gmail/[Gmail]/Drafts"
-            [Gmail]/All Mail    = folder:"gmail/[Gmail]/All Mail"
+            INBOX = tag:gmail and tag:inbox
+            Sent  = folder:"gmail/[Gmail]/Sent Mail"
           '';
         in
         {
@@ -222,13 +226,6 @@ _: {
           # notmuch reads ~/.notmuch-config (legacy path) regardless of XDG
           # if the file exists — keep it explicit.
           home.file.".notmuch-config".text = notmuchConfig;
-
-          # The hooks dir lives inside the notmuch DB. notmuch creates
-          # ${maildir}/.notmuch on first run; we only own the post-new file.
-          home.file.".local/share/mail/.notmuch/hooks/post-new" = {
-            source = postNewHook;
-            executable = true;
-          };
 
           xdg.configFile."aerc/accounts.conf".text = aercAccountsConf;
           xdg.configFile."aerc/queries-kontainer".text = queriesKontainer;

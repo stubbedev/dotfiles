@@ -2,20 +2,16 @@
 import os
 import fcntl
 import json
-import socket
 import shutil
 import subprocess
-from email import message_from_string
-from email.header import decode_header, make_header
 from pathlib import Path
 
 
-# Paths and icons
 ACCOUNTS_CONF = Path.home() / ".config/aerc/accounts.conf"
 STATE_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.state")
 LOCK_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.lock")
-ICON_OPEN = "\U000f06ee "   # Open envelope (no unread)
-ICON_CLOSED = "\U000f0d8d "  # Closed envelope (has unread)
+ICON_OPEN = "\U000f06ee "
+ICON_CLOSED = "\U000f0d8d "
 
 
 def ensure_dbus():
@@ -55,15 +51,15 @@ def load_previous_state() -> dict:
     if STATE_FILE.exists():
         for line in STATE_FILE.read_text().splitlines():
             if "=" in line:
-                account, uids = line.split("=", 1)
-                state[account] = set(filter(None, uids.split(",")))
+                account, ids = line.split("=", 1)
+                state[account] = set(filter(None, ids.split("\t")))
     return state
 
 
-def save_state(current_uids_map: dict) -> None:
+def save_state(current: dict) -> None:
     lines = []
-    for account, uids in current_uids_map.items():
-        lines.append(f"{account}={','.join(uids)}")
+    for account, ids in current.items():
+        lines.append(f"{account}={chr(9).join(sorted(ids))}")
     STATE_FILE.write_text("\n".join(lines))
 
 
@@ -80,205 +76,116 @@ def parse_accounts_conf():
                 continue
             if line.startswith("[") and line.endswith("]"):
                 current = line[1:-1]
-                accounts[current] = {"source": "", "source_cred_cmd": "", "from": ""}
+                accounts[current] = {"source": "", "from": ""}
                 continue
-            if current is None:
-                continue
-            if "=" not in line:
+            if current is None or "=" not in line:
                 continue
             key, value = line.split("=", 1)
-            if key in ("source", "source-cred-cmd", "from"):
-                accounts[current][key.replace("-", "_")] = value.strip()
+            if key in ("source", "from"):
+                accounts[current][key] = value.strip()
     return accounts
 
 
-def run_cred_cmd(cmd: str) -> str:
-    if not cmd:
-        return ""
-    expanded = os.path.expanduser(cmd)
+def notmuch_message_ids(query: str) -> list:
     try:
         result = subprocess.run(
-            expanded,
-            shell=True,
-            check=False,
+            ["notmuch", "search", "--output=messages", "--", query],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            check=False,
             text=True,
-            timeout=5,
+            timeout=10,
         )
-        return result.stdout.strip()
     except Exception:
-        return ""
-
-
-def parse_source_url(source: str):
-    if not source.startswith("imaps://"):
-        return None
-    stripped = source[len("imaps://") :]
-    # Format: user@domain@server:port
-    if "@" not in stripped:
-        return None
-    user_part = stripped.split("@", 1)[0]
-    rest = stripped.split("@", 1)[1]
-    if "@" not in rest:
-        return None
-    domain = rest.split("@", 1)[0]
-    server_port = rest.split("@", 1)[1]
-    server, sep, port = server_port.partition(":")
-    if not port:
-        port = "993"
-    return f"{user_part}@{domain}", server, int(port)
-
-
-def imap_connect(server: str, port: int, user: str, password: str):
-    import imaplib
-
-    socket.setdefaulttimeout(10)
-    client = imaplib.IMAP4_SSL(server, port)
-    client.login(user, password)
-    return client
-
-
-def fetch_unseen_uids(client) -> list:
-    typ, _ = client.select("INBOX")
-    if typ != "OK":
         return []
-    typ, data = client.uid("SEARCH", None, "UNSEEN")
-    if typ != "OK" or not data:
-        return []
-    raw = data[0].decode().strip()
-    return [uid for uid in raw.split() if uid]
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
-def fetch_headers(client, uid: str) -> str:
-    # Include extra headers useful for forwarded messages
-    typ, data = client.uid(
-        "FETCH",
-        uid,
-        "(BODY.PEEK[HEADER.FIELDS (SUBJECT RESENT-SUBJECT THREAD-TOPIC FROM SENDER REPLY-TO RESENT-FROM X-ORIGINAL-FROM X-FORWARDED-FOR TO DELIVERED-TO DATE)])",
-    )
-    if typ != "OK" or not data:
-        return ""
-    # data can contain multiple parts; find the bytes payload
-    for part in data:
-        if isinstance(part, tuple) and len(part) > 1 and isinstance(part[1], (bytes, bytearray)):
-            return part[1].decode(errors="replace")
-    return ""
-
-
-def parse_email_info(headers: str):
-    msg = message_from_string(headers)
-
-    def decode_val(val: str) -> str:
-        if not val:
-            return ""
-        try:
-            return str(make_header(decode_header(val)))
-        except Exception:
-            return val
-
-    def first_nonempty(keys):
-        for key in keys:
-            for val in msg.get_all(key, []) or []:
-                decoded = decode_val(val).replace("\n", " ").strip()
-                if decoded:
-                    return decoded
-        return ""
-
-    subject = first_nonempty(["Subject", "Resent-Subject", "Thread-Topic"])
-    sender = first_nonempty([
-        "Reply-To",
-        "X-Original-From",
-        "X-Forwarded-For",
-        "Resent-From",
-        "From",
-        "Sender",
-    ])
-    recipient = first_nonempty(["To", "Delivered-To"])
-    date = first_nonempty(["Date"])
-    return subject, sender, recipient, date
+def notmuch_headers(message_id: str):
+    try:
+        result = subprocess.run(
+            [
+                "notmuch",
+                "show",
+                "--format=json",
+                "--body=false",
+                "--",
+                message_id,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        data = json.loads(result.stdout) if result.stdout else []
+    except Exception:
+        return {}
+    # `notmuch show --format=json` returns a nested list of threads.
+    # Walk it until we find a dict with "headers".
+    stack = [data]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict) and "headers" in node:
+            return node["headers"]
+        if isinstance(node, list):
+            stack.extend(node)
+    return {}
 
 
 def main():
-    import shutil
-
     previous = load_previous_state()
     accounts = parse_accounts_conf()
 
     total_unread = 0
     accounts_with_unread = []
-    current_uids_map = {}
+    current_ids_map = {}
 
     for account_name, cfg in accounts.items():
-        source = cfg.get("source", "")
-        cred_cmd = cfg.get("source_cred_cmd", "")
-        from_addr = cfg.get("from", account_name)
-
-        parsed = parse_source_url(source)
-        if not parsed:
-            current_uids_map[account_name] = []
-            continue
-        imap_user, server, port = parsed
-
-        password = run_cred_cmd(cred_cmd)
-        if not password:
-            current_uids_map[account_name] = []
+        if not cfg.get("source", "").startswith("notmuch://"):
             continue
 
-        try:
-            client = imap_connect(server, port, imap_user, password)
-        except Exception:
-            current_uids_map[account_name] = []
-            continue
+        from_addr = cfg.get("from") or account_name
+        query = (
+            f"tag:{account_name} and tag:unread "
+            f"and folder:{account_name}/INBOX"
+        )
+        ids = notmuch_message_ids(query)
+        current_ids_map[account_name] = set(ids)
 
-        try:
-            uids = fetch_unseen_uids(client)
-        except Exception:
-            uids = []
-        current_uids_map[account_name] = uids
-
-        unread = len(uids)
+        unread = len(ids)
         if unread > 0:
             accounts_with_unread.append(f"{from_addr} ({unread})")
             total_unread += unread
 
-        prev_uids = previous.get(account_name, set())
-        current_set = set(uids)
-        new_uids = current_set - prev_uids if account_name in previous else current_set
+        prev_ids = previous.get(account_name, set())
+        # On first run the state file is missing; don't notify for the
+        # whole existing inbox.
+        new_ids = (
+            current_ids_map[account_name] - prev_ids
+            if account_name in previous
+            else set()
+        )
 
-        if new_uids:
-            for uid in sorted(new_uids):
-                headers = ""
-                try:
-                    headers = fetch_headers(client, uid)
-                except Exception:
-                    headers = ""
+        for mid in sorted(new_ids):
+            headers = notmuch_headers(mid)
+            subject = headers.get("Subject") or "No Subject"
+            sender = headers.get("From") or "Unknown Sender"
+            recipient = headers.get("To") or from_addr
+            date = headers.get("Date") or ""
 
-                subject, sender, recipient, date = parse_email_info(headers)
-                subject = subject or "No Subject"
-                sender = sender or "Unknown Sender"
-                recipient = recipient or from_addr
+            body_lines = [f"From: {sender}"]
+            if date:
+                body_lines.append(f"Date: {date}")
+            body_lines.append(f"To: {recipient}")
+            send_notification(subject, "\n".join(body_lines))
 
-                body_lines = [f"From: {sender}"]
-                if date:
-                    body_lines.append(f"Date: {date}")
-                body_lines.append(f"To: {recipient}")
-                body = "\n".join(body_lines)
-
-                send_notification(subject, body)
-
-        try:
-            client.logout()
-        except Exception:
-            pass
-
-    save_state({k: v for k, v in current_uids_map.items()})
+    save_state(current_ids_map)
 
     if total_unread > 0:
-        tooltip = "\n".join(accounts_with_unread)
         payload = {
             "text": f"{ICON_CLOSED} {total_unread} ",
-            "tooltip": tooltip,
+            "tooltip": "\n".join(accounts_with_unread),
             "class": "mail-status",
         }
     else:
