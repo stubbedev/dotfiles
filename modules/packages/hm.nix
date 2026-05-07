@@ -94,6 +94,10 @@ _: {
             secret edit <name>  Open secrets/<name> in $EDITOR via sops, binary mode (creates if absent)
             secret set <name>   Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)
             secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
+            iso build [args]    Build the NixOS installer ISO
+            iso path [args]     Build the ISO and print its store path
+            iso devices         List removable/block devices
+            iso burn <dev> --yes  Build the ISO and write it to a USB device
             help                Show this help message
 
           Other args are passed through to home-manager.
@@ -335,6 +339,10 @@ _: {
             secret)
               shift
               hm_secret "$@"
+              ;;
+            iso)
+              shift
+              nixos-iso "$@"
               ;;
             help|-h|--help)
               usage

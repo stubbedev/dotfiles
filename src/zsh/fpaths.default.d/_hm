@@ -12,6 +12,7 @@ _hm() {
     'whoami:Print this machine'\''s age recipient pubkey for sops'
     'trust:Add an age recipient to .sops.yaml and re-wrap secrets/*'
     'secret:Edit, set, or rotate an encrypted file under secrets/'
+    'iso:Build the NixOS installer ISO or burn it to a USB device'
     'search:Search for nix packages'
 
     # Home Manager commands
@@ -100,6 +101,42 @@ _hm() {
           _arguments \
             '--switch[Immediately activate the generated configuration]' \
             '1:directory:_directories'
+          ;;
+        iso)
+          local -a iso_cmds
+          iso_cmds=(
+            'build:Build the installer ISO'
+            'path:Build the ISO and print its store path'
+            'devices:List removable/block devices'
+            'burn:Build the ISO and write it to a USB device (requires --yes)'
+            'help:Show nixos-iso help'
+          )
+          case $words[2] in
+            burn)
+              _arguments \
+                '--yes[Confirm destructive write to device]' \
+                '-y[Confirm destructive write to device]' \
+                '*:block device:->blockdev'
+              if [[ $state == blockdev ]]; then
+                local -a devs
+                devs=(${(f)"$(lsblk -d -n -o NAME,SIZE,MODEL 2>/dev/null | awk '{print "/dev/"$1":("$2") "$3}')"})
+                if (( ${#devs} )); then
+                  _describe -t block-devices 'block device' devs
+                else
+                  _message 'block device (e.g. /dev/sdb)'
+                fi
+              fi
+              ;;
+            '')
+              _describe -t iso-commands 'iso command' iso_cmds
+              ;;
+            *)
+              case $CURRENT in
+                2) _describe -t iso-commands 'iso command' iso_cmds ;;
+              esac
+              ;;
+          esac
+          return 0
           ;;
         update|upgrade|help|edit|build|instantiate|switch|generations|packages|news|uninstall|whoami)
           # These commands don't take additional arguments
