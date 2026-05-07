@@ -128,6 +128,16 @@ in
         # shell. The installed system still uses greetd from
         # modules/nixos/greetd.nix; this override is scoped to the ISO.
         services.greetd.enable = lib.mkForce false;
+
+        # graphics.nix adds nvidia to videoDrivers and enables nvidia-open.
+        # The nvidia kernel modules fail to load on machines without a
+        # supported GPU, crashing systemd-modules-load.service on first boot.
+        # Use modesetting/fbdev only on the live ISO.
+        services.xserver.videoDrivers = lib.mkForce [ "modesetting" "fbdev" ];
+        hardware.nvidia = {
+          modesetting.enable = lib.mkForce false;
+          open = lib.mkForce false;
+        };
         services.getty.autologinUser = lib.mkForce "root";
         users.users.root.initialHashedPassword = lib.mkForce "";
 
