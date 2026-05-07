@@ -35,16 +35,15 @@ _: {
 
       options.host.installed = lib.mkOption {
         type = lib.types.bool;
-        default = builtins.pathExists "/etc/stubbe-installed";
-        defaultText = lib.literalExpression ''builtins.pathExists "/etc/stubbe-installed"'';
+        default = false;
         description = ''
-          False on a freshly-checked-out host (stub bootloader + stub root
-          fileSystem keep `nix build` evaluable). True once /etc/stubbe-installed
-          exists — stb-install-nixos touches the marker on both the live ISO
-          (so install-time eval picks the real btrfs layout from
-          modules/nixos/filesystems.nix) and on /mnt/etc/ (so post-install
-          rebuilds keep the same shape). Reading the marker requires --impure,
-          which the flake already runs under.
+          Set to true on hosts that target real, post-install hardware
+          (e.g. `stubbe-nixos`). Activates modules/nixos/filesystems.nix
+          (the real btrfs layout) and inhibits any stub fileSystems that
+          exist purely to keep a fresh checkout `nix build`-evaluable.
+          The installer ISO leaves this at the default (false) so the
+          live image keeps using the cd-dvd installation media's own
+          root mount.
         '';
       };
     };

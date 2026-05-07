@@ -88,4 +88,35 @@ Or directly with home-manager:
 The `--impure` is required because activation scripts read `$HOME` and detect
 the host distribution at evaluation time.
 
+## NIXOS INSTALLER ISO
+
+Build a bootable installer ISO that mirrors the `stubbe-nixos` host:
+
+```sh
+# Recommended: scope which SSH keys get baked into the ISO.
+STB_ISO_SSH_KEYS=id_ed25519:id_ed25519.pub:known_hosts \
+  nix build .#installer-iso --impure
+
+# Output: ./result/iso/*.iso — flash to a USB stick with `dd` or
+# (on NixOS) `nixos-rebuild boot --target-host live-iso`.
+```
+
+> **Security:** the ISO contains your private SSH keys (used by
+> `bin/stb-install-nixos` to clone this repo onto the target).
+> Treat the image as sensitive — never publish or share it, and wipe
+> the install USB once the target machine is up.
+
+Boot the live USB on the target machine, log in as `root` (auto-login on
+tty1), and run:
+
+```sh
+stb-install-nixos
+```
+
+The script wipes every fixed (non-removable) disk, formats them as a
+multi-device btrfs volume labeled `stubbe`, runs
+`nixos-install --flake /etc/nixos#stubbe-nixos`, clones this repo to
+`/mnt/etc/nixos` over SSH, and prompts for the primary user's password
+before finishing.
+
 ![This is the caption for the next figure link (or table)](./src/wallpapers/traffic.png)

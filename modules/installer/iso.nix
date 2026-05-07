@@ -13,11 +13,26 @@ let
   # Build with --impure to enable this; under pure eval (e.g. `nix flake
   # check`) HOME is empty and we fall back to no preloaded keys so the
   # ISO derivation still evaluates.
+  #
+  # SECURITY WARNING. The resulting ISO contains UNENCRYPTED PRIVATE
+  # SSH KEYS. Treat the ISO as a sensitive artefact: never publish it,
+  # never put it on a shared file server, and wipe USB sticks once the
+  # install is done. To narrow the blast radius, set the
+  # STB_ISO_SSH_KEYS env var to a colon-separated allowlist of file
+  # basenames before building, e.g.
+  #   STB_ISO_SSH_KEYS=id_ed25519:id_ed25519.pub:known_hosts \
+  #     nix build .#installer-iso --impure
+  # When unset, every regular file under ~/.ssh is read (legacy
+  # behaviour) and a build-time warning fires.
   homeDirectory = builtins.getEnv "HOME";
   hasHome = homeDirectory != "";
   sshDirectory = if hasHome then /. + "${homeDirectory}/.ssh" else null;
   sshDirectoryEntries =
     if hasHome && builtins.pathExists sshDirectory then builtins.readDir sshDirectory else { };
+
+  sshKeyAllowlistEnv = builtins.getEnv "STB_ISO_SSH_KEYS";
+  hasAllowlist = sshKeyAllowlistEnv != "";
+  sshKeyAllowlist = lib.filter (s: s != "") (lib.splitString ":" sshKeyAllowlistEnv);
 
   readSshFile =
     name:
@@ -25,9 +40,21 @@ let
       result = builtins.tryEval (builtins.readFile (sshDirectory + "/${name}"));
     in
     if result.success then result.value else "";
-  sshFileNames = lib.attrNames (
+  rawSshFileNames = lib.attrNames (
     lib.filterAttrs (_: type: type == "regular" || type == "symlink") sshDirectoryEntries
   );
+  rawSshFileNamesFiltered =
+    if hasAllowlist then lib.filter (n: lib.elem n sshKeyAllowlist) rawSshFileNames else rawSshFileNames;
+  sshFileNames =
+    if hasHome && !hasAllowlist && rawSshFileNamesFiltered != [ ] then
+      lib.warn ''
+        installer-iso: STB_ISO_SSH_KEYS not set — baking ALL ~/.ssh files
+        into the ISO. The resulting image carries unencrypted private
+        keys; treat it as sensitive. Set STB_ISO_SSH_KEYS=key1:key2:...
+        to narrow the allowlist.
+      '' rawSshFileNamesFiltered
+    else
+      rawSshFileNamesFiltered;
   sshFiles =
     if hasHome then
       map (
@@ -147,25 +174,12 @@ in
 
         # Stage the live ISO's HM user identically to the post-install
         # stubbe-nixos host so live-boot drops you into the same desktop
-        # the installed system would. Activation scripts that are gated
-        # on `host.platform == "nixos"` stay no-op.
+        # the installed system would. Feature profile comes from
+        # modules/home-manager/feature-defaults.nix via hmMods; activation
+        # scripts gated on `host.platform == "nixos"` stay no-op.
         home-manager.users.${config.host.primaryUser} = {
           imports = builtins.attrValues hmMods;
           host.platform = "nixos";
-          features = {
-            desktop = true;
-            development = true;
-            hyprland = true;
-            theming = true;
-            media = true;
-            vpn = true;
-            opencode = true;
-            srv = true;
-            php = false;
-            k8s = true;
-            claudeCode = true;
-            slack = true;
-          };
         };
 
         system.stateVersion = "26.05";

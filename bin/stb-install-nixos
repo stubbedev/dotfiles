@@ -3,11 +3,13 @@ set -euo pipefail
 
 # stb-install-nixos — live-ISO installer for the stubbe-nixos host.
 #
-# Detects every disk attached to the live system (excluding the USB
-# the ISO is booted from), formats them as ONE multi-device btrfs
-# volume labeled `stubbe`, lays down the subvolume structure that
-# modules/nixos/filesystems.nix expects, and runs `nixos-install`
-# against /etc/nixos#stubbe-nixos.
+# Detects every fixed (non-removable) disk attached to the live system,
+# excludes the disk the live ISO is booted from, formats them as ONE
+# multi-device btrfs volume labeled `stubbe`, lays down the subvolume
+# structure that modules/nixos/filesystems.nix expects, runs
+# `nixos-install` against /etc/nixos#stubbe-nixos, replaces the read-only
+# /etc/nixos store-path with a writable git checkout owned by the
+# primary user, and prompts for that user's password.
 #
 # Run as root from a tty in the live ISO.
 
@@ -29,23 +31,82 @@ require wipefs
 require mkfs.btrfs
 require mkfs.vfat
 require nixos-install
+require nixos-enter
 require findmnt
+require udevadm
+require partprobe
+require git
 
-# Disk where the live ISO is mounted — exclude it from the install set.
-live_disk="$(findmnt -no SOURCE /iso 2>/dev/null | sed 's/[0-9]*$//' | sed 's|/dev/||' || true)"
+REPO_URL="git@github.com:stubbedev/dotfiles.git"
+FLAKE_ATTR="stubbe-nixos"
+PRIMARY_USER="stubbe"
 
+cleanup() {
+  # Best-effort unmount on failure so the live system isn't left holding
+  # locks on /mnt that block a retry.
+  if mountpoint -q /mnt 2>/dev/null; then
+    umount -R /mnt 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
+# Resolve which physical disk hosts the live ISO so we exclude it from
+# the wipe set. PKNAME walks lsblk's parent-of relation, which works for
+# NVMe (/dev/nvme0n1p1 → nvme0n1) and mmc devices where naive trailing-
+# digit stripping breaks. Try the common live-ISO mountpoints in order.
+detect_live_disk() {
+  local mp src parent
+  for mp in /iso /run/initramfs/live /nix/.ro-store /; do
+    src="$(findmnt -no SOURCE "$mp" 2>/dev/null || true)"
+    [ -n "$src" ] && [ -b "$src" ] || continue
+    parent="$(lsblk -no PKNAME "$src" 2>/dev/null | head -1)"
+    if [ -n "$parent" ]; then
+      echo "$parent"
+      return
+    fi
+  done
+}
+
+live_disk="$(detect_live_disk || true)"
+if [ -z "$live_disk" ]; then
+  echo "stb-install-nixos: WARNING — could not detect live ISO disk." >&2
+  echo "Relying on the RM=0 filter to exclude the live USB. Verify the" >&2
+  echo "candidate list below DOES NOT contain the disk you booted from." >&2
+fi
+
+# Eligible install targets: type=disk, non-removable (RM=0), not the live
+# disk. The RM=0 filter is a safety net so an unrelated USB stick plugged
+# into the box at install time can't be wiped, and also skips the live
+# media itself when detect_live_disk fails.
 mapfile -t candidates < <(
   lsblk -dno NAME,TYPE,RM \
-    | awk -v live="$live_disk" '$2=="disk" && $1!=live { print $1 }'
+    | awk -v live="$live_disk" '$2=="disk" && $3=="0" && $1!=live { print $1 }'
 )
 
 if [ "${#candidates[@]}" -eq 0 ]; then
   echo "stb-install-nixos: no eligible disks found" >&2
+  echo "(live disk: '${live_disk:-unknown}', filter: type=disk, RM=0)" >&2
   exit 1
 fi
 
+# Refuse if any candidate disk has live mounts or md/LUKS/LVM children —
+# wipefs would fail mid-loop and leave a partially-wiped state.
+for d in "${candidates[@]}"; do
+  if findmnt -no SOURCE 2>/dev/null | grep -qE "^/dev/${d}([0-9]|p[0-9])?\b"; then
+    echo "stb-install-nixos: /dev/$d (or its partitions) has an active mount, refusing" >&2
+    findmnt | grep -E "^/dev/${d}" >&2 || true
+    exit 1
+  fi
+  child_types="$(lsblk -no TYPE "/dev/$d" 2>/dev/null | tail -n +2 | sort -u)"
+  if echo "$child_types" | grep -qE '^(raid[0-9]+|crypt|lvm)$'; then
+    echo "stb-install-nixos: /dev/$d has md/LUKS/LVM children, refusing" >&2
+    lsblk "/dev/$d" >&2 || true
+    exit 1
+  fi
+done
+
 echo ""
-echo "Detected disks (live USB '$live_disk' excluded):"
+echo "Detected disks (live USB '${live_disk:-unknown}' and removable media excluded):"
 lsblk -dno NAME,SIZE,MODEL "${candidates[@]/#/\/dev\/}"
 echo ""
 read -r -p "Proceed and ERASE all listed disks? [y/N] " confirm
@@ -65,16 +126,18 @@ for d in "${candidates[@]}"; do
   wipefs -a "/dev/$d"
   sgdisk --zap-all "/dev/$d"
 done
+udevadm settle
 
 echo "==> Partitioning $boot_dev (1G EFI + remainder for btrfs)"
 sgdisk \
   --new=1:0:+1G --typecode=1:ef00 --change-name=1:STBBOOT \
   --new=2:0:0   --typecode=2:8300 --change-name=2:stubbe-data \
   "$boot_dev"
-partprobe "$boot_dev" || sleep 2
+partprobe "$boot_dev" \
+  || echo "stb-install-nixos: partprobe warned on $boot_dev, continuing after udevadm settle" >&2
+udevadm settle
 
-# Resolve the partition path for the boot disk. NVMe / mmc devices use
-# pN suffix; SATA / virtio use plain N.
+# NVMe / mmc devices use pN partition suffix; SATA / virtio use plain N.
 case "$boot_disk" in
   nvme*|mmcblk*) boot_part="${boot_dev}p1"; first_data="${boot_dev}p2" ;;
   *)             boot_part="${boot_dev}1";  first_data="${boot_dev}2"  ;;
@@ -88,11 +151,18 @@ done
 echo "==> mkfs.vfat $boot_part (label STBBOOT)"
 mkfs.vfat -F32 -n STBBOOT "$boot_part"
 
-echo "==> mkfs.btrfs (label stubbe) over $first_data ${extra_data[*]:-}"
-# -d single keeps capacity = sum of disks; -m raid1 mirrors metadata so
-# losing one disk doesn't trash the filesystem header. On a single-disk
-# install raid1 metadata silently degrades to dup, which is fine.
-mkfs.btrfs -f -L stubbe -d single -m raid1 "$first_data" "${extra_data[@]}"
+# Single-disk btrfs can't host raid1 metadata, so fall back to dup. With
+# 2+ disks raid1 metadata mirrors so losing one disk doesn't trash the
+# filesystem header. Data stays `single` to keep capacity = sum of disks.
+if [ "${#extra_data[@]}" -eq 0 ]; then
+  meta_profile="dup"
+else
+  meta_profile="raid1"
+fi
+
+echo "==> mkfs.btrfs (label stubbe, -d single -m ${meta_profile}) over $first_data ${extra_data[*]:-}"
+mkfs.btrfs -f -L stubbe -d single -m "$meta_profile" "$first_data" "${extra_data[@]}"
+udevadm settle
 
 echo "==> Creating subvolumes"
 mount -o compress=zstd,noatime "$first_data" /mnt
@@ -106,25 +176,47 @@ umount /mnt
 mount_opts="compress=zstd,noatime"
 echo "==> Mounting subvolumes under /mnt"
 mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
-mkdir -p /mnt/{home,nix,var,.snapshots,boot}
+mkdir -p /mnt/{home,nix,var,.snapshots,boot,etc}
 mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
 mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
 mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
 mount -o "${mount_opts},subvol=@snapshots"  "$first_data" /mnt/.snapshots
-mount "$boot_part" /mnt/boot
+# fmask/dmask matches modules/nixos/filesystems.nix so the install-time
+# mount sees /boot the same way the installed system will.
+mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 
-# Mark the host as installed. modules/platform.nix reads this marker
-# (impurely) to flip host.installed = true, which activates the btrfs
-# fileSystems entries from modules/nixos/filesystems.nix and disables
-# the stub bootloader/root entries in modules/nixos/hosts/stubbe-nixos.nix.
-# Touch on both the live ISO (so install-time eval sees it) and on
-# /mnt/etc (so the installed system carries the marker forward).
-mkdir -p /mnt/etc
-touch /etc/stubbe-installed /mnt/etc/stubbe-installed
+echo "==> Running nixos-install --flake /etc/nixos#${FLAKE_ATTR}"
+nixos-install --root /mnt --flake "/etc/nixos#${FLAKE_ATTR}" --no-root-password
 
-echo "==> Running nixos-install --flake /etc/nixos#stubbe-nixos"
-nixos-install --root /mnt --flake /etc/nixos#stubbe-nixos --no-root-password
+# /etc/nixos on the ISO is a read-only store path (set by
+# modules/installer/iso.nix). Replace it on the installed system with a
+# real git checkout so `nixos-rebuild switch --flake /etc/nixos#...`
+# works and the primary user can git pull / push from there. The ISO
+# ships the user's SSH key in /root/.ssh, so the SSH-form remote
+# authenticates.
+echo "==> Cloning ${REPO_URL} into /mnt/etc/nixos"
+rm -rf /mnt/etc/nixos
+GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
+  git clone "$REPO_URL" /mnt/etc/nixos
+
+# Hand the checkout to the primary user so editing + `git pull` doesn't
+# require sudo. uid/gid are resolved via /mnt's passwd/group, since the
+# host hasn't booted yet.
+user_uid="$(nixos-enter --root /mnt --command "id -u ${PRIMARY_USER}")"
+user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
+chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos
+
+# nixos-install ran with --no-root-password and modules/nixos/users.nix
+# doesn't set a password for the primary user, so without this prompt
+# the installed system has no console login.
+echo ""
+echo "==> Set password for ${PRIMARY_USER}"
+nixos-enter --root /mnt -c "passwd ${PRIMARY_USER}"
+
+trap - EXIT
 
 echo ""
-echo "Install complete. Reboot into the new system; log in as the user"
-echo "declared in modules/nixos/users.nix (default: stubbe)."
+echo "Install complete."
+echo "  Flake checkout: /etc/nixos (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
+echo "  Reboot, log in as '${PRIMARY_USER}', then iterate via:"
+echo "    sudo nixos-rebuild switch --flake /etc/nixos#${FLAKE_ATTR}"
