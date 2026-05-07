@@ -169,7 +169,7 @@ _: {
             postpone=Drafts
             archive=Archive
             check-mail-cmd=${mailSync}/bin/mail-sync kontainer
-            check-mail=5m
+            check-mail=30s
 
             [gmail]
             source=notmuch://${maildir}
@@ -186,7 +186,7 @@ _: {
             postpone=[Gmail]/Drafts
             archive=[Gmail]/All Mail
             check-mail-cmd=${mailSync}/bin/mail-sync gmail
-            check-mail=5m
+            check-mail=30s
           '';
 
           # query-map: virtual folder name → notmuch query. aerc opens the
@@ -231,9 +231,10 @@ _: {
           xdg.configFile."aerc/queries-kontainer".text = queriesKontainer;
           xdg.configFile."aerc/queries-gmail".text = queriesGmail;
 
-          # Periodic sync: every 5 minutes after the last successful run.
-          # OnBootSec=1m kicks the first sync soon after login; Persistent
-          # makes us catch up if the laptop was suspended past the window.
+          # Periodic sync every 30s so notifications fire within the
+          # waybar refresh window. mbsync STATUS-only round-trips are
+          # cheap (~1-2s) when nothing changed; the lock file in
+          # ~/.mbsync prevents concurrent runs from piling up.
           systemd.user.services.mail-sync = {
             Unit = {
               Description = "Sync IMAP -> local maildir + reindex with notmuch";
@@ -250,10 +251,9 @@ _: {
           systemd.user.timers.mail-sync = {
             Unit.Description = "Periodic mail sync";
             Timer = {
-              OnBootSec = "1m";
-              OnUnitActiveSec = "5m";
+              OnBootSec = "30s";
+              OnUnitActiveSec = "30s";
               Persistent = true;
-              RandomizedDelaySec = "30s";
             };
             Install.WantedBy = [ "timers.target" ];
           };
