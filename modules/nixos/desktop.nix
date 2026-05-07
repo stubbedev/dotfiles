@@ -19,7 +19,7 @@ _: {
       # ~/.config/Kvantum/kvantum.kvconfig (also managed by that module).
       qt = {
         enable = true;
-        platformTheme.name = "qt5ct";
+        platformTheme = "qt5ct";
       };
 
       # Provides the Catppuccin-Mocha-Mauve Kvantum theme files.
