@@ -33,9 +33,9 @@ _: {
         kdePackages.qt6ct
         libsForQt5.qtstyleplugins
 
-        # KDE/Qt theming - Kvantum for dark mode support
+        # KDE/Qt theming - Kvantum style engine (Qt5 + Qt6)
         libsForQt5.qtstyleplugin-kvantum
-        kdePackages.breeze # Breeze Qt theme
+        kdePackages.qtstyleplugin-kvantum
       ];
     };
 }

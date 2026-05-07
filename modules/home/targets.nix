@@ -1,7 +1,7 @@
 _: {
   linuxOnlyHomeModules.targets =
-    { pkgs, ... }:
-    {
+    { pkgs, config, lib, ... }:
+    lib.mkIf (config.host.platform != "nixos") {
       targets.genericLinux = {
         enable = true;
         nixGL = {

@@ -2,6 +2,7 @@
   lib,
   pkgs,
   systemInfo,
+  isNixOS ? false,
   ...
 }:
 let
@@ -85,22 +86,35 @@ in
   # name is the basename of the wrapped binary.
   gfx =
     program:
-    let
-      programPath = lib.getExe program;
-      name = baseNameOf programPath;
-    in
-    mkNixGLWrapper name programPath;
+    if isNixOS then
+      program
+    else
+      let
+        programPath = lib.getExe program;
+        name = baseNameOf programPath;
+      in
+      mkNixGLWrapper name programPath;
 
   # Wrap `program`'s mainProgram, exposing it under `name` (use to rename).
-  gfxName = name: program: mkNixGLWrapper name (lib.getExe program);
+  gfxName =
+    name: program:
+    if isNixOS then
+      pkgs.runCommand name { } ''
+        mkdir -p $out/bin
+        ln -s ${lib.getExe program} $out/bin/${name}
+      ''
+    else
+      mkNixGLWrapper name (lib.getExe program);
 
   # Wrap a specific binary `exeName` from `program` (not necessarily its
   # mainProgram). Output name matches exeName.
   gfxExe =
     exeName: program:
-    mkNixGLWrapper exeName (lib.getExe' program exeName);
+    if isNixOS then program else mkNixGLWrapper exeName (lib.getExe' program exeName);
 
   # Direct (no nixGL) wrapper that injects system driver search paths.
   # For DRM/KMS contexts where we need the host's EGL implementation.
-  gfxDirectWithDrivers = name: program: mkDirectWrapperWithDrivers name (lib.getExe program);
+  gfxDirectWithDrivers =
+    name: program:
+    if isNixOS then program else mkDirectWrapperWithDrivers name (lib.getExe program);
 }

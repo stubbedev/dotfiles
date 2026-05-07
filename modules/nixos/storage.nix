@@ -15,5 +15,11 @@ _: {
       # Auto-mount removable media (USB sticks, SD cards, MTP). waybar's
       # disk widget + file managers (vifm, nautilus) read its dbus API.
       services.udisks2.enable = true;
+
+      # Virtual filesystem layer for GIO-based apps (PCManFM, nautilus, …).
+      # Enables: trash support, MTP device mounting (Android phones/cameras),
+      # SFTP/SMB network browsing, archive mounting. Without this, deleting
+      # files in PCManFM is permanent (no trash) and network/phone mounts silently fail.
+      services.gvfs.enable = true;
     };
 }

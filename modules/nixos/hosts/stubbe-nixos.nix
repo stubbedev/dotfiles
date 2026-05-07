@@ -2,6 +2,7 @@
 let
   nixosMods = config.flake.modules.nixos;
   hmMods = config.flake.modules.homeManager;
+  hmLinux = config.linuxOnlyHomeModules;
 in
 {
   configurations.nixos.stubbe-nixos = {
@@ -32,7 +33,7 @@ in
         host.installed = true;
 
         home-manager.users.${config.host.primaryUser} = {
-          imports = builtins.attrValues hmMods;
+          imports = builtins.attrValues hmMods ++ builtins.attrValues hmLinux;
 
           # Gate off privileged activation scripts — the corresponding
           # NixOS modules under modules/nixos/ own those files now.

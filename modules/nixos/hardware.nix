@@ -47,5 +47,13 @@ _: {
       # lanzaboote's stub generation. Faster + better diagnostics than
       # the legacy script-based initrd.
       boot.initrd.systemd.enable = true;
+
+      # Udev rule so the primary user can adjust backlight without sudo.
+      # Also installs the brightnessctl binary system-wide.
+      hardware.brightnessctl.enable = true;
+
+      # Load i2c-dev kernel module + udev rules so ddcutil works without sudo.
+      # The i2c group is created automatically; users.nix adds the primary user.
+      hardware.i2c.enable = true;
     };
 }

@@ -1,6 +1,6 @@
 _: {
   flake.modules.nixos.desktop =
-    { ... }:
+    { pkgs, ... }:
     {
       # HM-side modules/theme/dconf.nix writes dconf keys (color-scheme,
       # blueman). On NixOS, the dconf service must be enabled system-wide
@@ -12,5 +12,20 @@ _: {
       # screen sharing, etc. portal.nix already enables the service; this
       # is the explicit GSettings dependency that pulls in the schema.
       services.gnome.gnome-keyring.enable = true;
+
+      # Qt platform theming. qt5ct/qt6ct read ~/.config/qt5ct/qt5ct.conf
+      # (managed by modules/theme/qt.nix) which delegates rendering to the
+      # Kvantum engine. Kvantum picks up Catppuccin-Mocha-Mauve from
+      # ~/.config/Kvantum/kvantum.kvconfig (also managed by that module).
+      qt = {
+        enable = true;
+        platformTheme.name = "qt5ct";
+      };
+
+      # Provides the Catppuccin-Mocha-Mauve Kvantum theme files.
+      # The Qt5 plugin (libsForQt5.qtstyleplugin-kvantum) and Qt6 plugin
+      # (kdePackages.qtstyleplugin-kvantum) are installed via home-manager
+      # modules/packages/theming.nix so they land in the user profile.
+      environment.systemPackages = [ pkgs.catppuccin-kvantum ];
     };
 }

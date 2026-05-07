@@ -3,6 +3,7 @@
   pkgs ? null,
   systemInfo ? null,
   self,
+  isNixOS ? false,
   ...
 }:
 let
@@ -14,7 +15,7 @@ rec {
   # GFX wrappers (nixGL)
   # ============================================================
 
-  gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo; };
+  gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo isNixOS; };
   inherit (gfxLib)
     gfx
     gfxName

@@ -13,6 +13,8 @@ _: {
           "video"
           "audio"
           "networkmanager"
+          "i2c"
+          "dialout"
         ];
       };
     };
