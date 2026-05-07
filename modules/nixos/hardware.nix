@@ -41,5 +41,11 @@ _: {
       # Wipe /tmp on every boot so stale build artefacts don't leak
       # between sessions.
       boot.tmp.cleanOnBoot = true;
+
+      # Modern systemd-in-initrd: parallel mount setup, structured
+      # journal during early boot, required prerequisite for
+      # lanzaboote's stub generation. Faster + better diagnostics than
+      # the legacy script-based initrd.
+      boot.initrd.systemd.enable = true;
     };
 }
