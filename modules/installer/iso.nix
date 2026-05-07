@@ -121,6 +121,76 @@ in
 
         boot.zfs.forceImportRoot = false;
 
+        # stb-install-nixos creates btrfs volumes and a vfat EFI partition.
+        # Explicit declaration ensures the kernel modules are present and
+        # fsck helpers are included even if cd-base doesn't pull them in.
+        boot.supportedFilesystems = lib.mkAfter [ "btrfs" "vfat" ];
+
+        # Auto-load common wired NIC drivers. nixos-install fetches packages
+        # from cache.nixos.org — a missing driver means a stalled install.
+        # hardware.nix covers storage controllers; these cover the NIC side.
+        boot.kernelModules = lib.mkAfter [
+          # --- Wired ethernet ---
+          "r8169"       # Realtek Gigabit PCIe (most consumer boards)
+          "r8168"       # Realtek Gigabit alt driver
+          "r8152"       # Realtek USB ethernet
+          "e1000"       # Intel Gigabit (older)
+          "e1000e"      # Intel Gigabit (NUCs, ThinkPads)
+          "igb"         # Intel Gigabit (server / newer)
+          "ixgbe"       # Intel 10G
+          "i40e"        # Intel 40G / X710
+          "tg3"         # Broadcom Gigabit
+          "bnx2x"       # Broadcom 10G
+          "sky2"        # Marvell Gigabit
+          "atl1c"       # Qualcomm/Atheros wired
+          "alx"         # Qualcomm/Atheros wired (newer)
+          "forcedeth"   # nForce onboard
+          # USB ethernet dongles
+          "ax88179_178a" # ASIX USB 3.0 ethernet (common dongles)
+          "cdc_ether"    # Generic CDC ethernet / USB tethering
+          "cdc_ncm"      # CDC NCM (4G modems, some hubs)
+          "r8153_ecm"    # Realtek USB 3.0 ethernet
+          "lan78xx"      # Microchip USB 3.0 ethernet
+          "smsc75xx"     # SMSC USB ethernet
+          "smsc95xx"     # SMSC USB ethernet (Raspberry Pi style)
+
+          # --- WiFi ---
+          "iwlwifi"     # Intel WiFi 4/5/6/6E/7 (dominant in laptops)
+          "iwldvm"      # Intel WiFi 4000 series firmware driver
+          "iwlmvm"      # Intel WiFi 5000+ series firmware driver
+          "ath9k"       # Qualcomm 802.11n PCIe
+          "ath9k_htc"   # Qualcomm 802.11n USB
+          "ath10k_pci"  # Qualcomm 802.11ac PCIe
+          "ath11k_pci"  # Qualcomm 802.11ax PCIe
+          "rtw88_pci"   # Realtek 802.11ac PCIe
+          "rtw88_8822be" "rtw88_8822ce" "rtw88_8821ce" # Realtek 802.11ac chips
+          "rtw89_pci"   # Realtek 802.11ax PCIe
+          "rtw89_8852be" "rtw89_8852ce" # Realtek 802.11ax chips
+          "mt7921e"     # MediaTek 802.11ax PCIe (AMD budget laptops)
+          "mt7915e"     # MediaTek 802.11ax PCIe (newer)
+          "mt7601u"     # MediaTek USB WiFi (cheap dongles)
+          "brcmfmac"    # Broadcom FullMAC (common in Macs, RPi, Chromebooks)
+          "brcmsmac"    # Broadcom SoftMAC
+          "b43"         # Broadcom 43xx (older)
+
+          # --- Bluetooth (useful if WiFi uses BT coexistence firmware) ---
+          "btusb"       # USB Bluetooth (covers most BT dongles + built-in)
+          "btintel"     # Intel Bluetooth
+          "btrtl"       # Realtek Bluetooth
+          "btmtk"       # MediaTek Bluetooth
+
+          # --- Input (belt-and-suspenders over hardware.nix) ---
+          "hid_generic" # Generic HID fallback
+          "i2c_hid"     # I2C HID (laptop touchpads/keyboards)
+          "i2c_hid_acpi"
+        ];
+
+        # All firmware blobs including non-redistributable (Broadcom WiFi,
+        # some Intel/Realtek). Needed for brcmfmac, some iwlwifi revisions,
+        # and various USB WiFi chips.
+        hardware.enableAllFirmware = true;
+        nixpkgs.config.allowUnfree = true;
+
         networking.hostName = lib.mkForce "stubbe-iso";
 
         # The ISO's only job is to run stb-install-nixos. Skip greetd and
@@ -174,23 +244,16 @@ in
           parted
           rsync
           inputs.disko.packages.${system}.default
-          # Wrap bin/stb-install-nixos as a system package so root can call
-          # it from a tty without depending on the HM-user profile being
-          # built first.
           (pkgs.writeShellScriptBin "stb-install-nixos" (
             builtins.readFile (self + "/bin/stb-install-nixos")
           ))
         ];
 
-        # Stage the live ISO's HM user identically to the post-install
-        # stubbe-nixos host so live-boot drops you into the same desktop
-        # the installed system would. Feature profile comes from
-        # modules/home-manager/feature-defaults.nix via hmMods; activation
-        # scripts gated on `host.platform == "nixos"` stay no-op.
-        home-manager.users.${config.host.primaryUser} = {
-          imports = builtins.attrValues hmMods;
-          host.platform = "nixos";
-        };
+        environment.etc."profile.d/stb-welcome.sh".text = ''
+          [ "$(id -u)" -eq 0 ] || return 0
+          printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'
+          printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n\n'
+        '';
 
         system.stateVersion = "26.05";
       };

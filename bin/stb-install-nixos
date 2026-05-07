@@ -50,6 +50,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if mountpoint -q /mnt 2>/dev/null; then
+  echo "stb-install-nixos: /mnt is already mounted; run 'umount -R /mnt' first" >&2
+  exit 1
+fi
+
 # Resolve which physical disk hosts the live ISO so we exclude it from
 # the wipe set. PKNAME walks lsblk's parent-of relation, which works for
 # NVMe (/dev/nvme0n1p1 → nvme0n1) and mmc devices where naive trailing-
@@ -80,7 +85,7 @@ fi
 # media itself when detect_live_disk fails.
 mapfile -t candidates < <(
   lsblk -dno NAME,TYPE,RM \
-    | awk -v live="$live_disk" '$2=="disk" && $3=="0" && $1!=live { print $1 }'
+    | awk -v live="$live_disk" '$2=="disk" && $3=="0" && $1!=live && $1!~/^zram/ { print $1 }'
 )
 
 if [ "${#candidates[@]}" -eq 0 ]; then
@@ -89,10 +94,19 @@ if [ "${#candidates[@]}" -eq 0 ]; then
   exit 1
 fi
 
+MIN_BYTES=$(( 20 * 1024 * 1024 * 1024 ))
+for d in "${candidates[@]}"; do
+  sz=$(lsblk -dno SIZE --bytes "/dev/$d" 2>/dev/null || echo 0)
+  if (( sz < MIN_BYTES )); then
+    echo "stb-install-nixos: /dev/$d is too small ($(( sz / 1024 / 1024 / 1024 )) GiB < 20 GiB minimum)" >&2
+    exit 1
+  fi
+done
+
 # Refuse if any candidate disk has live mounts or md/LUKS/LVM children —
 # wipefs would fail mid-loop and leave a partially-wiped state.
 for d in "${candidates[@]}"; do
-  if findmnt -no SOURCE 2>/dev/null | grep -qE "^/dev/${d}([0-9]|p[0-9])?\b"; then
+  if findmnt -no SOURCE 2>/dev/null | grep -qE "^/dev/${d}(p?[0-9]+)?\b"; then
     echo "stb-install-nixos: /dev/$d (or its partitions) has an active mount, refusing" >&2
     findmnt | grep -E "^/dev/${d}" >&2 || true
     exit 1
@@ -142,6 +156,20 @@ case "$boot_disk" in
   nvme*|mmcblk*) boot_part="${boot_dev}p1"; first_data="${boot_dev}p2" ;;
   *)             boot_part="${boot_dev}1";  first_data="${boot_dev}2"  ;;
 esac
+
+# Kernel may take a moment to expose new partition nodes even after
+# partprobe + udevadm settle. Poll up to 10 s before giving up.
+wait_for_part() {
+  local path="$1" i
+  for (( i=0; i<40; i++ )); do
+    [[ -b "$path" ]] && return 0
+    sleep 0.25
+  done
+  echo "stb-install-nixos: timed out waiting for block device $path" >&2
+  return 1
+}
+wait_for_part "$boot_part"
+wait_for_part "$first_data"
 
 extra_data=()
 for d in "${candidates[@]:1}"; do
@@ -194,34 +222,36 @@ mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 echo "==> Running nixos-install --flake /etc/nixos#${FLAKE_ATTR}"
 nixos-install --root /mnt --flake "/etc/nixos#${FLAKE_ATTR}" --no-root-password
 
-# /etc/nixos on the ISO is a read-only store path (set by
-# modules/installer/iso.nix). Replace it on the installed system with a
-# real git checkout so `nixos-rebuild switch --flake /etc/nixos#...`
-# works and the primary user can git pull / push from there. The ISO
-# ships the user's SSH key in /root/.ssh, so the SSH-form remote
-# authenticates.
-echo "==> Cloning ${REPO_URL} into /mnt/etc/nixos"
-rm -rf /mnt/etc/nixos
-GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
-  git clone "$REPO_URL" /mnt/etc/nixos
-
-# Hand the checkout to the primary user so editing + `git pull` doesn't
-# require sudo. uid/gid are resolved via /mnt's passwd/group, since the
-# host hasn't booted yet.
+# Resolve uid/gid from the installed system — needed for ownership
+# regardless of whether the git clone succeeds.
 user_uid="$(nixos-enter --root /mnt --command "id -u ${PRIMARY_USER}")"
 user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
-chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos
 
-# Create ~/.stubbe → /etc/nixos. The HM modules under modules/files/,
-# modules/activation/, modules/home/ all reference paths under
-# ${HOME}/.stubbe/src/... (e.g. .zshrc sources ~/.stubbe/src/zsh/init,
-# starship reads ~/.stubbe/src/starship/...). The non-NixOS `stb-install`
-# script creates this symlink; on NixOS we mirror it so the same configs
-# resolve. Pointing at /etc/nixos keeps a single source of truth.
+# Replace the read-only /etc/nixos store path with a live git checkout so
+# `nixos-rebuild switch --flake /etc/nixos#...` works after first boot.
+# Non-fatal: a network outage or missing SSH key shouldn't brick an
+# otherwise complete install. The user can re-clone after first boot.
+clone_ok=false
+echo "==> Cloning ${REPO_URL} into /mnt/etc/nixos"
+rm -rf /mnt/etc/nixos
+if GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
+    git clone "$REPO_URL" /mnt/etc/nixos; then
+  clone_ok=true
+  chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos
+else
+  echo "" >&2
+  echo "WARNING: git clone failed (no network, or SSH key not authorized)." >&2
+  echo "Install is complete. After first boot, run as root:" >&2
+  echo "  git clone ${REPO_URL} /etc/nixos" >&2
+  echo "  chown -R ${PRIMARY_USER}:${PRIMARY_USER} /etc/nixos" >&2
+fi
+
 home_dir="/mnt/home/${PRIMARY_USER}"
 mkdir -p "$home_dir"
-ln -sfn /etc/nixos "${home_dir}/.stubbe"
-chown -h "${user_uid}:${user_gid}" "${home_dir}/.stubbe"
+if [[ "$clone_ok" == true ]]; then
+  ln -sfn /etc/nixos "${home_dir}/.stubbe"
+  chown -h "${user_uid}:${user_gid}" "${home_dir}/.stubbe"
+fi
 chown "${user_uid}:${user_gid}" "$home_dir"
 
 # Copy the user's SSH keys from /root/.ssh (where modules/installer/iso.nix
@@ -246,6 +276,7 @@ echo ""
 echo "==> Set password for ${PRIMARY_USER}"
 nixos-enter --root /mnt -c "passwd ${PRIMARY_USER}"
 
+sync
 trap - EXIT
 
 echo ""
