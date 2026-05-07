@@ -401,9 +401,15 @@ _: {
             nix build --impure "$flake_ref#installer-iso" --out-link "$out_link" "$@"
           }
 
+          resolve_iso_path() {
+            local dir
+            dir=$(readlink -f "$out_link")
+            echo "$dir"/iso/*.iso
+          }
+
           print_iso_path() {
             build_iso "$@" >/dev/null
-            readlink -f "$out_link"
+            resolve_iso_path
           }
 
           list_devices() {
@@ -471,7 +477,7 @@ _: {
             fi
 
             build_iso "''${nix_args[@]}"
-            iso_path=$(readlink -f "$out_link")
+            iso_path=$(resolve_iso_path)
 
             echo "Writing $iso_path to $device"
             sudo dd if="$iso_path" of="$device" bs=4M status=progress oflag=sync conv=fsync
