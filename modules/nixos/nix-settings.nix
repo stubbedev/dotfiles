@@ -30,7 +30,9 @@
       # packages fall back to a vanilla nixpkgs eval and miss the overrides.
       nixpkgs.config = {
         allowUnfree = true;
-        allowInsecure = true;
+        permittedInsecurePackages = [
+          "dcraw-9.28.0"
+        ];
       };
 
       nixpkgs.overlays = builtins.attrValues config.flake.overlays;

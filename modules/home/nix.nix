@@ -4,6 +4,13 @@ _: {
     {
       programs.home-manager.enable = true;
 
+      nixpkgs.config = {
+        allowUnfree = true;
+        permittedInsecurePackages = [
+          "dcraw-9.28.0"
+        ];
+      };
+
       nix = {
         package = lib.mkDefault pkgs.nix;
         settings = {
