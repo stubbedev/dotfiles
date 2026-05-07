@@ -170,17 +170,15 @@ btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@nix
 btrfs subvolume create /mnt/@var
-btrfs subvolume create /mnt/@snapshots
 umount /mnt
 
 mount_opts="compress=zstd,noatime"
 echo "==> Mounting subvolumes under /mnt"
 mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
-mkdir -p /mnt/{home,nix,var,.snapshots,boot,etc}
+mkdir -p /mnt/{home,nix,var,boot,etc}
 mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
 mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
 mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
-mount -o "${mount_opts},subvol=@snapshots"  "$first_data" /mnt/.snapshots
 # fmask/dmask matches modules/nixos/filesystems.nix so the install-time
 # mount sees /boot the same way the installed system will.
 mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
@@ -205,6 +203,18 @@ GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
 user_uid="$(nixos-enter --root /mnt --command "id -u ${PRIMARY_USER}")"
 user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
 chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos
+
+# Create ~/.stubbe → /etc/nixos. The HM modules under modules/files/,
+# modules/activation/, modules/home/ all reference paths under
+# ${HOME}/.stubbe/src/... (e.g. .zshrc sources ~/.stubbe/src/zsh/init,
+# starship reads ~/.stubbe/src/starship/...). The non-NixOS `stb-install`
+# script creates this symlink; on NixOS we mirror it so the same configs
+# resolve. Pointing at /etc/nixos keeps a single source of truth.
+home_dir="/mnt/home/${PRIMARY_USER}"
+mkdir -p "$home_dir"
+ln -sfn /etc/nixos "${home_dir}/.stubbe"
+chown -h "${user_uid}:${user_gid}" "${home_dir}/.stubbe"
+chown "${user_uid}:${user_gid}" "$home_dir"
 
 # nixos-install ran with --no-root-password and modules/nixos/users.nix
 # doesn't set a password for the primary user, so without this prompt

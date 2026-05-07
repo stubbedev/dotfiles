@@ -19,7 +19,6 @@ _: {
         "/home" = "@home";
         "/nix" = "@nix";
         "/var" = "@var";
-        "/.snapshots" = "@snapshots";
       };
 
       mkSubvolMount = name: {
@@ -30,6 +29,14 @@ _: {
     in
     lib.mkIf config.host.installed {
       boot.supportedFilesystems = [ "btrfs" ];
+
+      # Monthly checksum scrub catches bit-rot on the btrfs members
+      # before silent corruption propagates to backups.
+      services.btrfs.autoScrub = {
+        enable = true;
+        interval = "monthly";
+        fileSystems = [ "/" ];
+      };
 
       fileSystems = lib.mapAttrs (_: subvol: mkSubvolMount subvol) subvolumes // {
         "/boot" = {

@@ -187,8 +187,43 @@ in
   };
 
   perSystem =
-    { system, ... }:
+    { pkgs, system, ... }:
+    let
+      iso = config.flake.nixosConfigurations.installer-iso.config.system.build.isoImage;
+      # Boot the freshly-built ISO under qemu/KVM with EFI firmware and a
+      # persistent virtio disk, so stb-install-nixos can be exercised end-
+      # to-end without burning a USB stick. Disk path overridable via the
+      # ISO_VM_DISK env var; defaults to /tmp/stb-installer-vm.qcow2.
+      iso-vm = pkgs.writeShellApplication {
+        name = "installer-iso-vm";
+        runtimeInputs = [
+          pkgs.qemu
+          pkgs.OVMFFull
+        ];
+        text = ''
+          set -euo pipefail
+          iso_path=$(echo ${iso}/iso/*.iso)
+          disk="''${ISO_VM_DISK:-/tmp/stb-installer-vm.qcow2}"
+          if [ ! -f "$disk" ]; then
+            echo "Creating fresh 32G install disk at $disk"
+            qemu-img create -f qcow2 "$disk" 32G
+          fi
+          exec qemu-system-x86_64 \
+            -enable-kvm -cpu host -m 4096 -smp 4 \
+            -bios ${pkgs.OVMFFull.fd}/FV/OVMF.fd \
+            -cdrom "$iso_path" \
+            -drive file="$disk",if=virtio,format=qcow2 \
+            -boot d \
+            -netdev user,id=net0 -device virtio-net-pci,netdev=net0
+        '';
+      };
+    in
     lib.optionalAttrs (system == "x86_64-linux") {
-      packages.installer-iso = config.flake.nixosConfigurations.installer-iso.config.system.build.isoImage;
+      packages.installer-iso = iso;
+      packages.installer-iso-vm = iso-vm;
+      apps.installer-iso-vm = {
+        type = "app";
+        program = lib.getExe iso-vm;
+      };
     };
 }
