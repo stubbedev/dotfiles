@@ -223,10 +223,12 @@ in
         users.users.root.openssh.authorizedKeys.keys = sshAuthorizedKeys;
 
         environment.etc = sshEtcFiles // {
-          # Surface the flake source at /etc/nixos so
-          # `nixos-install --flake /etc/nixos#stubbe-nixos`
-          # (run by stb-install-nixos) resolves without arguments.
           "nixos".source = self;
+          "profile.d/stb-welcome.sh".text = ''
+            [ "$(id -u)" -eq 0 ] || return 0
+            printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'
+            printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n\n'
+          '';
         };
 
         systemd.tmpfiles.rules = [
@@ -248,12 +250,6 @@ in
             builtins.readFile (self + "/bin/stb-install-nixos")
           ))
         ];
-
-        environment.etc."profile.d/stb-welcome.sh".text = ''
-          [ "$(id -u)" -eq 0 ] || return 0
-          printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'
-          printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n\n'
-        '';
 
         system.stateVersion = "26.05";
       };
