@@ -7,20 +7,19 @@ _: {
     {
       xdg.portal = {
         enable = true;
-        # The Hyprland and wlr backends serve the wayland session;
-        # GTK provides file-picker fallback. Gnome portal joins when
-        # Niri is enabled (Niri's preferred interface).
-        extraPortals = with pkgs;
-          [
-            xdg-desktop-portal-gtk
-          ]
-          ++ lib.optionals (hmFeatures.hyprland or false) [
-            xdg-desktop-portal-hyprland
-            xdg-desktop-portal-wlr
-          ]
-          ++ lib.optionals (hmFeatures.niri or false) [
-            xdg-desktop-portal-gnome
-          ];
+        # `programs.hyprland.enable` already adds its matching
+        # xdg-desktop-portal-hyprland (same version as the Hyprland binary),
+        # so we don't add it here — duplicating the package with a different
+        # store path collides on the user-unit symlink farm. Same story for
+        # `programs.niri.enable` and the Niri portal stack on niri-flake;
+        # nixpkgs' niri pulls xdg-desktop-portal-gnome via xdg.portal.gtkUsePortal
+        # automatically, so we only need to ensure GTK fallback is present.
+        extraPortals = with pkgs; [
+          xdg-desktop-portal-gtk
+        ]
+        ++ lib.optionals (hmFeatures.hyprland or false) [
+          xdg-desktop-portal-wlr
+        ];
         config.common.default = "*";
       };
     };
