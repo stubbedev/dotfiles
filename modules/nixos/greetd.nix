@@ -8,7 +8,16 @@ _: {
         enable = true;
         wayland.enable = true;
         theme = "catppuccin-mocha-mauve";
-        extraPackages = [ pkgs.catppuccin-sddm ];
+        extraPackages = [
+          pkgs.catppuccin-sddm
+          pkgs.vimix-cursors
+        ];
+        settings = {
+          Theme = {
+            CursorTheme = "Vimix-cursors";
+            CursorSize = 24;
+          };
+        };
       };
 
       # SDDM's ThemeDir is /run/current-system/sw/share/sddm/themes, populated
