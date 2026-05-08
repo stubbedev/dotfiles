@@ -1,12 +1,14 @@
 #!/usr/bin/env zsh
 
-if [[ -z $(pgrep tmux -u "$USER") ]]; then
+# `tmux list-sessions` exits non-zero (and prints to stderr) when no
+# server is running. We can't pre-check with `pgrep tmux` because pgrep
+# matches by truncated comm name (15 chars): this script's own comm
+# is `tmux-pick-sessi` which substring-matches "tmux", so pgrep would
+# falsely report a running server and the subsequent connect would fail.
+SESSIONS=$(tmux list-sessions -F "#{session_name}" 2>/dev/null) || {
   clear
   exit 0
-fi
-
-# List all tmux sessions
-SESSIONS=$(tmux list-sessions -F "#{session_name}")
+}
 
 if [[ -z $SESSIONS ]]; then
   exit 0

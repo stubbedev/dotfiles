@@ -7,6 +7,14 @@ PROVIDER_NAME="@PROVIDER_NAME@"
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 PKILL_BIN="$(command -v pkill || true)"
 
+# pkexec canonicalises the program path before the polkit rule checks
+# allowedPrograms, but argv[0] passed to pkexec stays as the user-supplied
+# (often symlinked) path. Our 49-openconnect.rules enforces
+# args[0] === program, so resolve to the canonical store path here.
+if [ -n "$PKILL_BIN" ]; then
+  PKILL_BIN="$(readlink -f "$PKILL_BIN")"
+fi
+
 is_running() {
   if [ -f "$PID_FILE" ]; then
     local pid

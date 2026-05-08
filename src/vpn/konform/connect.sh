@@ -11,17 +11,20 @@ COOKIE_FILE="$CONFIG_DIR/cookie"
 PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
 LOG_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.log"
 OPENCONNECT_BIN="$(command -v openconnect || true)"
-SETSID_BIN=""
-for _setsid_candidate in /usr/bin/setsid /bin/setsid /run/current-system/sw/bin/setsid; do
-  if [ -x "$_setsid_candidate" ] && [ "$(realpath "$_setsid_candidate")" = "$_setsid_candidate" ]; then
-    SETSID_BIN="$_setsid_candidate"
-    break
-  fi
-done
-if [ -z "$SETSID_BIN" ]; then
-  SETSID_BIN="$(command -v setsid || true)"
+SETSID_BIN="$(command -v setsid || true)"
+
+# pkexec canonicalises the program path before the polkit rule checks
+# allowedPrograms, but argv[0] passed to pkexec stays as the user-supplied
+# (often symlinked) path. Our 49-openconnect.rules enforces
+# args[0] === program, so the script must hand pkexec the canonical store
+# path or the rule rejects on argv[0] mismatch and pkexec falls back to
+# interactive auth — same root cause as power.profile.fix.sh's readlink -f.
+if [ -n "$OPENCONNECT_BIN" ]; then
+  OPENCONNECT_BIN="$(readlink -f "$OPENCONNECT_BIN")"
 fi
-unset _setsid_candidate
+if [ -n "$SETSID_BIN" ]; then
+  SETSID_BIN="$(readlink -f "$SETSID_BIN")"
+fi
 
 # Linux interface names cap at 15 chars, so the iface is "oc-<provider>"
 # truncated to fit. Keeping it deterministic lets status / waybar agree

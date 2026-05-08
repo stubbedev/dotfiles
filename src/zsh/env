@@ -1,5 +1,16 @@
 #!/usr/bin/env zsh
 
-if [[ -f "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" ]]; then
-  source "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
-fi
+# home-manager exports its session variables (EDITOR, FZF_DEFAULT_OPTS,
+# XDG_DATA_DIRS, ...) via this script. The path differs by deployment
+# mode: standalone HM lands it under ~/.nix-profile, NixOS-integrated HM
+# (useUserPackages) under /etc/profiles/per-user/$USER. Source whichever
+# exists so the same dotfiles work on both.
+for _hm_session_vars in \
+    "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" \
+    "/etc/profiles/per-user/$USER/etc/profile.d/hm-session-vars.sh"; do
+  if [[ -f "$_hm_session_vars" ]]; then
+    source "$_hm_session_vars"
+    break
+  fi
+done
+unset _hm_session_vars

@@ -7,14 +7,17 @@
 # panes attaching across reboots) and adds the few dirs Nix doesn't own.
 #
 # The list is deliberately minimal — every CLI tool we use is installed
-# via Nix and reached through ~/.nix-profile/bin. Tool-managed install
-# dirs (~/.cargo/bin, ~/.bun/bin, ~/.go/bin, ~/.deno/bin, ~/.opencode/bin,
-# ~/.local/share/nvim/mason/bin, …) stay off PATH so we don't shadow the
-# pinned versions.
+# via Nix and reached through home-manager's profile dir (~/.nix-profile
+# on standalone HM, /etc/profiles/per-user/$USER on NixOS-integrated HM).
+# The non-existent candidate is silently skipped by the `[[ -d ]]` guard.
+# Tool-managed install dirs (~/.cargo/bin, ~/.bun/bin, ~/.go/bin,
+# ~/.deno/bin, ~/.opencode/bin, ~/.local/share/nvim/mason/bin, …) stay
+# off PATH so we don't shadow the pinned versions.
 
 function _paths_init {
   local -a STUBBE_PATHS=(
     "$HOME/.nix-profile/bin"
+    "/etc/profiles/per-user/$USER/bin"
     "$HOME/.local/bin"
     "$HOME/.config/composer/vendor/bin"  # PHP composer global
     "$HOME/.local/share/pnpm"             # pnpm global (PNPM_HOME)

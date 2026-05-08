@@ -10,14 +10,14 @@ from pathlib import Path
 ACCOUNTS_CONF = Path.home() / ".config/aerc/accounts.conf"
 STATE_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.state")
 LOCK_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.lock")
-# Per-account branded icons live in ../icons/ relative to this script.
-# Path(__file__).resolve() walks the symlink (~/.config/waybar → ~/.stubbe/...)
-# so the resulting absolute path is the dotfiles checkout, not a dangling
-# /home path that notify-send can't read.
-ICONS_DIR = Path(__file__).resolve().parent.parent / "icons"
+# Per-account icons. These names resolve through the hicolor icon theme:
+# modules/packages/wayland/desktop.nix builds PNGs for them at
+# ~/.nix-profile/share/icons/hicolor/128x128/apps/mail-account-*.png so
+# notify-send (and any libnotify caller) gets the right glyph by name —
+# no absolute path leaking from the dotfiles checkout into D-Bus.
 ACCOUNT_ICONS = {
-    "gmail": ICONS_DIR / "gmail.svg",
-    "kontainer": ICONS_DIR / "exchange.svg",
+    "gmail": "mail-account-gmail",
+    "kontainer": "mail-account-exchange",
 }
 DEFAULT_NOTIFICATION_ICON = "mail-unread"
 ICON_OPEN = "\U000f06ee "
@@ -33,10 +33,7 @@ def ensure_dbus():
 
 
 def account_icon(account: str) -> str:
-    candidate = ACCOUNT_ICONS.get(account)
-    if candidate and candidate.exists():
-        return str(candidate)
-    return DEFAULT_NOTIFICATION_ICON
+    return ACCOUNT_ICONS.get(account, DEFAULT_NOTIFICATION_ICON)
 
 
 def send_notification(summary: str, body: str, account: str) -> None:
