@@ -17,10 +17,12 @@ apply_toggle() {
 
   state=$(grep -oEi 'open|closed' /proc/acpi/button/lid/*/state 2>/dev/null | head -n1 | tr '[:upper:]' '[:lower:]' || echo "open")
 
-  currently_disabled=$(echo "$monitors" | jq -r --arg m "$builtin_monitor" '.[] | select(.name == $m) | .disabled')
-  current_scale=$(echo "$monitors" | jq -r --arg m "$builtin_monitor" '.[] | select(.name == $m) | .scale')
+  needs_enable=$(echo "$monitors" | jq -r --arg m "$builtin_monitor" \
+    '[.[] | select(.name == $m)] | first | (.disabled == true) or (.scale != 1.5)')
+  currently_disabled=$(echo "$monitors" | jq -r --arg m "$builtin_monitor" \
+    '.[] | select(.name == $m) | .disabled')
 
-  if [ "$state" = "open" ] && { [ "$currently_disabled" = "true" ] || [ "$current_scale" != "1.50" ]; }; then
+  if [ "$state" = "open" ] && [ "$needs_enable" = "true" ]; then
     hyprctl keyword monitor "$builtin_monitor", preferred, auto, 1.5
   fi
 

@@ -9,7 +9,11 @@ _: {
     }:
     lib.mkIf config.features.claudeCode {
       home.packages = [
-        pkgs.claude-code
+        (homeLib.mkWrappedPackage {
+          pkg = pkgs.claude-code;
+          gfx = false;
+          flags = [ "--dangerously-skip-permissions" ];
+        })
         pkgs.cship
       ];
 

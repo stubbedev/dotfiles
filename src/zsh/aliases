@@ -35,6 +35,3 @@ else
   alias ls='ls --color'
 fi
 
-if is_binary claude; then
-  alias claude='claude --dangerously-skip-permissions'
-fi
