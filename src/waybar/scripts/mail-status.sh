@@ -10,6 +10,16 @@ from pathlib import Path
 ACCOUNTS_CONF = Path.home() / ".config/aerc/accounts.conf"
 STATE_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.state")
 LOCK_FILE = Path(f"/tmp/mail-status-{os.getenv('USER', 'user')}.lock")
+# Per-account branded icons live in ../icons/ relative to this script.
+# Path(__file__).resolve() walks the symlink (~/.config/waybar → ~/.stubbe/...)
+# so the resulting absolute path is the dotfiles checkout, not a dangling
+# /home path that notify-send can't read.
+ICONS_DIR = Path(__file__).resolve().parent.parent / "icons"
+ACCOUNT_ICONS = {
+    "gmail": ICONS_DIR / "gmail.svg",
+    "kontainer": ICONS_DIR / "exchange.svg",
+}
+DEFAULT_NOTIFICATION_ICON = "mail-unread"
 ICON_OPEN = "\U000f06ee "
 ICON_CLOSED = "\U000f0d8d "
 
@@ -22,25 +32,52 @@ def ensure_dbus():
         os.environ["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={runtime_dir}/bus"
 
 
-def send_notification(summary: str, body: str) -> None:
+def account_icon(account: str) -> str:
+    candidate = ACCOUNT_ICONS.get(account)
+    if candidate and candidate.exists():
+        return str(candidate)
+    return DEFAULT_NOTIFICATION_ICON
+
+
+def send_notification(summary: str, body: str, account: str) -> None:
+    """Fire a clickable notification.
+
+    notify-send -w blocks until the user dismisses or actions the
+    notification, then prints the action ID. We spawn it detached in a
+    subshell that runs `mail-open` when the default action fires (any
+    click on the notification body in swaync). The Python script returns
+    immediately so waybar's 5s tick isn't blocked by 100s-of-seconds of
+    notification dwell time.
+    """
     if not shutil.which("notify-send"):
         return
     ensure_dbus()
+
+    notify_cmd = [
+        "notify-send",
+        "-u", "normal",
+        "-w",
+        "-A", "default=Open",
+        "-a", "mail-notification",
+        "-i", account_icon(account),
+        "--",
+        summary,
+        body,
+    ]
+
+    # Quote each arg for the inner sh -c. shlex.quote handles spaces and
+    # special characters (subjects routinely contain quotes, brackets, $).
+    import shlex
+    quoted = " ".join(shlex.quote(a) for a in notify_cmd)
+    routing = f'[ "$({quoted})" = "default" ] && exec mail-open'
+
     try:
-        subprocess.run(
-            [
-                "notify-send",
-                "-u",
-                "normal",
-                "-i",
-                "mail-unread",
-                "-a",
-                "mail-notification",
-                summary,
-                body,
-            ],
-            timeout=3,
-            check=False,
+        subprocess.Popen(
+            ["sh", "-c", routing],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
     except Exception:
         pass
@@ -171,14 +208,12 @@ def main():
             headers = notmuch_headers(mid)
             subject = headers.get("Subject") or "No Subject"
             sender = headers.get("From") or "Unknown Sender"
-            recipient = headers.get("To") or from_addr
-            date = headers.get("Date") or ""
-
-            body_lines = [f"From: {sender}"]
-            if date:
-                body_lines.append(f"Date: {date}")
-            body_lines.append(f"To: {recipient}")
-            send_notification(subject, "\n".join(body_lines))
+            # Keep the body minimal: just the sender. swaync already
+            # shows its own arrival timestamp so Date is redundant, and
+            # the recipient is always us. Cuts down on noisy headers
+            # (e.g. quoted copyright strings inside Date / Reply-To
+            # that some senders inject) leaking into the popup.
+            send_notification(subject, sender, account_name)
 
     save_state(current_ids_map)
 
