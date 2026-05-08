@@ -325,8 +325,6 @@ _: {
               update_system
               rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
               home-manager switch --flake "$hm_flake_ref" --impure "$@"
-              home-manager expire-generations "-7 days" >/dev/null 2>&1
-              nix-store --gc --quiet >/dev/null 2>&1 &!
               ;;
             whoami)
               shift
@@ -352,12 +350,10 @@ _: {
               subcmd="$1"
               shift
               home-manager "$subcmd" --flake "$hm_flake_ref" --impure "$@"
-              home-manager expire-generations "-7 days" >/dev/null 2>&1 &!
               ;;
             *)
               rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
               home-manager --impure "$@"
-              home-manager expire-generations "-7 days" >/dev/null 2>&1 &!
               ;;
           esac
         '')
