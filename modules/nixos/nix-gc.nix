@@ -1,15 +1,28 @@
-_: {
+{ ... }:
+{
   flake.modules.nixos.nixGc =
-    { ... }:
+    { config, pkgs, ... }:
     {
-      # Weekly cleanup of generations older than 30d, plus dedup of
-      # identical store paths. Keeps /nix from filling the disk on a
-      # long-running install without manual intervention.
+      # Garbage-collect the store on a weekly timer. We want the system
+      # profile trimmed to "current + 1 previous" so a rebuild that boots
+      # poorly can still be rolled back instantly, but we don't want
+      # months of stale generations holding 100s of GB live.
+      #
+      # `nix-collect-garbage` only deletes store paths that have no
+      # remaining GC roots. Old generation symlinks ARE roots, so we
+      # have to prune them BEFORE collecting — otherwise the GC has
+      # nothing to free. `--delete-older-than` is time-based and lets
+      # generation count drift; `nix-env --delete-generations +2`
+      # enforces a count regardless of switch frequency.
       nix.gc = {
         automatic = true;
         dates = "weekly";
-        options = "--delete-older-than 30d";
+        options = "";
       };
+
+      systemd.services.nix-gc.serviceConfig.ExecStartPre = [
+        "${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2"
+      ];
 
       nix.optimise = {
         automatic = true;
