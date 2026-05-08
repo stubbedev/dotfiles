@@ -25,6 +25,89 @@ _: {
 
           hm_flake_ref="path:$hm_flake_dir"
 
+          # On NixOS the home-manager CLI isn't installed (submoduleSupport
+          # path in upstream programs/home-manager.nix gates `home.packages`
+          # on `!submoduleSupport.enable`), so switch/build shell out to
+          # nixos-rebuild against nixosConfigurations.<hostname>. Override
+          # the resolved attr with HM_NIXOS_CONFIG if the flake key differs.
+          is_nixos() {
+            [ -r /etc/os-release ] && grep -q '^ID=nixos' /etc/os-release
+          }
+
+          nixos_attr() {
+            echo "''${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
+          }
+
+          run_hm_subcmd() {
+            local subcmd="$1"; shift
+            if is_nixos; then
+              local prefix=()
+              case "$subcmd" in
+                # Verbs that mutate /run, /nix/var/nix/profiles/system,
+                # /boot etc. nixos-rebuild itself can self-sudo with --sudo
+                # in newer versions, but explicit sudo here keeps behaviour
+                # uniform across nixpkgs revisions.
+                switch|boot|test|dry-activate)
+                  prefix=(sudo)
+                  ;;
+                # Pure build / introspection verbs — no privileged writes.
+                build|dry-build|build-vm|build-vm-with-bootloader|repl)
+                  ;;
+                *)
+                  echo "hm $subcmd: unavailable on NixOS. Supported subcommands: switch, boot, test, build, dry-build, dry-activate, build-vm, build-vm-with-bootloader, repl, rollback, gc, generations." >&2
+                  return 1
+                  ;;
+              esac
+              "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@"
+            else
+              case "$subcmd" in
+                # nixos-rebuild-only verbs — no home-manager equivalent.
+                boot|test|dry-activate|dry-build|build-vm|build-vm-with-bootloader|repl)
+                  echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
+                  return 1
+                  ;;
+                *)
+                  home-manager "$subcmd" --flake "$hm_flake_ref" --impure "$@"
+                  ;;
+              esac
+            fi
+          }
+
+          run_rollback() {
+            if is_nixos; then
+              sudo nixos-rebuild switch --rollback "$@"
+            else
+              echo "hm rollback: not implemented for standalone home-manager. Use 'home-manager generations' to list, then run '<gen>/activate' from the desired generation." >&2
+              return 2
+            fi
+          }
+
+          run_gc() {
+            # Default to -d so the most common intent (drop old generations
+            # and free their store paths) doesn't need an extra arg.
+            local gc_args=("$@")
+            if [ "''${#gc_args[@]}" -eq 0 ]; then
+              gc_args=("-d")
+            fi
+            if is_nixos; then
+              # sudo so the system profile is also collected, not just the
+              # invoking user's. nix-collect-garbage scopes by who runs it.
+              sudo nix-collect-garbage "''${gc_args[@]}"
+            else
+              nix-collect-garbage "''${gc_args[@]}"
+            fi
+          }
+
+          run_generations() {
+            if is_nixos; then
+              # NixOS system profile — nixos-rebuild list-generations is
+              # the supported listing API and includes Current/Specialisation.
+              nixos-rebuild list-generations "$@"
+            else
+              home-manager generations "$@"
+            fi
+          }
+
           ensure_sudo() {
             if [[ "''${1:-}" == "true" ]]; then
               echo "Requesting sudo..."
@@ -85,7 +168,7 @@ _: {
 
           Commands:
             update              Update system package managers and nix inputs
-            upgrade             Update system packages and apply home-manager switch
+            upgrade             Update system packages and apply switch
             whoami              Print "<hostname> <age-pubkey>" for this machine
             trust [name] <key>  Add an age recipient to .sops.yaml and re-wrap secrets/*
                                   - hm trust <name> <pubkey>
@@ -98,9 +181,30 @@ _: {
             iso path [args]     Build the ISO and print its store path
             iso devices         List removable/block devices
             iso burn <dev> --yes  Build the ISO and write it to a USB device
+
+            switch              Build and activate (default boot entry on NixOS)
+            boot                Build and set as next-boot only (NixOS)
+            test                Activate without making it the default (NixOS)
+            build               Build without activating
+            dry-build           Show what would build, don't fetch/build
+            dry-activate        Show what activate would do, don't activate (NixOS)
+            build-vm            Build a VM image of the configuration (NixOS)
+            build-vm-with-bootloader  Same, including bootloader (NixOS)
+            repl                Open a nix repl scoped to the configuration (NixOS)
+            rollback            Roll back to the previous generation
+            generations         List system/home-manager generations
+            gc [args]           nix-collect-garbage (defaults to -d)
+            news                Read home-manager release notes (non-NixOS)
+            instantiate         home-manager instantiate (non-NixOS)
             help                Show this help message
 
-          Other args are passed through to home-manager.
+          On NixOS the build/activate verbs delegate to `[sudo ]nixos-rebuild
+          <cmd> --flake <flake>#<host> --impure`. The host attr defaults to
+          `hostname -s`; override with HM_NIXOS_CONFIG=<attr>. Verbs without
+          a NixOS counterpart (news/instantiate) error on NixOS; verbs without
+          a home-manager counterpart (boot/test/dry-activate/dry-build/build-vm
+          /repl) error on non-NixOS. Unknown args fall through to home-manager
+          on non-NixOS.
           EOF
           }
 
@@ -324,7 +428,7 @@ _: {
               shift
               update_system
               rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
-              home-manager switch --flake "$hm_flake_ref" --impure "$@"
+              run_hm_subcmd switch "$@"
               ;;
             whoami)
               shift
@@ -345,14 +449,37 @@ _: {
             help|-h|--help)
               usage
               ;;
-            switch|build|news|instantiate)
+            switch|boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
               rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
               subcmd="$1"
               shift
-              home-manager "$subcmd" --flake "$hm_flake_ref" --impure "$@"
+              run_hm_subcmd "$subcmd" "$@"
+              ;;
+            rollback)
+              shift
+              rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              run_rollback "$@"
+              ;;
+            gc)
+              shift
+              run_gc "$@"
+              ;;
+            generations)
+              shift
+              run_generations "$@"
+              ;;
+            "")
+              # `hm` with no args: show usage rather than tripping `set -u`
+              # on `$1` below, or proxying an empty arg to home-manager.
+              usage
+              exit 2
               ;;
             *)
               rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              if is_nixos; then
+                echo "hm: '$1' is not supported on NixOS — the home-manager CLI is not available in submodule mode. Try 'hm help'." >&2
+                exit 2
+              fi
               home-manager --impure "$@"
               ;;
           esac

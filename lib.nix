@@ -313,6 +313,52 @@ rec {
       cat "${sourcePath}" > "${targetPath}"
     '';
 
+  # Recursively merge `patch` (a Nix attrset) onto whatever JSON is
+  # currently at `target`, writing the result back atomically.
+  #
+  # Use this for state files the owning app rewrites at runtime
+  # (claude-code's ~/.claude.json, ~/.claude/settings.json, …). Doing
+  # the merge at *activation* time — instead of `recursiveUpdate`-ing
+  # against `builtins.readFile` at eval time — preserves every byte
+  # the app wrote between evaluation and activation. The eval-time
+  # approach silently drops anything written in that window.
+  #
+  # name    — basename for the rendered patch derivation in /nix/store.
+  # target  — absolute path to the live JSON file.
+  # patch   — attrset to merge in (right-side wins on conflicts, same
+  #           semantics as lib.recursiveUpdate / jq's `*`).
+  # mode    — file mode used only when target doesn't yet exist
+  #           (default 0600 — most app state files want this).
+  #
+  # cmp-before-mv: skip the rename when the merged result is already
+  # byte-identical to the live file. Avoids racing against the app's
+  # own writes once the patch is in place (steady-state behaviour).
+  mergeJsonPatch =
+    {
+      name,
+      target,
+      patch,
+      mode ? "0600",
+    }:
+    let
+      p = requirePkgs "mergeJsonPatch";
+      patchFile = p.writeText "${name}.json" (builtins.toJSON patch);
+    in
+    ''
+      mkdir -p "$(dirname "${target}")"
+      if [ -f "${target}" ]; then
+        ${p.jq}/bin/jq -s '(.[0] // {}) * .[1]' "${target}" "${patchFile}" \
+          > "${target}.hm-tmp"
+        if cmp -s "${target}.hm-tmp" "${target}"; then
+          rm -f "${target}.hm-tmp"
+        else
+          mv "${target}.hm-tmp" "${target}"
+        fi
+      else
+        install -m ${mode} "${patchFile}" "${target}"
+      fi
+    '';
+
   # ============================================================
   # Sudo-prompt scaffolding (consistent "Install X" / "Install X?")
   # ============================================================

@@ -36,5 +36,15 @@
       };
 
       nixpkgs.overlays = builtins.attrValues config.flake.overlays;
+
+      # Leftover from any pre-flake nix-channel use of this host. Channels
+      # are disabled (nix.channel.enable defaults false on flake-only
+      # systems) but Nix still warns at every activation while these
+      # directories exist (NixOS/nix#9574). Remove on each switch — the
+      # `-rf` is safe because the daemon doesn't read them when channels
+      # are disabled, and recreated copies would just re-trigger the warning.
+      system.activationScripts.removeLegacyNixChannels = ''
+        rm -rf /root/.nix-defexpr/channels /nix/var/nix/profiles/per-user/root/channels
+      '';
     };
 }

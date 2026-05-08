@@ -1,6 +1,14 @@
 return {
+  -- blink.cmp v2 was split into two repos: the cmp engine (saghen/blink.cmp)
+  -- and a shared Rust/Lua library (saghen/blink.lib) that lazy.nvim has to
+  -- install alongside, otherwise `require('blink.lib')` from blink.cmp's
+  -- init fails with "module 'blink.lib' not found". Newer LazyVim revisions
+  -- declare this dependency upstream; declaring it here keeps the spec
+  -- working across LazyVim updates.
+  { "saghen/blink.lib" },
   {
     "saghen/blink.cmp",
+    dependencies = { "saghen/blink.lib" },
     opts_extend = {
       "sources.default",
       "completion.documentation",

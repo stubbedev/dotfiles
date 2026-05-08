@@ -87,6 +87,13 @@ _: {
         (homeLib.gfx bemenu)
         wl-clipboard
         wl-clip-persist
+        # `notify-send` and the libnotify shared library. swaync registers
+        # org.freedesktop.Notifications on the session bus, but anything
+        # that fires notifications via the libnotify CLI (mail-status
+        # hooks, ad-hoc scripts, third-party tools) silently no-ops if
+        # the binary isn't on PATH. Apps that talk D-Bus directly don't
+        # need this, but many small helpers do.
+        libnotify
       ];
     };
 }

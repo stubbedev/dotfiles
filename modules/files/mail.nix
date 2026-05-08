@@ -132,19 +132,60 @@ _: {
             runtimeInputs = [
               pkgs.isync
               pkgs.notmuch
+              pkgs.util-linux # flock
             ];
             text = ''
               # Sync every channel by default; pass channel name(s) to limit.
+              # Run channels independently so one account's outage (auth,
+              # network, server-side flake-out) doesn't black-hole the other.
               if [ "$#" -eq 0 ]; then
-                mbsync -a
+                channels=(kontainer gmail)
               else
-                mbsync "$@"
+                channels=("$@")
               fi
-              notmuch new --quiet
 
-              notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer'
-              notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'
-              notmuch tag -inbox -- 'tag:inbox and not folder:kontainer/INBOX and not folder:gmail/INBOX'
+              # mail-sync is invoked from three independent schedulers:
+              # the systemd timer (all channels every 30s), aerc's per-account
+              # check-mail-cmd, and the user from CLI. Without serialization
+              # they collide on mbsync's per-channel SyncState lock, leaving
+              # half-synced folders in "cannot be opened anymore" state.
+              # Per-channel flock with -E 75 distinguishes "lock busy"
+              # (skip cleanly) from "mbsync genuinely failed" (report).
+              lock_dir="''${XDG_RUNTIME_DIR:-/tmp}"
+              mkdir -p "$lock_dir"
+
+              failed=()
+              for ch in "''${channels[@]}"; do
+                rc=0
+                flock -n -E 75 "$lock_dir/mail-sync-$ch.lock" mbsync "$ch" || rc=$?
+                case "$rc" in
+                  0)
+                    ;;
+                  75)
+                    echo "mail-sync: $ch already syncing elsewhere, skipping" >&2
+                    ;;
+                  *)
+                    echo "mail-sync: mbsync $ch failed (exit $rc)" >&2
+                    failed+=("$ch")
+                    ;;
+                esac
+              done
+
+              # Always reindex — partial syncs are still worth indexing so
+              # aerc reflects whatever did land. --quiet must precede the
+              # subcommand in notmuch's CLI grammar; suppresses the per-file
+              # "Note: ignoring" lines mbsync's state files would otherwise
+              # generate every run.
+              notmuch --quiet new || true
+
+              notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer' || true
+              notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'     || true
+              notmuch tag -inbox -- 'tag:inbox and not folder:kontainer/INBOX and not folder:gmail/INBOX' || true
+
+              if [ ''${#failed[@]} -gt 0 ]; then
+                echo "mail-sync: failed channels: ''${failed[*]}" >&2
+                exit 1
+              fi
             '';
           };
 
