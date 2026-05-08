@@ -15,7 +15,7 @@
           file = self + "/src/polkit/49-openconnect.rules";
           vars = {
             USERNAME = config.home.username;
-            HOME = config.home.homeDirectory;
+            PROFILE_DIR = config.home.profileDirectory;
           };
         };
       };

@@ -16,7 +16,7 @@ _: {
         fpath=(
           '${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.default.d'
           '${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d'
-          '${config.home.homeDirectory}/.nix-profile/share/zsh/site-functions'
+          '${config.home.profileDirectory}/share/zsh/site-functions'
           $fpath
         )
 

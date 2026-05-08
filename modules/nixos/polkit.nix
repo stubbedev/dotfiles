@@ -6,7 +6,10 @@
       homeLib = import (self + "/lib.nix") { inherit (inputs.nixpkgs) lib; inherit self; };
 
       username = "stubbe";
-      home = "/home/${username}";
+      # NixOS with useUserPackages places the home-manager profile at
+      # /etc/profiles/per-user/<user>; this mirrors config.home.profileDirectory
+      # used in the standalone-HM activation (setup-vpn-polkit.nix).
+      profileDir = "/etc/profiles/per-user/${username}";
       # pkexec resolves symlinks before matching allowedPrograms.
       # ~/.stubbe is a symlink → /etc/nixos (the live flake checkout), so the
       # canonical path pkexec sees is /etc/nixos/… not ~/.stubbe/….
@@ -21,7 +24,7 @@
         file = self + "/src/polkit/49-openconnect.rules";
         vars = {
           USERNAME = username;
-          HOME = home;
+          PROFILE_DIR = profileDir;
         };
       };
 

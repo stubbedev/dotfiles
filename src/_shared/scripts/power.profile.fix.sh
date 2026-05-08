@@ -133,9 +133,14 @@ choose_epp() {
 
 get_helper_path() {
   # Substituted at build time; must match the path allowed by the polkit rule.
+  # pkexec canonicalises the program path, so the polkit rule's allowedPrograms
+  # uses the symlink target (/etc/nixos/dotfiles/…, not ~/.stubbe/…). The rule
+  # also enforces args[0] === program — i.e. argv[0] passed to pkexec must
+  # match the canonical path. So we resolve symlinks here before invocation,
+  # otherwise the rule check passes program but rejects on argv[0] mismatch.
   local helper="@HELPER_PATH@"
   if [ -f "$helper" ]; then
-    echo "$helper"
+    readlink -f "$helper"
   else
     echo ""
   fi

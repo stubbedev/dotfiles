@@ -13,7 +13,7 @@ _: {
           text = lib.generators.toINI { } {
             Xwayland = {
               Scale = 1;
-              ServerPath = "${config.home.homeDirectory}/.nix-profile/bin/Xwayland";
+              ServerPath = "${config.home.profileDirectory}/bin/Xwayland";
               XwaylandEavesdrops = "None";
             };
           };

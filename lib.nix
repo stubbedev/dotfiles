@@ -212,7 +212,7 @@ rec {
       name, # filename basename (without .desktop)
       displayName, # "Hyprland (Nix)"
       comment,
-      execName, # binary in ~/.nix-profile/bin
+      execName, # binary in config.home.profileDirectory/bin
       desktopNames,
       extraEntries ? { }, # additional Desktop Entry keys
     }:
@@ -222,7 +222,7 @@ rec {
         "Desktop Entry" = {
           Name = displayName;
           Comment = comment;
-          Exec = "${config.home.homeDirectory}/.nix-profile/bin/${execName}";
+          Exec = "${config.home.profileDirectory}/bin/${execName}";
           Type = "Application";
           DesktopNames = desktopNames;
         }
@@ -243,12 +243,12 @@ rec {
     };
 
   # ============================================================
-  # Script binaries (live in ~/.nix-profile/bin/)
+  # Script binaries (live in config.home.profileDirectory/bin/)
   # ============================================================
 
   # Read a script at <repo-root>/<source>, apply @KEY@ substitutions, and
   # build it as an executable Nix derivation that lands under
-  # ~/.nix-profile/bin/<name>. Preserves the script's own shebang
+  # config.home.profileDirectory/bin/<name>. Preserves the script's own shebang
   # (so zsh stays zsh, bash stays bash). Use this instead of writing
   # things to home.file.".local/bin/x" — keeps scripts on PATH and
   # owned by the Nix profile.

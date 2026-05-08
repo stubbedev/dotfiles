@@ -11,7 +11,8 @@ _: {
         : > "$tmp"
 
         add_file() {
-          [ -f "$1" ] && cat "$1" >> "$tmp"
+          [ -f "$1" ] || return 0
+          cat "$1" >> "$tmp"
         }
 
         add_dir() {

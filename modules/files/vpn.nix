@@ -8,7 +8,7 @@ _: {
     }:
     let
       # Build the four scripts for one VPN provider as Nix bins under
-      # ~/.nix-profile/bin/vpn-<provider>-{connect,disconnect,status,waybar}.
+      # config.home.profileDirectory/bin/vpn-<provider>-{connect,disconnect,status,waybar}.
       # The provider name is baked into each script via @PROVIDER_NAME@
       # substitution; runtime config (gateway, username, password) is
       # decrypted by sops-nix into ~/.config/vpn/<provider>/.

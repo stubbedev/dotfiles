@@ -10,7 +10,8 @@
     }:
     let
       # Standalone scripts that aren't tied to a specific app's config dir.
-      # Built as Nix bins so they live under ~/.nix-profile/bin/ on PATH.
+      # Built as Nix bins so they live under config.home.profileDirectory/bin
+      # (i.e. ~/.nix-profile/bin or /etc/profiles/per-user/$USER/bin) on PATH.
       # Other modules reference paths via `${scripts.<name>}/bin/<name>` —
       # systemd ExecStart, polkit-allowed targets, etc.
       #

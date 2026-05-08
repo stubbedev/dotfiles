@@ -24,7 +24,7 @@ _: {
                   "chrome-devtools-mcp@latest"
                   "--no-usage-statistics"
                   "--executable-path"
-                  "${config.home.homeDirectory}/.nix-profile/bin/google-chrome-stable"
+                  "${config.home.profileDirectory}/bin/google-chrome-stable"
                 ];
               };
             }

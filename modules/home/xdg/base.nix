@@ -62,12 +62,18 @@ _: {
         noDisplay = true;
       };
 
-      # Default file manager for D-Bus / xdg-open / portal callers.
+      # Default file manager + browser for D-Bus / xdg-open / portal callers.
       xdg.mimeApps = {
         enable = true;
         defaultApplications = {
           "inode/directory" = "pcmanfm.desktop";
           "x-scheme-handler/file" = "pcmanfm.desktop";
+          "x-scheme-handler/http" = "firefox.desktop";
+          "x-scheme-handler/https" = "firefox.desktop";
+          "x-scheme-handler/about" = "firefox.desktop";
+          "x-scheme-handler/unknown" = "firefox.desktop";
+          "text/html" = "firefox.desktop";
+          "application/xhtml+xml" = "firefox.desktop";
         };
       };
     };

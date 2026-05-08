@@ -8,7 +8,7 @@ _: {
       ...
     }:
     let
-      chromeExecutable = "${config.home.homeDirectory}/.nix-profile/bin/google-chrome-stable";
+      chromeExecutable = "${config.home.profileDirectory}/bin/google-chrome-stable";
 
       # Merge our managed keys into the existing on-disk JSON at eval time.
       # claude-code rewrites these files at runtime, so we deep-merge on top of

@@ -24,25 +24,28 @@ polkit.addRule(function(action, subject) {
     );
   };
 
+  // The PROFILE_DIR substitution resolves to the active home-manager
+  // profile: ~/.nix-profile under standalone HM, or /etc/profiles/per-user/<user>
+  // under NixOS with useUserPackages.
   var openconnectPrograms = [
     "/usr/bin/openconnect",
     "/bin/openconnect",
     "/run/current-system/sw/bin/openconnect",
-    "@HOME@/.nix-profile/bin/openconnect",
+    "@PROFILE_DIR@/bin/openconnect",
     nixStore("openconnect", "openconnect")
   ];
   var pkillPrograms = [
     "/usr/bin/pkill",
     "/bin/pkill",
     "/run/current-system/sw/bin/pkill",
-    "@HOME@/.nix-profile/bin/pkill",
+    "@PROFILE_DIR@/bin/pkill",
     nixStore("procps", "pkill")
   ];
   var setsidPrograms = [
     "/usr/bin/setsid",
     "/bin/setsid",
     "/run/current-system/sw/bin/setsid",
-    "@HOME@/.nix-profile/bin/setsid",
+    "@PROFILE_DIR@/bin/setsid",
     nixStore("util-linux", "setsid")
   ];
 

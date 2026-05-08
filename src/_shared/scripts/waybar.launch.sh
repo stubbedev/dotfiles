@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Launch waybar with proper Wayland environment detection.
 # Sets HYPRLAND_INSTANCE_SIGNATURE only when an active Hyprland socket is

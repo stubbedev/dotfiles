@@ -3,8 +3,10 @@
   paths = {
     dotfiles = "${config.home.homeDirectory}/.stubbe";
     zsh = "${config.home.homeDirectory}/.stubbe/src/zsh";
-    nixBin = "${config.home.homeDirectory}/.nix-profile/bin";
-    term = "${config.home.homeDirectory}/.nix-profile/bin/alacritty";
+    # home.profileDirectory resolves to /etc/profiles/per-user/$USER under
+    # NixOS (useUserPackages) and ~/.nix-profile under standalone HM.
+    nixBin = "${config.home.profileDirectory}/bin";
+    term = "${config.home.profileDirectory}/bin/alacritty";
   };
 
   theme = {

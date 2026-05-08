@@ -17,10 +17,10 @@ _: {
           # Editor and display
           EDITOR = lib.getExe pkgs.neovim;
           VISUAL = lib.getExe pkgs.neovim;
-          ROFI_SENSIBLE_TERMINAL = "${config.home.homeDirectory}/.nix-profile/bin/alacritty";
+          ROFI_SENSIBLE_TERMINAL = "${config.home.profileDirectory}/bin/alacritty";
 
           # Desktop entries (Flatpak + Nix)
-          XDG_DATA_DIRS = lib.mkForce "${config.home.homeDirectory}/.local/share/flatpak/exports/share:${config.home.homeDirectory}/.nix-profile/share:/nix/var/nix/profiles/default/share:/var/lib/flatpak/exports/share:/usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop:$XDG_DATA_DIRS";
+          XDG_DATA_DIRS = lib.mkForce "${config.home.homeDirectory}/.local/share/flatpak/exports/share:${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:/var/lib/flatpak/exports/share:/usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop:$XDG_DATA_DIRS";
 
           # Paging and documentation
           MANPAGER = "sh -c 'col -bx | bat -l man -p'";
