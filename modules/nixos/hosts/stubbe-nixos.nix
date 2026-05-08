@@ -25,6 +25,9 @@ in
         # access could otherwise append `init=/bin/sh` and get a root
         # shell without a password.
         boot.loader.systemd-boot.editor = false;
+        # Match the system-profile prune in modules/nixos/nix-gc.nix:
+        # current + 1 previous in the boot menu, no stale entries.
+        boot.loader.systemd-boot.configurationLimit = 2;
 
         # Mark this host as the post-install target so
         # modules/nixos/filesystems.nix supplies the real btrfs layout.

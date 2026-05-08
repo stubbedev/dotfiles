@@ -24,6 +24,15 @@
         "${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2"
       ];
 
+      # Also prune on every `nixos-rebuild switch` so generations don't
+      # accumulate between weekly GC runs — same pattern as the
+      # home-manager activation hook in modules/home/nix-gc.nix.
+      system.activationScripts.pruneSystemGenerations = {
+        text = ''
+          ${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2 || true
+        '';
+      };
+
       nix.optimise = {
         automatic = true;
         dates = [ "weekly" ];
