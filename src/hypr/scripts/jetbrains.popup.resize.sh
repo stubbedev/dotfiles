@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Listen for Hyprland openwindow events and resize floating JetBrains popup
 # windows by +1px height. Run via exec-once in settings.conf.

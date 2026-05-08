@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Audio control script for PipeWire
 # Usage: audio.control.sh [volume-up|volume-down|volume-mute|mic-mute]

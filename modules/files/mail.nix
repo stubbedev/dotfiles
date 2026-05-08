@@ -172,11 +172,11 @@ _: {
               done
 
               # Always reindex — partial syncs are still worth indexing so
-              # aerc reflects whatever did land. --quiet must precede the
-              # subcommand in notmuch's CLI grammar; suppresses the per-file
-              # "Note: ignoring" lines mbsync's state files would otherwise
-              # generate every run.
-              notmuch --quiet new || true
+              # aerc reflects whatever did land. --quiet is a `new`
+              # subcommand flag (not top-level), suppresses per-message
+              # progress; the "Note: Ignoring non-mail file" lines come
+              # from mbsync, not notmuch, so they're unaffected.
+              notmuch new --quiet || true
 
               notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer' || true
               notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'     || true
