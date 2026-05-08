@@ -7,7 +7,10 @@
 
       username = "stubbe";
       home = "/home/${username}";
-      sharedScripts = "${home}/.stubbe/src/_shared/scripts";
+      # pkexec resolves symlinks before matching allowedPrograms.
+      # ~/.stubbe is a symlink → /etc/nixos (the live flake checkout), so the
+      # canonical path pkexec sees is /etc/nixos/… not ~/.stubbe/….
+      sharedScripts = "/etc/nixos/dotfiles/src/_shared/scripts";
     in
     {
       security.polkit.enable = true;

@@ -20,7 +20,7 @@
           homeLib
           self
           ;
-        inherit (inputs) hyprland hy3 fenix opencode srv;
+        inherit (inputs) hyprland hy3 fenix srv;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
         "tree-sitter" = inputs."tree-sitter";
       };

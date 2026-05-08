@@ -12,10 +12,10 @@ _: {
       # (we use hyprlock as the lockscreen on both Hyprland and Niri).
       security.pam.services.hyprlock = lib.mkIf anyCompositor { };
 
-      # Enable GNOME keyring autounlock on the login PAM stack. greetd
-      # delegates to it, so this covers password unlock on console login
-      # too. SDDM/GDM lines from the previous version dropped — we don't
-      # ship those display managers on NixOS.
+      # Enable GNOME keyring autounlock on both the login and SDDM PAM stacks.
+      # SDDM uses its own PAM service ("sddm"), not "login", so both need the
+      # hook or the keyring stays locked after graphical login.
       security.pam.services.login.enableGnomeKeyring = lib.mkDefault true;
+      security.pam.services.sddm.enableGnomeKeyring = true;
     };
 }

@@ -222,7 +222,7 @@ in
         users.users.root.openssh.authorizedKeys.keys = sshAuthorizedKeys;
 
         environment.etc = sshEtcFiles // {
-          "nixos".source = self;
+          "nixos/dotfiles".source = self;
           "profile.d/stb-welcome.sh".text = ''
             [ "$(id -u)" -eq 0 ] || return 0
             printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'

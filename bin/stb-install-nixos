@@ -7,8 +7,8 @@ set -euo pipefail
 # excludes the disk the live ISO is booted from, formats them as ONE
 # multi-device btrfs volume labeled `stubbe`, lays down the subvolume
 # structure that modules/nixos/filesystems.nix expects, runs
-# `nixos-install` against /etc/nixos#stubbe-nixos, replaces the read-only
-# /etc/nixos store-path with a writable git checkout owned by the
+# `nixos-install` against /etc/nixos/dotfiles#stubbe-nixos, replaces the
+# read-only /etc/nixos/dotfiles store-path with a writable git checkout owned by the
 # primary user, and prompts for that user's password.
 #
 # Run as root from a tty in the live ISO.
@@ -219,44 +219,45 @@ mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
 # mount sees /boot the same way the installed system will.
 mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 
-echo "==> Running nixos-install --flake /etc/nixos#${FLAKE_ATTR}"
-nixos-install --root /mnt --flake "/etc/nixos#${FLAKE_ATTR}" --no-root-password
+echo "==> Running nixos-install --flake /etc/nixos/dotfiles#${FLAKE_ATTR}"
+nixos-install --root /mnt --flake "/etc/nixos/dotfiles#${FLAKE_ATTR}" --no-root-password
 
 # Resolve uid/gid from the installed system — needed for ownership
 # regardless of whether the git clone succeeds.
 user_uid="$(nixos-enter --root /mnt --command "id -u ${PRIMARY_USER}")"
 user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
 
-# Replace the read-only /etc/nixos store path with a live git checkout so
-# `nixos-rebuild switch --flake /etc/nixos#...` works after first boot.
+# Replace the read-only /etc/nixos/dotfiles store path with a live git checkout so
+# `nixos-rebuild switch --flake /etc/nixos/dotfiles#...` works after first boot.
 # Non-fatal: a network outage or missing SSH key shouldn't brick an
 # otherwise complete install. The user can re-clone after first boot.
 clone_ok=false
-echo "==> Cloning ${REPO_URL} into /mnt/etc/nixos"
-rm -rf /mnt/etc/nixos
+echo "==> Cloning ${REPO_URL} into /mnt/etc/nixos/dotfiles"
+mkdir -p /mnt/etc/nixos
+rm -rf /mnt/etc/nixos/dotfiles
 if GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
-    git clone "$REPO_URL" /mnt/etc/nixos; then
+    git clone "$REPO_URL" /mnt/etc/nixos/dotfiles; then
   clone_ok=true
-  chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos
+  chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos/dotfiles
 else
   echo "" >&2
   echo "WARNING: git clone failed (no network, or SSH key not authorized)." >&2
   echo "Install is complete. After first boot, run as root:" >&2
-  echo "  git clone ${REPO_URL} /etc/nixos" >&2
-  echo "  chown -R ${PRIMARY_USER}:${PRIMARY_USER} /etc/nixos" >&2
+  echo "  mkdir -p /etc/nixos && git clone ${REPO_URL} /etc/nixos/dotfiles" >&2
+  echo "  chown -R ${PRIMARY_USER}:${PRIMARY_USER} /etc/nixos/dotfiles" >&2
 fi
 
 home_dir="/mnt/home/${PRIMARY_USER}"
 mkdir -p "$home_dir"
 if [[ "$clone_ok" == true ]]; then
-  ln -sfn /etc/nixos "${home_dir}/.stubbe"
+  ln -sfn /etc/nixos/dotfiles "${home_dir}/.stubbe"
   chown -h "${user_uid}:${user_gid}" "${home_dir}/.stubbe"
 fi
 chown "${user_uid}:${user_gid}" "$home_dir"
 
 # Copy the user's SSH keys from /root/.ssh (where modules/installer/iso.nix
 # baked them on the live ISO) into the installed user's home. Required
-# for: git push/pull on the /etc/nixos clone, sops-nix decryption at HM
+# for: git push/pull on the /etc/nixos/dotfiles clone, sops-nix decryption at HM
 # activation (modules/sops.nix reads ~/.ssh/id_ed25519 to derive an age
 # identity), and general SSH access from the new machine. cp -a preserves
 # the 0600/0644 modes the tmpfiles rule set.
@@ -281,6 +282,6 @@ trap - EXIT
 
 echo ""
 echo "Install complete."
-echo "  Flake checkout: /etc/nixos (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
+echo "  Flake checkout: /etc/nixos/dotfiles (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
 echo "  Reboot, log in as '${PRIMARY_USER}', then iterate via:"
-echo "    sudo nixos-rebuild switch --flake /etc/nixos#${FLAKE_ATTR}"
+echo "    sudo nixos-rebuild switch --flake /etc/nixos/dotfiles#${FLAKE_ATTR}"

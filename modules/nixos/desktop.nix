@@ -26,6 +26,10 @@ _: {
       # The Qt5 plugin (libsForQt5.qtstyleplugin-kvantum) and Qt6 plugin
       # (kdePackages.qtstyleplugin-kvantum) are installed via home-manager
       # modules/packages/theming.nix so they land in the user profile.
-      environment.systemPackages = [ pkgs.catppuccin-kvantum ];
+      environment.systemPackages = [
+        pkgs.catppuccin-kvantum
+        # Waybar plugins (e.g. the custom power-profile script) require python3.
+        pkgs.python3
+      ];
     };
 }

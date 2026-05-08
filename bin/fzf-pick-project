@@ -15,21 +15,40 @@ for pattern in "${FILTER_PATTERNS[@]}"; do
   AWK_FILTER="$AWK_FILTER index(tolower(\$0), tolower(\"$ESCAPED_PATTERN\")) == 0"
 done
 
-FD_CMD="fd . \
-  --base-directory ~ \
-  -t d \
-  --max-depth 5 \
-  --min-depth 1 \
-  --hidden 2>/dev/null"
+# Git repos under HOME (outputs absolute paths)
+home_results() {
+  fd . \
+    --base-directory ~ \
+    -t d \
+    --max-depth 5 \
+    --min-depth 1 \
+    --hidden 2>/dev/null \
+    | awk -v home="$HOME" '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print home "/" $0 }'
+}
+
+# Git repos under /etc/nixos — dotfiles live at /etc/nixos/dotfiles on NixOS
+nixos_results() {
+  [[ -d /etc/nixos ]] || return 0
+  fd . \
+    --base-directory /etc/nixos \
+    -t d \
+    --max-depth 3 \
+    --min-depth 1 \
+    --hidden 2>/dev/null \
+    | awk '/\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print "/etc/nixos/" $0 }'
+  # /etc/nixos itself might also be a git repo
+  [[ -d /etc/nixos/.git ]] && echo "/etc/nixos"
+}
+
+all_results() {
+  home_results
+  nixos_results
+}
 
 if [[ -n "$AWK_FILTER" ]]; then
-  SELECTED_PATH="$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | awk "$AWK_FILTER" | fzf --query="$INITIAL_QUERY")"
+  SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | fzf --query="$INITIAL_QUERY")"
 else
-  SELECTED_PATH="$(eval "$FD_CMD" | awk '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print }' | fzf --query="$INITIAL_QUERY")"
+  SELECTED_PATH="$(all_results | fzf --query="$INITIAL_QUERY")"
 fi
 
-if [[ -n "$SELECTED_PATH" ]]; then
-  echo "$HOME/$SELECTED_PATH"
-else
-  echo ""
-fi
+echo "${SELECTED_PATH:-}"

@@ -365,7 +365,7 @@ _: {
           set -euo pipefail
 
           flake_dir="''${NIXOS_FLAKE_DIR:-${flakeDir}}"
-          out_link="''${NIXOS_ISO_OUT_LINK:-$PWD/result-nixos-installer-iso}"
+          out_link="''${NIXOS_ISO_OUT_LINK:-''${XDG_CACHE_HOME:-$HOME/.cache}/nixos-installer-iso}"
 
           has_cmd() {
             command -v "$1" >/dev/null 2>&1
@@ -390,7 +390,7 @@ _: {
 
           Environment:
             NIXOS_FLAKE_DIR       Override the flake directory (default: ~/.stubbe)
-            NIXOS_ISO_OUT_LINK    Override the build result link
+            NIXOS_ISO_OUT_LINK    Override the build result link (default: ~/.cache/nixos-installer-iso)
 
           The ISO build always reads ~/.ssh impurely and embeds detected public
           and private SSH key files into /root/.ssh on the live image.
@@ -476,11 +476,22 @@ _: {
               exit 1
             fi
 
-            build_iso "''${nix_args[@]}"
+            # Skip rebuild if result link already points to a valid store path
+            # and no extra nix args were given. This avoids the full --impure
+            # re-evaluation (which nix always reruns even when nothing changed)
+            # when the user just ran `hm iso build` moments before.
+            if [[ "''${#nix_args[@]}" -gt 0 ]] || \
+               ! { [[ -L "$out_link" ]] && [[ -e "$(readlink -f "$out_link" 2>/dev/null || true)" ]]; }; then
+              build_iso "''${nix_args[@]}"
+            else
+              echo "Reusing existing ISO build: $(readlink -f "$out_link")"
+            fi
             iso_path=$(resolve_iso_path)
 
             echo "Writing $iso_path to $device"
-            sudo dd if="$iso_path" of="$device" bs=4M status=progress oflag=sync conv=fsync
+            # bs=16M: larger chunks reduce syscall overhead.
+            # conv=fsync: single flush at end instead of after every block (oflag=sync).
+            sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
             sync
           }
 

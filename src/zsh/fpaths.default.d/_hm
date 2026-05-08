@@ -116,6 +116,7 @@ _hm() {
               _arguments \
                 '--yes[Confirm destructive write to device]' \
                 '-y[Confirm destructive write to device]' \
+                '--rebuild[Force a fresh ISO build even if result is cached]' \
                 '*:block device:->blockdev'
               if [[ $state == blockdev ]]; then
                 local -a devs
@@ -126,6 +127,12 @@ _hm() {
                   _message 'USB block device (e.g. /dev/sdb)'
                 fi
               fi
+              ;;
+            build|path)
+              _arguments \
+                '--rebuild[Force a fresh build even if output is already in the store]' \
+                '(-L --print-build-logs)'{-L,--print-build-logs}'[Print build logs]' \
+                '--show-trace[Show trace on errors]'
               ;;
             '')
               _describe -t iso-commands 'iso command' iso_cmds
