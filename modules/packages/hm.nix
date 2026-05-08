@@ -489,9 +489,14 @@ _: {
             iso_path=$(resolve_iso_path)
 
             echo "Writing $iso_path to $device"
-            # bs=16M: larger chunks reduce syscall overhead.
-            # conv=fsync: single flush at end instead of after every block (oflag=sync).
-            sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
+            iso_size=$(stat -c%s "$iso_path" 2>/dev/null || stat -f%z "$iso_path" 2>/dev/null || echo 0)
+            if command -v pv >/dev/null 2>&1 && [[ "$iso_size" -gt 0 ]]; then
+              pv -s "$iso_size" "$iso_path" | sudo dd of="$device" bs=16M conv=fsync
+            else
+              # bs=16M: larger chunks reduce syscall overhead.
+              # conv=fsync: single flush at end instead of after every block (oflag=sync).
+              sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
+            fi
             sync
           }
 

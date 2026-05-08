@@ -116,7 +116,7 @@ in
         isoImage = {
           makeEfiBootable = true;
           makeUsbBootable = true;
-          squashfsCompression = "zstd -Xcompression-level 6";
+          squashfsCompression = "zstd -Xcompression-level 15";
         };
 
         boot.zfs.forceImportRoot = false;
