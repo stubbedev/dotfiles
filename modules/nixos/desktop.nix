@@ -30,6 +30,7 @@ _: {
         pkgs.catppuccin-kvantum
         # Waybar plugins (e.g. the custom power-profile script) require python3.
         pkgs.python3
+        pkgs.imgcat
       ];
     };
 }

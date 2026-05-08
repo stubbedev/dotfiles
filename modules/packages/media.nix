@@ -52,6 +52,7 @@ _: {
 
         # Terminal image viewers (some use GPU)
         chafa
+        imgcat
         (homeLib.gfx viu)
         (homeLib.gfxExe "ueberzugpp" ueberzugpp)
 
