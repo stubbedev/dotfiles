@@ -10,12 +10,46 @@
 		"@franlol/opencode-md-table-formatter@latest"
 	],
 	"mcp": {
-		"atlassian": {
+		"chrome-devtools": {
+			"type": "local",
+			"command": [
+				"npx",
+				"-y",
+				"chrome-devtools-mcp@latest",
+				"--no-usage-statistics",
+				"--executable-path",
+				"@CHROME_EXECUTABLE@"
+			]
+		},
+		"atlassian-mcp": {
 			"type": "local",
 			"command": [
 				"npx",
 				"-y",
 				"@stubbedev/atlassian-mcp@latest"
+			]
+		},
+		"sentry-mcp": {
+			"type": "local",
+			"command": [
+				"npx",
+				"-y",
+				"@stubbedev/sentry-mcp@latest"
+			]
+		},
+		"jenkins-mcp": {
+			"type": "local",
+			"command": [
+				"npx",
+				"-y",
+				"@stubbedev/jenkins-mcp@latest"
+			]
+		},
+		"nix-mcp": {
+			"type": "local",
+			"command": [
+				"uvx",
+				"mcp-nixos"
 			]
 		}
 	},
