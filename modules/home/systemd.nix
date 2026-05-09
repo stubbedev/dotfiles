@@ -93,6 +93,13 @@ _: {
                 ++ (lib.optional hyprlandEnabled "xdg-desktop-portal-hyprland.service");
               Wants = [ "power-profiles-daemon.service" ];
               PartOf = compositorTargets;
+              # Make sd-switch restart waybar when its config changes too,
+              # not only when the unit definition itself changes. The store
+              # path under config.xdg.configFile.waybar.source moves whenever
+              # anything under src/waybar/ is touched — embedding it here
+              # bumps the unit hash and triggers a single restart that
+              # subsumes what the old onChange hook did.
+              X-Restart-Triggers = [ (toString config.xdg.configFile."waybar".source) ];
             };
             Install.WantedBy = compositorTargets;
             Service = {
