@@ -18,15 +18,12 @@ _: {
         PLUGINS_DIR="${pluginsDir}"
         PLUGINS_FILE="${constants.paths.zsh}/plugins"
 
-        # Extract GitHub slugs/URLs from the plugins file (lines inside the array)
+        # Source the plugins file in a non-interactive zsh subshell. The
+        # interactive guard inside it skips the side effect (manager call),
+        # so we only get the array declaration. Avoids parsing zsh syntax
+        # with awk and stays robust to formatting changes.
         mapfile -t URLS < <(
-          ${pkgs.gawk}/bin/awk '
-            /local -a plugins=\(/{found=1; next}
-            found && /^\)/{exit}
-            found && /\"/{
-              gsub(/[" ]/, ""); print
-            }
-          ' "$PLUGINS_FILE"
+          ${pkgs.zsh}/bin/zsh -c 'source "$1"; printf "%s\n" "''${plugins[@]}"' _ "$PLUGINS_FILE"
         )
 
         mkdir -p "$PLUGINS_DIR"

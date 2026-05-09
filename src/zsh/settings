@@ -64,32 +64,27 @@ function _settings_init {
   bindkey -s "^[a" "tmux-system-monitor^M"
   bindkey -s "^[h" "tmux-claude^M"
 
+  local _cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+
   if is_binary fzf; then
       bindkey -s "^[f" "tmux-pick-project^M"
       bindkey -s "^[F" "fzf-project-picker^M"
       bindkey -s "^[d" "tmux-pick-session^M"
       bindkey -s "^[D" "fzf-directory-picker^M"
-      local _fzf_cache="${XDG_CACHE_HOME:-$HOME/.cache}/fzf_init.zsh"
-      local _fzf_resolved="${commands[fzf]:A}"
-      if _init_cache_stale "$_fzf_cache" "$_fzf_resolved"; then
-        local _fzf_init
-        _fzf_init=$(fzf --zsh 2>/dev/null)
-        print -r -- "${(F)${(f)_fzf_init:#bindkey '^I'*}}" >| "$_fzf_cache"
-        print -r -- "$_fzf_resolved" >| "${_fzf_cache}.ver"
-      fi
-      source "$_fzf_cache"
+      # Strip fzf's default `bindkey '^I'` (Tab) line so fzf-tab keeps Tab.
+      function _settings_gen_fzf_init {
+        local _out
+        _out=$(fzf --zsh 2>/dev/null) || return 1
+        print -r -- "${(F)${(f)_out:#bindkey '^I'*}}"
+      }
+      _cached_eval "$_cache_dir/fzf_init.zsh" "${commands[fzf]:A}" _settings_gen_fzf_init
+      unfunction _settings_gen_fzf_init
   fi
 
-  if is_binary starship; then
-      type starship_zle-keymap-select >/dev/null || {
-        local _starship_cache="${XDG_CACHE_HOME:-$HOME/.cache}/starship_init.zsh"
-        local _starship_resolved="${commands[starship]:A}"
-        if _init_cache_stale "$_starship_cache" "$_starship_resolved"; then
-          starship init zsh >| "$_starship_cache"
-          print -r -- "$_starship_resolved" >| "${_starship_cache}.ver"
-        fi
-        source "$_starship_cache"
-      }
+  if is_binary starship && ! type starship_zle-keymap-select >/dev/null; then
+      function _settings_gen_starship_init { starship init zsh; }
+      _cached_eval "$_cache_dir/starship_init.zsh" "${commands[starship]:A}" _settings_gen_starship_init
+      unfunction _settings_gen_starship_init
   fi
 
   if is_binary pyenv; then

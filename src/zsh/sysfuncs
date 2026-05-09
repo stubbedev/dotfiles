@@ -5,68 +5,32 @@ function is_binary {
   command -v "$1" &>/dev/null
 }
 
-function is_nix {
-  [[ -r /etc/os-release ]] || return 1
-  local content=$(<"/etc/os-release")
-  [[ "$content" == *$'\n'ID=nixos* ]] || [[ "$content" == ID=nixos* ]]
-}
-
 function are_binary {
+  local arg
   for arg in "$@"; do
-    if ! is_binary "$arg"; then
-      return 1
-    fi
+    is_binary "$arg" || return 1
   done
-  return 0
 }
-
-function is_directory {
-  [[ -d "$1" ]]
-}
-
-function are_directory {
-  for arg in "$@"; do
-    if ! is_directory "$arg"; then
-      return 1
-    fi
-  done
-  return 0
-}
-
 
 function is_file {
   [[ -f "$1" ]]
 }
 
-function are_file {
-  for arg in "$@"; do
-    if ! is_file "$arg"; then
-      return 1
-    fi
-  done
-  return 0
-}
-
-function has_string {
-  [[ -r "$1" ]] || return 1
-  local content=$(<"$1")
-  [[ "$content" == *"$2"* ]]
-}
-
-function is_elevated_shell {
-  [[ "$EUID" -eq 0 ]]
-}
-
-# Returns true if a shell init cache file is missing or stale.
-# Staleness is determined by comparing the resolved binary path (nix store path)
-# against the path stored in the companion .ver file.
-function _init_cache_stale {
-  local _cache=$1 _resolved=$2 _cached=""
-  [[ -f "$_cache" ]] || return 0
-  [[ -f "${_cache}.ver" ]] && _cached=$(<"${_cache}.ver")
-  [[ "$_cached" != "$_resolved" ]]
-}
-
 function src_zsh {
   is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
+}
+
+# Source $cache, regenerating it by calling $generator (a function or
+# command name) first if the cache is missing or if the resolved binary
+# path stored in ${cache}.ver doesn't match $resolved. Used to skip the
+# cost of `fzf --zsh` / `starship init zsh` on every shell start.
+function _cached_eval {
+  local cache=$1 resolved=$2 generator=$3
+  local cached=""
+  [[ -f "${cache}.ver" ]] && cached=$(<"${cache}.ver")
+  if [[ ! -f "$cache" || "$cached" != "$resolved" ]]; then
+    "$generator" >| "$cache" || return 1
+    print -r -- "$resolved" >| "${cache}.ver"
+  fi
+  source "$cache"
 }

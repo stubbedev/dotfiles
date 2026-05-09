@@ -87,9 +87,10 @@ function _gwt_remove_if_clean {
   ) &!
 }
 
-# Print the path of the worktree that has $1 checked out, or nothing if none.
-function _worktree_path_for_branch {
-  local _target="$1" _wt_path="" _wt_branch="" _wt_line
+# Emit one "<path>\t<branch>" line per linked worktree on a branch.
+# Worktrees in detached HEAD or bare are skipped (no `branch` line).
+function _list_worktrees {
+  local _wt_path="" _wt_branch="" _wt_line
   while IFS= read -r _wt_line; do
     if [[ $_wt_line == worktree\ * ]]; then
       _wt_path=${_wt_line#worktree }
@@ -97,16 +98,21 @@ function _worktree_path_for_branch {
     elif [[ $_wt_line == branch\ * ]]; then
       _wt_branch=${_wt_line#branch refs/heads/}
     elif [[ -z $_wt_line ]]; then
-      if [[ "$_wt_branch" == "$_target" ]]; then
-        echo "$_wt_path"
-        return 0
-      fi
+      [[ -n $_wt_branch && -n $_wt_path ]] && printf '%s\t%s\n' "$_wt_path" "$_wt_branch"
       _wt_path="" _wt_branch=""
     fi
   done < <(
     git worktree list --porcelain 2>/dev/null
     echo
   )
+}
+
+# Print the path of the worktree that has $1 checked out, or nothing if none.
+function _worktree_path_for_branch {
+  local _target="$1" _path _branch
+  while IFS=$'\t' read -r _path _branch; do
+    [[ "$_branch" == "$_target" ]] && { echo "$_path"; return 0; }
+  done < <(_list_worktrees)
   return 1
 }
 
@@ -228,29 +234,11 @@ if are_binary git bat fzf; then
   function gp {
     in_git_repo || return 1
 
-    local banned_branches=(
-      "develop"
-      "staging"
-      "production"
-      "master"
-      "main"
-    )
+    local -a banned_branches=(develop staging production master main)
     local branch_name=$(git branch --show-current)
 
-    if [[ " ${banned_branches[@]} " =~ " ${branch_name} " ]]; then
-      local choice=$(echo -e "No\nYes" |
-        fzf \
-          --no-input \
-          --header="[WARN] Protected Branch: Confirm Push" \
-          --reverse \
-          --height=4 \
-          --no-info \
-          --no-multi \
-          --exit-0)
-
-      if [[ "$choice" != "Yes" ]]; then
-        return 0
-      fi
+    if (( ${banned_branches[(Ie)$branch_name]} )); then
+      _confirm_destructive "[WARN] Protected Branch: Confirm Push" || return 0
     fi
 
     git branch --set-upstream-to="origin/$branch_name"
@@ -259,7 +247,7 @@ if are_binary git bat fzf; then
   function gcr {
     in_git_repo || return 1
 
-    current_tag=${$(git tag --sort=version:refname)[-1]}
+    local current_tag=${$(git tag --sort=version:refname)[-1]}
     local increment_action=$(printf 'Major\nMinor\nPatch\n' |
       fzf --prompt="(Enter: select action)> " \
         --height=4 \
@@ -612,27 +600,24 @@ if are_binary git bat fzf; then
 
     git stash
   }
-  function gw {
-    in_git_repo || return 1
-
-    if [[ -z "$(git status --porcelain)" ]]; then
-      return 0
-    fi
-
-    local choice=$(echo -e "No\nYes" |
+  # Confirm a destructive action via fzf Yes/No. Returns 0 on Yes, 1 otherwise.
+  function _confirm_destructive {
+    local choice=$(printf 'No\nYes\n' |
       fzf \
         --no-input \
-        --header="[WARN] Local Branch: Wipe Non-Pushed Changes" \
+        --header="$1" \
         --reverse \
         --height=4 \
         --no-info \
         --no-multi \
         --exit-0)
+    [[ "$choice" == "Yes" ]]
+  }
 
-    if [[ "$choice" != "Yes" ]]; then
-      return 0
-    fi
-
+  function gw {
+    in_git_repo || return 1
+    [[ -z "$(git status --porcelain)" ]] && return 0
+    _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
     git add .
     git stash
     git stash drop
@@ -640,21 +625,7 @@ if are_binary git bat fzf; then
 
   function gwa {
     in_git_repo || return 1
-
-    local choice=$(echo -e "No\nYes" |
-      fzf \
-        --no-input \
-        --header="[WARN] Local Branch: Wipe Non-Pushed Changes" \
-        --reverse \
-        --height=4 \
-        --no-info \
-        --no-multi \
-        --exit-0)
-
-    if [[ "$choice" != "Yes" ]]; then
-      return 0
-    fi
-
+    _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
     git add .
     git stash
     git stash clear
@@ -779,8 +750,7 @@ if are_binary git fzf; then
     in_git_repo || return 1
 
     local current_worktree="$_git_root"
-    local git_common_dir=$(git rev-parse --git-common-dir)
-    local repo_root="$current_worktree"
+    local repo_root=$(_git_main_root) || repo_root="$current_worktree"
 
     # If we're leaving a clean linked worktree, remove it after the switch.
     local _prev_clean_worktree=""
@@ -788,40 +758,15 @@ if are_binary git fzf; then
       _prev_clean_worktree="$current_worktree"
     fi
 
-    if [[ "$git_common_dir" != /* ]]; then
-      git_common_dir="$(cd "$git_common_dir" && pwd -P)"
-    fi
-    if [[ "$git_common_dir" == */.git ]]; then
-      repo_root="${git_common_dir%/.git}"
-    fi
-
     local worktrees_dir="$repo_root/.worktrees"
 
-    # Parse worktree list once, extract both entries and occupied branches
-    # Append a blank line so the EOF-flush logic fires for the last entry too
-    local _wt_raw=$(
-      git worktree list --porcelain
-      echo
-    )
     local worktree_entries=""
     local occupied_branches=""
-    local _wt_path="" _wt_branch=""
-    while IFS= read -r _wt_line; do
-      if [[ $_wt_line == worktree\ * ]]; then
-        _wt_path=${_wt_line#worktree }
-        _wt_branch=""
-      elif [[ $_wt_line == branch\ * ]]; then
-        _wt_branch=${_wt_line#branch refs/heads/}
-      elif [[ -z $_wt_line ]]; then
-        if [[ -n $_wt_branch && -n $_wt_path && $_wt_path != "$current_worktree" ]]; then
-          worktree_entries+="$_wt_path  $_wt_branch"$'\n'
-        fi
-        if [[ -n $_wt_branch ]]; then
-          occupied_branches+="$_wt_branch"$'\n'
-        fi
-        _wt_path="" _wt_branch=""
-      fi
-    done <<<"$_wt_raw"
+    local _path _branch
+    while IFS=$'\t' read -r _path _branch; do
+      [[ "$_path" != "$current_worktree" ]] && worktree_entries+="$_path  $_branch"$'\n'
+      occupied_branches+="$_branch"$'\n'
+    done < <(_list_worktrees)
 
     _list_git_branches
     local all_branches=${(F)reply}
@@ -924,36 +869,14 @@ if are_binary git fzf; then
   function gwtd {
     in_git_repo || return 1
 
-    local repo_root="$_git_root"
-    local git_common_dir=$(git rev-parse --git-common-dir)
     local target="$1"
-
-    if [[ "$git_common_dir" != /* ]]; then
-      git_common_dir="$(cd "$git_common_dir" && pwd -P)"
-    fi
-
-    if [[ "$git_common_dir" == */.git ]]; then
-      repo_root="${git_common_dir%/.git}"
-    fi
+    local repo_root=$(_git_main_root) || repo_root="$_git_root"
 
     local linked_worktrees=""
-    local _wt_path2="" _wt_branch2=""
-    while IFS= read -r _wt_line2; do
-      if [[ $_wt_line2 == worktree\ * ]]; then
-        _wt_path2=${_wt_line2#worktree }
-        _wt_branch2=""
-      elif [[ $_wt_line2 == branch\ * ]]; then
-        _wt_branch2=${_wt_line2#branch refs/heads/}
-      elif [[ -z $_wt_line2 ]]; then
-        if [[ -n $_wt_branch2 && "$_wt_path2" != "$repo_root" ]]; then
-          linked_worktrees+="$_wt_branch2  →  $_wt_path2"$'\n'
-        fi
-        _wt_path2="" _wt_branch2=""
-      fi
-    done < <(
-      git worktree list --porcelain
-      echo
-    )
+    local _path _branch
+    while IFS=$'\t' read -r _path _branch; do
+      [[ "$_path" != "$repo_root" ]] && linked_worktrees+="$_branch  →  $_path"$'\n'
+    done < <(_list_worktrees)
 
     if [[ -z "$linked_worktrees" ]]; then
       echo "No linked worktrees found."
@@ -995,19 +918,15 @@ if are_binary git fzf; then
   }
 fi
 
-if is_binary bat; then
-  function view_git_file {
-    local _url="${1//github.com/raw.githubusercontent.com}"
-    _url="${_url//\/blob\//\/refs\/heads\/}"
-    curl "$_url" | bat -f -l "${1##*\.}"
-  }
-else
-  function view_git_file {
-    local _url="${1//github.com/raw.githubusercontent.com}"
-    _url="${_url//\/blob\//\/refs\/heads\/}"
+function view_git_file {
+  local _url="${1//github.com/raw.githubusercontent.com}"
+  _url="${_url//\/blob\//\/refs\/heads\/}"
+  if is_binary bat; then
+    curl -s "$_url" | bat -f -l "${1##*\.}"
+  else
     curl "$_url"
-  }
-fi
+  fi
+}
 
 if is_binary ss; then
   function pop {
@@ -1085,7 +1004,7 @@ if is_binary fzf; then
   }
   function fzf-directory-picker {
     SELECTED_DIR="$(fzf-pick-directory "$@")"
-    if [[ -n "SELECTED_DIR" ]]; then
+    if [[ -n "$SELECTED_DIR" ]]; then
       cd "$SELECTED_DIR"
     fi
     clear

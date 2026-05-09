@@ -1,13 +1,12 @@
 #!/usr/bin/env zsh
 
-disown 2>/dev/null
-
 if [[ -d "$HOME/.stubbe" ]]; then
   function _stubbe_init {
-    [[ -f "$HOME/.zsh_history" ]] || >>$HOME/.zsh_history
+    [[ -f "$HOME/.zsh_history" ]] || touch "$HOME/.zsh_history"
     local STBDIR="$HOME/.stubbe/src/zsh"
+    local zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
     local -a pre=(paths fpaths apaths sysfuncs manager funcs)
-    local -a post=(aliases secrets plugins env settings)
+    local -a post=(aliases plugins env settings)
     local f
 
     for f in "${pre[@]}"; do
@@ -15,7 +14,6 @@ if [[ -d "$HOME/.stubbe" ]]; then
     done
 
     autoload -Uz compinit
-    local zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
     [[ -f $zcompdump ]] && compinit -C -d "$zcompdump" || compinit -d "$zcompdump"
 
     for f in "${post[@]}"; do

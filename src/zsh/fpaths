@@ -1,18 +1,20 @@
 #!/usr/bin/env zsh
 
-# zsh evaluates fpath at compinit time but ignores entries that don't
-# resolve to an existing directory, so listing both candidate profile
-# locations costs nothing on the platform that doesn't have one.
+# Prepend our completion dirs so generated completions (`_gh`, `_uv`, …)
+# beat any same-named function shipped via $fpath defaults. Both candidate
+# profile locations are listed; zsh ignores fpath entries whose dir doesn't
+# exist at compinit time, so the unused one costs nothing.
 function _fpaths_init {
   local dir="$HOME/.stubbe/src/zsh/fpaths.d"
-  [[ -d "$dir" ]] || mkdir -p "$dir"
   local default_dir="$HOME/.stubbe/src/zsh/fpaths.default.d"
+  [[ -d "$dir" ]] || mkdir -p "$dir"
   [[ -d "$default_dir" ]] || mkdir -p "$default_dir"
-  fpath+=(
+  fpath=(
     "$default_dir"
     "$dir"
     "$HOME/.nix-profile/share/zsh/site-functions"
     "/etc/profiles/per-user/$USER/share/zsh/site-functions"
+    $fpath
   )
 }
 _fpaths_init

@@ -18,12 +18,9 @@ _: {
         export HOME='${config.home.homeDirectory}'
         STBDIR='${config.home.homeDirectory}/.stubbe/src/zsh'
 
-        fpath=(
-          '${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.default.d'
-          '${config.home.homeDirectory}/.stubbe/src/zsh/fpaths.d'
-          '${config.home.profileDirectory}/share/zsh/site-functions'
-          $fpath
-        )
+        # Use the same fpath construction the interactive shell does so the
+        # zcompdump matches the runtime fpath exactly.
+        source "$STBDIR/fpaths"
 
         [ -f "$STBDIR/paths" ] && source "$STBDIR/paths"
         [ -f "$STBDIR/apaths" ] && source "$STBDIR/apaths"
@@ -34,11 +31,14 @@ _: {
         autoload -Uz compinit
         compinit -d '${config.home.homeDirectory}/.zcompdump'
 
-        # Append dynamic autoload + compdef registrations that can't be captured by #compdef directives
+        # Append dynamic autoload + compdef registrations that #compdef
+        # directives can't capture. compinit's dump is plain zsh source; the
+        # appended lines run when init's `compinit -C` re-evals the dump on
+        # next shell start. One file, one source — keeps startup paths short.
         {
           print -r -- "autoload -Uz _git_shortcuts"
           print -r -- "compdef _git_shortcuts ''${(k)_git_shorthand_docs}"
-        } >> '${config.home.homeDirectory}/.zcompdump'
+        } >>'${config.home.homeDirectory}/.zcompdump'
 
         zcompile '${config.home.homeDirectory}/.zcompdump'
 
