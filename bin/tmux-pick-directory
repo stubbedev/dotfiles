@@ -10,4 +10,4 @@ if [[ -z $SELECTED ]]; then
   exit 0
 fi
 
-cd $SELECTED || exit 1
+cd "$SELECTED" || exit 1

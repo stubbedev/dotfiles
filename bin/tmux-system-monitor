@@ -1,29 +1,12 @@
 #!/usr/bin/env zsh
 
-function toggle_htop {
-  if command -v btop &>/dev/null; then
-    if [[ -z "$TMUX" ]]; then
-      btop
-    else
-      btop
-      TOP_ALIVE=""
-      local TOP_ALIVE
-      if [[ -z "${TOP_ALIVE}" ]]; then
-        tmux kill-pane || exit 0
-      fi
-    fi
-  else
-    if [[ -z "$TMUX" ]]; then
-      htop
-    else
-      htop
-      TOP_ALIVE=""
-      local TOP_ALIVE
-      if [[ -z "${TOP_ALIVE}" ]]; then
-        tmux kill-pane || exit 0
-      fi
-    fi
-  fi
-}
+if command -v btop &>/dev/null; then
+  monitor=btop
+elif command -v htop &>/dev/null; then
+  monitor=htop
+else
+  exit 0
+fi
 
-toggle_htop
+"$monitor"
+[[ -n "$TMUX" ]] && { tmux kill-pane || exit 0; }

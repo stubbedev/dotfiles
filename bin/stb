@@ -18,7 +18,6 @@ run_options() {
   local chosen_option
   stb_options=(
     "Edit Nix"
-    "Edit Secrets"
     "Edit Aliases"
     "Edit Functions"
     "Edit Paths"
@@ -32,9 +31,6 @@ run_options() {
   case "$chosen_option" in
     "Edit Nix")
       sudo "$(command -v "$EDITOR")" /etc/nix/nix.conf
-      ;;
-    "Edit Secrets")
-      "$EDITOR" "$ZSH_DIR/secrets"
       ;;
     "Edit Aliases")
       "$EDITOR" "$ZSH_DIR/aliases"

@@ -12,11 +12,8 @@ TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 # pgrep tmux substring-matches our own comm (`tmux-pick-proje`,
 # truncated to 15 chars) and would falsely report a server, so the
 # new-session call below would race against tmux start-up.
-if ! tmux has-session 2>/dev/null; then
-  TMUX_RUNNING=""
-else
-  TMUX_RUNNING=1
-fi
+TMUX_RUNNING=""
+tmux has-session 2>/dev/null && TMUX_RUNNING=1
 
 if [[ -z $TMUX ]] && [[ -z $TMUX_RUNNING ]]; then
   tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"

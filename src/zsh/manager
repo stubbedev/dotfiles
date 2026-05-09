@@ -5,7 +5,7 @@ if [[ ! -o interactive ]] || [[ ! -t 0 ]]; then
   return 0
 fi
 
-function source_github_plugins() {
+function source_github_plugins {
   # Disable job control to suppress background job messages
   setopt local_options no_notify no_monitor
 
@@ -14,20 +14,21 @@ function source_github_plugins() {
   local -a urls=("${args[@]:0:${#args[@]}-1}")
   [[ -d "$parent_dir" ]] || mkdir -p "$parent_dir"
 
-  local url repo target
-
-  # Build list of expected repo names
-  local -a expected_repos=()
-  for url in $urls; do
-    [[ $url == http* ]] || url="https://github.com/$url"
-    expected_repos+=("${url:t:r}")
+  # Canonicalize once: derive (full_url, repo_name, target_path) per entry.
+  local -a full_urls=() repos=() targets=()
+  local _u
+  for _u in $urls; do
+    [[ $_u == http* ]] || _u="https://github.com/$_u"
+    full_urls+=("$_u")
+    repos+=("${_u:t:r}")
+    targets+=("$parent_dir/${_u:t:r}")
   done
 
   # Remove directories that aren't in the expected list
   local existing_dir existing_repo
   for existing_dir in "$parent_dir"/*(/N); do
     existing_repo="${existing_dir:t}"
-    if [[ ${expected_repos[(r)$existing_repo]} != "$existing_repo" ]]; then
+    if [[ ${repos[(r)$existing_repo]} != "$existing_repo" ]]; then
       print -P "%F{red}REMOVING: $existing_repo%f"
       rm -rf "$existing_dir"
     fi
@@ -36,26 +37,21 @@ function source_github_plugins() {
   # Clone any missing plugins in background; defer tmpdir until actually needed
   local tmpdir=""
   local -a pids=() tmpfiles=()
-  for url in $urls; do
-    [[ $url == http* ]] || url="https://github.com/$url"
-    repo="${url:t:r}"
-    target="$parent_dir/$repo"
-    if [[ ! -d "$target" ]]; then
+  local _i
+  for (( _i = 1; _i <= ${#urls}; _i++ )); do
+    if [[ ! -d "${targets[$_i]}" ]]; then
       [[ -n "$tmpdir" ]] || tmpdir=$(mktemp -d)
-      local out="$tmpdir/$repo.out"
+      local out="$tmpdir/${repos[$_i]}.out"
       tmpfiles+=("$out")
       (
-        print -P "%F{green}ADDING: $repo%f"
-        git clone "$url.git" "$target" >/dev/null 2>&1
+        print -P "%F{green}ADDING: ${repos[$_i]}%f"
+        git clone "${full_urls[$_i]}.git" "${targets[$_i]}" >/dev/null 2>&1
       ) >"$out" 2>&1 &
       pids+=($!)
     fi
   done
 
-  for pid in $pids; do
-    wait "$pid" 2>/dev/null
-  done
-  disown 2>/dev/null
+  (( ${#pids} )) && wait "${pids[@]}" 2>/dev/null
 
   local tmp
   for tmp in $tmpfiles; do
@@ -64,14 +60,11 @@ function source_github_plugins() {
   [[ -n "$tmpdir" ]] && rm -rf "$tmpdir"
 
   # Source plugin files in the foreground after all jobs are done
-  local plugin_file
-  for url in $urls; do
-    [[ $url == http* ]] || url="https://github.com/$url"
-    target="$parent_dir/${url:t:r}"
-    if [[ -d "$target" ]]; then
-      for plugin_file in ${target}/*.plugin.zsh(.N); do
-        source "$plugin_file"
-      done
-    fi
+  local target plugin_file
+  for target in $targets; do
+    [[ -d "$target" ]] || continue
+    for plugin_file in $target/*.plugin.zsh(.N); do
+      source "$plugin_file"
+    done
   done
 }

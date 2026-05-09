@@ -1,21 +1,13 @@
 #!/usr/bin/env zsh
 
-function toggle_claude {
-  if command -v claude &>/dev/null; then
-    if [[ -z "$TMUX" ]]; then
-      claude --dangerously-skip-permissions "$@"
-    else
-      tmux renamew "claude"
-      claude --dangerously-skip-permissions "$@"
-      CLAUDE_ALIVE=""
-      local CLAUDE_ALIVE
-      if [[ -z "${CLAUDE_ALIVE}" ]]; then
-        tmux kill-pane || exit 0
-      fi
-    fi
-  else
-    exit 0
-  fi
-}
+if ! command -v claude &>/dev/null; then
+  exit 0
+fi
 
-toggle_claude
+if [[ -z "$TMUX" ]]; then
+  claude --dangerously-skip-permissions "$@"
+else
+  tmux renamew "claude"
+  claude --dangerously-skip-permissions "$@"
+  tmux kill-pane || exit 0
+fi

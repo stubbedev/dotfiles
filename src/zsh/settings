@@ -5,7 +5,7 @@ function _settings_init {
   bindkey -s "^[R" "src_zsh^M"
   bindkey -s "^[o" "nvim^M"
   bindkey -s "^[O" "nvim .^M"
-  function _git_shorthand_descriptions() {
+  function _git_shorthand_descriptions {
     (( CURRENT != 1 )) && return 1
     (( ${#_git_shorthand_docs} == 0 )) && return 1
 

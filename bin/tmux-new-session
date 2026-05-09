@@ -1,8 +1,7 @@
 #!/usr/bin/env zsh
 
-TMUXDIRNAME=$(basename "$PWD" | tr '.' '_')
 if [ -z "$1" ]; then
-  TMUXCLIENTNAME="$(whoami)($TMUXDIRNAME)"
+  TMUXCLIENTNAME="$(whoami)(${${PWD:t}//./_})"
 else
   TMUXCLIENTNAME="$1"
 fi
