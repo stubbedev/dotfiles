@@ -30,6 +30,14 @@ in
           ${pkgs.kubectl}/bin/kubectl completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_kubectl 2>/dev/null
           ${pkgs.minikube}/bin/minikube completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_minikube 2>/dev/null
         ''}
+        ${lib.optionalString config.features.docker ''
+          # Docker is host-installed (apt on Ubuntu, virtualisation.docker on
+          # NixOS), so resolve the binary at activation time rather than via
+          # ${"\${pkgs.docker}"}/bin/docker which isn't in the nix closure.
+          if command -v docker >/dev/null 2>&1; then
+            docker completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_docker 2>/dev/null
+          fi
+        ''}
         ${lib.optionalString config.features.php ''
           # FrankenPHP emits a Caddy-derived completion (it embeds Caddy);
           # rename caddy → frankenphp so the directives register against the
