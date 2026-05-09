@@ -4,6 +4,7 @@
       name,
       args,
       enableIf ? true,
+      after ? [ ],
     }:
     {
       flake.modules.homeManager.${name} =
@@ -19,7 +20,7 @@
           isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
         in
         lib.mkIf isEnabled {
-          home.activation.${name} = lib.hm.dag.entryAfter [ "writeBoundary" ] resolvedArgs.actionScript;
+          home.activation.${name} = lib.hm.dag.entryAfter ([ "writeBoundary" ] ++ after) resolvedArgs.actionScript;
         };
     };
 

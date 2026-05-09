@@ -1,5 +1,10 @@
 _: {
   enableIf = { config, ... }: config.features.desktop;
+  # Must run AFTER setup-shell-completions writes _gh / _uv / _frankenphp /
+  # ... into fpaths.d, otherwise compinit caches a zcompdump that doesn't
+  # know about them and the user has to manually `rm ~/.zcompdump*` after
+  # every switch.
+  after = [ "non-privileged-setup-shell-completions" ];
   args =
     {
       config,
