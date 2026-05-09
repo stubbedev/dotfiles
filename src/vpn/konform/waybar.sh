@@ -130,13 +130,14 @@ status() {
 
 # Wakes up every waybar with `"signal": 8` set on its konform-vpn module —
 # waybar then re-execs `vpn-konform-waybar status` and re-reads the line.
-# Pattern is `-f '/bin/waybar$'` rather than the bare process name `waybar`
-# because the latter also matches `waybar-launch` (the bash wrapper that
-# starts waybar). Bash's default action for unhandled real-time signals is
-# Term, so signaling the wrapper kills it and systemd tears the whole
-# service down.
+# Pattern matches comm (process name) rather than full cmdline:
+#   - "waybar"          — non-NixOS, plain binary
+#   - ".waybar-wrapped" — NixOS, where home-manager wraps the binary
+# It deliberately excludes "waybar-launch" (the bash wrapper) because the
+# wrapper inherits bash's default Term action for unhandled real-time
+# signals, which would kill it and tear down the whole service.
 refresh_waybar() {
-  pkill -SIGRTMIN+8 -f '/bin/waybar$' 2>/dev/null || true
+  pkill -SIGRTMIN+8 '^\.?waybar(-wrapped)?$' 2>/dev/null || true
 }
 
 connect() {
@@ -173,7 +174,7 @@ connect() {
     start="$2"
     script="$3"
     iface="$4"
-    trap "rm -f \"$marker\"; pkill -SIGRTMIN+8 -f '/bin/waybar\$' 2>/dev/null || true" EXIT
+    trap "rm -f \"$marker\"; pkill -SIGRTMIN+8 '^\.?waybar(-wrapped)?\$' 2>/dev/null || true" EXIT
     printf "PID=%s\nSTART=%s\n" "$$" "$start" > "$marker"
     "$script" || exit $?
     for _ in $(seq 1 20); do
@@ -207,7 +208,7 @@ disconnect() {
   # click-feedback case for the user who clicks while connecting.
   setsid bash -c '
     "$1"
-    pkill -SIGRTMIN+8 -f "/bin/waybar\$" 2>/dev/null || true
+    pkill -SIGRTMIN+8 "^\.?waybar(-wrapped)?\$" 2>/dev/null || true
   ' _ "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
   disown
 
