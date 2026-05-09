@@ -30,9 +30,9 @@ _: {
         prettier
         oxlint
         oxfmt
+        stylua
 
-        # Editor and Lua runtimes
-        neovim
+        # Editor and Lua runtimes (nvim provided via programs.nixvim)
         (homeLib.gfx neovide)
         tree-sitter.packages.${system}.cli
         luaBin

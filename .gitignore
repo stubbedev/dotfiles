@@ -4,8 +4,6 @@ src/zsh/fpaths.d
 src/zsh/history
 src/zsh/update_flag
 src/zsh/*.zwc
-src/nvim/lazy-lock.json
-src/nvim/lazyvim.json
 src/btop/btop.log
 src/btop/btop.conf
 src/neomutt/accounts/*/*/cache/bodies/*

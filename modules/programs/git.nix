@@ -29,7 +29,7 @@ _: {
             };
             core = {
               excludesfile = "~/.config/git/ignore";
-              editor = "${pkgs.neovim}/bin/nvim";
+              editor = "${config.programs.nixvim.finalPackage}/bin/nvim";
             };
             init.defaultBranch = "master";
             push.autoSetupRemote = true;

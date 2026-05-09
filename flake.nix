@@ -65,6 +65,12 @@
     # Activated only when host.impermanent = true; see
     # modules/nixos/impermanence.nix.
     impermanence.url = "github:nix-community/impermanence";
+    # Declarative Neovim configuration. Tracks nixos-unstable like nixpkgs.
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+    };
   };
 
   outputs =

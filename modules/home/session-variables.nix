@@ -15,8 +15,8 @@ _: {
           NIXOS_OZONE_WL = "1";
 
           # Editor and display
-          EDITOR = lib.getExe pkgs.neovim;
-          VISUAL = lib.getExe pkgs.neovim;
+          EDITOR = lib.getExe config.programs.nixvim.finalPackage;
+          VISUAL = lib.getExe config.programs.nixvim.finalPackage;
           ROFI_SENSIBLE_TERMINAL = "${config.home.profileDirectory}/bin/alacritty";
 
           # Desktop entries (Flatpak + Nix)

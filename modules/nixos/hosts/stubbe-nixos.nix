@@ -36,7 +36,10 @@ in
         host.installed = true;
 
         home-manager.users.${config.host.primaryUser} = {
-          imports = builtins.attrValues hmMods ++ builtins.attrValues hmLinux;
+          imports =
+            builtins.attrValues hmMods
+            ++ builtins.attrValues hmLinux
+            ++ [ inputs.nixvim.homeModules.nixvim ];
 
           # Gate off privileged activation scripts — the corresponding
           # NixOS modules under modules/nixos/ own those files now.
