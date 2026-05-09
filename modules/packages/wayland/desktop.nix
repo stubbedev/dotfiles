@@ -57,34 +57,21 @@ _: {
         exec ${pkgs.swaynotificationcenter}/bin/swaync "$@"
       '';
 
-      # Pre-rendered PNGs for the per-account mail notifications. We can't
-      # ship SVGs containing PUA nerd-font glyphs because librsvg (which
-      # swaync uses to render notification icons) doesn't reliably resolve
-      # the Private Use Area through fontconfig — the result is a coloured
-      # square placeholder. Rendering once at build time with imagemagick
-      # against an explicit nerd-font path side-steps the issue and lets
-      # notify-send resolve `mail-account-{gmail,exchange}` through the
-      # standard hicolor → XDG_DATA_DIRS lookup chain.
+      # Per-account mail notification icons. Source PNGs live in ./icons
+      # and get upscaled to 128x128 so notify-send resolves
+      # `mail-account-{gmail,exchange}` through the standard hicolor →
+      # XDG_DATA_DIRS lookup chain.
       mailNotificationIcons = pkgs.runCommand "mail-notification-icons" {
         nativeBuildInputs = [ pkgs.imagemagick ];
       } ''
-        font="${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf"
         out_dir="$out/share/icons/hicolor/128x128/apps"
         mkdir -p "$out_dir"
 
-        render() {
-          local name="$1" color="$2" glyph="$3"
-          magick -size 128x128 -background none \
-            -fill "$color" -font "$font" -pointsize 96 \
-            -gravity center label:"$glyph" \
+        for name in gmail exchange; do
+          magick "${./icons}/mail-account-$name.png" \
+            -background none -resize 128x128 \
             "$out_dir/mail-account-$name.png"
-        }
-
-        # nf-md-gmail (U+F02ED) in Gmail red, nf-md-microsoft_outlook
-        # (U+F0372) in Outlook blue. printf with hex bytes avoids
-        # smuggling raw UTF-8 through Nix → bash quoting.
-        render gmail    '#ea4335' "$(printf '\xf3\xb0\x8b\xad')"
-        render exchange '#0078d4' "$(printf '\xf3\xb0\x8d\xb2')"
+        done
       '';
 
       # Switch the active compositor's user systemd target. Stops the other

@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, inputs, ... }:
 let
   intelephenseStubs = [
     "phpcore"
@@ -86,46 +86,27 @@ let
     "zlib"
   ];
 
-  nixdBeforeInit = ''
-    function(params, config)
-      local root
-      if params.workspaceFolders and params.workspaceFolders[1] then
-        root = vim.uri_to_fname(params.workspaceFolders[1].uri)
-      elseif params.rootUri then
-        root = vim.uri_to_fname(params.rootUri)
-      end
-      if not root or vim.fn.filereadable(root .. "/flake.nix") == 0 then return end
+  nixpkgsPath = inputs.nixpkgs.outPath;
+  hmPath = inputs.home-manager.outPath;
 
-      local hostname = vim.uv.os_gethostname()
-      local user = vim.env.USER or ""
+  # Evaluate just the option tree — fast, hostname-independent, no impure-eval risk.
+  # See https://kokada.dev/blog/make-nixd-module-completion-to-work-anywhere-with-flakes/
+  nixosOptionsExpr = ''
+    (let
+      pkgs = import "${nixpkgsPath}" { };
+    in (pkgs.lib.evalModules {
+      modules = (import "${nixpkgsPath}/nixos/modules/module-list.nix") ++
+        [ ({ ... }: { nixpkgs.hostPlatform = builtins.currentSystem; }) ];
+    })).options
+  '';
 
-      local settings = {
-        nixpkgs = {
-          expr = string.format(
-            '(builtins.getFlake "%s").inputs.nixpkgs.legacyPackages.''${builtins.currentSystem}',
-            root
-          ),
-        },
-        formatting = { command = { "nixfmt" } },
-        options = {
-          nixos = {
-            expr = string.format(
-              '(let f = builtins.getFlake "%s"; in f.nixosConfigurations.%s or f.nixosConfigurations.%s-nixos or {}).options or {}',
-              root, hostname, user
-            ),
-          },
-          home_manager = {
-            expr = string.format(
-              '(let f = builtins.getFlake "%s"; in f.homeConfigurations.%s or f.homeConfigurations.%s or {}).options or {}',
-              root, user, hostname
-            ),
-          },
-        },
-      }
-
-      config.settings = config.settings or {}
-      config.settings.nixd = vim.tbl_deep_extend("force", config.settings.nixd or {}, settings)
-    end
+  homeManagerOptionsExpr = ''
+    (let
+      pkgs = import "${nixpkgsPath}" { };
+    in (pkgs.lib.evalModules {
+      modules = [ "${hmPath}/modules/modules.nix" ];
+      specialArgs = { inherit pkgs; check = false; };
+    })).options
   '';
 in
 {
@@ -137,11 +118,13 @@ in
         enable = true;
         package = pkgs.nixd;
         settings = {
-          formatting = { command = [ "nixfmt" ]; };
-          nixpkgs = { expr = "import <nixpkgs> { }"; };
-        };
-        extraOptions = {
-          before_init.__raw = nixdBeforeInit;
+          formatting.command = [ "nixfmt" ];
+          nixpkgs.expr = "import ${nixpkgsPath} { }";
+          diagnostic.suppress = [ "sema-escaping-with" ];
+          options = {
+            nixos.expr = nixosOptionsExpr;
+            home_manager.expr = homeManagerOptionsExpr;
+          };
         };
       };
 
@@ -175,8 +158,6 @@ in
           "htm"
           "templ"
           "tmpl"
-          "php"
-          "blade"
           "twig"
         ];
       };
@@ -284,54 +265,24 @@ in
         enable = true;
         package = pkgs.tailwindcss-language-server;
         filetypes = [
-          "aspnetcorerazor"
           "astro"
-          "astro-markdown"
+          "blade"
           "css"
-          "django-html"
-          "edge"
-          "ejs"
-          "eelixir"
-          "elixir"
-          "erb"
-          "eruby"
-          "gohtml"
-          "gohtmltmpl"
-          "haml"
-          "handlebars"
-          "hbs"
-          "heex"
           "html"
-          "htmlangular"
-          "html-eex"
-          "jade"
-          "leaf"
+          "javascript"
+          "javascriptreact"
           "less"
-          "liquid"
           "markdown"
           "mdx"
-          "mustache"
-          "njk"
-          "nunjucks"
           "postcss"
-          "razor"
-          "rust"
           "sass"
           "scss"
-          "slim"
-          "stylus"
-          "sugarss"
-          "surface"
           "svelte"
           "templ"
           "twig"
-          "vue"
-          "javascript"
-          "javascriptreact"
-          "reason"
-          "rescript"
           "typescript"
           "typescriptreact"
+          "vue"
         ];
       };
     };

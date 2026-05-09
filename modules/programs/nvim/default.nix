@@ -7,6 +7,7 @@
       config = lib.mkIf config.features.desktop {
         programs.nixvim = {
           enable = true;
+          _module.args.inputs = inputs;
           imports = [
             ./_fragments/core.nix
             ./_fragments/lazyvim-defaults.nix

@@ -1,4 +1,4 @@
-_: {
+{ self, ... }: {
   enableIf = { config, ... }: config.features.opencode;
   args =
     {
@@ -11,7 +11,7 @@ _: {
       configPath = "${config.home.homeDirectory}/.config/opencode/opencode.json";
       configDerivation = pkgs.writeText "opencode-config.json" (
         homeLib.substituteFile {
-          file = "${config.home.homeDirectory}/.stubbe/src/opencode/opencode.json";
+          file = self + "/src/opencode/opencode.json";
           vars = {
             CHROME_EXECUTABLE = "${config.home.profileDirectory}/bin/google-chrome-stable";
           };

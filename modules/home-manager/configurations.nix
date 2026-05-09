@@ -33,7 +33,7 @@
       inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = cfg.extraSpecialArgs // {
-          inherit pkgs;
+          inherit pkgs inputs;
         };
         modules = [ cfg.module ];
       }
