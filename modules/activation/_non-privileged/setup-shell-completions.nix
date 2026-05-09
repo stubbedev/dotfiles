@@ -29,6 +29,15 @@ in
           ${pkgs.kubectl}/bin/kubectl completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_kubectl 2>/dev/null
           ${pkgs.minikube}/bin/minikube completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_minikube 2>/dev/null
         ''}
+        ${lib.optionalString config.features.php ''
+          # FrankenPHP emits a Caddy-derived completion (it embeds Caddy);
+          # rename caddy → frankenphp so the directives register against the
+          # actual binary name. Internal function names get renamed too for
+          # consistency with the file name (zsh autoloads _frankenphp).
+          ${pkgs.frankenphp}/bin/frankenphp completion zsh 2>/dev/null \
+            | sed 's/caddy/frankenphp/g' \
+            > ${stubbeDir}/src/zsh/fpaths.d/_frankenphp
+        ''}
       '';
     };
 }
