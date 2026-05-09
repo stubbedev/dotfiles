@@ -259,9 +259,6 @@ fn flatten_tables(root: &NodeRef) {
         if table.parent().is_none() {
             continue; // already swallowed by an outer rewrite
         }
-        // A table that contains no visible text is pure scaffolding — drop
-        // it regardless of the data-vs-layout heuristic. Without this, htmd
-        // emits `|  |  |  |` lines for empty marketing tables.
         if subtree_text(&table).trim().is_empty() {
             table.detach();
             continue;
@@ -288,10 +285,11 @@ fn is_data_table(t: &NodeRef) -> bool {
             return false;
         }
     }
-    if descendant_named(t, "th").is_some() {
-        return true;
-    }
-    if descendant_named(t, "thead").is_some() || descendant_named(t, "caption").is_some() {
+    // `<thead>` or `<caption>` is a strong semantic signal of a real data
+    // table. Bare `<th>` (without `<thead>`) is not — Steam, Mailchimp et al
+    // routinely use `<th class="column-…">` purely for column layout, where
+    // the `<th>` cells are siblings of `<td>` data cells in the same `<tr>`.
+    if has_own_descendant(t, "thead") || has_own_descendant(t, "caption") {
         return true;
     }
     if has_nested_table(t) {
@@ -318,8 +316,16 @@ fn is_data_table(t: &NodeRef) -> bool {
     min_c == max_c && has_border
 }
 
-fn descendant_named(root: &NodeRef, tag: &str) -> Option<NodeRef> {
-    root.descendants().find(|n| local_name_is(n, tag))
+/// Like `find descendant by tag`, but only matches descendants whose nearest
+/// `<table>` ancestor is `root`. Without this, `is_data_table` for a layout
+/// wrapper sees `<th>` / `<thead>` / `<caption>` from a nested data table
+/// and falsely marks the wrapper as data — leaving the wrapper unflattened
+/// so all its content (including the nested data table itself) gets emitted
+/// as a giant unstructured blob.
+fn has_own_descendant(root: &NodeRef, tag: &str) -> bool {
+    root.descendants()
+        .filter(|n| local_name_is(n, tag))
+        .any(|n| nearest_table_ancestor(&n).as_ref() == Some(root))
 }
 
 fn has_nested_table(t: &NodeRef) -> bool {
@@ -327,9 +333,25 @@ fn has_nested_table(t: &NodeRef) -> bool {
 }
 
 fn collect_rows(t: &NodeRef) -> Vec<NodeRef> {
+    // Only `<tr>`s whose nearest `<table>` ancestor is `t` itself. Without
+    // this, an outer layout table sweeps in `<tr>`s from any nested data
+    // table (e.g. Bitbucket PR notification's `commits-table`) and flattens
+    // those rows into paragraphs, destroying the inner table.
     t.descendants()
         .filter(|n| local_name_is(n, "tr"))
+        .filter(|tr| nearest_table_ancestor(tr).as_ref() == Some(t))
         .collect()
+}
+
+fn nearest_table_ancestor(n: &NodeRef) -> Option<NodeRef> {
+    let mut p = n.parent();
+    while let Some(parent) = p {
+        if local_name_is(&parent, "table") {
+            return Some(parent);
+        }
+        p = parent.parent();
+    }
+    None
 }
 
 fn count_cells(tr: &NodeRef) -> usize {
@@ -354,8 +376,8 @@ fn make_paragraph() -> NodeRef {
 
 fn flatten_one_table(table: &NodeRef) {
     let rows = collect_rows(table);
+    let mut emitted: Vec<NodeRef> = Vec::new();
 
-    let mut paragraphs: Vec<NodeRef> = Vec::new();
     for tr in rows {
         let cells: Vec<NodeRef> = tr
             .children()
@@ -365,31 +387,124 @@ fn flatten_one_table(table: &NodeRef) {
             continue;
         }
 
-        let p = make_paragraph();
-        let mut wrote = false;
+        // Walk the row's cells. Inline runs (text + inline elements, plus
+        // cells that wrap their content in a single `<p>`/`<div>`) accumulate
+        // into one paragraph spanning the row, joined by single spaces. Block
+        // kids — `<table>`, lists, headings, multiple sibling `<p>`s — emit
+        // as standalone siblings so their structure survives. This keeps a
+        // Bitbucket PR row that contains [title-`<p>`, desc-`<p>`, branch-`<p>`]
+        // as three separate paragraphs while still collapsing the
+        // [feature][→][develop] branch lozenges into a single line.
+        let mut row_p: Option<NodeRef> = None;
         for cell in cells {
             let kids: Vec<NodeRef> = cell.children().collect();
-            if kids.iter().all(is_blank) {
+            let non_blank: Vec<NodeRef> =
+                kids.iter().filter(|k| !is_blank(k)).cloned().collect();
+            if non_blank.is_empty() {
                 continue;
             }
-            if wrote {
-                p.append(NodeRef::new_text(" "));
+
+            let inline_content = classify_cell(&non_blank);
+            match inline_content {
+                CellMode::Inline(items) => {
+                    let p = row_p.get_or_insert_with(make_paragraph).clone();
+                    if !ends_with_whitespace(&p) && p.first_child().is_some() {
+                        p.append(NodeRef::new_text(" "));
+                    }
+                    for n in items {
+                        n.detach();
+                        p.append(n);
+                    }
+                }
+                CellMode::Blocks(blocks) => {
+                    if let Some(p) = row_p.take() {
+                        if !subtree_text(&p).trim().is_empty() {
+                            emitted.push(p);
+                        }
+                    }
+                    for b in blocks {
+                        b.detach();
+                        emitted.push(b);
+                    }
+                }
             }
-            for kid in kids {
-                kid.detach();
-                p.append(kid);
-            }
-            wrote = true;
         }
-        if wrote {
-            paragraphs.push(p);
+        if let Some(p) = row_p {
+            if !subtree_text(&p).trim().is_empty() {
+                emitted.push(p);
+            }
         }
     }
 
-    for p in paragraphs {
-        table.insert_before(p);
+    for n in emitted {
+        table.insert_before(n);
     }
     table.detach();
+}
+
+enum CellMode {
+    Inline(Vec<NodeRef>),
+    Blocks(Vec<NodeRef>),
+}
+
+fn classify_cell(non_blank: &[NodeRef]) -> CellMode {
+    let all_inline = non_blank.iter().all(|k| !is_block_kid(k));
+    if all_inline {
+        return CellMode::Inline(non_blank.to_vec());
+    }
+    if non_blank.len() == 1 {
+        let only = &non_blank[0];
+        let is_wrapper = only
+            .as_element()
+            .map(|el| matches!(&*el.name.local, "p" | "div"))
+            .unwrap_or(false);
+        if is_wrapper {
+            return CellMode::Inline(only.children().collect());
+        }
+    }
+    CellMode::Blocks(non_blank.to_vec())
+}
+
+fn is_block_kid(n: &NodeRef) -> bool {
+    n.as_element()
+        .map(|el| {
+            matches!(
+                &*el.name.local,
+                "p" | "div"
+                    | "table"
+                    | "ul"
+                    | "ol"
+                    | "li"
+                    | "h1"
+                    | "h2"
+                    | "h3"
+                    | "h4"
+                    | "h5"
+                    | "h6"
+                    | "pre"
+                    | "blockquote"
+                    | "hr"
+            )
+        })
+        .unwrap_or(false)
+}
+
+/// Append `kid` to `parent`, unwrapping block-level wrappers (`<p>`, `<div>`,
+/// previously-flattened inner tables) so their inline content merges into the
+fn ends_with_whitespace(n: &NodeRef) -> bool {
+    let last = match n.last_child() {
+        Some(c) => c,
+        None => return true, // empty parent — no separator needed
+    };
+    if let Some(t) = last.as_text() {
+        t.borrow()
+            .chars()
+            .last()
+            .map(|c| c.is_whitespace())
+            .unwrap_or(true)
+    } else {
+        false
+    }
 }
 
 fn is_blank(n: &NodeRef) -> bool {
@@ -676,7 +791,16 @@ fn wrap_lines(md: &str, width: usize) -> String {
         let mut at_line_start = true;
         for tok in tokens {
             let tlen = tok.chars().count();
-            if !at_line_start && col + 1 + tlen > width {
+            // Only wrap when the next token would overflow AND a wrap is
+            // actually useful: the token can fit on a fresh line and the
+            // current line isn't already over budget. Without this, a
+            // single oversized atom (long marketing tracking URL, nested
+            // bold/italic-wrapped link) produces an N-line cascade where
+            // every short trailing word — `from`, `1 author`, punctuation
+            // — orphans onto its own line.
+            let would_overflow = col + 1 + tlen > width;
+            let useless_wrap = tlen > width || col > width;
+            if !at_line_start && would_overflow && !useless_wrap {
                 out.push('\n');
                 out.push_str(&cont_prefix);
                 col = cont_prefix.chars().count();

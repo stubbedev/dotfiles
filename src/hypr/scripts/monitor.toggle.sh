@@ -10,6 +10,11 @@
 
 apply_toggle() {
   local monitors builtin_monitor state currently_disabled current_scale
+  # ACPI lid bind fires before /proc/acpi/button/lid/*/state updates on some
+  # hardware (notably when docked via Thunderbolt). Brief sleep avoids reading
+  # the previous lid state and toggling the wrong direction.
+  sleep 0.3
+
   monitors=$(hyprctl monitors all -j)
   builtin_monitor=$(echo "$monitors" | jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -n1)
 
@@ -42,12 +47,12 @@ listen_events() {
       continue
     fi
 
-    socat -u UNIX-CONNECT:"$sock" - 2>/dev/null | while IFS= read -r line; do
+    while IFS= read -r line; do
       case "$line" in
         monitoradded*|monitorremoved*) apply_toggle ;;
         *) ;;
       esac
-    done
+    done < <(socat -u UNIX-CONNECT:"$sock" - 2>/dev/null)
 
     sleep 1
   done
