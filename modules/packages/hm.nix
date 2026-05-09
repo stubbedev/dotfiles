@@ -58,7 +58,37 @@ _: {
                   return 1
                   ;;
               esac
-              "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@"
+
+              # On NixOS, HM activations run inside the home-manager-<user>.service
+              # oneshot unit. Their stdout is swallowed by journald
+              # (SyslogIdentifier=hm-activate-<user>), so `nixos-rebuild` shows
+              # nothing for them. For verbs that actually fire activations,
+              # snapshot a cutoff timestamp and replay the new journal lines
+              # afterwards so "Activating <step>" lines surface back here.
+              local hm_tag="" since=""
+              case "$subcmd" in
+                switch|test)
+                  if has_cmd journalctl; then
+                    hm_tag="hm-activate-''${USER:-$(id -un)}"
+                    since=$(date '+%Y-%m-%d %H:%M:%S')
+                  fi
+                  ;;
+              esac
+
+              local rc=0
+              "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@" || rc=$?
+
+              if [[ -n "$hm_tag" ]]; then
+                local hm_lines
+                hm_lines=$(journalctl -t "$hm_tag" --since "$since" --no-pager --output=cat 2>/dev/null || true)
+                if [[ -n "$hm_lines" ]]; then
+                  echo
+                  echo "--- home-manager activation ($hm_tag) ---"
+                  printf '%s\n' "$hm_lines"
+                fi
+              fi
+
+              return $rc
             else
               case "$subcmd" in
                 # nixos-rebuild-only verbs — no home-manager equivalent.
