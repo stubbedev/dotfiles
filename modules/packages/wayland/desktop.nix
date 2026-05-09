@@ -60,7 +60,9 @@ _: {
       # Per-account mail notification icons. Source PNGs live in ./icons
       # and get upscaled to 128x128 so notify-send resolves
       # `mail-account-{gmail,exchange}` through the standard hicolor →
-      # XDG_DATA_DIRS lookup chain.
+      # XDG_DATA_DIRS lookup chain. Source glyphs are black-on-transparent;
+      # `-channel RGB -negate` inverts RGB only (alpha untouched) so they
+      # render white against swaync's dark notification background.
       mailNotificationIcons = pkgs.runCommand "mail-notification-icons" {
         nativeBuildInputs = [ pkgs.imagemagick ];
       } ''
@@ -70,6 +72,7 @@ _: {
         for name in gmail exchange; do
           magick "${./icons}/mail-account-$name.png" \
             -background none -resize 128x128 \
+            -channel RGB -negate +channel \
             "$out_dir/mail-account-$name.png"
         done
       '';

@@ -4,9 +4,9 @@
 if is_binary php; then
   function art {
     if is_file "$PWD/artisan"; then
-      php artisan "${@:1}"
+      php artisan "$@"
     elif is_binary artisan; then
-      artisan "${@:1}"
+      artisan "$@"
     else
       echo "No artisan on current PATH"
     fi
@@ -241,8 +241,7 @@ if are_binary git bat fzf; then
       _confirm_destructive "[WARN] Protected Branch: Confirm Push" || return 0
     fi
 
-    git branch --set-upstream-to="origin/$branch_name"
-    git push origin "$branch_name"
+    git push -u origin "$branch_name"
   }
   function gcr {
     in_git_repo || return 1
@@ -279,11 +278,7 @@ if are_binary git bat fzf; then
   function gcb {
     in_git_repo || return 1
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
-
+    local initial_query="${1:-}"
     _list_git_branches
     local git_branches=${(F)reply}
 
@@ -362,7 +357,6 @@ if are_binary git bat fzf; then
   function ga {
     in_git_repo || return 1
 
-    local direct_add="$@"
     if [[ -n "$@" ]]; then
       git add "$@"
     fi
@@ -477,11 +471,7 @@ if are_binary git bat fzf; then
   function gd {
     in_git_repo || return 1
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
-
+    local initial_query="${1:-}"
     local current_branch=$(git branch --show-current)
     _list_git_branches
     local git_branches=${(F)reply}
@@ -508,11 +498,7 @@ if are_binary git bat fzf; then
   function gcd {
     in_git_repo || return 1
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
-
+    local initial_query="${1:-}"
     local current_branch=$(git branch --show-current)
     _list_git_branches
     local git_branches=${(F)reply}
@@ -618,27 +604,20 @@ if are_binary git bat fzf; then
     in_git_repo || return 1
     [[ -z "$(git status --porcelain)" ]] && return 0
     _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
-    git add .
-    git stash
-    git stash drop
+    git stash push -u >/dev/null && git stash drop
   }
 
   function gwa {
     in_git_repo || return 1
     _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
-    git add .
-    git stash
+    git stash push -u >/dev/null
     git stash clear
   }
 
   function ggo {
     in_git_repo || return 1
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
-
+    local initial_query="${1:-}"
     _list_git_branches
     local git_branches=${(F)reply}
 
@@ -657,11 +636,7 @@ if are_binary git bat fzf; then
   function gl {
     in_git_repo || return 1
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
-
+    local initial_query="${1:-}"
     local _commit_line=$(git log --oneline --color=always |
       fzf --ansi \
         --prompt="(Enter: show commit, Ctrl+C: cancel)> " \
@@ -709,11 +684,7 @@ if are_binary git bat fzf; then
   function gcp {
     in_git_repo || return 1
 
-    local initial_query=""
-    if [[ -n "$1" ]]; then
-      initial_query="$1"
-    fi
-
+    local initial_query="${1:-}"
     local _selected=$(git log --oneline --color=always --all |
       fzf --ansi \
         --multi \
@@ -732,15 +703,11 @@ if are_binary git bat fzf; then
       return 0
     fi
 
-    # Extract hashes, reverse so oldest commit applies first (log is newest-first)
+    # Extract hashes, reverse so oldest commit applies first (log is newest-first).
+    # (Oa) = reverse-array order flag.
     local -a _lines=(${(f)_selected})
     local -a _hashes=("${_lines[@]%% *}")
-    local -a _reversed=()
-    local _i
-    for ((_i = ${#_hashes[@]}; _i >= 1; _i--)); do
-      _reversed+=("${_hashes[$_i]}")
-    done
-    git cherry-pick "${_reversed[@]}"
+    git cherry-pick "${(Oa)_hashes[@]}"
   }
 
 fi
@@ -924,7 +891,7 @@ function view_git_file {
   if is_binary bat; then
     curl -s "$_url" | bat -f -l "${1##*\.}"
   else
-    curl "$_url"
+    curl -s "$_url"
   fi
 }
 
