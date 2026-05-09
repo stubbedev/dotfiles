@@ -24,6 +24,65 @@ local bufnr = 0
 -- Useless noise in a read-only viewer.
 vim.wo.spell = false
 
+-- Read-only mail viewer: no line numbers, no statusline, and bounce out
+-- of any insert-flavoured mode. Visual / visual-block stay usable for
+-- selecting text to yank.
+vim.wo.number = false
+vim.wo.relativenumber = false
+vim.wo.signcolumn = "no"
+
+-- Hide lualine + tabline. The user's init.lua re-runs lualine.setup()
+-- via a scheduled callback on BufAdd (to refresh the bufferline tabline),
+-- which resets laststatus and undoes a one-shot hide() call. Setup()
+-- itself fires no autocmd, so we wrap it: every future setup() call
+-- re-applies our hide as its last act.
+local function hide_chrome()
+  vim.o.laststatus = 0
+  vim.o.showtabline = 0
+  pcall(function() require("lualine").hide({ unhide = false }) end)
+end
+
+local ok, lualine = pcall(require, "lualine")
+if ok then
+  local orig_setup = lualine.setup
+  lualine.setup = function(...)
+    local ret = orig_setup(...)
+    hide_chrome()
+    return ret
+  end
+end
+hide_chrome()
+-- Belt and braces: catch any restore that races past the wrapper
+-- (other plugins poking laststatus directly, etc.).
+vim.defer_fn(hide_chrome, 50)
+vim.defer_fn(hide_chrome, 500)
+
+vim.api.nvim_create_autocmd("InsertEnter", {
+  group = vim.api.nvim_create_augroup("AercBlockInsert", { clear = true }),
+  callback = function() vim.cmd("stopinsert") end,
+})
+
+for _, key in ipairs({ "i", "I", "a", "A", "o", "O", "s", "S", "c", "C", "R", "gi", "gI", "gR" }) do
+  vim.keymap.set("n", key, "<Nop>", { buffer = bufnr, silent = true })
+end
+for _, key in ipairs({ "i", "I", "a", "A", "s", "S", "c", "C", "r", "R" }) do
+  vim.keymap.set("x", key, "<Nop>", { buffer = bufnr, silent = true })
+end
+
+-- Esc / q in normal mode: clear search highlight first, otherwise tell
+-- aerc to close the viewer. Visual / visual-block don't need a mapping
+-- -- their default Esc behaviour (exit to normal mode) is what we want,
+-- and the next press will then either clear hlsearch or close the mail.
+local function esc_or_close()
+  if vim.v.hlsearch == 1 then
+    vim.cmd("nohlsearch")
+  else
+    vim.fn.jobstart({ "aerc", ":close" }, { detach = true })
+  end
+end
+vim.keymap.set("n", "<Esc>", esc_or_close, { buffer = bufnr, silent = true })
+vim.keymap.set("n", "q", esc_or_close, { buffer = bufnr, silent = true })
+
 -- Markdown inline link, optionally with a "title" attribute. URL stops
 -- at the first whitespace or ')'; anything between URL and closing paren
 -- (e.g. a quoted title) is dropped along with the brackets.
@@ -33,11 +92,12 @@ local md_pat = "%[([^%]]+)%]%(([^%s)]+)[^)]*%)"
 -- class trims punctuation that's typically prose, not URL.
 local bare_pat = "()(https?://[^%s)%]>\"']+)()"
 
--- The globe icon + link highlight group that render-markdown.nvim uses
--- for inline links. We mirror that look here because we strip the
--- markdown syntax from the buffer above, so render-markdown has nothing
--- left to style.
-local link_icon = "󰌹 "
+-- Link highlight group that render-markdown.nvim uses for inline links.
+-- We mirror the colour here because we strip the markdown syntax from
+-- the buffer above, so render-markdown has nothing left to style. No
+-- virt_text icon: it adds visual columns that render-markdown's table
+-- border math doesn't account for, so links inside table cells push the
+-- border out of alignment.
 local link_hl = "RenderMarkdownLink"
 
 local function set_link_extmark(row, col, end_col, url)
@@ -45,8 +105,6 @@ local function set_link_extmark(row, col, end_col, url)
     end_col = end_col,
     url = url,
     hl_group = link_hl,
-    virt_text = { { link_icon, link_hl } },
-    virt_text_pos = "inline",
   })
 end
 

@@ -91,6 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .build()
         .convert(&cleaned_html)?;
     let md = reflow_paragraphs(&md);
+    let md = collapse_redundant_links(&md);
     let md = drop_empty_md_links(&md);
     let md = strip_empty_table_lines(&md);
     let md = trim_trailing_ws(&md);
@@ -99,6 +100,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let md = normalise_heading_levels(&md);
     let md = wrap_lines(&md, wrap_width());
     let md = collapse_blank_runs(&md);
+    let md = normalize_tables(&md);
     let md = md.trim_start_matches('\n').to_string();
 
     io::stdout().write_all(md.as_bytes())?;
@@ -823,15 +825,47 @@ fn empty_link_re() -> &'static Regex {
     R.get_or_init(|| Regex::new(r"\[ *\]\([^)]*\)").unwrap())
 }
 
+fn redundant_link_re() -> &'static Regex {
+    // `[<text>](<href>)` where href has no spaces/quotes (no title attr).
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\[([^\]\n]+)\]\(([^)\s]*)\)").unwrap())
+}
+
+/// Replace `[url](url)` with the bare `url`, and `[text]()` (empty href —
+/// htmd's output for `<a href="">text</a>`) with the bare text. Both forms
+/// are nuisance: render-markdown decorates the whole `[…](…)` once for the
+/// markdown link AND again for the autolinked URL inside the brackets, so
+/// the user sees a duplicated link icon next to a URL that wasn't really a
+/// link in the source.
+fn collapse_redundant_links(md: &str) -> String {
+    redundant_link_re()
+        .replace_all(md, |caps: &regex::Captures| {
+            let text = &caps[1];
+            let href = &caps[2];
+            if href.is_empty() {
+                return text.to_string();
+            }
+            if text.trim_end_matches('/') == href.trim_end_matches('/') {
+                return text.to_string();
+            }
+            caps[0].to_string()
+        })
+        .into_owned()
+}
+
 fn intra_space_re() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| Regex::new(r"  +").unwrap())
 }
 
 fn empty_table_line_re() -> &'static Regex {
-    // Lines that are pure table scaffolding: pipes, dashes, colons, spaces.
+    // An "empty" table row is pipes + whitespace only — a leftover scaffold
+    // from a layout table whose cells all collapsed to blank. The header
+    // separator `|---|---|` (and aligned variants like `|:--|:--:|--:|`)
+    // contains dashes / colons and must NOT be stripped, otherwise data
+    // tables lose their separator and the renderer falls back to pipe text.
     static R: OnceLock<Regex> = OnceLock::new();
-    R.get_or_init(|| Regex::new(r"^[ \t|:\-]+$").unwrap())
+    R.get_or_init(|| Regex::new(r"^[ \t|]+$").unwrap())
 }
 
 /// Drop residual `[](url)` and `[ ](url)` left after image stripping. htmd
@@ -866,6 +900,151 @@ fn trim_trailing_ws(md: &str) -> String {
         .map(str::trim_end)
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+// ─── Table normalisation ────────────────────────────────────────────────────
+
+fn link_strip_re() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\[([^\]\n]+)\]\([^)\n]*\)").unwrap())
+}
+
+fn separator_cell_re() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"^:?-+:?$").unwrap())
+}
+
+/// Visible width = chars the user actually sees once the pager rewrites
+/// `[text](url)` to bare `text`. Bold/italic/code markers stay (they're
+/// preserved by render-markdown), so we don't strip those.
+fn visible_width(s: &str) -> usize {
+    link_strip_re().replace_all(s.trim(), "$1").chars().count()
+}
+
+fn split_row_cells(line: &str) -> Vec<String> {
+    let trimmed = line.trim();
+    let inner = trimmed
+        .strip_prefix('|')
+        .unwrap_or(trimmed)
+        .strip_suffix('|')
+        .unwrap_or(trimmed.strip_prefix('|').unwrap_or(trimmed));
+    inner.split('|').map(|c| c.trim().to_string()).collect()
+}
+
+fn is_separator_line(line: &str) -> bool {
+    let t = line.trim();
+    if !t.starts_with('|') {
+        return false;
+    }
+    let cells = split_row_cells(line);
+    !cells.is_empty() && cells.iter().all(|c| separator_cell_re().is_match(c))
+}
+
+/// Recompute every table's separator and cell padding from visible width.
+/// htmd produces dashes proportional to the markdown source bytes, which
+/// blows up when a cell contains `[short text](very-long-url)`: the
+/// separator becomes hundreds of dashes wide while the rendered cell is
+/// only a few chars. Fix it by stripping links to their visible text and
+/// emitting `| pad |` rows where every separator dash count and cell pad
+/// count is anchored to the widest *visible* cell in the column.
+fn normalize_tables(md: &str) -> String {
+    let lines: Vec<&str> = md.split('\n').collect();
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i];
+        if line.trim_start().starts_with('|')
+            && i + 1 < lines.len()
+            && is_separator_line(lines[i + 1])
+        {
+            let start = i;
+            let mut end = i;
+            while end < lines.len() && lines[end].trim_start().starts_with('|') {
+                end += 1;
+            }
+            let block = &lines[start..end];
+            for rendered in render_table_block(block) {
+                out.push(rendered);
+            }
+            i = end;
+            continue;
+        }
+        out.push(line.to_string());
+        i += 1;
+    }
+    out.join("\n")
+}
+
+fn render_table_block(rows: &[&str]) -> Vec<String> {
+    let parsed: Vec<Vec<String>> = rows.iter().map(|r| split_row_cells(r)).collect();
+    let ncols = parsed.iter().map(|r| r.len()).max().unwrap_or(0);
+    if ncols == 0 {
+        return rows.iter().map(|s| s.to_string()).collect();
+    }
+
+    let sep_idx = parsed
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find(|(_, r)| !r.is_empty() && r.iter().all(|c| separator_cell_re().is_match(c)))
+        .map(|(i, _)| i);
+
+    // Capture alignment from the separator (`:--` left, `--:` right, `:-:` center).
+    let alignments: Vec<(bool, bool)> = if let Some(si) = sep_idx {
+        (0..ncols)
+            .map(|c| {
+                let cell = parsed[si].get(c).cloned().unwrap_or_default();
+                (cell.starts_with(':'), cell.ends_with(':'))
+            })
+            .collect()
+    } else {
+        vec![(false, false); ncols]
+    };
+
+    let mut widths = vec![3usize; ncols];
+    for (i, row) in parsed.iter().enumerate() {
+        if Some(i) == sep_idx {
+            continue;
+        }
+        for (c, cell) in row.iter().enumerate() {
+            let w = visible_width(cell);
+            if w > widths[c] {
+                widths[c] = w;
+            }
+        }
+    }
+
+    let mut out = Vec::with_capacity(parsed.len());
+    for (i, row) in parsed.iter().enumerate() {
+        let mut line = String::from("|");
+        for c in 0..ncols {
+            let raw = row.get(c).cloned().unwrap_or_default();
+            let w = widths[c];
+            if Some(i) == sep_idx {
+                let (l, r) = alignments[c];
+                let body = match (l, r) {
+                    (true, true) => format!(":{}:", "-".repeat(w.saturating_sub(2).max(1))),
+                    (true, false) => format!(":{}", "-".repeat(w.saturating_sub(1).max(1))),
+                    (false, true) => format!("{}:", "-".repeat(w.saturating_sub(1).max(1))),
+                    (false, false) => "-".repeat(w),
+                };
+                line.push(' ');
+                line.push_str(&body);
+                line.push_str(" |");
+            } else {
+                let visible = visible_width(&raw);
+                let pad = w.saturating_sub(visible);
+                line.push(' ');
+                line.push_str(&raw);
+                if pad > 0 {
+                    line.push_str(&" ".repeat(pad));
+                }
+                line.push_str(" |");
+            }
+        }
+        out.push(line);
+    }
+    out
 }
 
 /// Collapse runs of 2+ spaces to a single space, but leave 4-space-indented
