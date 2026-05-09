@@ -7,6 +7,6 @@ _: {
   flake.modules.homeManager.featureDefaults =
     { lib, ... }:
     {
-      features.php = lib.mkDefault false;
+      features.php = lib.mkDefault true;
     };
 }
