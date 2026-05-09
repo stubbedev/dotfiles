@@ -174,7 +174,7 @@ connect() {
     start="$2"
     script="$3"
     iface="$4"
-    trap "rm -f \"$marker\"; pkill -SIGRTMIN+8 '^\.?waybar(-wrapped)?\$' 2>/dev/null || true" EXIT
+    trap "rm -f \"$marker\"; pkill -SIGRTMIN+8 \"^\.?waybar(-wrapped)?\$\" 2>/dev/null || true" EXIT
     printf "PID=%s\nSTART=%s\n" "$$" "$start" > "$marker"
     "$script" || exit $?
     for _ in $(seq 1 20); do
