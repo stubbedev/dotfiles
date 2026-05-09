@@ -89,12 +89,17 @@ _: {
         paths = [ php ];
         postBuild = "rm $out/bin/php-fpm";
       };
+
+      # Composer pinned to our extension-laden php so `composer install`
+      # uses the same SAPI/extension set as the user's `php` invocations.
+      composer = phpPackage.packages.composer.override { inherit php; };
     in
     lib.mkIf config.features.php {
       home.packages = with pkgs; [
         phpBins
         phpFpmBin
         frankenphp
+        composer
         mago
       ];
     };

@@ -12,6 +12,7 @@ _: {
         # Shell and terminal
         bc
         zsh
+        zsh-completions
         tmux
         starship
 
