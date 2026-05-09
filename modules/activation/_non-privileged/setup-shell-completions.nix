@@ -31,12 +31,18 @@ in
           ${pkgs.minikube}/bin/minikube completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_minikube 2>/dev/null
         ''}
         ${lib.optionalString config.features.docker ''
-          # Docker is host-installed (apt on Ubuntu, virtualisation.docker on
-          # NixOS), so resolve the binary at activation time rather than via
-          # ${"\${pkgs.docker}"}/bin/docker which isn't in the nix closure.
-          if command -v docker >/dev/null 2>&1; then
-            docker completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_docker 2>/dev/null
-          fi
+          # Docker is host-installed (apt on Ubuntu, virtualisation.docker
+          # on NixOS), so it isn't in the nix closure. home-manager's
+          # activation PATH is sanitized to nix-store dirs only, so a bare
+          # `command -v docker` returns nothing — probe the canonical host
+          # locations directly.
+          for _docker_bin in /run/current-system/sw/bin/docker /usr/bin/docker /usr/local/bin/docker; do
+            if [ -x "$_docker_bin" ]; then
+              "$_docker_bin" completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_docker 2>/dev/null
+              break
+            fi
+          done
+          unset _docker_bin
         ''}
         ${lib.optionalString config.features.php ''
           # FrankenPHP emits a Caddy-derived completion (it embeds Caddy);
