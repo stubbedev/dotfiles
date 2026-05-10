@@ -13,6 +13,9 @@
   config.settings.aliases = [
     "vi"
     "vim"
+    "nano"
+    "ed"
+    "code"
   ];
 
   config.extraPackages = with pkgs; [
