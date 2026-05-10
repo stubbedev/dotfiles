@@ -27,10 +27,7 @@ _: {
               name = "Alexander Bugge Stage";
               email = "abs@stubbe.dev";
             };
-            core = {
-              excludesfile = "~/.config/git/ignore";
-              editor = "${config.programs.nixvim.build.package}/bin/nvim";
-            };
+            core.excludesfile = "~/.config/git/ignore";
             init.defaultBranch = "master";
             push.autoSetupRemote = true;
             pull.rebase = false;
