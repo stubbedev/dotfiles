@@ -21,8 +21,8 @@ if is_binary gzip; then
 fi
 
 if is_binary nvim; then
-  alias vim='nvim'
-  alias vi='nvim'
+  # `vi` and `vim` come from the nix-wrapper-modules wrapper aliases —
+  # see modules/programs/nvim/_wrapper.nix.
   alias nano='nvim'
   alias ed='nvim'
   alias code='nvim'
