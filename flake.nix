@@ -65,12 +65,6 @@
     # Activated only when host.impermanent = true; see
     # modules/nixos/impermanence.nix.
     impermanence.url = "github:nix-community/impermanence";
-    # Declarative Neovim configuration. Tracks nixos-unstable like nixpkgs.
-    nixvim = {
-      url = "github:nix-community/nixvim";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-parts.follows = "flake-parts";
-    };
     # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
     # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
     # modules/activation/_non-privileged/setup-nvim.nix; lazy.nvim handles
