@@ -62,6 +62,11 @@
     hadolint
     markdownlint-cli2
 
+    # Nix static analysis (statix wired via LazyVim's lang.nix nvim-lint
+    # config; deadnix added explicitly in plugins/lint.lua).
+    statix
+    deadnix
+
     # ── Toolchain runtimes ──────────────────────────────────
     cargo
     rustc

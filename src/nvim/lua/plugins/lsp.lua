@@ -134,6 +134,9 @@ return {
             nixd = {
               formatting = { command = { "nixfmt" } },
               nixpkgs = { expr = "import <nixpkgs> { }" },
+              -- `with` shadows free vars in nested scopes; nixd warns
+              -- aggressively, drowning out real diagnostics.
+              diagnostic = { suppress = { "sema-escaping-with" } },
             },
           },
           before_init = function(params, config)
