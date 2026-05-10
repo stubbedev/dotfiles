@@ -23,17 +23,28 @@ set_trigger() {
 
   monitors_json=$(hyprctl monitors -j 2>/dev/null) || return
 
-  width=$(jq -r 'map(select(.focused == true))[0].width' <<<"${monitors_json}")
+  # hy3 compares trigger_width against visualBox.w which is in *logical* units
+  # (post-scale, post-reserved). hyprctl monitors .width is physical pixels.
+  # Use logical work-area width so the threshold matches what hy3 actually sees.
+  read -r width scale rl rr < <(jq -r '
+    map(select(.focused == true))[0]
+    | "\(.width) \(.scale) \(.reserved[0]) \(.reserved[2])"
+  ' <<<"${monitors_json}")
 
   if [[ -z "${width}" || "${width}" == "null" ]]; then
     return
   fi
 
-  trigger=$(awk -v w="${width}" -v m="${MIN_TRIGGER}" 'BEGIN {
-    # Force a vertical split before a 4th column is possible
-    val = (w / 3) - 5;
+  trigger=$(awk -v w="${width}" -v s="${scale}" -v rl="${rl}" -v rr="${rr}" \
+    -v m="${MIN_TRIGGER}" 'BEGIN {
+    # Logical work-area width = (physical - reserved_left - reserved_right) / scale
+    log_w = (w - rl - rr) / s;
+    # hy3 fires autotile when size_after_addition < trigger.
+    # Want: 3rd window (size = log_w/3) NOT trigger, 4th (log_w/4) DOES trigger.
+    # floor(log_w/3) satisfies both since log_w/3 is not strictly < floor(log_w/3).
+    val = int(log_w / 3);
     if (val < m) val = m;
-    printf "%d\n", int(val);
+    printf "%d\n", val;
   }')
 
   if [[ "${trigger}" == "${last_set}" ]]; then
