@@ -1169,7 +1169,8 @@
         "nixvim": "nixvim",
         "sops-nix": "sops-nix",
         "srv": "srv",
-        "tree-sitter": "tree-sitter"
+        "tree-sitter": "tree-sitter",
+        "wrappers": "wrappers"
       }
     },
     "rust-analyzer-src": {
@@ -1340,6 +1341,26 @@
       "original": {
         "owner": "tree-sitter",
         "repo": "tree-sitter",
+        "type": "github"
+      }
+    },
+    "wrappers": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1778370802,
+        "narHash": "sha256-SrzT5P5IAPivMz/QVypjrC6Oq2saXNnJ9iHnlHZ4u5c=",
+        "owner": "BirdeeHub",
+        "repo": "nix-wrapper-modules",
+        "rev": "a7b45d4fe22f83a0d4aa8bbd85f8eafdf3b265cf",
+        "type": "github"
+      },
+      "original": {
+        "owner": "BirdeeHub",
+        "repo": "nix-wrapper-modules",
         "type": "github"
       }
     },

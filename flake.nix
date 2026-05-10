@@ -71,6 +71,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-parts.follows = "flake-parts";
     };
+    # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
+    # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
+    # modules/activation/_non-privileged/setup-nvim.nix; lazy.nvim handles
+    # plugin downloads from GitHub at runtime.
+    wrappers = {
+      url = "github:BirdeeHub/nix-wrapper-modules";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
