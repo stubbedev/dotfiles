@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, inputs, ... }:
 {
   flake.modules.nixos.nixSettings =
     { ... }:
@@ -7,6 +7,12 @@
         "nix-command"
         "flakes"
       ];
+
+      # Pin <nixpkgs> for system-side nix invocations (nixos-rebuild, root
+      # nix repl, anything reading NIX_PATH from the daemon environment).
+      # User-side NIX_PATH for nixd/nvim is set in
+      # modules/home/session-variables.nix.
+      nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
 
       # Restrict who can talk to the nix-daemon. Default `@users` lets
       # any local user trigger evaluation / store paths; tighten to

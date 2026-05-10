@@ -1,4 +1,5 @@
-_: {
+{ inputs, ... }:
+{
   flake.modules.homeManager.sessionVariables =
     {
       config,
@@ -13,6 +14,14 @@ _: {
           NIXPKGS_ALLOW_UNFREE = "1";
           NIXPKGS_ALLOW_INSECURE = "1";
           NIXOS_OZONE_WL = "1";
+
+          # Pin <nixpkgs> to the flake input so nixd, `nix repl`, and any
+          # impure `import <nixpkgs>` resolve to the pinned revision instead
+          # of whatever the legacy NIX_PATH search points at. Crucial for
+          # nixd's lib lookups (mkDefault etc.) on hosts that never had
+          # `nix-channel --add nixpkgs …`. Mirrored on the NixOS side via
+          # nix.nixPath so root / nixos-rebuild see the same value.
+          NIX_PATH = "nixpkgs=${inputs.nixpkgs}";
 
           # Editor and display
           ROFI_SENSIBLE_TERMINAL = "${config.home.profileDirectory}/bin/alacritty";
