@@ -71,6 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // become text-empty.
     normalise_text_nodes(&doc);
     replace_brs(&doc);
+    unwrap_punctuation_emphasis(&doc);
     flatten_tables(&doc);
     // Marketing emails wrap a brand logo in <a href="…"><img></a>; once we
     // drop the <img>, the anchor has no visible text and htmd renders it as
@@ -211,6 +212,82 @@ fn subtree_text(n: &NodeRef) -> String {
         }
     }
     buf
+}
+
+/// Unwrap emphasis tags whose textual content is purely punctuation (≤ 3
+/// chars, no letters/digits). Sentry tag rows wrap a literal `=` in `<em>`,
+/// which htmd serialises as `*\=*` — italic markers around a backslash-
+/// escaped equals — and renders as visible noise. Same for `<strong>:</strong>`
+/// and similar single-symbol decorations.
+fn unwrap_punctuation_emphasis(root: &NodeRef) {
+    let candidates: Vec<NodeRef> = root
+        .inclusive_descendants()
+        .filter(|n| {
+            n.as_element()
+                .map(|el| {
+                    matches!(
+                        &*el.name.local,
+                        "em" | "i" | "strong" | "b" | "u" | "mark" | "small"
+                    )
+                })
+                .unwrap_or(false)
+        })
+        .collect();
+    for el in candidates {
+        let text = subtree_text(&el);
+        let trimmed = text.trim();
+        if trimmed.is_empty() {
+            // Whitespace-only emphasis (`<em> </em>`) often glues two
+            // adjacent inlines together. Detaching loses the space and
+            // mashes neighbours. Merge the space into an adjacent text
+            // sibling so flatten_tables' is_blank filter (which discards
+            // standalone whitespace text nodes) can't strip it.
+            if !text.is_empty() {
+                merge_separator_space(&el);
+            }
+            el.detach();
+            continue;
+        }
+        if trimmed.chars().count() <= 3
+            && trimmed
+                .chars()
+                .all(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        {
+            let kids: Vec<NodeRef> = el.children().collect();
+            for k in kids {
+                k.detach();
+                el.insert_before(k);
+            }
+            el.detach();
+        }
+    }
+}
+
+/// Push a separator space onto an adjacent text sibling of `el`. Prefers the
+/// previous sibling (so a leading space doesn't accidentally start a new
+/// "blank" line); falls back to the next sibling. If neither sibling is a
+/// text node, inserts a standalone text node (which will survive non-table
+/// contexts).
+fn merge_separator_space(el: &NodeRef) {
+    if let Some(prev) = el.previous_sibling() {
+        if let Some(t) = prev.as_text() {
+            let mut s = t.borrow_mut();
+            if !s.ends_with(' ') {
+                s.push(' ');
+            }
+            return;
+        }
+    }
+    if let Some(next) = el.next_sibling() {
+        if let Some(t) = next.as_text() {
+            let mut s = t.borrow_mut();
+            if !s.starts_with(' ') {
+                s.insert(0, ' ');
+            }
+            return;
+        }
+    }
+    el.insert_before(NodeRef::new_text(" "));
 }
 
 fn replace_brs(root: &NodeRef) {
