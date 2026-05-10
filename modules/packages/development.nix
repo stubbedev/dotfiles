@@ -7,14 +7,6 @@ _: {
       config,
       ...
     }:
-    let
-      luaBin = pkgs.writeShellScriptBin "lua" ''
-        exec ${pkgs.lua5_1}/bin/lua "$@"
-      '';
-      luajitBin = pkgs.writeShellScriptBin "luajit" ''
-        exec ${pkgs.luajit}/bin/luajit "$@"
-      '';
-    in
     lib.mkIf config.features.development {
       home.packages = with pkgs; [
         # JavaScript/TypeScript runtimes (CLI tools)
@@ -30,11 +22,8 @@ _: {
         oxfmt
         stylua
 
-        # Editor and Lua runtimes (nvim provided via the wrapper module).
+        # Editor (nvim provided via the wrapper module).
         (homeLib.gfx neovide)
-        tree-sitter
-        luaBin
-        luajitBin
 
         # Go tools (CLI)
         gopass
