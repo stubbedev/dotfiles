@@ -21,6 +21,10 @@ vim.filetype.add({
   filename = { Caddyfile = "caddy" },
 })
 
+-- GUI font (read by neovide, ignored by terminal nvim). Mirrors
+-- src/alacritty/alacritty.toml so neovide and alacritty render the same.
+vim.o.guifont = "JetBrainsMono Nerd Font:h12"
+
 -- Folding
 vim.opt.foldlevel = 99
 vim.opt.foldtext = "v:lua.require'lazyvim.util'.ui.foldtext()"
