@@ -1,4 +1,29 @@
+-- nixd attaches per-flake. We feed it `nixosConfigurations.<host>.options`
+-- and `homeConfigurations.<user>.options` so completion can index into the
+-- right host/user. Discovering the right names requires `nix eval`, which
+-- takes 2-3s on a cold flake — enough to visibly hang the first .nix file
+-- of the day. Cache the picked names to ~/.cache/nvim/nixd-roots.json,
+-- keyed by flake root, so only the very first open per repo pays the cost.
+
+local cache_path = vim.fn.stdpath("cache") .. "/nixd-roots.json"
 local nixd_eval_cache = {}
+
+local function load_disk_cache()
+  if vim.fn.filereadable(cache_path) == 0 then return {} end
+  local lines = vim.fn.readfile(cache_path)
+  if not lines or #lines == 0 then return {} end
+  local ok, data = pcall(vim.json.decode, table.concat(lines, "\n"))
+  return (ok and type(data) == "table") and data or {}
+end
+
+local function save_disk_cache(cache)
+  local ok, encoded = pcall(vim.json.encode, cache)
+  if not ok then return end
+  vim.fn.mkdir(vim.fn.fnamemodify(cache_path, ":h"), "p")
+  vim.fn.writefile({ encoded }, cache_path)
+end
+
+local disk_cache = load_disk_cache()
 
 local function nixd_eval(root, attr, apply)
   local key = root .. "::" .. attr .. "::" .. (apply or "")
@@ -48,6 +73,16 @@ local function nixd_pick(root, attr, identity_attr)
   return fallback
 end
 
+local function pick_with_cache(root, kind, attr, identity_attr)
+  disk_cache[root] = disk_cache[root] or {}
+  local cached = disk_cache[root][kind]
+  if cached ~= nil then return cached end
+  local picked = nixd_pick(root, attr, identity_attr)
+  disk_cache[root][kind] = picked or vim.NIL
+  save_disk_cache(disk_cache)
+  return picked
+end
+
 local function nixd_settings_for_root(root)
   local settings = {
     nixpkgs = {
@@ -60,8 +95,8 @@ local function nixd_settings_for_root(root)
     options = {},
   }
 
-  local nixos = nixd_pick(root, "nixosConfigurations", "config.networking.hostName")
-  if nixos then
+  local nixos = pick_with_cache(root, "nixos", "nixosConfigurations", "config.networking.hostName")
+  if nixos and nixos ~= vim.NIL then
     settings.options.nixos = {
       expr = string.format(
         '(builtins.getFlake "%s").nixosConfigurations."%s".options',
@@ -70,8 +105,8 @@ local function nixd_settings_for_root(root)
     }
   end
 
-  local hm = nixd_pick(root, "homeConfigurations", "config.home.username")
-  if hm then
+  local hm = pick_with_cache(root, "hm", "homeConfigurations", "config.home.username")
+  if hm and hm ~= vim.NIL then
     settings.options.home_manager = {
       expr = string.format(
         '(builtins.getFlake "%s").homeConfigurations."%s".options',
