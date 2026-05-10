@@ -79,6 +79,10 @@
     fd
     git
 
+    # `nix` CLI: required by nixd (flake eval) and by lsp.lua's
+    # before_init callback that picks the right nixos/home config.
+    nix
+
     # JS runtime for plugins that need node (copilot, blade ls, etc.)
     nodejs
 
