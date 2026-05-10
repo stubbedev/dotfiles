@@ -22,17 +22,19 @@ return {
         mc.lineSkipCursor(1)
       end, { desc = "Multicursor: skip cursor below" })
 
-      -- Add or skip adding a new cursor by matching word/selection.
-      set({ "n", "x" }, "<leader>n", function()
+      -- Add/skip a cursor by matching word/selection. Bound under <leader>m
+      -- so the LazyVim defaults on <leader>n / <leader>S / <leader>s stay free
+      -- for notifications, scratch buffer and snacks search.
+      set({ "n", "x" }, "<leader>mn", function()
         mc.matchAddCursor(1)
       end, { desc = "Multicursor: match add cursor forward" })
-      set({ "n", "x" }, "<leader>s", function()
+      set({ "n", "x" }, "<leader>ms", function()
         mc.matchSkipCursor(1)
       end, { desc = "Multicursor: match skip cursor forward" })
-      set({ "n", "x" }, "<leader>N", function()
+      set({ "n", "x" }, "<leader>mN", function()
         mc.matchAddCursor(-1)
       end, { desc = "Multicursor: match add cursor backward" })
-      set({ "n", "x" }, "<leader>S", function()
+      set({ "n", "x" }, "<leader>mS", function()
         mc.matchSkipCursor(-1)
       end, { desc = "Multicursor: match skip cursor backward" })
 
@@ -55,7 +57,7 @@ return {
         layerSet({ "n", "x" }, "<right>", mc.nextCursor, { desc = "Multicursor: next cursor" })
 
         -- Delete the main cursor.
-        layerSet({ "n", "x" }, "<leader>x", mc.deleteCursor, { desc = "Multicursor: delete cursor" })
+        layerSet({ "n", "x" }, "<leader>mx", mc.deleteCursor, { desc = "Multicursor: delete cursor" })
 
         -- Enable and clear cursors using escape.
         layerSet("n", "<esc>", function()

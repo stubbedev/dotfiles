@@ -36,9 +36,6 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # nixpkgs-unstable ships 0.25.x but nvim-treesitter requires >= 0.26.1.
-    # Track upstream master so nix flake update always pulls the latest.
-    tree-sitter.url = "github:tree-sitter/tree-sitter";
     srv.url = "github:stubbedev/srv";
     cship = {
       url = "github:stephenleo/cship";

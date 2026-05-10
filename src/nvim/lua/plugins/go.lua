@@ -20,6 +20,8 @@ return {
       })
     end,
     ft = { "go", "gomod" },
-    build = ':lua require("go.install").update_all_sync()' -- if you need to install/update all binaries
+    -- Go tools come from the nix wrapper PATH (gopls, gofumpt, goimports,
+    -- gomodifytags, gotests, impl, iferr). go.install.update_all_sync()
+    -- would re-download into ~/.local/bin; skip it.
   }
 }

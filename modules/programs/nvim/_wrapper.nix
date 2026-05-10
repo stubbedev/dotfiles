@@ -10,6 +10,11 @@
   config.settings.config_directory =
     lib.generators.mkLuaInline "vim.fn.stdpath('config')";
 
+  config.settings.aliases = [
+    "vi"
+    "vim"
+  ];
+
   config.extraPackages = with pkgs; [
     # ── LSPs ────────────────────────────────────────────────
     # Core / always-on
