@@ -1,13 +1,19 @@
 return {
-  { "nvim-mini/mini.indentscope", enabled = false },
-  { "goolord/alpha-nvim",           enabled = false },
-  { "folke/flash.nvim",             enabled = false },
-  { "akinsho/bufferline.nvim",      enabled = false },
+  -- Mason can't run on NixOS (downloads pre-built binaries that miss the
+  -- FHS dynamic linker). LSPs/formatters/linters live in the nix wrapper
+  -- PATH instead — see modules/programs/nvim/_wrapper.nix.
+  { "mason-org/mason.nvim",            enabled = false },
+  { "mason-org/mason-lspconfig.nvim",  enabled = false },
+  { "jay-babu/mason-nvim-dap.nvim",    enabled = false },
+
+  { "nvim-mini/mini.indentscope",      enabled = false },
+  { "goolord/alpha-nvim",              enabled = false },
+  { "akinsho/bufferline.nvim",         enabled = false },
   {
     "folke/snacks.nvim",
     keys = {
-      { "<c-/>",    false },
-      { "<c-_>",    false },
+      { "<c-/>",      false },
+      { "<c-_>",      false },
       { "<leader>e",  false },
       { "<leader>E",  false },
       { "<leader>fe", false },
@@ -28,8 +34,8 @@ return {
           header = [[
 ███████╗████████╗██╗   ██╗██████╗ ██████╗ ███████╗
 ██╔════╝╚══██╔══╝██║   ██║██╔══██╗██╔══██╗██╔════╝
-███████╗   ██║   ██║   ██║██████╔╝██████╔╝█████╗  
-╚════██║   ██║   ██║   ██║██╔══██╗██╔══██╗██╔══╝  
+███████╗   ██║   ██║   ██║██████╔╝██████╔╝█████╗
+╚════██║   ██║   ██║   ██║██╔══██╗██╔══██╗██╔══╝
 ███████║   ██║   ╚██████╔╝██████╔╝██████╔╝███████╗
 ╚══════╝   ╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝]]
         }

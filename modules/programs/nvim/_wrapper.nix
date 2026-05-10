@@ -11,26 +11,56 @@
     lib.generators.mkLuaInline "vim.fn.stdpath('config')";
 
   config.extraPackages = with pkgs; [
-    # LSPs (mirrors the previous nixvim config)
+    # ── LSPs ────────────────────────────────────────────────
+    # Core / always-on
     nixd
     lua-language-server
-    vscode-langservers-extracted
-    templ
+    vscode-langservers-extracted # html, cssls (handles scss), jsonls, eslint
     bash-language-server
     taplo
+    yaml-language-server
+    marksman
+    dot-language-server
+
+    # Web / JS / TS
     typescript-language-server
     oxlint
     oxfmt
-    intelephense
     vue-language-server
-    yaml-language-server
     tailwindcss-language-server
 
-    # Formatters
+    # Backend / domain
+    intelephense
+    templ
+    basedpyright
+    ruff
+    rust-analyzer
+    sqls
+    gopls
+    golangci-lint-langserver
+
+    # Containers
+    dockerfile-language-server
+    docker-compose-language-service
+
+    # ── Formatters / linters ────────────────────────────────
     stylua
     nixfmt
     prettier
     caddy
+    gofumpt
+    gotools # provides goimports
+    golangci-lint
+    hadolint
+    markdownlint-cli2
+
+    # ── Toolchain runtimes ──────────────────────────────────
+    cargo
+    rustc
+    gomodifytags
+    gotests
+    impl
+    iferr
 
     # Treesitter compile chain
     tree-sitter
@@ -44,7 +74,7 @@
     # JS runtime for plugins that need node (copilot, blade ls, etc.)
     nodejs
 
-    # DAP backends
+    # ── DAP backends ────────────────────────────────────────
     delve
     python3Packages.debugpy
   ];
