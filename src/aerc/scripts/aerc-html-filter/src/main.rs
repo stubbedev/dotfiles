@@ -71,7 +71,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // become text-empty.
     normalise_text_nodes(&doc);
     replace_brs(&doc);
+    flatten_link_text(&doc);
     unwrap_punctuation_emphasis(&doc);
+    demote_stat_headings(&doc);
+    inline_flex_row_divs(&doc);
     flatten_tables(&doc);
     // Marketing emails wrap a brand logo in <a href="…"><img></a>; once we
     // drop the <img>, the anchor has no visible text and htmd renders it as
@@ -100,6 +103,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let md = drop_empty_headings(&md);
     let md = normalise_heading_levels(&md);
     let md = wrap_lines(&md, wrap_width());
+    let md = unescape_safe(&md);
     let md = collapse_blank_runs(&md);
     let md = normalize_tables(&md);
     let md = md.trim_start_matches('\n').to_string();
@@ -288,6 +292,181 @@ fn merge_separator_space(el: &NodeRef) {
         }
     }
     el.insert_before(NodeRef::new_text(" "));
+}
+
+/// Sentry's weekly digest dumps headline stats as `<h1>471k</h1>` purely for
+/// visual scale. Treating those as h1 means the whole document inherits a
+/// numeric heading level and the stat itself renders as an oversized header.
+/// Detect short numeric-only heading content (≤ 12 chars, digits + optional
+/// unit suffix like `k`, `M`, `ms`) and rewrite the element to a paragraph
+/// with bold so the level normaliser ignores it.
+fn demote_stat_headings(root: &NodeRef) {
+    let candidates: Vec<NodeRef> = root
+        .inclusive_descendants()
+        .filter(|n| {
+            n.as_element()
+                .map(|el| matches!(&*el.name.local, "h1" | "h2" | "h3" | "h4" | "h5" | "h6"))
+                .unwrap_or(false)
+        })
+        .collect();
+    for h in candidates {
+        let text = subtree_text(&h);
+        let trimmed = text.trim();
+        if trimmed.is_empty() || trimmed.chars().count() > 12 {
+            continue;
+        }
+        if !is_stat_text(trimmed) {
+            continue;
+        }
+        // Replace with `<p><strong>…</strong></p>` so the bold stat keeps
+        // visible scale without skewing the heading hierarchy and remains a
+        // block-level node so flatten_tables won't glue it to a neighbouring
+        // inline `<a>View All …</a>` link.
+        let para = parse_html()
+            .one("<p><strong></strong></p>")
+            .descendants()
+            .find(|n| local_name_is(n, "p"))
+            .expect("kuchikiki always materialises the parsed <p>");
+        let strong = para
+            .first_child()
+            .expect("freshly-parsed <p> contains a <strong>");
+        let kids: Vec<NodeRef> = h.children().collect();
+        for k in kids {
+            k.detach();
+            strong.append(k);
+        }
+        h.insert_before(para);
+        h.detach();
+    }
+}
+
+fn is_stat_text(s: &str) -> bool {
+    let mut saw_digit = false;
+    for c in s.chars() {
+        if c.is_ascii_digit() {
+            saw_digit = true;
+        } else if !matches!(c, '.' | ',' | ' ' | 'k' | 'K' | 'M' | 'B' | 'm' | 's' | 'µ' | 'h') {
+            return false;
+        }
+    }
+    saw_digit
+}
+
+/// Sentry's "Issues with the most errors" / "Most frequent transactions"
+/// rows are CSS flex containers (`<div style="display: flex; ...">`) wrapping
+/// 3 inline-feeling children: a count, a link block, a status pill. htmd
+/// treats every `<div>` as a paragraph, so each row explodes into 4–5
+/// blank-separated paragraphs. Detect flex-row parents and unwrap their
+/// `<div>` children that hold only inline content, so the row collapses to
+/// a single paragraph joined by spaces.
+fn inline_flex_row_divs(root: &NodeRef) {
+    // Sentry rows are flex containers with a small handful of direct
+    // children (a count, a link wrapper, a status pill — usually 3–4).
+    // Marketing emails that use flex for full-page layout typically have
+    // 1 main column wrapping thousands of nested elements. Use direct
+    // child count as the row-vs-page differentiator: a row has few direct
+    // children, a page-wrapper has either one or dozens of mixed blocks.
+    const MAX_FLEX_DIRECT_CHILDREN: usize = 8;
+    let flex_parents: Vec<NodeRef> = root
+        .inclusive_descendants()
+        .filter(|n| {
+            if !is_flex_div(n) {
+                return false;
+            }
+            let mut p = n.parent();
+            while let Some(parent) = p {
+                if is_flex_div(&parent) {
+                    return false;
+                }
+                p = parent.parent();
+            }
+            let direct = n
+                .children()
+                .filter(|c| c.as_element().is_some())
+                .count();
+            (2..=MAX_FLEX_DIRECT_CHILDREN).contains(&direct)
+        })
+        .collect();
+    let mut targets: Vec<(usize, NodeRef)> = Vec::new();
+    for parent in flex_parents {
+        for d in parent.descendants() {
+            if local_name_is(&d, "div") {
+                targets.push((depth(&d), d));
+            }
+        }
+    }
+    targets.sort_by(|a, b| b.0.cmp(&a.0));
+
+    for (_, d) in targets {
+        if d.parent().is_none() {
+            continue;
+        }
+        let has_block = d.descendants().any(|c| {
+            c.as_element()
+                .map(|el| {
+                    matches!(
+                        &*el.name.local,
+                        "table" | "ul" | "ol" | "li" | "h1" | "h2" | "h3" | "h4" | "h5"
+                            | "h6" | "pre" | "blockquote" | "hr" | "p" | "div"
+                    )
+                })
+                .unwrap_or(false)
+        });
+        if has_block {
+            continue;
+        }
+        let inner: Vec<NodeRef> = d.children().collect();
+        for c in inner {
+            c.detach();
+            d.insert_before(c);
+        }
+        d.insert_before(NodeRef::new_text(" "));
+        d.detach();
+    }
+}
+
+fn is_flex_div(n: &NodeRef) -> bool {
+    n.as_element()
+        .map(|el| {
+            &*el.name.local == "div"
+                && el
+                    .attributes
+                    .borrow()
+                    .get("style")
+                    .map(|s| s.contains("display: flex") || s.contains("display:flex"))
+                    .unwrap_or(false)
+        })
+        .unwrap_or(false)
+}
+
+/// Squash any newline/tab inside `<a>` text (whether from the source HTML's
+/// `<br>` substitution or raw whitespace) to a single space. Markdown link
+/// text on multiple physical lines breaks rendering for many readers and
+/// confuses our wrap pass (each line is processed in isolation, splitting
+/// the atomic `[…](…)` token). Applied after `replace_brs` so substituted
+/// newlines are also normalised.
+fn flatten_link_text(root: &NodeRef) {
+    let anchors: Vec<NodeRef> = root
+        .inclusive_descendants()
+        .filter(|n| local_name_is(n, "a"))
+        .collect();
+    for a in anchors {
+        let texts: Vec<NodeRef> = a
+            .inclusive_descendants()
+            .filter(|n| n.as_text().is_some())
+            .collect();
+        for t in texts {
+            let cell = t.as_text().unwrap();
+            let s = cell.borrow().clone();
+            if s.contains('\n') || s.contains('\t') {
+                let cleaned: String = s
+                    .chars()
+                    .map(|c| if c == '\n' || c == '\t' { ' ' } else { c })
+                    .collect();
+                *cell.borrow_mut() = cleaned;
+            }
+        }
+    }
 }
 
 fn replace_brs(root: &NodeRef) {
@@ -490,7 +669,14 @@ fn flatten_one_table(table: &NodeRef) {
                     if !ends_with_whitespace(&p) && p.first_child().is_some() {
                         p.append(NodeRef::new_text(" "));
                     }
-                    for n in items {
+                    // If classify_cell returned the cell's full inline run
+                    // (text + inline elements with whitespace-only text nodes
+                    // sandwiched between), preserve those separators —
+                    // marketing legends emit `<span></span>X<span> (n)</span>
+                    // \n<span></span>Y` and the inter-element whitespace text
+                    // is the only thing keeping `X (n)` from glueing to `Y`.
+                    let with_ws = include_inline_whitespace(&kids, &items);
+                    for n in with_ws {
                         n.detach();
                         p.append(n);
                     }
@@ -524,6 +710,54 @@ fn flatten_one_table(table: &NodeRef) {
 enum CellMode {
     Inline(Vec<NodeRef>),
     Blocks(Vec<NodeRef>),
+}
+
+/// Re-thread whitespace-only text nodes from `kids` into `items` whenever
+/// they sit between two retained nodes. Filtering blanks earlier was right
+/// for cells with stray empty text padding, but inline runs need their
+/// inter-element whitespace preserved or htmd glues neighbouring text
+/// straight together (`Escalating (7)Regressed (12)`). When `items` came
+/// from a wrapper's grandchildren (classify_cell unwrapping `<p>`/`<div>`)
+/// it is not a subsequence of `kids`; in that case fall back to `items`
+/// untouched.
+fn include_inline_whitespace(kids: &[NodeRef], items: &[NodeRef]) -> Vec<NodeRef> {
+    if items.is_empty() {
+        return Vec::new();
+    }
+    let is_subseq = {
+        let mut it = items.iter();
+        let mut next = it.next();
+        for k in kids {
+            if let Some(want) = next {
+                if *want == *k {
+                    next = it.next();
+                }
+            } else {
+                break;
+            }
+        }
+        next.is_none()
+    };
+    if !is_subseq {
+        return items.to_vec();
+    }
+    let mut out: Vec<NodeRef> = Vec::with_capacity(items.len());
+    let mut item_iter = items.iter().peekable();
+    let mut started = false;
+    let mut last_was_item = false;
+    for k in kids {
+        if item_iter.peek().map(|i| **i == *k).unwrap_or(false) {
+            out.push(item_iter.next().unwrap().clone());
+            started = true;
+            last_was_item = true;
+        } else if started && last_was_item && is_blank(k) {
+            if item_iter.peek().is_some() {
+                out.push(k.clone());
+            }
+            last_was_item = false;
+        }
+    }
+    out
 }
 
 fn classify_cell(non_blank: &[NodeRef]) -> CellMode {
@@ -716,9 +950,13 @@ fn token_re() -> &'static Regex {
     // spaces that must not split the chunk. Tokenise as one-or-more of
     // (link | code | non-space char) so trailing punctuation like `,` after
     // a link is absorbed into the same token instead of orphaning onto its
-    // own line when the link itself fills the wrap budget.
+    // own line when the link itself fills the wrap budget. Inside link
+    // text and URL, `\\.` consumes any escaped char so that JSON-shaped
+    // payloads with `\[` and `\]` don't prematurely close the match.
     static R: OnceLock<Regex> = OnceLock::new();
-    R.get_or_init(|| Regex::new(r"(?:!?\[[^\]]*\]\([^)]*\)|`[^`]*`|[^\s])+").unwrap())
+    R.get_or_init(|| {
+        Regex::new(r"(?:!?\[(?:\\.|[^\]])*\]\((?:\\.|[^)])*\)|`[^`]*`|[^\s])+").unwrap()
+    })
 }
 
 fn wrap_width() -> usize {
@@ -914,6 +1152,70 @@ fn redundant_link_re() -> &'static Regex {
 /// markdown link AND again for the autolinked URL inside the brackets, so
 /// the user sees a duplicated link icon next to a URL that wasn't really a
 /// link in the source.
+fn unescape_re() -> &'static Regex {
+    // Three top-level alternatives:
+    //   1. Inline code `` `…` `` — unescape everything inside; markdown
+    //      doesn't interpret backslashes in code spans, so `App\\Events`
+    //      surfaces double backslashes verbatim in the user's pager.
+    //   2. A whole markdown link `[text](url)` — captured so we can
+    //      rewrite text and url under different rules. Inside link TEXT
+    //      strip `\\` and `\_` only; `\[` / `\]` stay or the parser
+    //      truncates the link at the first inner `]`. Inside the URL
+    //      strip all four — htmd never emits a literal `[`/`]` there.
+    //   3. An escape sequence `\X` outside any link/code — strip all four.
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| {
+        Regex::new(
+            r"(`[^`\n]+`)|(\[(?:\\.|[^\]\n])*\])\(((?:\\.|[^)\n])*)\)|\\([\\_\[\]])"
+        )
+        .unwrap()
+    })
+}
+
+fn link_text_unescape_re() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\\([\\_])").unwrap())
+}
+
+fn link_url_unescape_re() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\\([\\_\[\]])").unwrap())
+}
+
+/// htmd auto-escapes `_`, `[`, `]`, `\` wherever they could conceivably
+/// trigger markdown syntax. Most are noise — `_` mid-word never opens
+/// emphasis under CommonMark flanking rules, `\\` is just a backslash,
+/// and `[…]` only matters when followed by `(…)`. Outside links we strip
+/// all four. Inside link text we keep `\[` / `\]` (the parser would
+/// otherwise truncate the link and render raw `[…](url)`); inside the
+/// URL we strip everything because htmd never emits a real `[`/`]` there.
+fn unescape_safe(md: &str) -> String {
+    unescape_re()
+        .replace_all(md, |caps: &regex::Captures| {
+            if let Some(code) = caps.get(1) {
+                // Branch 1: inline code span — unescape all four inside.
+                let raw = code.as_str();
+                let inner = &raw[1..raw.len() - 1];
+                let cleaned = link_url_unescape_re().replace_all(inner, "$1");
+                format!("`{}`", cleaned)
+            } else if let Some(text_with_brackets) = caps.get(2) {
+                // Branch 2: full markdown link.
+                let text = text_with_brackets.as_str();
+                let url = caps.get(3).map(|m| m.as_str()).unwrap_or("");
+                let inner = &text[1..text.len() - 1];
+                let new_text = link_text_unescape_re().replace_all(inner, "$1");
+                let new_url = link_url_unescape_re().replace_all(url, "$1");
+                format!("[{}]({})", new_text, new_url)
+            } else if let Some(esc) = caps.get(4) {
+                // Branch 3: bare escape — strip.
+                esc.as_str().to_string()
+            } else {
+                caps[0].to_string()
+            }
+        })
+        .into_owned()
+}
+
 fn collapse_redundant_links(md: &str) -> String {
     redundant_link_re()
         .replace_all(md, |caps: &regex::Captures| {
@@ -1008,13 +1310,29 @@ fn split_row_cells(line: &str) -> Vec<String> {
     inner.split('|').map(|c| c.trim().to_string()).collect()
 }
 
+fn is_separator_cells(cells: &[String]) -> bool {
+    if cells.is_empty() {
+        return false;
+    }
+    let mut has_dashes = false;
+    for c in cells {
+        if c.is_empty() {
+            continue;
+        }
+        if !separator_cell_re().is_match(c) {
+            return false;
+        }
+        has_dashes = true;
+    }
+    has_dashes
+}
+
 fn is_separator_line(line: &str) -> bool {
     let t = line.trim();
     if !t.starts_with('|') {
         return false;
     }
-    let cells = split_row_cells(line);
-    !cells.is_empty() && cells.iter().all(|c| separator_cell_re().is_match(c))
+    is_separator_cells(&split_row_cells(line))
 }
 
 /// Recompute every table's separator and cell padding from visible width.
@@ -1053,17 +1371,45 @@ fn normalize_tables(md: &str) -> String {
 }
 
 fn render_table_block(rows: &[&str]) -> Vec<String> {
-    let parsed: Vec<Vec<String>> = rows.iter().map(|r| split_row_cells(r)).collect();
-    let ncols = parsed.iter().map(|r| r.len()).max().unwrap_or(0);
+    let mut parsed: Vec<Vec<String>> = rows.iter().map(|r| split_row_cells(r)).collect();
+    let mut ncols = parsed.iter().map(|r| r.len()).max().unwrap_or(0);
     if ncols == 0 {
         return rows.iter().map(|s| s.to_string()).collect();
     }
 
+    let sep_idx_initial = parsed
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find(|(_, r)| is_separator_cells(r))
+        .map(|(i, _)| i);
+
+    // Drop columns whose every non-separator cell is empty. Sentry's weekly
+    // digest puts a 1×1 colour swatch (`<span>&nbsp;</span>`) in a leading
+    // `<th></th>`/`<td>` column purely for visual decoration; after NBSP
+    // normalisation those cells are blank and the rendered table starts with
+    // a useless `| |` column.
+    let keep: Vec<usize> = (0..ncols)
+        .filter(|&c| {
+            parsed.iter().enumerate().any(|(i, row)| {
+                if Some(i) == sep_idx_initial {
+                    return false;
+                }
+                row.get(c).map(|s| !s.trim().is_empty()).unwrap_or(false)
+            })
+        })
+        .collect();
+    if keep.len() < ncols && !keep.is_empty() {
+        for row in parsed.iter_mut() {
+            *row = keep.iter().map(|&c| row.get(c).cloned().unwrap_or_default()).collect();
+        }
+        ncols = keep.len();
+    }
     let sep_idx = parsed
         .iter()
         .enumerate()
         .skip(1)
-        .find(|(_, r)| !r.is_empty() && r.iter().all(|c| separator_cell_re().is_match(c)))
+        .find(|(_, r)| is_separator_cells(r))
         .map(|(i, _)| i);
 
     // Capture alignment from the separator (`:--` left, `--:` right, `:-:` center).
