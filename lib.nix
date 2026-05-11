@@ -135,11 +135,18 @@ rec {
     ''
       if ! command -v ${detect} >/dev/null 2>&1; then
         if command -v apt-get >/dev/null 2>&1; then
+          # --no-install-recommends: many Debian/Ubuntu packages
+          # (sddm → plasma-desktop, plymouth → snapd, …) recommend
+          # entire desktop environments. Activation is opinionated
+          # about what gets installed, so suppress recommends and
+          # let each module list explicit deps.
           sudo apt-get update
-          sudo apt-get install -y ${lib.escapeShellArgs apt}
+          sudo apt-get install -y --no-install-recommends ${lib.escapeShellArgs apt}
         elif command -v dnf >/dev/null 2>&1; then
-          sudo dnf install -y ${lib.escapeShellArgs dnf}
+          # --setopt=install_weak_deps=False mirrors the apt behavior.
+          sudo dnf install -y --setopt=install_weak_deps=False ${lib.escapeShellArgs dnf}
         elif command -v pacman >/dev/null 2>&1; then
+          # pacman has no Recommends concept; optional deps stay opt-in.
           sudo pacman -S --needed --noconfirm ${lib.escapeShellArgs pacman}
         else
           echo "No supported package manager (apt-get/dnf/pacman) found." >&2
@@ -572,11 +579,11 @@ rec {
 
       echo ""
       echo "--------------------------------------------------------------------"
-      echo "${promptTitle}"
+      printf '%s\n' ${lib.escapeShellArg promptTitle}
       echo "--------------------------------------------------------------------"
       echo ""
-      echo "${promptBody}"
-      read -p "${promptQuestion} [Y/n] " -n 1 -r
+      printf '%s\n' ${lib.escapeShellArg promptBody}
+      read -p ${lib.escapeShellArg "${promptQuestion} [Y/n] "} -n 1 -r
       echo
 
       if [[ ! $REPLY =~ ^[Nn]$ ]]; then
@@ -585,7 +592,7 @@ rec {
         echo -n "${actionHash}" > "$lockFile"
       else
         echo ""
-        echo "${skipMessage}"
+        printf '%s\n' ${lib.escapeShellArg skipMessage}
       fi
       echo ""
     '';

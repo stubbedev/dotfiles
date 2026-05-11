@@ -74,29 +74,26 @@ _: {
 
         # ---------------------------------------------------------------
         # 3. Validate plymouth recognises the theme BEFORE touching the
-        #    initrd. -l lists every theme plymouth can find under
-        #    /usr/share/plymouth/themes. If catppuccin-mocha isn't here,
-        #    the copy step was incomplete and we abort without any boot
-        #    path modification.
+        #    initrd. Ubuntu 25.10+ dropped the plymouth-set-default-theme
+        #    helper (which had a -l flag), so check directly for the
+        #    .plymouth manifest in the canonical themes directory. If
+        #    missing, the copy step was incomplete and we abort without
+        #    any boot path modification.
         # ---------------------------------------------------------------
-        if ! plymouth-set-default-theme -l 2>/dev/null | grep -qx catppuccin-mocha; then
+        themeManifest=/usr/share/plymouth/themes/catppuccin-mocha/catppuccin-mocha.plymouth
+        if [ ! -f "$themeManifest" ]; then
           echo "ERROR: plymouth does not recognise catppuccin-mocha after copy." >&2
+          echo "  Expected manifest at $themeManifest" >&2
           echo "  Theme dir contents:" >&2
           ls -la /usr/share/plymouth/themes/catppuccin-mocha/ >&2 || true
           exit 1
         fi
 
         # ---------------------------------------------------------------
-        # 4. Set the default theme symlink. No initrd touch yet —
-        #    this only updates /usr/share/plymouth/themes/default.plymouth
-        #    (or distro equivalent). Trivially reversible.
-        # ---------------------------------------------------------------
-        sudo plymouth-set-default-theme catppuccin-mocha
-
-        # ---------------------------------------------------------------
-        # 5. Distro-specific kernel cmdline + initrd rebuild.
-        #    Detect distro by package manager so we use each distro's
-        #    native, idempotent, reversible tool.
+        # 4 + 5. Distro-specific default-theme + kernel cmdline + initrd
+        #        rebuild. Detect distro by package manager so we use each
+        #        distro's native, idempotent, reversible tool. Each
+        #        branch sets the default first, then rebuilds.
         # ---------------------------------------------------------------
         if command -v apt-get >/dev/null 2>&1; then
           # ----- Debian / Ubuntu -----
@@ -121,11 +118,25 @@ _: {
             exit 1
           fi
 
-          # plymouth-set-default-theme -R on Debian/Ubuntu runs
-          # update-initramfs -u, which writes to a tmp file and renames
-          # atomically. The existing /boot/initrd.img-* stays put if the
-          # rebuild dies mid-way.
-          if ! sudo plymouth-set-default-theme -R catppuccin-mocha; then
+          # Set the default theme via update-alternatives. Debian/Ubuntu
+          # ship /usr/share/plymouth/themes/default.plymouth as an
+          # alternatives-managed symlink; Ubuntu 25.10 dropped the
+          # plymouth-set-default-theme helper that used to wrap this.
+          # --install is idempotent (re-registering the same target +
+          # priority is a no-op); --set then forces the selection.
+          sudo update-alternatives --install \
+            /usr/share/plymouth/themes/default.plymouth default.plymouth \
+            "$themeManifest" 100
+          sudo update-alternatives --set default.plymouth "$themeManifest"
+
+          # update-initramfs -u -k all rebuilds every kernel's initrd
+          # (not just the default-symlinked one). Required when the user
+          # boots a non-default kernel — without -k all, the booted
+          # kernel's initrd keeps the previous plymouth theme and the
+          # splash silently doesn't change on next boot.
+          # Writes each initrd to a tmp file and renames atomically;
+          # an interrupted rebuild leaves the existing initrd intact.
+          if ! sudo update-initramfs -u -k all; then
             echo "ERROR: initrd rebuild failed. Existing initrd untouched (update-initramfs writes atomically)." >&2
             echo "  Next boot should still work; the splash just won't render. Recover by booting an older kernel from GRUB if needed." >&2
             exit 1
@@ -157,17 +168,20 @@ _: {
           # BEFORE `udev`, and (b) `quiet splash` on the kernel cmdline
           # (location depends on bootloader: GRUB, systemd-boot, rEFInd,
           # …). Both edits are too host-variable to automate safely;
-          # print instructions instead. Theme files + default-theme
-          # symlink are already in place above, so once the user
-          # finishes the two steps they get the splash.
+          # print instructions instead. Theme files are already in place
+          # above; the user finishes the three steps below to get the
+          # splash.
           echo "" >&2
-          echo "INFO: Theme files installed. Two manual steps remain on Arch:" >&2
+          echo "INFO: Theme files installed. Three manual steps remain on Arch:" >&2
           echo "" >&2
-          echo "  1. Add 'plymouth' to the HOOKS array in /etc/mkinitcpio.conf" >&2
+          echo "  1. Set the default theme:" >&2
+          echo "     sudo plymouth-set-default-theme catppuccin-mocha" >&2
+          echo "" >&2
+          echo "  2. Add 'plymouth' to the HOOKS array in /etc/mkinitcpio.conf" >&2
           echo "     BEFORE 'udev' (and BEFORE 'encrypt'/'sd-encrypt' if you use them)." >&2
           echo "     Then run: sudo mkinitcpio -P" >&2
           echo "" >&2
-          echo "  2. Add 'quiet splash' to your kernel cmdline:" >&2
+          echo "  3. Add 'quiet splash' to your kernel cmdline:" >&2
           echo "     - GRUB:        append to GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub," >&2
           echo "                    then 'sudo grub-mkconfig -o /boot/grub/grub.cfg'" >&2
           echo "     - systemd-boot: edit /boot/loader/entries/*.conf, append to 'options'" >&2

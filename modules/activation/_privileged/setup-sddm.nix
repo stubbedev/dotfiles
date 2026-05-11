@@ -5,8 +5,11 @@ _: {
     homeLib.mkInstallPrompt {
       subject = "SDDM with Catppuccin Mocha Mauve + Vimix cursor";
       body = ''
-        Install SDDM + weston (used as the Wayland greeter compositor,
-        matching the NixOS host), drop the catppuccin-mocha-mauve theme
+        Install SDDM + kwin-wayland (used as the Wayland greeter
+        compositor — best SDDM-side cursor and HiDPI support, and with
+        --no-install-recommends only kwin-wayland + libkwin6 land on
+        the system, no Plasma desktop), drop the catppuccin-mocha-mauve
+        theme
         into /usr/share/sddm/themes and the Vimix-cursors theme into
         /usr/share/icons, then make SDDM the system display manager.
 
@@ -35,11 +38,16 @@ _: {
         #    `weston --shell=kiosk`). Much lighter than kwin and
         #    available on all three distros.
         # ---------------------------------------------------------------
+        # detect on kwin_wayland (not sddm) so the activation actually
+        # installs kwin-wayland on hosts where sddm is already present
+        # from a previous run with a different compositor.
         ${homeLib.installHostPackage {
-          detect = "sddm";
-          apt = [ "sddm" "weston" ];
-          dnf = [ "sddm" "weston" ];
-          pacman = [ "sddm" "weston" ];
+          detect = "kwin_wayland";
+          apt = [ "sddm" "kwin-wayland" ];
+          # Fedora ships kwin under the kwin / kwin-wayland subpackage.
+          dnf = [ "sddm" "kwin-wayland" ];
+          # Arch packages kwin in one package; kwin_wayland is included.
+          pacman = [ "sddm" "kwin" ];
         }}
 
         # ---------------------------------------------------------------
@@ -53,6 +61,18 @@ _: {
         sudo install -d -m 0755 /usr/share/icons
         sudo cp -a ${pkgs.vimix-cursors}/share/icons/Vimix-cursors \
           /usr/share/icons/
+
+        # ---------------------------------------------------------------
+        # 2b. Stage JetBrainsMono Nerd Font into /usr/share/fonts so the
+        #     SDDM greeter (running as the `sddm` user with no access to
+        #     /home/<user>/.local/share/fonts) can resolve the family
+        #     name set in theme.conf below. Re-run fc-cache once the
+        #     files are in place.
+        # ---------------------------------------------------------------
+        sudo install -d -m 0755 /usr/share/fonts/jetbrainsmono-nerd-font
+        sudo cp -a ${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/. \
+          /usr/share/fonts/jetbrainsmono-nerd-font/
+        sudo fc-cache -f /usr/share/fonts/jetbrainsmono-nerd-font >/dev/null
 
         # ---------------------------------------------------------------
         # 3. SDDM config + greeter compositor config. Both as drop-ins —
@@ -70,9 +90,22 @@ _: {
             # modules/activation/_privileged/setup-sddm.nix
             [General]
             DisplayServer=wayland
+            # GreeterEnvironment forces these vars into the wayland
+            # greeter process. SDDM is supposed to export XCURSOR_THEME
+            # and XCURSOR_SIZE from [Theme] automatically, but in 0.21
+            # the wayland helper does not always pass them through to
+            # the Qt greeter — without these the greeter renders the
+            # default Adwaita cursor (software-drawn, leaves trails).
+            GreeterEnvironment=XCURSOR_THEME=Vimix-cursors,XCURSOR_SIZE=24,XCURSOR_PATH=/usr/share/icons
 
             [Wayland]
-            CompositorCommand=weston --shell=kiosk -c /etc/sddm-weston.ini
+            # kwin_wayland is the SDDM-blessed Wayland greeter
+            # compositor — best cursor + HiDPI support across GPUs.
+            # --no-lockscreen disables the kscreenlocker integration
+            # (we're a greeter, not a session). --no-global-shortcuts
+            # avoids the kglobalaccel handshake (not running on the
+            # greeter side). --locale1 reads locale from systemd-localed.
+            CompositorCommand=kwin_wayland --no-lockscreen --no-global-shortcuts --locale1
             SessionDir=/usr/share/wayland-sessions
             EnableHiDPI=true
 
@@ -82,22 +115,22 @@ _: {
             CursorSize=24
           '';
         }}
-        ${homeLib.installSystemFile {
-          target = "/etc/sddm-weston.ini";
-          content = ''
-            # Managed by stubbedev dotfiles —
-            # modules/activation/_privileged/setup-sddm.nix
-            [keyboard]
-            keymap_layout=us
-            keymap_model=pc104
-            keymap_options=terminate:ctrl_alt_bksp
-            keymap_variant=
+        # cage doesn't need a config file. Remove the legacy
+        # /etc/sddm-weston.ini that previous activations dropped, so
+        # nothing stale stays under /etc.
+        sudo rm -f /etc/sddm-weston.ini
 
-            [libinput]
-            enable-tap=true
-            left-handed=false
-          '';
-        }}
+        # ---------------------------------------------------------------
+        # 3b. Override the catppuccin-sddm theme font. Upstream ships
+        #     Font="Noto Sans" with literal quote characters in the
+        #     value, which Qt's QFont parser treats as part of the
+        #     family string and falls back to the system default. Force
+        #     it to JetBrainsMono Nerd Font (no quotes) to match the
+        #     rest of the desktop. Idempotent — re-runs replace the
+        #     value in place.
+        # ---------------------------------------------------------------
+        sudo sed -i 's|^Font=.*|Font=JetBrainsMono Nerd Font|' \
+          /usr/share/sddm/themes/catppuccin-mocha-mauve/theme.conf
 
         # ---------------------------------------------------------------
         # 4. Display-manager swap. Order matters — disable competing
