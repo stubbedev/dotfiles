@@ -74,17 +74,43 @@ in
         package = config.boot.kernelPackages.nvidiaPackages.production;
       };
 
-      # Early KMS for NVIDIA: load the modules in initrd and expose a
-      # fbdev so Plymouth renders at the native panel resolution
-      # instead of the low-res EFI framebuffer. Gated on detection so
-      # non-NVIDIA hosts don't carry the modules in stage 1 (the
-      # closure cost above is paid in stage 2 only).
-      boot.initrd.kernelModules = lib.mkIf hasNvidia [
-        "nvidia"
-        "nvidia_modeset"
-        "nvidia_uvm"
-        "nvidia_drm"
-      ];
+      # Force the matching GPU driver into stage 1 so Plymouth has a
+      # real DRM device to attach to, instead of the EFI framebuffer
+      # surrogate that simpledrm exposes briefly before being torn down
+      # by the real driver — that handoff was the cause of the "splash
+      # silently paints into a freed surface, user sees TTY underneath"
+      # symptom.
+      #
+      # nvidia: only the nvidia stack (nouveau would conflict).
+      # non-nvidia: include i915 + amdgpu unconditionally. The kernel
+      #             only binds the module whose PCI ID actually matches
+      #             present hardware, so the unmatched one is inert.
+      #             nouveau is intentionally omitted — it doesn't go
+      #             through simpledrm-style takeover and would just
+      #             bloat stage 1.
+      boot.initrd.kernelModules =
+        if hasNvidia then
+          [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ]
+        else
+          [ "i915" "amdgpu" ];
+
       boot.kernelParams = lib.mkIf hasNvidia [ "nvidia-drm.fbdev=1" ];
+
+      # simpledrm registers /dev/dri/card0 from the EFI framebuffer at
+      # kernel start, then is torn down when the real GPU driver loads.
+      # If Plymouth attached to simpledrm in that window (which it
+      # always did, because plymouth-start runs before initrd
+      # kernel-modules-load completes), its drawing surface is freed
+      # underneath it — the splash continues "running" per the journal
+      # but is no longer visible. Blacklisting forces Plymouth to wait
+      # for the real DRM device (up to plymouth's DeviceTimeout, 8s by
+      # default) and attach to that directly.
+      #
+      # Trade-off: hosts where neither nvidia, i915, nor amdgpu binds
+      # (uncommon ARM / virtio-only / exotic setups) get no early
+      # framebuffer at all and lose the splash, but still boot — the
+      # firmware splash covers the gap until userspace starts the
+      # display manager.
+      boot.blacklistedKernelModules = [ "simpledrm" ];
     };
 }
