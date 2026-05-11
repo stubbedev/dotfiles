@@ -57,11 +57,9 @@ session_init() {
 }
 
 set_ssh_flag() {
-  local sess flag=0
-  sess=$(tmux display-message -p -F "#S")
-  if tmux show-environment -t "$sess" SSH_CONNECTION >/dev/null 2>&1; then
-    flag=1
-  fi
+  local sess="${1:-$(tmux display-message -p '#S')}"
+  local flag=0
+  [[ $(tmux show-environment -t "$sess" SSH_CONNECTION 2>/dev/null) == SSH_CONNECTION=* ]] && flag=1
   tmux set-option -q -t "$sess" @stubbe_ssh "$flag"
 }
 
@@ -416,7 +414,7 @@ case "$1" in
 "move_pane")                move_pane "$2" ;;
 "move_pane_to_window")      move_pane_to_window "$2" ;;
 "session_init")             session_init ;;
-"set_ssh_flag")             set_ssh_flag ;;
+"set_ssh_flag")             set_ssh_flag "$2" ;;
 "reload_animation")         reload_animation ;;
 "pending_animation")        pending_animation "$2" "$3" "$4" ;;
 esac
