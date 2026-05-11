@@ -23,7 +23,7 @@ _: {
         Install Plymouth via the host's package manager, drop the
         catppuccin-mocha theme into /usr/share/plymouth/themes, set it
         as default, ensure `quiet splash` is on the kernel cmdline, and
-        rebuild the initrd so the splash appears at boot.
+        rebuild every kernel's initrd so the splash appears at boot.
 
         Safety:
         * Theme files live in /usr/share/plymouth/themes/catppuccin-mocha
@@ -32,11 +32,13 @@ _: {
           /etc/default/grub.d/ drop-in on Debian (rm + update-grub
           recovers), grubby BLS edit on Fedora (reversible with
           --remove-args). The main /etc/default/grub is never modified.
-        * Initrd rebuild is delegated to plymouth-set-default-theme -R,
-          which calls update-initramfs/dracut. Both write the new image
-          to a temp file and rename atomically — a failed rebuild
-          leaves the existing initrd intact, so worst case is "no
-          splash next boot" rather than "unbootable".
+        * Initrd rebuild is delegated to the distro's native tool —
+          update-initramfs -u -k all on Debian/Ubuntu (uses
+          update-alternatives to point default.plymouth at the theme
+          first), plymouth-set-default-theme -R on Fedora (dracut).
+          Both write the new image to a temp file and rename atomically;
+          an interrupted rebuild leaves the existing initrd intact, so
+          worst case is "no splash next boot" rather than "unbootable".
         * Arch: theme files are installed but mkinitcpio.conf and
           bootloader edits are NOT automated (hook placement is
           fragile, bootloader varies). Instructions are printed.
@@ -53,8 +55,12 @@ _: {
         # ---------------------------------------------------------------
         # 1. Install Plymouth via the host package manager.
         # ---------------------------------------------------------------
+        # detect on plymouthd (always present when plymouth installed) —
+        # the older plymouth-set-default-theme helper was dropped in
+        # Ubuntu 25.10, so detecting on it would re-trigger apt every
+        # activation on questing+.
         ${homeLib.installHostPackage {
-          detect = "plymouth-set-default-theme";
+          detect = "plymouthd";
           apt = [ "plymouth" ];
           dnf = [ "plymouth" ];
           pacman = [ "plymouth" ];

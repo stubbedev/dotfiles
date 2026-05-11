@@ -32,21 +32,17 @@ _: {
         PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
         # ---------------------------------------------------------------
-        # 1. Install SDDM + weston via the host package manager.
-        #    weston is the Wayland compositor SDDM uses for the greeter
-        #    (matches the NixOS sddm wayland.enable path which calls
-        #    `weston --shell=kiosk`). Much lighter than kwin and
-        #    available on all three distros.
+        # 1. Install SDDM + kwin-wayland via the host package manager.
+        #    kwin_wayland is the Wayland compositor SDDM spawns for the
+        #    greeter — best cursor + HiDPI handling. detect on
+        #    kwin_wayland (not sddm) so installing pulls in kwin even
+        #    when sddm is already present.
         # ---------------------------------------------------------------
-        # detect on kwin_wayland (not sddm) so the activation actually
-        # installs kwin-wayland on hosts where sddm is already present
-        # from a previous run with a different compositor.
         ${homeLib.installHostPackage {
           detect = "kwin_wayland";
           apt = [ "sddm" "kwin-wayland" ];
-          # Fedora ships kwin under the kwin / kwin-wayland subpackage.
           dnf = [ "sddm" "kwin-wayland" ];
-          # Arch packages kwin in one package; kwin_wayland is included.
+          # Arch ships kwin_wayland inside the single kwin package.
           pacman = [ "sddm" "kwin" ];
         }}
 
@@ -83,20 +79,25 @@ _: {
         #    via mkSddmSession writes to /usr/share/wayland-sessions).
         # ---------------------------------------------------------------
         sudo install -d -m 0755 /etc/sddm.conf.d
+        # Remove the foreign drop-ins KDE Plasma and the
+        # `sddm-hyprland-config` Debian package leave behind. Both
+        # sort alphabetically AFTER 10/20/30- so they used to clobber
+        # us; even now that our drop-in is 99-, pruning keeps /etc
+        # honest. Idempotent — `rm -f` is a no-op when the file is
+        # absent.
+        sudo rm -f \
+          /etc/sddm.conf.d/sddm-hyprland.conf \
+          /etc/sddm.conf.d/kde_settings.conf
+        # 99- prefix so this drop-in sorts last and wins against any
+        # future stale file dropped in /etc/sddm.conf.d by a package
+        # postinst or manual experiment.
         ${homeLib.installSystemFile {
-          target = "/etc/sddm.conf.d/10-stubbedev.conf";
+          target = "/etc/sddm.conf.d/99-stubbedev.conf";
           content = ''
             # Managed by stubbedev dotfiles —
             # modules/activation/_privileged/setup-sddm.nix
             [General]
             DisplayServer=wayland
-            # GreeterEnvironment forces these vars into the wayland
-            # greeter process. SDDM is supposed to export XCURSOR_THEME
-            # and XCURSOR_SIZE from [Theme] automatically, but in 0.21
-            # the wayland helper does not always pass them through to
-            # the Qt greeter — without these the greeter renders the
-            # default Adwaita cursor (software-drawn, leaves trails).
-            GreeterEnvironment=XCURSOR_THEME=Vimix-cursors,XCURSOR_SIZE=24,XCURSOR_PATH=/usr/share/icons
 
             [Wayland]
             # kwin_wayland is the SDDM-blessed Wayland greeter
@@ -115,10 +116,51 @@ _: {
             CursorSize=24
           '';
         }}
-        # cage doesn't need a config file. Remove the legacy
-        # /etc/sddm-weston.ini that previous activations dropped, so
-        # nothing stale stays under /etc.
-        sudo rm -f /etc/sddm-weston.ini
+        # ---------------------------------------------------------------
+        # 3c. Cursor pickup by kwin_wayland.
+        #
+        #     SDDM 0.21 strips XCURSOR_THEME/XCURSOR_SIZE/XCURSOR_PATH
+        #     from the env it hands its wayland helper (allowlist in
+        #     src/daemon/Greeter.cpp only passes LANG/LC_*/LD_LIBRARY_PATH
+        #     /QML2_IMPORT_PATH/QT_PLUGIN_PATH/XDG_DATA_DIRS), so neither
+        #     a systemd Service-level Environment= drop-in nor [General]
+        #     GreeterEnvironment in sddm.conf reaches kwin or the
+        #     greeter. The [Theme] CursorTheme setting only configures
+        #     the Qt greeter — kwin (which draws its own cursor before
+        #     the greeter surface attaches) reads cursorTheme from
+        #     kcminputrc instead, and falls back to breeze_cursors when
+        #     that file is absent.
+        #
+        #     Two fixes layered:
+        #
+        #     (a) Drop a kcminputrc into the sddm user's XDG config
+        #         dir. kwin_wayland reads it on start.
+        #
+        #     (b) Drop a Vimix-cursors symlink into ~/.icons for the
+        #         sddm user. libxcursor's compile-time default path on
+        #         Ubuntu (`~/.icons:/usr/share/icons:/usr/share/pixmaps`)
+        #         already covers /usr/share/icons where step 2 staged
+        #         the theme, but the home-dir entry makes the lookup
+        #         resilient to libxcursor versions that prefer per-user
+        #         paths and to the symlink-traversal hardening some
+        #         distros patch in.
+        # ---------------------------------------------------------------
+        sudo install -d -m 0755 -o sddm -g sddm /var/lib/sddm/.config
+        ${homeLib.installSystemFile {
+          target = "/var/lib/sddm/.config/kcminputrc";
+          content = ''
+            # Managed by stubbedev dotfiles —
+            # modules/activation/_privileged/setup-sddm.nix
+            [Mouse]
+            cursorTheme=Vimix-cursors
+            cursorSize=24
+          '';
+        }}
+        sudo chown sddm:sddm /var/lib/sddm/.config/kcminputrc
+
+        sudo install -d -m 0755 -o sddm -g sddm /var/lib/sddm/.icons
+        sudo ln -sfn /usr/share/icons/Vimix-cursors /var/lib/sddm/.icons/Vimix-cursors
+        sudo chown -h sddm:sddm /var/lib/sddm/.icons/Vimix-cursors
 
         # ---------------------------------------------------------------
         # 3b. Override the catppuccin-sddm theme font. Upstream ships
