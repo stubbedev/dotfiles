@@ -211,7 +211,7 @@ binds {
     Mod+F { fullscreen-window; }
     Mod+Shift+F { maximize-column; }
     Mod+T { toggle-window-floating; }
-    Mod+Escape { spawn "hyprlock"; }
+    Mod+Escape { spawn "/home/stubbe/.stubbe/src/_shared/scripts/hyprlock.launch.sh"; }
     Mod+Delete { quit skip-confirmation=true; }
 
     // WINDOW FOCUS
