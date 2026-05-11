@@ -40,8 +40,13 @@ _: {
       # — none of which contain Vimix-cursors on NixOS, where the symlink
       # lives at /run/current-system/sw/share/icons. Without XCURSOR_PATH
       # set on the unit, Weston (the greeter's compositor) silently
-      # renders the default cursor or none at all. Setting it here
-      # propagates through to the child Weston + greeter processes.
-      systemd.services.sddm.environment.XCURSOR_PATH = "/run/current-system/sw/share/icons";
+      # renders the default cursor or none at all.
+      #
+      # The unit name is `display-manager`, not `sddm`. NixOS's sddm
+      # module wires the service config into systemd.services.display-manager
+      # (nixos/modules/services/display-managers/sddm.nix:13 uses
+      # `xEnv = config.systemd.services.display-manager.environment`).
+      systemd.services.display-manager.environment.XCURSOR_PATH =
+        "/run/current-system/sw/share/icons";
     };
 }

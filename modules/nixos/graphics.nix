@@ -94,23 +94,33 @@ in
         else
           [ "i915" "amdgpu" ];
 
-      boot.kernelParams = lib.mkIf hasNvidia [ "nvidia-drm.fbdev=1" ];
-
       # simpledrm registers /dev/dri/card0 from the EFI framebuffer at
       # kernel start, then is torn down when the real GPU driver loads.
       # If Plymouth attached to simpledrm in that window (which it
       # always did, because plymouth-start runs before initrd
       # kernel-modules-load completes), its drawing surface is freed
       # underneath it — the splash continues "running" per the journal
-      # but is no longer visible. Blacklisting forces Plymouth to wait
-      # for the real DRM device (up to plymouth's DeviceTimeout, 8s by
-      # default) and attach to that directly.
+      # but is no longer visible.
+      #
+      # `boot.blacklistedKernelModules` is the WRONG knob here: it only
+      # writes /etc/modprobe.d/nixos.conf (see nixos/modules/system/boot/
+      # modprobe.nix:80), which blocks `modprobe` but is ignored by the
+      # kernel's own early auto-load path. simpledrm is bound to the
+      # EFI simple-framebuffer device by the kernel before any modprobe
+      # runs, so the modprobe blacklist never takes effect.
+      #
+      # `module_blacklist=` on the kernel cmdline is the kernel's
+      # built-in blacklist — applies to every load path, including the
+      # early auto-bind. Documented in Documentation/admin-guide/kernel-
+      # parameters.txt.
       #
       # Trade-off: hosts where neither nvidia, i915, nor amdgpu binds
       # (uncommon ARM / virtio-only / exotic setups) get no early
       # framebuffer at all and lose the splash, but still boot — the
       # firmware splash covers the gap until userspace starts the
       # display manager.
-      boot.blacklistedKernelModules = [ "simpledrm" ];
+      boot.kernelParams =
+        [ "module_blacklist=simpledrm" ]
+        ++ lib.optional hasNvidia "nvidia-drm.fbdev=1";
     };
 }
