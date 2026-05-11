@@ -220,7 +220,10 @@ mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
 mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 
 echo "==> Running nixos-install --flake /etc/nixos/dotfiles#${FLAKE_ATTR}"
-nixos-install --root /mnt --flake "/etc/nixos/dotfiles#${FLAKE_ATTR}" --no-root-password
+# --impure so graphics.nix can read /proc/driver/nvidia/version (populated
+# by the live ISO when an NVIDIA card is present — see iso.nix kernelModules)
+# and enable the nvidia driver in the installed system iff the target has one.
+nixos-install --root /mnt --flake "/etc/nixos/dotfiles#${FLAKE_ATTR}" --no-root-password --impure
 
 # Resolve uid/gid from the installed system — needed for ownership
 # regardless of whether the git clone succeeds.
@@ -284,4 +287,4 @@ echo ""
 echo "Install complete."
 echo "  Flake checkout: /etc/nixos/dotfiles (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
 echo "  Reboot, log in as '${PRIMARY_USER}', then iterate via:"
-echo "    sudo nixos-rebuild switch --flake /etc/nixos/dotfiles#${FLAKE_ATTR}"
+echo "    sudo nixos-rebuild switch --flake /etc/nixos/dotfiles#${FLAKE_ATTR} --impure"

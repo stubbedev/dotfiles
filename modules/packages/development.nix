@@ -43,7 +43,6 @@ _: {
 
         # IDE toolbox (GUI app)
         (homeLib.gfx jetbrains-toolbox)
-        networkmanager-openconnect
         openconnect
       ];
     };

@@ -18,5 +18,17 @@ _: {
         xdg-desktop-portal-hyprland
         xdg-desktop-portal-wlr
       ];
+
+      # The portal is a dbus-activated systemd user service and does not
+      # inherit Hyprland's `env =` directives. src/hypr/settings.conf
+      # deliberately excludes QT_QPA_PLATFORMTHEME and QT_STYLE_OVERRIDE
+      # from dbus-update-activation-environment (breaks KDE Plasma login),
+      # so scope them to this unit only — hyprland-share-picker is a Qt
+      # child of xdph and reads them from its parent's env.
+      xdg.configFile."systemd/user/xdg-desktop-portal-hyprland.service.d/qt-theme.conf".text = ''
+        [Service]
+        Environment=QT_QPA_PLATFORMTHEME=qt5ct
+        Environment=QT_STYLE_OVERRIDE=kvantum
+      '';
     };
 }

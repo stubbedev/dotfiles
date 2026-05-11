@@ -10,6 +10,14 @@ _: {
         enable = true;
         nssmdns4 = true;
         openFirewall = true;
+        # Restrict to real LAN NICs. Without this, avahi advertises on
+        # docker0 / br-* / veth* too, which collides the hostname with
+        # itself across bridges (stubbe-nixos-2, -3, ...) and leaks the
+        # host name into container networks.
+        allowInterfaces = [
+          "enp4s0"
+          "wlp3s0"
+        ];
         publish = {
           enable = true;
           addresses = true;

@@ -18,6 +18,11 @@ _: {
           default = true;
           description = "Install Docker via the host package manager and add the user to the docker group. On NixOS, set virtualisation.docker.enable instead.";
         };
+        avahi = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Install avahi-daemon + libnss-mdns via the host package manager so `*.local` mDNS resolution works. On NixOS, the system module handles this.";
+        };
         hyprland = lib.mkOption {
           type = lib.types.bool;
           default = true;

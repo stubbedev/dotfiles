@@ -1,3 +1,11 @@
+/* notification-icon-size drives the big body-image slot; the app-icon
+   slot (icon hints from notify-send -i) defaults to 1/3 of it. Pin both
+   so per-output scale is the only thing affecting apparent size. */
+:root {
+	--notification-icon-size: 48px;
+	--notification-app-icon-size: 32px;
+}
+
 * {
 	all: unset;
 	font-size: 14px;

@@ -129,6 +129,8 @@ in
         # Auto-load common wired NIC drivers. nixos-install fetches packages
         # from cache.nixos.org — a missing driver means a stalled install.
         # hardware.nix covers storage controllers; these cover the NIC side.
+        # (graphics.nix already force-loads `nvidia` unconditionally, which
+        # is what populates /proc/driver/nvidia/version on NVIDIA targets.)
         boot.kernelModules = lib.mkAfter [
           # --- Wired ethernet ---
           "r8169"       # Realtek Gigabit PCIe (most consumer boards)
@@ -200,13 +202,12 @@ in
         services.greetd.enable = lib.mkForce false;
         services.displayManager.sddm.enable = lib.mkForce false;
 
-        # graphics.nix enables nvidia-open; the minimal ISO has no X11 so the
-        # module would still be loaded at boot and fail on non-NVIDIA hardware.
+        # The live ISO is a console-only installer; X stays off. The
+        # nvidia kernel module is pulled into the closure and force-loaded
+        # by graphics.nix unconditionally, so /proc/driver/nvidia/version
+        # populates on NVIDIA targets and stb-install-nixos --impure can
+        # auto-detect the GPU regardless of the build host.
         services.xserver.enable = lib.mkForce false;
-        hardware.nvidia = {
-          modesetting.enable = lib.mkForce false;
-          open = lib.mkForce false;
-        };
         services.getty.autologinUser = lib.mkForce "root";
         users.users.root.initialHashedPassword = lib.mkForce "";
 

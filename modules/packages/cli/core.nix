@@ -26,7 +26,6 @@ _: {
         just
 
         # System monitoring
-        htop
         btop
 
         # Network utilities
