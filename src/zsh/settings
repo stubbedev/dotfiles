@@ -41,6 +41,38 @@ function _settings_init {
   zstyle ':fzf-tab:*' switch-group '<' '>'
   zstyle ':fzf-tab:*' fuzzy-search true
 
+  # Add avahi-discovered .local hosts to ssh-style completion. avahi-browse
+  # takes ~1.5s, so we serve from a stale on-disk cache and refresh in the
+  # background — completion never blocks. The service-type filter excludes
+  # Sonos boxes, printers, etc. so only ssh-able machines show up.
+  if is_binary avahi-browse; then
+    function _avahi_ssh_hosts {
+      local cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-avahi-hosts"
+      local max_age=30
+      local mtime
+      mtime=$(stat -c %Y -- "$cache" 2>/dev/null || echo 0)
+      if (( EPOCHSECONDS - mtime > max_age )); then
+        {
+          mkdir -p -- "${cache:h}"
+          local tmp="$cache.$$"
+          if avahi-browse -atrp 2>/dev/null \
+               | awk -F';' '$1=="=" && $3=="IPv4" && ($5=="_workstation._tcp" || $5 ~ /ssh/) && $7!="" {print $7}' \
+               | sort -u > "$tmp" 2>/dev/null; then
+            mv -- "$tmp" "$cache"
+          else
+            rm -f -- "$tmp"
+          fi
+        } &!
+      fi
+      if [[ -s $cache ]]; then
+        reply=( ${(f)"$(<$cache)"} )
+      else
+        reply=()
+      fi
+    }
+    zstyle -e ':completion:*:hosts' hosts '_avahi_ssh_hosts'
+  fi
+
   HYPHEN_INSENSITIVE=false
   DISABLE_AUTO_TITLE=true
   ENABLE_CORRECTION=true

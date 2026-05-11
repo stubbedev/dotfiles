@@ -19,22 +19,15 @@ _: {
         # finds apt-get / dnf / pacman / ip under /usr/sbin etc.
         PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-        if ! command -v avahi-daemon >/dev/null 2>&1; then
-          if command -v apt-get >/dev/null 2>&1; then
-            # On Debian/Ubuntu, libnss-mdns's postinst edits
-            # /etc/nsswitch.conf for us; the nsswitch step below is a
-            # safety net (idempotent grep skips if already done).
-            sudo apt-get update
-            sudo apt-get install -y avahi-daemon libnss-mdns
-          elif command -v dnf >/dev/null 2>&1; then
-            sudo dnf install -y avahi nss-mdns
-          elif command -v pacman >/dev/null 2>&1; then
-            sudo pacman -S --needed --noconfirm avahi nss-mdns
-          else
-            echo "No supported package manager (apt-get/dnf/pacman) found." >&2
-            exit 1
-          fi
-        fi
+        # On Debian/Ubuntu, libnss-mdns's postinst edits /etc/nsswitch.conf
+        # for us; the nsswitch step below is a safety net for the case
+        # where it didn't, and the canonical path for Fedora/Arch.
+        ${homeLib.installHostPackage {
+          detect = "avahi-daemon";
+          apt = [ "avahi-daemon" "libnss-mdns" ];
+          dnf = [ "avahi" "nss-mdns" ];
+          pacman = [ "avahi" "nss-mdns" ];
+        }}
 
         # Ensure /etc/nsswitch.conf carries an mdns entry so `ssh foo.local`
         # resolves. Fedora's nss-mdns and Arch's nss-mdns ship the NSS

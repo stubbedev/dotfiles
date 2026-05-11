@@ -23,6 +23,11 @@ _: {
           default = true;
           description = "Install avahi-daemon + libnss-mdns via the host package manager so `*.local` mDNS resolution works. On NixOS, the system module handles this.";
         };
+        openssh = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Install openssh-server via the host package manager and enable sshd so this machine accepts inbound ssh. On NixOS, services.openssh handles this.";
+        };
         hyprland = lib.mkOption {
           type = lib.types.bool;
           default = true;

@@ -114,6 +114,40 @@ rec {
       rm -f "$_stb_tmp"
     '';
 
+  # Render a shell snippet that installs host-OS packages via the first
+  # available package manager when `detect` (a binary in PATH) is
+  # absent. Aborts with `exit 1` on unsupported distros. Each branch
+  # takes its own distro-native package list.
+  #
+  #   ${homeLib.installHostPackage {
+  #     detect = "avahi-daemon";
+  #     apt    = [ "avahi-daemon" "libnss-mdns" ];
+  #     dnf    = [ "avahi" "nss-mdns" ];
+  #     pacman = [ "avahi" "nss-mdns" ];
+  #   }}
+  installHostPackage =
+    {
+      detect,
+      apt,
+      dnf,
+      pacman,
+    }:
+    ''
+      if ! command -v ${detect} >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y ${lib.escapeShellArgs apt}
+        elif command -v dnf >/dev/null 2>&1; then
+          sudo dnf install -y ${lib.escapeShellArgs dnf}
+        elif command -v pacman >/dev/null 2>&1; then
+          sudo pacman -S --needed --noconfirm ${lib.escapeShellArgs pacman}
+        else
+          echo "No supported package manager (apt-get/dnf/pacman) found." >&2
+          exit 1
+        fi
+      fi
+    '';
+
   # Install a polkit rule and reload the polkit service. Polkit rules
   # want root:polkitd ownership when the polkitd group exists (newer
   # distros), root:root otherwise.

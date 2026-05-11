@@ -1,0 +1,37 @@
+polkit.addRule(function(action, subject) {
+  if (action.id.indexOf("org.freedesktop.login1.") !== 0) {
+    return;
+  }
+
+  var allowed = {
+    "org.freedesktop.login1.reboot": true,
+    "org.freedesktop.login1.reboot-multiple-sessions": true,
+    "org.freedesktop.login1.reboot-ignore-inhibit": true,
+    "org.freedesktop.login1.power-off": true,
+    "org.freedesktop.login1.power-off-multiple-sessions": true,
+    "org.freedesktop.login1.power-off-ignore-inhibit": true,
+    "org.freedesktop.login1.halt": true,
+    "org.freedesktop.login1.halt-multiple-sessions": true,
+    "org.freedesktop.login1.halt-ignore-inhibit": true,
+    "org.freedesktop.login1.suspend": true,
+    "org.freedesktop.login1.suspend-multiple-sessions": true,
+    "org.freedesktop.login1.suspend-ignore-inhibit": true,
+    "org.freedesktop.login1.hibernate": true,
+    "org.freedesktop.login1.hibernate-multiple-sessions": true,
+    "org.freedesktop.login1.hibernate-ignore-inhibit": true,
+    "org.freedesktop.login1.hybrid-sleep": true,
+    "org.freedesktop.login1.hybrid-sleep-multiple-sessions": true,
+    "org.freedesktop.login1.suspend-then-hibernate": true,
+    "org.freedesktop.login1.suspend-then-hibernate-multiple-sessions": true
+  };
+
+  if (!allowed[action.id]) {
+    return;
+  }
+
+  if (subject.user !== "@USERNAME@" || !subject.local || !subject.active) {
+    return;
+  }
+
+  return polkit.Result.YES;
+});

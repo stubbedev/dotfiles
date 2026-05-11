@@ -35,5 +35,12 @@
           HELPER_PATH = "${sharedScripts}/power.profile.helper.sh";
         };
       };
+
+      environment.etc."polkit-1/rules.d/52-power-management.rules".text = homeLib.substituteFile {
+        file = self + "/src/polkit/52-power-management.rules";
+        vars = {
+          USERNAME = username;
+        };
+      };
     };
 }
