@@ -94,23 +94,40 @@ in
         else
           [ "i915" "amdgpu" ];
 
-      boot.kernelParams = lib.mkIf hasNvidia [ "nvidia-drm.fbdev=1" ];
-
       # simpledrm registers /dev/dri/card0 from the EFI framebuffer at
       # kernel start, then is torn down when the real GPU driver loads.
       # If Plymouth attached to simpledrm in that window (which it
       # always did, because plymouth-start runs before initrd
       # kernel-modules-load completes), its drawing surface is freed
       # underneath it — the splash continues "running" per the journal
-      # but is no longer visible. Blacklisting forces Plymouth to wait
-      # for the real DRM device (up to plymouth's DeviceTimeout, 8s by
-      # default) and attach to that directly.
+      # but is no longer visible.
+      #
+      # On NixOS the kernel ships with CONFIG_DRM_SIMPLEDRM=y — simpledrm
+      # is *built into vmlinuz*, not a loadable module. Verified by
+      # `zgrep DRM_SIMPLEDRM /proc/config.gz` and by `lsmod | grep
+      # simpledrm` returning empty while the journal still shows
+      # `[drm] Initialized simpledrm 1.0.0`. Two consequences:
+      #
+      #   1. `boot.blacklistedKernelModules` (writes
+      #      /etc/modprobe.d/nixos.conf) is a no-op — built-in code
+      #      doesn't go through modprobe.
+      #   2. `module_blacklist=simpledrm` on the cmdline is also a
+      #      no-op — that param only matches loadable modules.
+      #
+      # `initcall_blacklist=` is the kernel's own knob that does match
+      # built-in initcalls. The exact function name was confirmed from
+      # this kernel's System.map:
+      #   ffffffff837f2e80 t simpledrm_platform_driver_init
+      # (`module_platform_driver(simpledrm_platform_driver)` macro-
+      # expands into a `_init` initcall at level 6.)
       #
       # Trade-off: hosts where neither nvidia, i915, nor amdgpu binds
       # (uncommon ARM / virtio-only / exotic setups) get no early
       # framebuffer at all and lose the splash, but still boot — the
       # firmware splash covers the gap until userspace starts the
       # display manager.
-      boot.blacklistedKernelModules = [ "simpledrm" ];
+      boot.kernelParams =
+        [ "initcall_blacklist=simpledrm_platform_driver_init" ]
+        ++ lib.optional hasNvidia "nvidia-drm.fbdev=1";
     };
 }
