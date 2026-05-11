@@ -76,11 +76,16 @@ function _git_main_root {
 }
 
 # Remove the previous worktree if we've moved out of it. Caller must have
-# already verified it was clean before the switch.
+# already verified it was clean before the switch. Skipped if the worktree
+# has commits that aren't on its upstream — those would be silently lost.
 function _gwt_remove_if_clean {
   local _prev="$1"
   [[ -z "$_prev" ]] && return 0
   [[ "$PWD" == "$_prev" || "$PWD" == "$_prev"/* ]] && return 0
+  if _worktree_has_unpushed "$_prev"; then
+    echo "gwt: keeping $_prev (has unpushed commits)"
+    return 0
+  fi
   (
     if git worktree remove "$_prev" 2>/dev/null; then
       git worktree prune --expire now >/dev/null 2>&1
@@ -165,20 +170,11 @@ function _checkout_branch_or_worktree {
     return $?
   fi
 
-  local _wt_dir="$_main/.worktrees"
-  local _sanitized=${_target//\//-}
-  local _wt_path="$_wt_dir/$_sanitized"
-  mkdir -p "$_wt_dir"
   if [[ "$_mode" == "create" ]]; then
-    if [[ -n "$_base" ]]; then
-      git worktree add -b "$_target" "$_wt_path" "$_base" || return 1
-    else
-      git worktree add -b "$_target" "$_wt_path" || return 1
-    fi
+    _gwt_create "$_target" "$_base"
   else
-    git worktree add "$_wt_path" "$_target" || return 1
+    _gwt_attach "$_target"
   fi
-  cd "$_wt_path" || return 1
 }
 
 # Fork-free branch listing: sets $reply to sorted-unique branch array.
@@ -227,6 +223,195 @@ function _pick_base_branch {
       --height=30%)
   [[ -z "$_picked" ]] && return 1
   echo "$_picked"
+}
+
+# True if the worktree at $1 has any uncommitted changes.
+function _worktree_is_dirty {
+  local _p="$1"
+  [[ -z "$_p" ]] && return 1
+  [[ -n "$(git -C "$_p" status --porcelain 2>/dev/null)" ]]
+}
+
+# True if the worktree at $1 has commits not yet on its upstream. When no
+# upstream is configured, falls back to comparing against origin/<default>.
+function _worktree_has_unpushed {
+  local _p="$1"
+  [[ -z "$_p" ]] && return 1
+  local _up _count _def
+  _up=$(git -C "$_p" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)
+  if [[ -n "$_up" ]]; then
+    _count=$(git -C "$_p" rev-list --count "$_up..HEAD" 2>/dev/null)
+  else
+    _def=$(git -C "$_p" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)
+    _def=${_def#refs/remotes/origin/}
+    [[ -z "$_def" ]] && return 1
+    _count=$(git -C "$_p" rev-list --count "origin/$_def..HEAD" 2>/dev/null)
+  fi
+  [[ -n "$_count" && "$_count" -gt 0 ]]
+}
+
+# Echo a ref to base a new branch from. Fetches origin first (unless
+# GWT_NO_FETCH=1) and prefers origin/$base when available so new worktrees
+# pick up upstream commits even when local $base is stale.
+function _resolve_base {
+  local _base="$1"
+  [[ -z "$_base" ]] && return 0
+  [[ -z "$GWT_NO_FETCH" ]] && git fetch origin "$_base" --quiet 2>/dev/null
+  if git rev-parse --verify --quiet "refs/remotes/origin/$_base" >/dev/null 2>&1; then
+    echo "origin/$_base"
+  else
+    echo "$_base"
+  fi
+}
+
+# Symlink uncommitted-but-needed files from the main repo into a new worktree.
+# Defaults: .env, .env.local, .env.*.local, .envrc. A .gwt-link file in the
+# main repo root overrides the defaults (one glob pattern per line, # comments).
+function _gwt_link_files {
+  local _main="$1" _wt="$2"
+  [[ -z "$_main" || -z "$_wt" || "$_main" == "$_wt" ]] && return 0
+  emulate -L zsh
+  setopt null_glob
+  local -a _patterns
+  if [[ -f "$_main/.gwt-link" ]]; then
+    local _line
+    while IFS= read -r _line; do
+      [[ -z $_line || $_line == \#* ]] && continue
+      _patterns+=("$_line")
+    done <"$_main/.gwt-link"
+  else
+    _patterns=('.env' '.env.local' '.env.*.local' '.envrc')
+  fi
+  local _pat _src _rel _dst _linked_envrc=0
+  for _pat in "${_patterns[@]}"; do
+    for _src in "$_main"/${~_pat}; do
+      [[ -e "$_src" || -L "$_src" ]] || continue
+      _rel=${_src#$_main/}
+      _dst="$_wt/$_rel"
+      [[ -e "$_dst" || -L "$_dst" ]] && continue
+      mkdir -p "${_dst:h}"
+      if ln -s "$_src" "$_dst" 2>/dev/null; then
+        echo "gwt: linked $_rel"
+        [[ "$_rel" == ".envrc" ]] && _linked_envrc=1
+      fi
+    done
+  done
+  if (( _linked_envrc )) && command -v direnv >/dev/null 2>&1; then
+    direnv allow "$_wt" 2>/dev/null && echo "gwt: direnv allowed $_wt"
+  fi
+}
+
+# Run project setup in the new worktree. If <main>/.gwt-postcreate exists and
+# is executable, run it (project owns the setup). Otherwise detect a lockfile
+# and dispatch the matching install command. Output goes to
+# <worktree>/.gwt-postcreate.log. Skipped when GWT_NO_INSTALL=1.
+function _gwt_postcreate {
+  local _wt="$1" _main="$2"
+  [[ -z "$_wt" || -n "$GWT_NO_INSTALL" ]] && return 0
+  local _log="$_wt/.gwt-postcreate.log"
+  if [[ -n "$_main" && -x "$_main/.gwt-postcreate" ]]; then
+    echo "gwt: running $_main/.gwt-postcreate in bg → tail -f $_log"
+    ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" >"$_log" 2>&1 ) &!
+    return 0
+  fi
+  local -a _cmd
+  if [[ -f "$_wt/bun.lockb" ]] && command -v bun >/dev/null 2>&1; then
+    _cmd=(bun install)
+  elif [[ -f "$_wt/pnpm-lock.yaml" ]] && command -v pnpm >/dev/null 2>&1; then
+    _cmd=(pnpm install)
+  elif [[ -f "$_wt/package-lock.json" ]] && command -v npm >/dev/null 2>&1; then
+    _cmd=(npm ci)
+  elif [[ -f "$_wt/yarn.lock" ]] && command -v yarn >/dev/null 2>&1; then
+    _cmd=(yarn install --frozen-lockfile)
+  elif [[ -f "$_wt/composer.lock" ]] && command -v composer >/dev/null 2>&1; then
+    _cmd=(composer install)
+  elif [[ -f "$_wt/uv.lock" ]] && command -v uv >/dev/null 2>&1; then
+    _cmd=(uv sync)
+  elif [[ -f "$_wt/go.mod" ]] && command -v go >/dev/null 2>&1; then
+    _cmd=(go mod download)
+  else
+    return 0
+  fi
+  echo "gwt: installing deps in bg (${_cmd[*]}) → tail -f $_log"
+  ( cd "$_wt" && "${_cmd[@]}" >"$_log" 2>&1 ) &!
+}
+
+# Create a new worktree at .worktrees/<branch> (slashes preserved), cd in,
+# link env files, kick off dep install in the background.
+function _gwt_create {
+  local _branch="$1" _base="$2"
+  local _main=$(_git_main_root) || _main="$_git_root"
+  local _wt_path="$_main/.worktrees/$_branch"
+  mkdir -p "${_wt_path:h}"
+  local _base_ref=""
+  [[ -n "$_base" ]] && _base_ref=$(_resolve_base "$_base")
+  if [[ -n "$_base_ref" ]]; then
+    git worktree add -b "$_branch" "$_wt_path" "$_base_ref" || return 1
+  else
+    git worktree add -b "$_branch" "$_wt_path" || return 1
+  fi
+  cd "$_wt_path" || return 1
+  _gwt_link_files "$_main" "$_wt_path"
+  _gwt_postcreate "$_wt_path" "$_main"
+}
+
+# Attach an existing branch to a new worktree at the canonical path.
+function _gwt_attach {
+  local _branch="$1"
+  local _main=$(_git_main_root) || _main="$_git_root"
+  local _wt_path="$_main/.worktrees/$_branch"
+  mkdir -p "${_wt_path:h}"
+  git worktree add "$_wt_path" "$_branch" || return 1
+  cd "$_wt_path" || return 1
+  _gwt_link_files "$_main" "$_wt_path"
+  _gwt_postcreate "$_wt_path" "$_main"
+}
+
+# Interactive branch-name builder. Echoes final name on stdout; sets
+# `_branch_base_out` to the chosen base. Returns 1 on cancel.
+#   $1 initial token (may be empty); $2 default-base label for the prompt.
+function _branch_wizard {
+  local _initial="$1" _label="$2"
+  local _name="$_initial"
+  if [[ -z "$_name" ]]; then
+    local _p="(Enter: branch name [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> "
+    [[ -n "$_label" ]] && _p="(Enter: new branch from $_label [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> "
+    _name=$(fzf --prompt="$_p" --height=1 --reverse --no-info --print-query </dev/null)
+    [[ -z "$_name" ]] && return 1
+  fi
+
+  local _final=""
+  local _tag_mask='^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$'
+  if [[ $_name =~ $_tag_mask ]]; then
+    _branch_base_out=$(_default_branch) || return 1
+    _final="release/$_name"
+  else
+    local _prefix=$(echo -e "feature\nbugfix\nhotfix" |
+      fzf --prompt="(Enter: select prefix)> " --height=3 --no-input --no-info)
+    [[ -z "$_prefix" ]] && return 1
+
+    if [[ "$_prefix" == "hotfix" ]]; then
+      _branch_base_out=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 1
+    else
+      _branch_base_out=$(_default_branch) || return 1
+    fi
+
+    local _suffix=$(fzf --height=1 --reverse --no-info --print-query \
+      --prompt="(Enter: select suffix)> " </dev/null)
+    if [[ -n "$_suffix" ]]; then
+      _suffix=${_suffix:l}
+      _suffix=${_suffix// /-}
+      _final="$_prefix/$_name-$_suffix"
+    else
+      _final="$_prefix/$_name"
+    fi
+  fi
+
+  if ! git check-ref-format "refs/heads/$_final" 2>/dev/null; then
+    echo "Invalid branch name: $_final" >&2
+    return 1
+  fi
+  echo "$_final"
 }
 
 if are_binary git bat fzf; then
@@ -336,64 +521,9 @@ if are_binary git bat fzf; then
       return 0
     fi
 
-    if [[ -z "$branch_name" ]]; then
-      branch_name=$(fzf \
-        --prompt="(Enter: create branch [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel command)> " \
-        --height=1 \
-        --reverse \
-        --no-info \
-        --print-query </dev/null)
-    fi
-
-    if [[ -z "$branch_name" ]]; then
-      return 0
-    fi
-
-    local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
-    if [[ $branch_name =~ $tag_mask ]]; then
-      _checkout_branch_or_worktree "release/$branch_name" create
-      return 0
-    fi
-
-    local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
-      fzf --prompt="(Enter: select prefix)> " \
-        --height=3 \
-        --no-input \
-        --no-info)
-
-    if [[ -z "$branch_prefix" ]]; then
-      return 0
-    fi
-
-    local base_branch
-    if [[ "$branch_prefix" == "hotfix" ]]; then
-      base_branch=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 0
-    else
-      base_branch=$(_default_branch) || {
-        echo "Could not determine default branch"
-        return 1
-      }
-    fi
-
     local new_branch_name
-    local branch_suffix=$(fzf \
-      --height=1 \
-      --reverse \
-      --no-info \
-      --print-query \
-      --prompt="(Enter: select suffix)> " </dev/null)
-
-    if [[ -n "$branch_suffix" ]]; then
-      branch_suffix=${branch_suffix:l}
-      branch_suffix=${branch_suffix// /-}
-      new_branch_name="$branch_prefix/$branch_name-$branch_suffix"
-    else
-      new_branch_name="$branch_prefix/$branch_name"
-    fi
-
-    if [[ "$new_branch_name" != "/" ]]; then
-      _checkout_branch_or_worktree "$new_branch_name" create "$base_branch"
-    fi
+    new_branch_name=$(_branch_wizard "$branch_name" "") || return 0
+    _checkout_branch_or_worktree "$new_branch_name" create "$_branch_base_out"
   }
 
   function ga {
@@ -583,14 +713,16 @@ if are_binary git bat fzf; then
     in_git_repo || return 1
 
     local current_branch=$(git branch --show-current)
-    git branch --set-upstream-to="origin/$current_branch"
+    git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 ||
+      git branch --set-upstream-to="origin/$current_branch" 2>/dev/null
     git pull
   }
   function gga {
     in_git_repo || return 1
 
     local current_branch=$(git branch --show-current)
-    git branch --set-upstream-to="origin/$current_branch"
+    git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 ||
+      git branch --set-upstream-to="origin/$current_branch" 2>/dev/null
     git pull --all
   }
   function gf {
@@ -605,12 +737,12 @@ if are_binary git bat fzf; then
   }
   function ghr {
     in_git_repo || return 1
-
+    _confirm_destructive "[WARN] Hard reset HEAD~ (drops last commit + working changes)" || return 0
     git reset --hard HEAD~
   }
   function ghrn {
     in_git_repo || return 1
-
+    _confirm_destructive "[WARN] Hard reset HEAD~$1 (drops last $1 commits + working changes)" || return 0
     git reset --hard HEAD~"$1"
   }
   function gr {
@@ -758,6 +890,20 @@ if are_binary git fzf; then
   function gwt {
     in_git_repo || return 1
 
+    local _start_pwd="$PWD"
+
+    # `gwt -` — toggle to the previously-visited worktree.
+    if [[ "$1" == "-" ]]; then
+      if [[ -z "$_GWT_LAST" || ! -d "$_GWT_LAST" ]]; then
+        echo "gwt: no previous worktree"
+        return 1
+      fi
+      cd "$_GWT_LAST" || return 1
+      typeset -g _GWT_LAST="$_start_pwd"
+      return 0
+    fi
+
+    {
     local current_worktree="$_git_root"
     local repo_root=$(_git_main_root) || repo_root="$current_worktree"
 
@@ -769,13 +915,26 @@ if are_binary git fzf; then
 
     local worktrees_dir="$repo_root/.worktrees"
 
-    local worktree_entries=""
+    # Build worktree rows, sorted newest-first by HEAD commit timestamp.
     local occupied_branches=""
-    local _path _branch
+    local -a _wt_rows=()
+    local _path _branch _ts
     while IFS=$'\t' read -r _path _branch; do
-      [[ "$_path" != "$current_worktree" ]] && worktree_entries+="$_path  $_branch"$'\n'
       occupied_branches+="$_branch"$'\n'
+      [[ "$_path" == "$current_worktree" ]] && continue
+      _ts=$(git -C "$_path" log -1 --format=%at HEAD 2>/dev/null)
+      _ts=${_ts:-0}
+      _wt_rows+=("$_ts"$'\t'"$_path"$'\t'"$_branch")
     done < <(_list_worktrees)
+    _wt_rows=("${(@On)_wt_rows}")
+    local worktree_entries=""
+    local _row _rest
+    for _row in "${_wt_rows[@]}"; do
+      _rest=${_row#*$'\t'}
+      _path=${_rest%%$'\t'*}
+      _branch=${_rest#*$'\t'}
+      worktree_entries+="$_path  $_branch"$'\n'
+    done
 
     _list_git_branches
     local all_branches=${(F)reply}
@@ -799,7 +958,11 @@ if are_binary git fzf; then
       [[ -z "$line" ]] && continue
       local wt_path=${line%% *}
       local wt_branch=${line##* }
-      display_list+="[worktree] $wt_branch  →  $wt_path"$'\n'
+      local marker=""
+      _worktree_is_dirty "$wt_path" && marker+="*"
+      _worktree_has_unpushed "$wt_path" && marker+="!"
+      [[ -n "$marker" ]] && marker=" $marker"
+      display_list+="[worktree] $wt_branch$marker  →  $wt_path"$'\n'
     done <<<"$worktree_entries"
 
     while IFS= read -r branch; do
@@ -850,11 +1013,7 @@ if are_binary git fzf; then
       if [[ -z "$base_branch" ]]; then
         return 0
       fi
-      local sanitized=${new_branch_name//\//-}
-      local worktree_path="$worktrees_dir/$sanitized"
-      mkdir -p "$worktrees_dir"
-      git worktree add -b "$new_branch_name" "$worktree_path" "$base_branch" || return 1
-      cd "$worktree_path" || return 1
+      _gwt_create "$new_branch_name" "$base_branch" || return 1
       _gwt_remove_if_clean "$_prev_clean_worktree"
       return 0
     fi
@@ -866,13 +1025,12 @@ if are_binary git fzf; then
       cd "$target_path" || return 1
     else
       local branch_name=${match#"[branch]   "}
-      local sanitized=${branch_name//\//-}
-      local worktree_path="$worktrees_dir/$sanitized"
-      mkdir -p "$worktrees_dir"
-      git worktree add "$worktree_path" "$branch_name" || return 1
-      cd "$worktree_path" || return 1
+      _gwt_attach "$branch_name" || return 1
     fi
     _gwt_remove_if_clean "$_prev_clean_worktree"
+    } always {
+      [[ "$PWD" != "$_start_pwd" ]] && typeset -g _GWT_LAST="$_start_pwd"
+    }
   }
 
   function gwtd {
@@ -884,7 +1042,12 @@ if are_binary git fzf; then
     local linked_worktrees=""
     local _path _branch
     while IFS=$'\t' read -r _path _branch; do
-      [[ "$_path" != "$repo_root" ]] && linked_worktrees+="$_branch  →  $_path"$'\n'
+      [[ "$_path" == "$repo_root" ]] && continue
+      local _marker=""
+      _worktree_is_dirty "$_path" && _marker+="*"
+      _worktree_has_unpushed "$_path" && _marker+="!"
+      [[ -n "$_marker" ]] && _marker=" $_marker"
+      linked_worktrees+="$_branch$_marker  →  $_path"$'\n'
     done < <(_list_worktrees)
 
     if [[ -z "$linked_worktrees" ]]; then
@@ -897,8 +1060,12 @@ if are_binary git fzf; then
       local _entry
       while IFS= read -r _entry; do
         local _ebranch=${_entry%%  →  *}
+        local _ebranch_clean="$_ebranch"
+        _ebranch_clean=${_ebranch_clean% \*\!}
+        _ebranch_clean=${_ebranch_clean% \!}
+        _ebranch_clean=${_ebranch_clean% \*}
         local _epath=${_entry##*  →  }
-        if [[ "$_ebranch" == "$target" || "$_epath" == "$target" ]]; then
+        if [[ "$_ebranch_clean" == "$target" || "$_epath" == "$target" ]]; then
           selected="$_entry"
           break
         fi
@@ -922,15 +1089,31 @@ if are_binary git fzf; then
       cd "$repo_root" || return 1
     fi
 
-    git worktree remove --force "$worktree_path" || return 1
+    local -a _msgs=()
+    _worktree_is_dirty "$worktree_path" && _msgs+=("uncommitted changes")
+    _worktree_has_unpushed "$worktree_path" && _msgs+=("unpushed commits")
+    if (( ${#_msgs[@]} )); then
+      local _why=${(j:, :)_msgs}
+      _confirm_destructive "[WARN] Worktree '$worktree_path' has $_why — destroy?" || return 0
+      git worktree remove --force "$worktree_path" || return 1
+    else
+      git worktree remove "$worktree_path" || return 1
+    fi
     git worktree prune --expire now >/dev/null 2>&1
+
+    # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
+    # removing feature/foo).
+    local _wt_root="$repo_root/.worktrees"
+    local _parent="${worktree_path:h}"
+    while [[ "$_parent" == "$_wt_root"/* ]]; do
+      rmdir "$_parent" 2>/dev/null || break
+      _parent="${_parent:h}"
+    done
   }
 
   # Wizard like gcb, but always creates a worktree off the default branch.
   function gcbw {
     in_git_repo || return 1
-
-    local initial_query="${1:-}"
 
     local default_branch
     default_branch=$(_default_branch) || {
@@ -938,53 +1121,8 @@ if are_binary git fzf; then
       return 1
     }
 
-    local branch_name=$(fzf \
-      --prompt="(Enter: new branch from $default_branch [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> " \
-      --query="$initial_query" \
-      --height=1 \
-      --reverse \
-      --no-info \
-      --print-query </dev/null)
-
-    if [[ -z "$branch_name" ]]; then
-      return 0
-    fi
-
-    local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
     local new_branch_name
-    local base_branch="$default_branch"
-    if [[ $branch_name =~ $tag_mask ]]; then
-      new_branch_name="release/$branch_name"
-    else
-      local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
-        fzf --prompt="(Enter: select prefix)> " \
-          --height=3 \
-          --no-input \
-          --no-info)
-
-      if [[ -z "$branch_prefix" ]]; then
-        return 0
-      fi
-
-      if [[ "$branch_prefix" == "hotfix" ]]; then
-        base_branch=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 0
-      fi
-
-      local branch_suffix=$(fzf \
-        --height=1 \
-        --reverse \
-        --no-info \
-        --print-query \
-        --prompt="(Enter: select suffix)> " </dev/null)
-
-      if [[ -n "$branch_suffix" ]]; then
-        branch_suffix=${branch_suffix:l}
-        branch_suffix=${branch_suffix// /-}
-        new_branch_name="$branch_prefix/$branch_name-$branch_suffix"
-      else
-        new_branch_name="$branch_prefix/$branch_name"
-      fi
-    fi
+    new_branch_name=$(_branch_wizard "${1:-}" "$default_branch") || return 0
 
     local _existing_wt=$(_worktree_path_for_branch "$new_branch_name")
     if [[ -n "$_existing_wt" ]]; then
@@ -998,13 +1136,7 @@ if are_binary git fzf; then
       return 1
     fi
 
-    local _main=$(_git_main_root) || _main="$_git_root"
-    local _wt_dir="$_main/.worktrees"
-    local _sanitized=${new_branch_name//\//-}
-    local _wt_path="$_wt_dir/$_sanitized"
-    mkdir -p "$_wt_dir"
-    git worktree add -b "$new_branch_name" "$_wt_path" "$base_branch" || return 1
-    cd "$_wt_path" || return 1
+    _gwt_create "$new_branch_name" "$_branch_base_out"
   }
 fi
 
