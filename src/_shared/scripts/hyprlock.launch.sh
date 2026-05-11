@@ -13,7 +13,6 @@ pidof hyprlock >/dev/null && exit 0
 
 readonly OUT="${XDG_RUNTIME_DIR:-/tmp}/hyprlock.conf"
 readonly THEME="${HOME}/.config/hypr/theme.conf"
-readonly BG="${HOME}/.stubbe/src/wallpapers/ballet.jpg"
 
 list_monitors() {
   if [ -n "${HYPRLAND_INSTANCE_SIGNATURE-}" ]; then
@@ -117,8 +116,6 @@ animations {
 
 background {
   monitor =
-  path = ${BG}
-  blur_passes = 0
   color = \$base
 }
 EOF
