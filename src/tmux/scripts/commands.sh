@@ -56,6 +56,13 @@ session_init() {
   tmux set-option -q -t "$target" @stubbe_has_git "$has_git"
 }
 
+set_ssh_flag() {
+  local sess="${1:-$(tmux display-message -p '#S')}"
+  local flag=0
+  [[ $(tmux show-environment -t "$sess" SSH_CONNECTION 2>/dev/null) == SSH_CONNECTION=* ]] && flag=1
+  tmux set-option -q -t "$sess" @stubbe_ssh "$flag"
+}
+
 refresh_session_git_flag() {
   local session_name
   local pane_id
@@ -407,6 +414,7 @@ case "$1" in
 "move_pane")                move_pane "$2" ;;
 "move_pane_to_window")      move_pane_to_window "$2" ;;
 "session_init")             session_init ;;
+"set_ssh_flag")             set_ssh_flag "$2" ;;
 "reload_animation")         reload_animation ;;
 "pending_animation")        pending_animation "$2" "$3" "$4" ;;
 esac
