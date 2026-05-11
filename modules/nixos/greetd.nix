@@ -34,19 +34,24 @@ _: {
       # find it, so kwin_wayland renders an invisible cursor.
       environment.pathsToLink = [ "/share/icons" ];
 
-      # SDDM passes the [Theme] CursorTheme setting to its greeter as
-      # XCURSOR_THEME, but the libxcursor lookup falls back to the
-      # default search path (~/.icons:/usr/share/icons:/usr/share/pixmaps)
-      # — none of which contain Vimix-cursors on NixOS, where the symlink
-      # lives at /run/current-system/sw/share/icons. Without XCURSOR_PATH
-      # set on the unit, Weston (the greeter's compositor) silently
-      # renders the default cursor or none at all.
+      # SDDM 0.21 (src/daemon/Greeter.cpp:195-205) builds the env it
+      # hands to sddm-helper (which then spawns weston + sddm-greeter)
+      # by *allowlisting* keys from its own systemEnvironment — only
+      # LANG/LC_*/LD_LIBRARY_PATH/QML2_IMPORT_PATH/QT_PLUGIN_PATH/
+      # XDG_DATA_DIRS get pulled through, the rest are dropped. So
+      # XCURSOR_PATH on this unit is silently discarded before reaching
+      # weston, which is why a plain `XCURSOR_PATH=...` had no effect.
       #
-      # The unit name is `display-manager`, not `sddm`. NixOS's sddm
-      # module wires the service config into systemd.services.display-manager
-      # (nixos/modules/services/display-managers/sddm.nix:13 uses
-      # `xEnv = config.systemd.services.display-manager.environment`).
-      systemd.services.display-manager.environment.XCURSOR_PATH =
-        "/run/current-system/sw/share/icons";
+      # XDG_DATA_DIRS *is* in the allowlist, and libxcursor's search
+      # path expands to `$XDG_DATA_HOME/icons:$XDG_DATA_DIRS/icons:…`
+      # (Xcursor man page). Setting XDG_DATA_DIRS here to the system
+      # profile gets `/run/current-system/sw/share/icons/Vimix-cursors`
+      # found by weston's libxcursor.
+      #
+      # The unit name is `display-manager`, not `sddm` — NixOS sddm
+      # module wires service config via systemd.services.display-manager
+      # (nixos/modules/services/display-managers/sddm.nix:13).
+      systemd.services.display-manager.environment.XDG_DATA_DIRS =
+        "/run/current-system/sw/share";
     };
 }

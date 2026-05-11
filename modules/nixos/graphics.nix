@@ -102,17 +102,24 @@ in
       # underneath it — the splash continues "running" per the journal
       # but is no longer visible.
       #
-      # `boot.blacklistedKernelModules` is the WRONG knob here: it only
-      # writes /etc/modprobe.d/nixos.conf (see nixos/modules/system/boot/
-      # modprobe.nix:80), which blocks `modprobe` but is ignored by the
-      # kernel's own early auto-load path. simpledrm is bound to the
-      # EFI simple-framebuffer device by the kernel before any modprobe
-      # runs, so the modprobe blacklist never takes effect.
+      # On NixOS the kernel ships with CONFIG_DRM_SIMPLEDRM=y — simpledrm
+      # is *built into vmlinuz*, not a loadable module. Verified by
+      # `zgrep DRM_SIMPLEDRM /proc/config.gz` and by `lsmod | grep
+      # simpledrm` returning empty while the journal still shows
+      # `[drm] Initialized simpledrm 1.0.0`. Two consequences:
       #
-      # `module_blacklist=` on the kernel cmdline is the kernel's
-      # built-in blacklist — applies to every load path, including the
-      # early auto-bind. Documented in Documentation/admin-guide/kernel-
-      # parameters.txt.
+      #   1. `boot.blacklistedKernelModules` (writes
+      #      /etc/modprobe.d/nixos.conf) is a no-op — built-in code
+      #      doesn't go through modprobe.
+      #   2. `module_blacklist=simpledrm` on the cmdline is also a
+      #      no-op — that param only matches loadable modules.
+      #
+      # `initcall_blacklist=` is the kernel's own knob that does match
+      # built-in initcalls. The exact function name was confirmed from
+      # this kernel's System.map:
+      #   ffffffff837f2e80 t simpledrm_platform_driver_init
+      # (`module_platform_driver(simpledrm_platform_driver)` macro-
+      # expands into a `_init` initcall at level 6.)
       #
       # Trade-off: hosts where neither nvidia, i915, nor amdgpu binds
       # (uncommon ARM / virtio-only / exotic setups) get no early
@@ -120,7 +127,7 @@ in
       # firmware splash covers the gap until userspace starts the
       # display manager.
       boot.kernelParams =
-        [ "module_blacklist=simpledrm" ]
+        [ "initcall_blacklist=simpledrm_platform_driver_init" ]
         ++ lib.optional hasNvidia "nvidia-drm.fbdev=1";
     };
 }
