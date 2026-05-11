@@ -338,6 +338,9 @@ function _gwt_postcreate {
   if [[ -f "$_wt/go.mod" ]] && command -v go >/dev/null 2>&1; then
     _stacks[go]="go mod download"
   fi
+  if [[ -f "$_wt/Cargo.toml" ]] && command -v cargo >/dev/null 2>&1; then
+    _stacks[cargo]="cargo fetch"
+  fi
   (( ${#_stacks[@]} == 0 )) && return 0
   local _name _cmd _slog
   for _name in ${(k)_stacks}; do
