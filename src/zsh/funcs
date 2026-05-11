@@ -198,6 +198,37 @@ function _list_git_branches {
   reply=(${(ou)_arr})
 }
 
+# Resolve repo default branch via origin/HEAD, falling back to master/main.
+# Echoes the branch name; returns 1 if it can't be determined.
+function _default_branch {
+  local _default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)
+  _default=${_default#refs/remotes/origin/}
+  if [[ -z "$_default" ]]; then
+    local _b
+    for _b in master main; do
+      if git rev-parse --verify --quiet "refs/heads/$_b" >/dev/null 2>&1; then
+        _default=$_b
+        break
+      fi
+    done
+  fi
+  [[ -z "$_default" ]] && return 1
+  echo "$_default"
+}
+
+# Prompt for a base branch via fzf. Echoes selection; returns 1 if cancelled.
+function _pick_base_branch {
+  local _prompt="${1:-(Enter: select base branch)> }"
+  _list_git_branches
+  local _branches=${(F)reply}
+  local _picked=$(echo "$_branches" |
+    fzf --prompt="$_prompt" \
+      --no-info \
+      --height=30%)
+  [[ -z "$_picked" ]] && return 1
+  echo "$_picked"
+}
+
 if are_binary git bat fzf; then
   function gcm {
     in_git_repo || return 1
@@ -326,12 +357,22 @@ if are_binary git bat fzf; then
 
     local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
       fzf --prompt="(Enter: select prefix)> " \
-        --height=4 \
+        --height=3 \
         --no-input \
         --no-info)
 
     if [[ -z "$branch_prefix" ]]; then
       return 0
+    fi
+
+    local base_branch
+    if [[ "$branch_prefix" == "hotfix" ]]; then
+      base_branch=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 0
+    else
+      base_branch=$(_default_branch) || {
+        echo "Could not determine default branch"
+        return 1
+      }
     fi
 
     local new_branch_name
@@ -351,7 +392,7 @@ if are_binary git bat fzf; then
     fi
 
     if [[ "$new_branch_name" != "/" ]]; then
-      _checkout_branch_or_worktree "$new_branch_name" create
+      _checkout_branch_or_worktree "$new_branch_name" create "$base_branch"
     fi
   }
 
@@ -891,21 +932,11 @@ if are_binary git fzf; then
 
     local initial_query="${1:-}"
 
-    local default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)
-    default_branch=${default_branch#refs/remotes/origin/}
-    if [[ -z "$default_branch" ]]; then
-      local _b
-      for _b in master main; do
-        if git rev-parse --verify --quiet "refs/heads/$_b" >/dev/null 2>&1; then
-          default_branch=$_b
-          break
-        fi
-      done
-    fi
-    if [[ -z "$default_branch" ]]; then
+    local default_branch
+    default_branch=$(_default_branch) || {
       echo "Could not determine default branch"
       return 1
-    fi
+    }
 
     local branch_name=$(fzf \
       --prompt="(Enter: new branch from $default_branch [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> " \
@@ -921,17 +952,22 @@ if are_binary git fzf; then
 
     local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
     local new_branch_name
+    local base_branch="$default_branch"
     if [[ $branch_name =~ $tag_mask ]]; then
       new_branch_name="release/$branch_name"
     else
       local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
         fzf --prompt="(Enter: select prefix)> " \
-          --height=4 \
+          --height=3 \
           --no-input \
           --no-info)
 
       if [[ -z "$branch_prefix" ]]; then
         return 0
+      fi
+
+      if [[ "$branch_prefix" == "hotfix" ]]; then
+        base_branch=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 0
       fi
 
       local branch_suffix=$(fzf \
@@ -967,7 +1003,7 @@ if are_binary git fzf; then
     local _sanitized=${new_branch_name//\//-}
     local _wt_path="$_wt_dir/$_sanitized"
     mkdir -p "$_wt_dir"
-    git worktree add -b "$new_branch_name" "$_wt_path" "$default_branch" || return 1
+    git worktree add -b "$new_branch_name" "$_wt_path" "$base_branch" || return 1
     cd "$_wt_path" || return 1
   }
 fi
