@@ -40,6 +40,7 @@ typeset -gA _git_shorthand_docs=(
   gcp 'interactive cherry-pick from log (multi-select, oldest first)'
   gwt 'switch to or create git worktree'
   gwtd 'remove a git worktree'
+  gcbw 'create branch in worktree from default branch (feature/bugfix/hotfix prefixes)'
 )
 
 # Walk up directory tree looking for .git (handles regular repos and worktrees).
@@ -882,6 +883,92 @@ if are_binary git fzf; then
 
     git worktree remove --force "$worktree_path" || return 1
     git worktree prune --expire now >/dev/null 2>&1
+  }
+
+  # Wizard like gcb, but always creates a worktree off the default branch.
+  function gcbw {
+    in_git_repo || return 1
+
+    local initial_query="${1:-}"
+
+    local default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)
+    default_branch=${default_branch#refs/remotes/origin/}
+    if [[ -z "$default_branch" ]]; then
+      local _b
+      for _b in master main; do
+        if git rev-parse --verify --quiet "refs/heads/$_b" >/dev/null 2>&1; then
+          default_branch=$_b
+          break
+        fi
+      done
+    fi
+    if [[ -z "$default_branch" ]]; then
+      echo "Could not determine default branch"
+      return 1
+    fi
+
+    local branch_name=$(fzf \
+      --prompt="(Enter: new branch from $default_branch [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> " \
+      --query="$initial_query" \
+      --height=1 \
+      --reverse \
+      --no-info \
+      --print-query </dev/null)
+
+    if [[ -z "$branch_name" ]]; then
+      return 0
+    fi
+
+    local tag_mask="^[0-9]+\.[0-9]+\.[0-9]+$"
+    local new_branch_name
+    if [[ $branch_name =~ $tag_mask ]]; then
+      new_branch_name="release/$branch_name"
+    else
+      local branch_prefix=$(echo -e "feature\nbugfix\nhotfix" |
+        fzf --prompt="(Enter: select prefix)> " \
+          --height=4 \
+          --no-input \
+          --no-info)
+
+      if [[ -z "$branch_prefix" ]]; then
+        return 0
+      fi
+
+      local branch_suffix=$(fzf \
+        --height=1 \
+        --reverse \
+        --no-info \
+        --print-query \
+        --prompt="(Enter: select suffix)> " </dev/null)
+
+      if [[ -n "$branch_suffix" ]]; then
+        branch_suffix=${branch_suffix:l}
+        branch_suffix=${branch_suffix// /-}
+        new_branch_name="$branch_prefix/$branch_name-$branch_suffix"
+      else
+        new_branch_name="$branch_prefix/$branch_name"
+      fi
+    fi
+
+    local _existing_wt=$(_worktree_path_for_branch "$new_branch_name")
+    if [[ -n "$_existing_wt" ]]; then
+      cd "$_existing_wt" || return 1
+      echo "Switched to existing worktree: $_existing_wt"
+      return 0
+    fi
+
+    if git rev-parse --verify --quiet "refs/heads/$new_branch_name" >/dev/null 2>&1; then
+      echo "Branch '$new_branch_name' already exists but is not in a worktree"
+      return 1
+    fi
+
+    local _main=$(_git_main_root) || _main="$_git_root"
+    local _wt_dir="$_main/.worktrees"
+    local _sanitized=${new_branch_name//\//-}
+    local _wt_path="$_wt_dir/$_sanitized"
+    mkdir -p "$_wt_dir"
+    git worktree add -b "$new_branch_name" "$_wt_path" "$default_branch" || return 1
+    cd "$_wt_path" || return 1
   }
 fi
 
