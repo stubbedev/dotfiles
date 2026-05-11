@@ -311,7 +311,7 @@ function _gwt_postcreate {
   local _log="$_wt/.gwt-postcreate.log"
   if [[ -n "$_main" && -x "$_main/.gwt-postcreate" ]]; then
     echo "gwt: running $_main/.gwt-postcreate in bg → tail -f $_log"
-    ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" >"$_log" 2>&1 ) &!
+    ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" </dev/null >"$_log" 2>&1 ) &!
     return 0
   fi
   # Detect every present stack; spawn each install in its own bg job with
@@ -344,7 +344,7 @@ function _gwt_postcreate {
     _cmd=${_stacks[$_name]}
     _slog="$_wt/.gwt-postcreate.$_name.log"
     echo "gwt: $_name in bg ($_cmd) → tail -f $_slog"
-    ( cd "$_wt" && eval "$_cmd" >"$_slog" 2>&1 ) &!
+    ( cd "$_wt" && eval "$_cmd" </dev/null >"$_slog" 2>&1 ) &!
   done
 }
 
