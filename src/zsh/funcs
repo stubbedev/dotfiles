@@ -314,26 +314,38 @@ function _gwt_postcreate {
     ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" >"$_log" 2>&1 ) &!
     return 0
   fi
-  local -a _cmd
-  if [[ -f "$_wt/bun.lockb" ]] && command -v bun >/dev/null 2>&1; then
-    _cmd=(bun install)
-  elif [[ -f "$_wt/pnpm-lock.yaml" ]] && command -v pnpm >/dev/null 2>&1; then
-    _cmd=(pnpm install)
-  elif [[ -f "$_wt/package-lock.json" ]] && command -v npm >/dev/null 2>&1; then
-    _cmd=(npm ci)
-  elif [[ -f "$_wt/yarn.lock" ]] && command -v yarn >/dev/null 2>&1; then
-    _cmd=(yarn install --frozen-lockfile)
-  elif [[ -f "$_wt/composer.lock" ]] && command -v composer >/dev/null 2>&1; then
-    _cmd=(composer install)
-  elif [[ -f "$_wt/uv.lock" ]] && command -v uv >/dev/null 2>&1; then
-    _cmd=(uv sync)
-  elif [[ -f "$_wt/go.mod" ]] && command -v go >/dev/null 2>&1; then
-    _cmd=(go mod download)
-  else
-    return 0
+  # Detect every present stack; spawn each install in its own bg job with
+  # its own log so output doesn't interleave. JS managers are mutually
+  # exclusive (at most one lockfile per project).
+  local -A _stacks=()
+  if [[ -f "$_wt/composer.lock" || -f "$_wt/composer.json" ]] && command -v composer >/dev/null 2>&1; then
+    _stacks[composer]="composer install --no-interaction"
   fi
-  echo "gwt: installing deps in bg (${_cmd[*]}) → tail -f $_log"
-  ( cd "$_wt" && "${_cmd[@]}" >"$_log" 2>&1 ) &!
+  # JS manager preference: yarn > bun > pnpm > npm. Fall back to plain
+  # `npm install` for projects without a manager-specific lockfile.
+  if [[ -f "$_wt/yarn.lock" ]] && command -v yarn >/dev/null 2>&1; then
+    _stacks[yarn]="yarn install --frozen-lockfile"
+  elif [[ -f "$_wt/bun.lockb" ]] && command -v bun >/dev/null 2>&1; then
+    _stacks[bun]="bun install"
+  elif [[ -f "$_wt/pnpm-lock.yaml" ]] && command -v pnpm >/dev/null 2>&1; then
+    _stacks[pnpm]="pnpm install"
+  elif [[ -f "$_wt/package.json" ]] && command -v npm >/dev/null 2>&1; then
+    _stacks[npm]="npm install"
+  fi
+  if [[ -f "$_wt/uv.lock" ]] && command -v uv >/dev/null 2>&1; then
+    _stacks[uv]="uv sync"
+  fi
+  if [[ -f "$_wt/go.mod" ]] && command -v go >/dev/null 2>&1; then
+    _stacks[go]="go mod download"
+  fi
+  (( ${#_stacks[@]} == 0 )) && return 0
+  local _name _cmd _slog
+  for _name in ${(k)_stacks}; do
+    _cmd=${_stacks[$_name]}
+    _slog="$_wt/.gwt-postcreate.$_name.log"
+    echo "gwt: $_name in bg ($_cmd) → tail -f $_slog"
+    ( cd "$_wt" && eval "$_cmd" >"$_slog" 2>&1 ) &!
+  done
 }
 
 # Create a new worktree at .worktrees/<branch> (slashes preserved), cd in,
