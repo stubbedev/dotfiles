@@ -469,17 +469,28 @@ if are_binary git bat fzf; then
     fi
 
     local -a _commit_args=()
+    local _editor_mode=0
     if [[ "$commit_message" == *\\ ]]; then
       commit_message=${commit_message%\\}
       while [[ "$commit_message" == *' ' ]]; do commit_message=${commit_message% }; done
       _commit_args+=(-e)
+      _editor_mode=1
     fi
 
     # Skip auto-prefix when the user already typed an explicit ticket prefix.
+    local _final_message
     if [[ "$commit_message" =~ '^[A-Z]+-[0-9]+:' ]] || [[ -z "$commit_prefix" ]]; then
-      git commit "${_commit_args[@]}" -m "$commit_message"
+      _final_message="$commit_message"
     else
-      git commit "${_commit_args[@]}" -m "$commit_prefix: $commit_message"
+      _final_message="$commit_prefix: $commit_message"
+    fi
+
+    # `git commit -e -m ""` seeds COMMIT_EDITMSG with a leading blank line
+    # that the user then has to delete. Drop -m when there's nothing to seed.
+    if (( _editor_mode )) && [[ -z "$_final_message" ]]; then
+      git commit "${_commit_args[@]}"
+    else
+      git commit "${_commit_args[@]}" -m "$_final_message"
     fi
   }
 
@@ -1171,7 +1182,7 @@ if are_binary git fzf; then
           --select-1 \
           --exit-0 \
           --no-info \
-          --height=10)
+          --height=~10)
     fi
 
     if [[ -z "$selected" ]]; then

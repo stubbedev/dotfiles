@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Background fetch for every git repo currently open in tmux.
+#
+# Only fetches the upstream remote of the checked-out branch, and only when
+# that remote is reachable over SSH — anything HTTPS-only or without an
+# upstream is skipped so we never hit interactive password prompts. Run
+# periodically by a systemd user timer (see modules/home/tmux-fetch.nix).
+set -uo pipefail
+
+# No tmux server, nothing to scan.
+tmux has-session 2>/dev/null || exit 0
+
+# Collect unique git roots. `sort -u` on pane paths first means we only fork
+# `git rev-parse` per *distinct* cwd, not per pane — panes split inside the
+# same repo would otherwise pay for redundant lookups.
+declare -A roots
+while IFS= read -r pane_path; do
+  [[ -d "$pane_path" ]] || continue
+  root=$(git -C "$pane_path" rev-parse --show-toplevel 2>/dev/null) || continue
+  roots[$root]=1
+done < <(tmux list-panes -a -F '#{pane_current_path}' | sort -u)
+
+(( ${#roots[@]} == 0 )) && exit 0
+
+# Fan out fetches with bounded concurrency. Sequential would mean worst-case
+# wall time of `timeout * N` when a remote stalls; parallel caps it at the
+# single slowest fetch. `-P 4` keeps a screenful of repos from opening 30+
+# simultaneous SSH sessions to the same forge.
+printf '%s\0' "${!roots[@]}" \
+  | xargs -0 -r -P 4 -n 1 bash -c '
+      root=$1
+      upstream=$(git -C "$root" rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null) || exit 0
+      remote=${upstream%%/*}
+      url=$(git -C "$root" remote get-url "$remote" 2>/dev/null) || exit 0
+      case "$url" in
+        git@*|ssh://*) ;;
+        *) exit 0 ;;
+      esac
+      timeout 30 git -C "$root" fetch --quiet --no-tags "$remote" 2>/dev/null
+    ' _
