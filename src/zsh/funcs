@@ -14,33 +14,28 @@ if is_binary php; then
 fi
 
 typeset -gA _git_shorthand_docs=(
-  gcm 'git commit with auto ticket prefix from branch name'
-  gp 'git push (warns on protected branches)'
+  gcm 'git commit with auto ticket prefix; trailing \ opens editor; explicit ABC-1234: prefix overrides'
+  gp 'git push (warns on protected branches, release/*, hotfix/*, gp.protected patterns, upstream-ahead)'
   gcb 'checkout or create branch (feature/bugfix/hotfix prefixes)'
   gcr 'create release branch with semver bump (major/minor/patch)'
-  ga 'interactively stage files with diff preview'
+  ga 'interactively stage files (single panel, M/A/D markers, type-aware preview)'
   gsd 'show working tree diff'
   gd 'diff current branch against another branch'
   gcd 'export branch diff to a patch file'
   gst 'git status (short format)'
-  gg 'git pull current branch from origin'
-  gga 'git pull --all'
-  gf 'git fetch'
-  gfa 'git fetch --all'
-  ghr 'hard reset HEAD~ (discard last commit and changes)'
-  ghrn 'hard reset HEAD~N (discard last N commits and changes)'
-  gr 'soft reset HEAD~ (undo last commit, keep changes staged)'
-  grn 'soft reset HEAD~N (undo last N commits, keep changes staged)'
+  gg 'git pull current branch from origin (--all for all branches)'
+  gf 'git fetch (--all for all remotes)'
+  ghr 'hard reset HEAD~[N] (discard last N commits and changes; default N=1)'
+  gr 'soft reset HEAD~[N] (undo last N commits, keep changes staged; default N=1)'
   gsa 'stash all local changes'
-  gw 'wipe local changes (stash + drop)'
-  gwa 'wipe all local changes including stash (stash + clear)'
+  gw 'wipe local changes (stash + drop; --all drops the entire stash stack)'
   ggo 'pull from a selected origin branch'
-  gl 'interactive git log browser with commit preview'
+  gl 'interactive git log browser (ctrl-y copy hash, ctrl-x cherry-pick, ctrl-r revert)'
   gsp 'interactive stash pop (fzf select from stash list)'
-  gcp 'interactive cherry-pick from log (multi-select, oldest first)'
-  gwt 'switch to or create git worktree'
+  gcp 'interactive cherry-pick from log (multi-select, oldest first, conflict hints)'
+  gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch)'
   gwtd 'remove a git worktree'
-  gcbw 'create branch in worktree from default branch (feature/bugfix/hotfix prefixes)'
+  gwth 'scaffold .gwt-postcreate / .gwt-predelete hooks in repo root and open in $EDITOR'
 )
 
 # Walk up directory tree looking for .git (handles regular repos and worktrees).
@@ -84,6 +79,11 @@ function _gwt_remove_if_clean {
   [[ "$PWD" == "$_prev" || "$PWD" == "$_prev"/* ]] && return 0
   if _worktree_has_unpushed "$_prev"; then
     echo "gwt: keeping $_prev (has unpushed commits)"
+    return 0
+  fi
+  local _main=$(_git_main_root 2>/dev/null) || _main=""
+  if ! _gwt_predelete "$_prev" "$_main"; then
+    echo "gwt: keeping $_prev (predelete hook failed)"
     return 0
   fi
   (
@@ -351,6 +351,17 @@ function _gwt_postcreate {
   done
 }
 
+# Run <main>/.gwt-predelete in the worktree before it is removed. Synchronous
+# (caller needs the result to decide whether to proceed). Cwd is the worktree
+# being removed. Skipped when GWT_NO_HOOKS=1 or the hook is absent/not
+# executable. Returns the hook's exit code (0 if no hook).
+function _gwt_predelete {
+  local _wt="$1" _main="$2"
+  [[ -z "$_wt" || -n "$GWT_NO_HOOKS" ]] && return 0
+  [[ -n "$_main" && -x "$_main/.gwt-predelete" ]] || return 0
+  ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-predelete" </dev/null )
+}
+
 # Create a new worktree at .worktrees/<branch> (slashes preserved), cd in,
 # link env files, kick off dep install in the background.
 function _gwt_create {
@@ -440,9 +451,9 @@ if are_binary git bat fzf; then
     local commit_prefix=""
     [[ $_branch =~ '([A-Z]+-[0-9]+)' ]] && commit_prefix=$match[1]
     if [[ -z "$commit_prefix" ]]; then
-      commit_prompt="(Enter: commit message)> "
+      commit_prompt="(Enter: commit message; trailing \\ opens editor)> "
     else
-      commit_prompt="(Enter: commit message [$commit_prefix])> "
+      commit_prompt="(Enter: commit message [$commit_prefix]; trailing \\ opens editor)> "
     fi
 
     local commit_message=$(fzf --height=1 \
@@ -456,21 +467,60 @@ if are_binary git bat fzf; then
       return 0
     fi
 
-    if [[ -z "$commit_prefix" ]]; then
-      git commit -m "$commit_message"
+    local -a _commit_args=()
+    if [[ "$commit_message" == *\\ ]]; then
+      commit_message=${commit_message%\\}
+      while [[ "$commit_message" == *' ' ]]; do commit_message=${commit_message% }; done
+      _commit_args+=(-e)
+    fi
+
+    # Skip auto-prefix when the user already typed an explicit ticket prefix.
+    if [[ "$commit_message" =~ '^[A-Z]+-[0-9]+:' ]] || [[ -z "$commit_prefix" ]]; then
+      git commit "${_commit_args[@]}" -m "$commit_message"
     else
-      git commit -m "$commit_prefix: $commit_message"
+      git commit "${_commit_args[@]}" -m "$commit_prefix: $commit_message"
     fi
   }
 
   function gp {
     in_git_repo || return 1
 
-    local -a banned_branches=(develop staging production master main)
     local branch_name=$(git branch --show-current)
+    local -a banned_branches=(develop staging production master main)
+    local -a banned_patterns=('release/*' 'hotfix/*')
 
+    # Per-repo extras via `git config --add gp.protected '<glob>'` (repeatable).
+    local _extra
+    while IFS= read -r _extra; do
+      [[ -n "$_extra" ]] && banned_patterns+=("$_extra")
+    done < <(git config --get-all gp.protected 2>/dev/null)
+
+    local _matched=""
     if (( ${banned_branches[(Ie)$branch_name]} )); then
-      _confirm_destructive "[WARN] Protected Branch: Confirm Push" || return 0
+      _matched="protected branch '$branch_name'"
+    else
+      local _pat
+      for _pat in "${banned_patterns[@]}"; do
+        if [[ "$branch_name" == ${~_pat} ]]; then
+          _matched="branch '$branch_name' matches '$_pat'"
+          break
+        fi
+      done
+    fi
+
+    local _diverged=""
+    if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+      local _behind=$(git rev-list --count "HEAD..@{u}" 2>/dev/null)
+      if (( ${_behind:-0} > 0 )); then
+        _diverged="upstream is ahead by $_behind commit(s) — push will be rejected without --force"
+      fi
+    fi
+
+    if [[ -n "$_matched" ]]; then
+      _confirm_destructive "[WARN] Push: $_matched" || return 0
+    fi
+    if [[ -n "$_diverged" ]]; then
+      _confirm_destructive "[WARN] Push: $_diverged" || return 0
     fi
 
     git push -u origin "$branch_name"
@@ -550,98 +600,78 @@ if are_binary git bat fzf; then
     local temp_pwd="$PWD"
     cd "$_git_root"
 
+    # Build a single list of rows: "<M|D|A>\t<path>". One panel, type-aware
+    # preview, type-aware action (M → `git add -p`; D/A → `git add`).
     local git_status=$(git status --porcelain)
-    local -a _tracked_arr=() _deleted_arr=() _untracked_arr=()
-    local _gs_line _xy _rest
+    local -a _rows=()
+    local _gs_line _xy _rest _wt _path
     while IFS= read -r _gs_line; do
       [[ -z $_gs_line ]] && continue
       _xy=${_gs_line:0:2}
       _rest=${_gs_line:3}
+      _wt=${_xy:1:1}
       if [[ $_xy == '??' ]]; then
-        # Untracked: expand directories to files
         if [[ -d $_rest ]]; then
-          _untracked_arr+=(${_rest}**/*(.N))
+          local _f
+          for _f in ${_rest}**/*(.N); do
+            _rows+=("A"$'\t'"$_f")
+          done
         else
-          _untracked_arr+=("$_rest")
+          _rows+=("A"$'\t'"$_rest")
         fi
-      elif [[ ${_xy:1:1} == D ]]; then
-        # Working-tree deleted (second char D)
-        _deleted_arr+=("$_rest")
-      elif [[ ${_xy:1:1} == M ]]; then
-        # Working-tree modified (second char M), includes MM and RM
-        # Renamed entries: "RM old -> new" → take new name after " -> "
-        if [[ $_rest == *' -> '* ]]; then
-          _tracked_arr+=("${_rest##* -> }")
-        else
-          _tracked_arr+=("$_rest")
-        fi
+      elif [[ $_wt == D ]]; then
+        _rows+=("D"$'\t'"$_rest")
+      elif [[ $_wt == M ]]; then
+        _path=$_rest
+        [[ $_path == *' -> '* ]] && _path=${_path##* -> }
+        _rows+=("M"$'\t'"$_path")
       fi
     done <<<"$git_status"
-    _tracked_arr=(${(ou)_tracked_arr})
-    local tracked_files=${(F)_tracked_arr}
-    local deleted_files=${(F)_deleted_arr}
-    local untracked_files=${(F)_untracked_arr}
 
-    if [[ -n "$tracked_files" ]]; then
-      local tracked_selected=$(printf "%s\n" $tracked_files | fzf --multi \
-        --preview='git diff --diff-filter=M -- {} | bat --style=numbers --color=always' \
-        --preview-window='up:90%:wrap:nohidden' \
-        --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
-        --header="Add tracked files" \
-        --bind 'shift-tab:toggle-all' \
-        --bind "tab:toggle" \
-        --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
-        --no-info \
-        --exit-0)
-
-      if [[ -n "$tracked_selected" ]]; then
-        local -a tracked_selection=(${(f)tracked_selected})
-        for file in "${tracked_selection[@]}"; do
-          git add "$file" -p
-        done
-      fi
+    if (( ${#_rows[@]} == 0 )); then
+      cd "$temp_pwd"
+      echo "Nothing to stage."
+      return 0
     fi
 
-    if [[ -n "$deleted_files" ]]; then
-      local deleted_selected=$(printf "%s\n" $deleted_files |
-        fzf --multi \
-          --preview='git diff --diff-filter=D -- {} | bat --style=numbers --color=always' \
-          --preview-window='up:90%:wrap:nohidden' \
-          --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
-          --header="Add deleted files" \
-          --bind 'shift-tab:toggle-all' \
-          --bind "tab:toggle" \
-          --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
-          --no-info \
-          --exit-0)
+    _rows=("${(@on)_rows}")
 
-      if [[ -n "$deleted_selected" ]]; then
-        local -a deleted_selection=(${(f)deleted_selected})
-        for file in "${deleted_selection[@]}"; do
-          git add "$file"
-        done
-      fi
-    fi
+    local _display=""
+    local _r
+    for _r in "${_rows[@]}"; do
+      _display+="${_r%%$'\t'*}  ${_r#*$'\t'}"$'\n'
+    done
 
-    if [[ -n "$untracked_files" ]]; then
-      local untracked_selected=$(printf "%s\n" $untracked_files |
-        fzf --multi \
-          --preview='bat --style=numbers --color=always {}' \
-          --preview-window='up:90%:wrap:nohidden' \
-          --prompt="(Tab: toggle file, Shift+Tab: toggle all files, Enter: submit selection, Ctrl+C: cancel selection)> " \
-          --header="Add untracked files" \
-          --bind 'shift-tab:toggle-all' \
-          --bind "tab:toggle" \
-          --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
-          --no-info \
-          --exit-0)
+    local _selected=$(printf '%s' "$_display" | fzf --multi \
+      --preview='
+        line={}
+        typ=${line:0:1}
+        path=${line:3}
+        case "$typ" in
+          M) git diff --color=always -- "$path" | bat --style=numbers --color=always -l diff ;;
+          D) git diff --diff-filter=D --color=always -- "$path" | bat --style=numbers --color=always -l diff ;;
+          A) bat --style=numbers --color=always -- "$path" 2>/dev/null || cat -- "$path" ;;
+        esac' \
+      --preview-window='up:85%:wrap:nohidden' \
+      --prompt="(Tab: toggle, Shift+Tab: toggle all, Enter: stage, Ctrl+C: cancel)> " \
+      --header="[M]odified → patch mode  [D]eleted → stage removal  [A]dded → stage untracked" \
+      --bind 'shift-tab:toggle-all' \
+      --bind 'tab:toggle' \
+      --bind 'enter:transform:[[ $FZF_SELECT_COUNT -gt 0 ]] && echo accept || echo abort' \
+      --no-info \
+      --exit-0)
 
-      if [[ -n "$untracked_selected" ]]; then
-        local -a untracked_selection=(${(f)untracked_selected})
-        for file in "${untracked_selection[@]}"; do
-          git add "$file"
-        done
-      fi
+    if [[ -n "$_selected" ]]; then
+      local -a _lines=(${(f)_selected})
+      local _line _t _p
+      for _line in "${_lines[@]}"; do
+        _t=${_line:0:1}
+        _p=${_line:3}
+        case "$_t" in
+          M) git add "$_p" -p ;;
+          D|A) git add "$_p" ;;
+        esac
+      done
     fi
     cd "$temp_pwd"
     clear
@@ -730,45 +760,31 @@ if are_binary git bat fzf; then
     local current_branch=$(git branch --show-current)
     git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 ||
       git branch --set-upstream-to="origin/$current_branch" 2>/dev/null
-    git pull
-  }
-  function gga {
-    in_git_repo || return 1
-
-    local current_branch=$(git branch --show-current)
-    git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 ||
-      git branch --set-upstream-to="origin/$current_branch" 2>/dev/null
-    git pull --all
+    if [[ "$1" == "--all" || "$1" == "-a" ]]; then
+      git pull --all
+    else
+      git pull
+    fi
   }
   function gf {
     in_git_repo || return 1
 
-    git fetch
-  }
-  function gfa {
-    in_git_repo || return 1
-
-    git fetch --all
+    if [[ "$1" == "--all" || "$1" == "-a" ]]; then
+      git fetch --all
+    else
+      git fetch
+    fi
   }
   function ghr {
     in_git_repo || return 1
-    _confirm_destructive "[WARN] Hard reset HEAD~ (drops last commit + working changes)" || return 0
-    git reset --hard HEAD~
-  }
-  function ghrn {
-    in_git_repo || return 1
-    _confirm_destructive "[WARN] Hard reset HEAD~$1 (drops last $1 commits + working changes)" || return 0
-    git reset --hard HEAD~"$1"
+    local _n=${1:-1}
+    _confirm_destructive "[WARN] Hard reset HEAD~$_n (drops last $_n commit(s) + working changes)" || return 0
+    git reset --hard "HEAD~$_n"
   }
   function gr {
     in_git_repo || return 1
-
-    git reset --soft HEAD~
-  }
-  function grn {
-    in_git_repo || return 1
-
-    git reset --soft HEAD~"$1"
+    local _n=${1:-1}
+    git reset --soft "HEAD~$_n"
   }
   function gsa {
     in_git_repo || return 1
@@ -791,16 +807,15 @@ if are_binary git bat fzf; then
 
   function gw {
     in_git_repo || return 1
+    if [[ "$1" == "--all" || "$1" == "-a" ]]; then
+      _confirm_destructive "[WARN] Wipe working changes + entire stash stack" || return 0
+      git stash push -u >/dev/null 2>&1
+      git stash clear
+      return 0
+    fi
     [[ -z "$(git status --porcelain)" ]] && return 0
     _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
     git stash push -u >/dev/null && git stash drop
-  }
-
-  function gwa {
-    in_git_repo || return 1
-    _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
-    git stash push -u >/dev/null
-    git stash clear
   }
 
   function ggo {
@@ -826,9 +841,29 @@ if are_binary git bat fzf; then
     in_git_repo || return 1
 
     local initial_query="${1:-}"
+
+    # Resolve a clipboard binary at call time so the fzf subshell gets a
+    # concrete command (it doesn't inherit zsh aliases).
+    local _clip=""
+    if command -v xclip >/dev/null 2>&1; then _clip='xclip -selection clipboard'
+    elif command -v wl-copy >/dev/null 2>&1; then _clip='wl-copy'
+    elif command -v pbcopy >/dev/null 2>&1; then _clip='pbcopy'
+    fi
+
+    local -a _binds=(
+      --bind 'ctrl-x:become(git cherry-pick {1})'
+      --bind 'ctrl-r:become(git revert {1})'
+    )
+    local _prompt_hints="Enter: show, Ctrl+X: cherry-pick, Ctrl+R: revert"
+    if [[ -n "$_clip" ]]; then
+      _binds+=(--bind "ctrl-y:execute-silent(printf '%s' {1} | $_clip)")
+      _prompt_hints+=", Ctrl+Y: copy hash"
+    fi
+    _prompt_hints+=", Ctrl+C: cancel"
+
     local _commit_line=$(git log --oneline --color=always |
       fzf --ansi \
-        --prompt="(Enter: show commit, Ctrl+C: cancel)> " \
+        --prompt="($_prompt_hints)> " \
         --query="$initial_query" \
         --no-sort \
         --exact \
@@ -836,7 +871,8 @@ if are_binary git bat fzf; then
         --no-info \
         --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50%)
+        --height=50% \
+        "${_binds[@]}")
     local commit=${_commit_line%% *}
 
     if [[ -n "$commit" ]]; then
@@ -873,6 +909,20 @@ if are_binary git bat fzf; then
   function gcp {
     in_git_repo || return 1
 
+    # Refuse to start if a cherry-pick is already in progress — surface the
+    # half-finished state instead of stacking another on top.
+    if [[ -f "$(git rev-parse --git-dir 2>/dev/null)/CHERRY_PICK_HEAD" ]]; then
+      echo "Cherry-pick already in progress:"
+      echo "  Continue: git cherry-pick --continue"
+      echo "  Skip:     git cherry-pick --skip"
+      echo "  Abort:    git cherry-pick --abort"
+      return 1
+    fi
+
+    if [[ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
+      _confirm_destructive "[WARN] Working tree not clean — cherry-pick may abort mid-way. Continue?" || return 0
+    fi
+
     local initial_query="${1:-}"
     local _selected=$(git log --oneline --color=always --all |
       fzf --ansi \
@@ -897,6 +947,15 @@ if are_binary git bat fzf; then
     local -a _lines=(${(f)_selected})
     local -a _hashes=("${_lines[@]%% *}")
     git cherry-pick "${(Oa)_hashes[@]}"
+    local _rc=$?
+    if (( _rc != 0 )); then
+      echo ""
+      echo "Cherry-pick stopped (exit $_rc). Working tree may have conflicts."
+      echo "  Resolve + stage, then: git cherry-pick --continue"
+      echo "  Skip current commit:   git cherry-pick --skip"
+      echo "  Abort entirely:        git cherry-pick --abort"
+      return $_rc
+    fi
   }
 
 fi
@@ -994,7 +1053,7 @@ if are_binary git fzf; then
     local _list_h=4 # prompt(1) + items(3)
     local _prev_h=$((${LINES:-40} * 50 / 100))
     local selected=$(echo "$display_list" |
-      fzf --prompt="(Enter: switch/create worktree, Ctrl+C: cancel)> " \
+      fzf --prompt="(Enter: switch/create, Ctrl+C: wizard create from scratch)> " \
         --print-query \
         --exit-0 \
         --no-info \
@@ -1014,21 +1073,41 @@ if are_binary git fzf; then
     local query=${selected%%$'\n'*}
     local match=${selected##*$'\n'}
 
+    # No match (typed-new OR Ctrl+C) → enter create path. Names that already
+    # contain a slash (e.g. `feature/foo`, `release/1.2.3`) are taken as-is
+    # and we just ask for a base. Bare names (or empty, from Ctrl+C) route
+    # through `_branch_wizard` to enforce the feature/bugfix/hotfix/release
+    # prefix convention.
     if [[ -z "$match" || "$match" == "$query" ]]; then
-      if [[ -z "$query" ]]; then
+      local _new_name="$query" _base=""
+      if [[ "$_new_name" == */* ]]; then
+        local base_branch=$(echo "$all_branches" |
+          fzf --prompt="(Enter: select base branch for '$_new_name')> " \
+            --select-1 \
+            --exit-0 \
+            --no-info \
+            --height=30%)
+        [[ -z "$base_branch" ]] && return 0
+        _base=$base_branch
+      else
+        _new_name=$(_branch_wizard "$_new_name" "") || return 0
+        _base=$_branch_base_out
+      fi
+      # Wizard may have produced an already-existing branch — handle the
+      # swap-to-existing case the same way `_checkout_branch_or_worktree`
+      # does, so the wizard never silently re-creates.
+      local _existing_wt=$(_worktree_path_for_branch "$_new_name")
+      if [[ -n "$_existing_wt" && "$_existing_wt" != "$_git_root" ]]; then
+        cd "$_existing_wt" || return 1
+        echo "Switched to existing worktree: $_existing_wt"
+        _gwt_remove_if_clean "$_prev_clean_worktree"
         return 0
       fi
-      local new_branch_name="$query"
-      local base_branch=$(echo "$all_branches" |
-        fzf --prompt="(Enter: select base branch for '$new_branch_name')> " \
-          --select-1 \
-          --exit-0 \
-          --no-info \
-          --height=30%)
-      if [[ -z "$base_branch" ]]; then
-        return 0
+      if git rev-parse --verify --quiet "refs/heads/$_new_name" >/dev/null 2>&1; then
+        _gwt_attach "$_new_name" || return 1
+      else
+        _gwt_create "$_new_name" "$_base" || return 1
       fi
-      _gwt_create "$new_branch_name" "$base_branch" || return 1
       _gwt_remove_if_clean "$_prev_clean_worktree"
       return 0
     fi
@@ -1107,13 +1186,16 @@ if are_binary git fzf; then
     local -a _msgs=()
     _worktree_is_dirty "$worktree_path" && _msgs+=("uncommitted changes")
     _worktree_has_unpushed "$worktree_path" && _msgs+=("unpushed commits")
+    local _force=""
     if (( ${#_msgs[@]} )); then
       local _why=${(j:, :)_msgs}
       _confirm_destructive "[WARN] Worktree '$worktree_path' has $_why — destroy?" || return 0
-      git worktree remove --force "$worktree_path" || return 1
-    else
-      git worktree remove "$worktree_path" || return 1
+      _force="--force"
     fi
+    if ! _gwt_predelete "$worktree_path" "$repo_root"; then
+      _confirm_destructive "[WARN] predelete hook failed — destroy '$worktree_path' anyway?" || return 0
+    fi
+    git worktree remove ${_force} "$worktree_path" || return 1
     git worktree prune --expire now >/dev/null 2>&1
 
     # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
@@ -1126,32 +1208,47 @@ if are_binary git fzf; then
     done
   }
 
-  # Wizard like gcb, but always creates a worktree off the default branch.
-  function gcbw {
+  # Scaffold .gwt-postcreate and .gwt-predelete in the repo root if missing,
+  # then open both in $EDITOR. Idempotent — existing files are left untouched.
+  function gwth {
     in_git_repo || return 1
+    local _main=$(_git_main_root) || _main="$_git_root"
+    local _post="$_main/.gwt-postcreate"
+    local _pre="$_main/.gwt-predelete"
 
-    local default_branch
-    default_branch=$(_default_branch) || {
-      echo "Could not determine default branch"
-      return 1
-    }
-
-    local new_branch_name
-    new_branch_name=$(_branch_wizard "${1:-}" "$default_branch") || return 0
-
-    local _existing_wt=$(_worktree_path_for_branch "$new_branch_name")
-    if [[ -n "$_existing_wt" ]]; then
-      cd "$_existing_wt" || return 1
-      echo "Switched to existing worktree: $_existing_wt"
-      return 0
+    if [[ ! -e "$_post" ]]; then
+      cat >"$_post" <<'EOF'
+#!/usr/bin/env bash
+# Runs in the background after `gwt` creates a new worktree. Replaces the
+# built-in lockfile-based dep install — wire up whatever your project needs
+# (compose up, db seed, env scaffolding, etc.).
+# Cwd:  the new worktree.
+# Env:  GWT_MAIN (main repo root), GWT_WT (this worktree path).
+# Logs: <worktree>/.gwt-postcreate.log (stdout + stderr).
+set -euo pipefail
+EOF
+      chmod +x "$_post"
+      echo "gwth: created $_post"
     fi
 
-    if git rev-parse --verify --quiet "refs/heads/$new_branch_name" >/dev/null 2>&1; then
-      echo "Branch '$new_branch_name' already exists but is not in a worktree"
-      return 1
+    if [[ ! -e "$_pre" ]]; then
+      cat >"$_pre" <<'EOF'
+#!/usr/bin/env bash
+# Runs synchronously before `gwtd` removes a worktree, and before the
+# auto-removal of a clean linked worktree on switch via `gwt`. Use for
+# external cleanup that git itself won't do (drop branch DB, tear down
+# compose project, remove reverse-proxy entry, etc.).
+# Cwd: the worktree being removed.
+# Env: GWT_MAIN (main repo root), GWT_WT (worktree path).
+# Exit non-zero to block the removal — interactive `gwtd` will prompt to
+# override, the silent auto-remove path will keep the worktree.
+set -euo pipefail
+EOF
+      chmod +x "$_pre"
+      echo "gwth: created $_pre"
     fi
 
-    _gwt_create "$new_branch_name" "$_branch_base_out"
+    ${EDITOR:-vi} "$_post" "$_pre"
   }
 fi
 

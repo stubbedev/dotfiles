@@ -22,8 +22,11 @@ _git_shortcuts() {
       fi
       _describe 'worktrees' _gsc_wt_cache
       ;;
-    ghrn|grn)
+    ghr|gr)
       _arguments '1:commits to reset:(1 2 3 4 5 6 7 8 9 10)'
+      ;;
+    gg|gf|gw)
+      _arguments '1:flag:((--all\:"include\ all\ remotes/stash"))'
       ;;
     *)
       return 1

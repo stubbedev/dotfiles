@@ -72,5 +72,16 @@ _: {
       ];
       boot.consoleLogLevel = lib.mkDefault 3;
       boot.initrd.verbose = false;
+
+      # Suppress the "Terminating Plymouth..." flash on VT1 between the
+      # splash and SDDM. By default systemd runs plymouth-quit.service as
+      # soon as multi-user.target is reached — which fires *before*
+      # display-manager.service has grabbed the framebuffer, exposing the
+      # bare VT for a fraction of a second. Dropping it from wantedBy
+      # leaves plymouth-quit-wait.service (ordered Before=display-manager
+      # via the systemd-generated ordering) as the single terminator:
+      # plymouth keeps the splash up until SDDM takes the KMS scanout,
+      # then quits in one step. No flash, no VT exposure.
+      systemd.services.plymouth-quit.wantedBy = lib.mkForce [ ];
     };
 }
