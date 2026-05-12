@@ -77,11 +77,12 @@ function _gwt_remove_if_clean {
   local _prev="$1"
   [[ -z "$_prev" ]] && return 0
   [[ "$PWD" == "$_prev" || "$PWD" == "$_prev"/* ]] && return 0
+  local _main=$(_git_main_root 2>/dev/null) || _main=""
+  [[ -z "$_main" || "$PWD" != "$_main" ]] && return 0
   if _worktree_has_unpushed "$_prev"; then
     echo "gwt: keeping $_prev (has unpushed commits)"
     return 0
   fi
-  local _main=$(_git_main_root 2>/dev/null) || _main=""
   if ! _gwt_predelete "$_prev" "$_main"; then
     echo "gwt: keeping $_prev (predelete hook failed)"
     return 0
