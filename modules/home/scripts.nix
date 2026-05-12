@@ -52,10 +52,17 @@
         waybar-launch.source = "src/_shared/scripts/waybar.launch.sh";
         power-profile-fix = {
           source = "src/_shared/scripts/power.profile.fix.sh";
-          # Use the flake store source path so the canonical pkexec sees
-          # matches the polkit rule installed by modules/nixos/polkit.nix.
-          # ~/.stubbe symlinks vary per host; store paths are stable.
-          vars.HELPER_PATH = toString (self + "/src/_shared/scripts/power.profile.helper.sh");
+          # Content-addressed store path: pkexec canonicalises symlinks, so
+          # the polkit rule and this script must point at the exact same
+          # absolute path. Keying on file content (not `self`) keeps the
+          # path stable across rebuilds — using `self + "/..."` re-hashes
+          # on every commit and triggers the sudo prompt in
+          # setup-power-profile-fix.nix every `hm switch`. Must match
+          # modules/nixos/polkit.nix and the activation module.
+          vars.HELPER_PATH = toString (builtins.path {
+            name = "power-profile-helper";
+            path = self + "/src/_shared/scripts/power.profile.helper.sh";
+          });
         };
       };
 

@@ -11,12 +11,16 @@
       # used in the standalone-HM activation (setup-vpn-polkit.nix).
       profileDir = "/etc/profiles/per-user/${username}";
       # pkexec resolves symlinks before matching allowedPrograms. Reference
-      # the helper via the flake's Nix store source path so both the polkit
+      # the helper via a *content-addressed* store path so both the polkit
       # rule and the live script (modules/home/scripts.nix) point at the
-      # same canonical path. Resolving via ~/.stubbe or /etc/nixos depends
-      # on per-host symlinks that aren't guaranteed to exist or to resolve
-      # to the same target — store paths always do.
-      helperPath = toString (self + "/src/_shared/scripts/power.profile.helper.sh");
+      # same canonical path AND that path is stable across rebuilds.
+      # Keying on `self + "/..."` re-hashes on every commit, which would
+      # also retrigger the sudo prompt in the standalone-HM activation
+      # module — `builtins.path` hashes only the helper file's contents.
+      helperPath = toString (builtins.path {
+        name = "power-profile-helper";
+        path = self + "/src/_shared/scripts/power.profile.helper.sh";
+      });
     in
     {
       security.polkit.enable = true;
