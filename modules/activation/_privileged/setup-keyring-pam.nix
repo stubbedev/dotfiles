@@ -1,5 +1,5 @@
 _: {
-  enableIf = { config, ... }: config.features.hyprland || config.features.niri;
+  enableIf = { config, ... }: config.features.hyprland || config.features.niri || config.features.theming;
   args = _: {
     promptTitle = "GNOME Keyring PAM setup";
     promptBody = ''
@@ -7,6 +7,15 @@ _: {
       to enable automatic keyring unlock on login.
     '';
     promptQuestion = "Add GNOME Keyring PAM lines?";
+    # Lock re-evaluates when any of these appear/disappear so installing
+    # a new display manager later forces a re-run.
+    stateInputs = [
+      "/etc/pam.d/login"
+      "/etc/pam.d/ly"
+      "/etc/pam.d/lightdm"
+      "/etc/pam.d/gdm"
+      "/etc/pam.d/sddm"
+    ];
     actionScript = ''
       authLine="auth optional pam_gnome_keyring.so"
       sessionLine="session optional pam_gnome_keyring.so auto_start"

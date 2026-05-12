@@ -547,10 +547,12 @@ rec {
       promptBody,
       promptQuestion,
       actionScript,
+      stateInputs ? [ ],
       skipMessage ? "Skipped. Re-run 'hm switch' to retry.",
     }:
     let
       actionHash = builtins.hashString "sha256" actionScript;
+      statePathsArg = lib.escapeShellArgs stateInputs;
     in
     pkgs.writeShellScript name ''
       set -e
@@ -570,8 +572,18 @@ rec {
 
       sudo() { "$SUDO" "$@"; }
 
+      # Fingerprint world-readable paths the script depends on so the lock
+      # invalidates when those paths appear/disappear (e.g. a new display
+      # manager getting installed after the script first ran).
+      stateHash=$(
+        for p in ${statePathsArg}; do
+          if [ -e "$p" ]; then printf '%s:1\n' "$p"; else printf '%s:0\n' "$p"; fi
+        done | sha256sum | cut -d' ' -f1
+      )
+      combinedHash="${actionHash}:$stateHash"
+
       lockFile="$HOME/.local/state/nix/home-manager/${name}.lock.sum"
-      if [ -f "$lockFile" ] && [ "$(cat "$lockFile")" = "${actionHash}" ]; then
+      if [ -f "$lockFile" ] && [ "$(cat "$lockFile")" = "$combinedHash" ]; then
         exit 0
       fi
 
@@ -589,7 +601,7 @@ rec {
       if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         ${actionScript}
         mkdir -p "$HOME/.local/state/nix/home-manager"
-        echo -n "${actionHash}" > "$lockFile"
+        echo -n "$combinedHash" > "$lockFile"
       else
         echo ""
         printf '%s\n' ${lib.escapeShellArg skipMessage}
