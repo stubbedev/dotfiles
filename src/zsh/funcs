@@ -567,7 +567,8 @@ if are_binary git bat fzf; then
       ;;
     esac
     local release_branch="$major.$minor.$patch"
-    _checkout_branch_or_worktree "release/$release_branch" create
+    local _release_base=$(_default_branch) || return 1
+    _checkout_branch_or_worktree "release/$release_branch" create "$_release_base"
   }
   function gcb {
     in_git_repo || return 1
@@ -1093,14 +1094,11 @@ if are_binary git fzf; then
     if [[ -z "$match" || "$match" == "$query" ]]; then
       local _new_name="$query" _base=""
       if [[ "$_new_name" == */* ]]; then
-        local base_branch=$(echo "$all_branches" |
-          fzf --prompt="(Enter: select base branch for '$_new_name')> " \
-            --select-1 \
-            --exit-0 \
-            --no-info \
-            --height=30%)
-        [[ -z "$base_branch" ]] && return 0
-        _base=$base_branch
+        if [[ "$_new_name" == hotfix/* ]]; then
+          _base=$(_pick_base_branch "(Enter: select base branch for '$_new_name')> ") || return 0
+        else
+          _base=$(_default_branch) || return 0
+        fi
       else
         _new_name=$(_branch_wizard "$_new_name" "") || return 0
         _base=$_branch_base_out
