@@ -14,6 +14,7 @@
           file = self + "/src/opencode/opencode.json";
           vars = {
             CHROME_EXECUTABLE = "${config.home.profileDirectory}/bin/google-chrome-stable";
+            FIREFOX_EXECUTABLE = "${config.home.profileDirectory}/bin/firefox";
           };
         }
       );

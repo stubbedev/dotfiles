@@ -8,6 +8,7 @@ _: {
     }:
     let
       chromeExecutable = "${config.home.profileDirectory}/bin/google-chrome-stable";
+      firefoxExecutable = "${config.home.profileDirectory}/bin/firefox";
     in
     {
       actionScript = ''
@@ -38,6 +39,16 @@ _: {
                   "--no-usage-statistics"
                   "--executable-path"
                   chromeExecutable
+                ];
+              };
+              firefox-devtools = {
+                type = "stdio";
+                command = "npx";
+                args = [
+                  "-y"
+                  "firefox-devtools-mcp@latest"
+                  "--firefox-path"
+                  firefoxExecutable
                 ];
               };
               atlassian-mcp = {

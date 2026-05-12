@@ -6,17 +6,25 @@
 set -euo pipefail
 
 STARTUP_WARMUP_SECONDS=${STARTUP_WARMUP_SECONDS:-8}
-STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-28}
+STARTUP_WARMUP_MIN_PCT=${STARTUP_WARMUP_MIN_PCT:-30}
 STARTUP_WARMUP_MAX_PCT=${STARTUP_WARMUP_MAX_PCT:-100}
-APPLY_RETRIES=${APPLY_RETRIES:-6}
-APPLY_RETRY_SLEEP_SECONDS=${APPLY_RETRY_SLEEP_SECONDS:-0.2}
-HIGH_LOAD_RETRY_SECONDS=${HIGH_LOAD_RETRY_SECONDS:-8}
-BALANCED_MIN_PCT=${BALANCED_MIN_PCT:-18}
-BALANCED_MAX_PCT=${BALANCED_MAX_PCT:-90}
-BALANCED_BOOST=${BALANCED_BOOST:-0}
+APPLY_RETRIES=${APPLY_RETRIES:-8}
+APPLY_RETRY_SLEEP_SECONDS=${APPLY_RETRY_SLEEP_SECONDS:-0.25}
+# Legacy HIGH_LOAD_RETRY_SECONDS removed — the defer-on-load path skipped
+# governor/EPP/boost writes entirely, leaving downscales half-applied.
+# Balanced defaults tuned for "smooth" desktop feel. Previous values
+# (min=18% max=90% boost=0) kept the CPU pinned to base clock; with
+# governor=schedutil on intel_cpufreq (passive) EPP is ignored, so the
+# only knobs that move the floor under typing/scrolling are min_perf_pct
+# / scaling_min_freq + boost. min=25% on a 4.7GHz part gives ~1.18GHz
+# floor (typing stays responsive); max=100% + boost=1 lets schedutil
+# ramp to turbo on real workload while down_rate=50ms decays quickly.
+BALANCED_MIN_PCT=${BALANCED_MIN_PCT:-25}
+BALANCED_MAX_PCT=${BALANCED_MAX_PCT:-100}
+BALANCED_BOOST=${BALANCED_BOOST:-1}
 BALANCED_EPP=${BALANCED_EPP:-balance_performance}
-BALANCED_UP_RATE_US=${BALANCED_UP_RATE_US:-4000}
-BALANCED_DOWN_RATE_US=${BALANCED_DOWN_RATE_US:-65000}
+BALANCED_UP_RATE_US=${BALANCED_UP_RATE_US:-2000}
+BALANCED_DOWN_RATE_US=${BALANCED_DOWN_RATE_US:-50000}
 BALANCED_IOWAIT_BOOST=${BALANCED_IOWAIT_BOOST:-1}
 CPU_HOT_TEMP_MILLIC=${CPU_HOT_TEMP_MILLIC:-85000}
 BALANCED_HOT_MAX_PCT=${BALANCED_HOT_MAX_PCT:-80}
@@ -225,10 +233,16 @@ run_helper() {
 
 is_floor_applied() {
   local min_pct="$1"
+  # Second arg is optional. 0 (default) means "do not enforce max" — used
+  # during the downscale delay window where we hold the min floor but
+  # don't yet care about the cap. Pass a non-zero value from
+  # apply_profile_fix to also detect PPD clamping scaling_max_freq below
+  # our target after the profile change (the min-only check missed this).
+  local max_pct="${2:-0}"
   local tolerance_khz=100000
 
   for policy in /sys/devices/system/cpu/cpufreq/policy*; do
-    local max_khz cur_min_khz target_min_khz
+    local max_khz cur_min_khz cur_max_khz target_min_khz target_max_khz
     [ -d "$policy" ] || continue
     max_khz=$(cat "$policy/cpuinfo_max_freq" 2>/dev/null || echo "")
     cur_min_khz=$(cat "$policy/scaling_min_freq" 2>/dev/null || echo "")
@@ -237,6 +251,14 @@ is_floor_applied() {
     target_min_khz=$((max_khz * min_pct / 100))
     if [ $((cur_min_khz + tolerance_khz)) -lt "$target_min_khz" ]; then
       return 1
+    fi
+    if [ "$max_pct" -gt 0 ]; then
+      cur_max_khz=$(cat "$policy/scaling_max_freq" 2>/dev/null || echo "")
+      [ -n "$cur_max_khz" ] || continue
+      target_max_khz=$((max_khz * max_pct / 100))
+      if [ $((cur_max_khz + tolerance_khz)) -lt "$target_max_khz" ]; then
+        return 1
+      fi
     fi
   done
 
@@ -261,21 +283,38 @@ keep_floor() {
 enforce_min_floor() {
   local profile="$1"
   local min_pct="$2"
+  # Optional max_pct: when non-zero, reapply also pushes the max cap back
+  # up if PPD has clamped scaling_max_freq below our target. Defaults to 0
+  # ("don't enforce max") for callers that only care about the min floor
+  # (e.g. apply_min_floor during the downscale delay window).
+  local max_pct="${3:-0}"
   local attempt
 
   for ((attempt = 1; attempt <= APPLY_RETRIES; attempt++)); do
-    if is_floor_applied "$min_pct"; then
+    if is_floor_applied "$min_pct" "$max_pct"; then
       return 0
     fi
-    log "Floor below target for $profile (attempt ${attempt}/${APPLY_RETRIES}), reapplying min floor"
-    set_policy_min_freqs "$min_pct"
-    if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
-      set_pstate_limits "$min_pct" 100
+    if [ "$max_pct" -gt 0 ]; then
+      log "Range below target for $profile (attempt ${attempt}/${APPLY_RETRIES}), reapplying min=${min_pct}% max=${max_pct}%"
+      set_policy_freqs "$min_pct" "$max_pct"
+      if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
+        set_pstate_limits "$min_pct" "$max_pct"
+      fi
+    else
+      log "Floor below target for $profile (attempt ${attempt}/${APPLY_RETRIES}), reapplying min floor"
+      set_policy_min_freqs "$min_pct"
+      if [ -f /sys/devices/system/cpu/intel_pstate/min_perf_pct ]; then
+        set_pstate_limits "$min_pct" 100
+      fi
     fi
     sleep "$APPLY_RETRY_SLEEP_SECONDS"
   done
 
-  log "Unable to fully enforce min floor for $profile after ${APPLY_RETRIES} attempts"
+  if [ "$max_pct" -gt 0 ]; then
+    log "Unable to fully enforce range (min=${min_pct}% max=${max_pct}%) for $profile after ${APPLY_RETRIES} attempts"
+  else
+    log "Unable to fully enforce min floor for $profile after ${APPLY_RETRIES} attempts"
+  fi
 }
 
 log_policy_state() {
@@ -317,14 +356,6 @@ apply_startup_warmup() {
   esac
 }
 
-is_high_load() {
-  local load cores
-  load=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo "0")
-  cores=$(nproc 2>/dev/null || echo "1")
-  # Return success if load >= 0.7 * cores
-  awk -v l="$load" -v c="$cores" 'BEGIN { exit (l >= c*0.7 ? 0 : 1) }'
-}
-
 get_max_temp_millic() {
   local max_temp=0
   local temp
@@ -350,10 +381,10 @@ is_hot() {
 get_profile_min_pct() {
   local profile="$1"
   case "$profile" in
-  power-saver) echo 8 ;;
+  power-saver) echo 12 ;;
   balanced) echo "$BALANCED_MIN_PCT" ;;
-  performance) echo 35 ;;
-  *) echo 8 ;;
+  performance) echo 45 ;;
+  *) echo 12 ;;
   esac
 }
 
@@ -395,10 +426,13 @@ apply_profile_fix() {
     gov_fallback="schedutil"
     epp_pref="power"
     epp_fallback="balance_power"
-    min_pct=8
+    # 12% × 4.7GHz ≈ 564MHz floor — well above cpuinfo_min (400MHz) so
+    # the cursor stays usable but idle power stays low. Max=60% caps
+    # turbo, boost=0 disables the upper turbo bins entirely.
+    min_pct=12
     max_pct=60
     boost=0
-    up_rate=40000
+    up_rate=20000
     down_rate=120000
     iowait=0
     ;;
@@ -424,7 +458,11 @@ apply_profile_fix() {
     gov_fallback="performance"
     epp_pref="performance"
     epp_fallback="balance_performance"
-    min_pct=35
+    # governor=performance pins scaling_setspeed at scaling_max_freq, so
+    # min_pct mainly matters during the dbus-apply gap before the
+    # governor switch lands. 45% (~2.1GHz floor) keeps wake-from-idle
+    # snappy without leaving the CPU below base clock.
+    min_pct=45
     max_pct=100
     boost=1
     up_rate=2000
@@ -439,13 +477,24 @@ apply_profile_fix() {
 
   gov=$(choose_governor "$gov_pref" "$gov_fallback")
   epp=$(choose_epp "$epp_pref" "$epp_fallback")
+  # EPP is only honored by active intel_pstate. In passive mode the driver
+  # name is intel_cpufreq and the kernel silently no-ops EPP writes — the
+  # `energy_performance_preference` sysfs file still exists, so choose_epp
+  # returns a value, but applying it wastes a pkexec hop. amd-pstate-passive
+  # and acpi-cpufreq behave the same way. Skip the EPP arg in those cases.
+  if [ "$(get_scaling_driver)" != "intel_pstate" ]; then
+    if [ -n "$epp" ]; then
+      log "Skipping EPP write: driver $(get_scaling_driver) ignores energy_performance_preference"
+    fi
+    epp=""
+  fi
   epp_arg="${epp:-none}"
 
   # Single pkexec call: freq caps are removed first inside the helper so the
   # CPU can ramp immediately, then governor/EPP/boost/schedutil follow.
   log "Applying profile=$profile gov=$gov epp=$epp_arg min=${min_pct}% max=${max_pct}% boost=$boost"
   run_helper set-all "$min_pct" "$max_pct" "$gov" "$epp_arg" "$boost" "$up_rate" "$down_rate" "$iowait"
-  enforce_min_floor "$profile" "$min_pct"
+  enforce_min_floor "$profile" "$min_pct" "$max_pct"
   log "Applied profile=$profile gov=$gov epp=$epp_arg min=${min_pct}% max=${max_pct}% boost=$boost"
   log_policy_state
 }
@@ -512,19 +561,11 @@ dbus-monitor --system "type='signal',interface='org.freedesktop.DBus.Properties'
             continue
           fi
 
-          if is_high_load; then
-            log "High load detected; deferring full apply for $new_profile by ${HIGH_LOAD_RETRY_SECONDS}s"
-            (
-              sleep "$HIGH_LOAD_RETRY_SECONDS"
-              if [[ "$(get_current_profile)" = "$new_profile" ]] && ! is_high_load; then
-                log "Retrying deferred apply for $new_profile"
-                apply_profile_fix "$new_profile"
-              fi
-            ) &
-            current_profile="$new_profile"
-            continue
-          fi
-
+          # Previously: defer full apply when is_high_load — based on 1-min
+          # loadavg this was both laggy (stale 60s window after resume) and
+          # incomplete (it skipped governor/EPP/boost writes entirely so the
+          # downscale was half-applied). apply_profile_fix is idempotent
+          # and cheap on a single pkexec call; just run it.
           apply_profile_fix "$new_profile"
         fi
 

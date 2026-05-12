@@ -10,10 +10,13 @@
       # /etc/profiles/per-user/<user>; this mirrors config.home.profileDirectory
       # used in the standalone-HM activation (setup-vpn-polkit.nix).
       profileDir = "/etc/profiles/per-user/${username}";
-      # pkexec resolves symlinks before matching allowedPrograms.
-      # ~/.stubbe is a symlink → /etc/nixos (the live flake checkout), so the
-      # canonical path pkexec sees is /etc/nixos/… not ~/.stubbe/….
-      sharedScripts = "/etc/nixos/dotfiles/src/_shared/scripts";
+      # pkexec resolves symlinks before matching allowedPrograms. Reference
+      # the helper via the flake's Nix store source path so both the polkit
+      # rule and the live script (modules/home/scripts.nix) point at the
+      # same canonical path. Resolving via ~/.stubbe or /etc/nixos depends
+      # on per-host symlinks that aren't guaranteed to exist or to resolve
+      # to the same target — store paths always do.
+      helperPath = toString (self + "/src/_shared/scripts/power.profile.helper.sh");
     in
     {
       security.polkit.enable = true;
@@ -32,7 +35,7 @@
         file = self + "/src/polkit/50-power-profile-fix.rules";
         vars = {
           USERNAME = username;
-          HELPER_PATH = "${sharedScripts}/power.profile.helper.sh";
+          HELPER_PATH = helperPath;
         };
       };
 

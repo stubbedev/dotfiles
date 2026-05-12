@@ -21,6 +21,16 @@
 				"@CHROME_EXECUTABLE@"
 			]
 		},
+		"firefox-devtools": {
+			"type": "local",
+			"command": [
+				"npx",
+				"-y",
+				"firefox-devtools-mcp@latest",
+				"--firefox-path",
+				"@FIREFOX_EXECUTABLE@"
+			]
+		},
 		"atlassian-mcp": {
 			"type": "local",
 			"command": [
