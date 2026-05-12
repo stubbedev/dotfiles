@@ -221,7 +221,7 @@ function _pick_base_branch {
   local _picked=$(echo "$_branches" |
     fzf --prompt="$_prompt" \
       --no-info \
-      --height=30%)
+      --height=~4)
   [[ -z "$_picked" ]] && return 1
   echo "$_picked"
 }
@@ -403,7 +403,7 @@ function _branch_wizard {
   if [[ -z "$_name" ]]; then
     local _p="(Enter: branch name [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> "
     [[ -n "$_label" ]] && _p="(Enter: new branch from $_label [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> "
-    _name=$(fzf --prompt="$_p" --height=1 --reverse --no-info --print-query </dev/null)
+    _name=$(fzf --prompt="$_p" --height=~1 --reverse --no-info --print-query </dev/null)
     [[ -z "$_name" ]] && return 1
   fi
 
@@ -414,7 +414,7 @@ function _branch_wizard {
     _final="release/$_name"
   else
     local _prefix=$(echo -e "feature\nbugfix\nhotfix" |
-      fzf --prompt="(Enter: select prefix)> " --height=3 --no-input --no-info)
+      fzf --prompt="(Enter: select prefix)> " --height=~4 --no-input --no-info)
     [[ -z "$_prefix" ]] && return 1
 
     if [[ "$_prefix" == "hotfix" ]]; then
@@ -423,7 +423,7 @@ function _branch_wizard {
       _branch_base_out=$(_default_branch) || return 1
     fi
 
-    local _suffix=$(fzf --height=1 --reverse --no-info --print-query \
+    local _suffix=$(fzf --height=~1 --reverse --no-info --print-query \
       --prompt="(Enter: select suffix)> " </dev/null)
     if [[ -n "$_suffix" ]]; then
       _suffix=${_suffix:l}
@@ -457,7 +457,7 @@ if are_binary git bat fzf; then
       commit_prompt="(Enter: commit message [$commit_prefix]; trailing \\ opens editor)> "
     fi
 
-    local commit_message=$(fzf --height=1 \
+    local commit_message=$(fzf --height=~1 \
       --query="$initial_query" \
       --reverse \
       --no-info \
@@ -543,7 +543,7 @@ if are_binary git bat fzf; then
     local current_tag=${$(git tag --sort=version:refname)[-1]}
     local increment_action=$(printf 'Major\nMinor\nPatch\n' |
       fzf --prompt="(Enter: select action)> " \
-        --height=4 \
+        --height=~4 \
         --no-input \
         --no-info)
 
@@ -577,9 +577,9 @@ if are_binary git bat fzf; then
     _list_git_branches
     local git_branches=${(F)reply}
 
-    # Fixed 3-item list + preview scaled to terminal height
+    # Up to 3 list rows + 1 prompt + 8-line preview
     local _list_h=4 # prompt(1) + items(3)
-    local _prev_h=$((${LINES:-40} * 50 / 100))
+    local _prev_h=8
     local _gcb_out=$(echo "$git_branches" |
       fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
         --query="$initial_query" \
@@ -589,9 +589,9 @@ if are_binary git bat fzf; then
         --exit-0 \
         --print-query \
         --no-info \
-        --preview='git log --oneline --color=always -15 {} 2>/dev/null' \
+        --preview='git log --oneline --color=always -8 {} 2>/dev/null' \
         --preview-window="down:${_prev_h}:wrap:nohidden" \
-        --height=$((_list_h + _prev_h)))
+        --height=~$((_list_h + _prev_h)))
     local branch_name=${_gcb_out##*$'\n'}
 
     if [[ -n "$branch_name" && ${reply[(r)$branch_name]} == "$branch_name" ]]; then
@@ -715,7 +715,7 @@ if are_binary git bat fzf; then
         --no-info \
         --preview="git diff ${current_branch}..{} 2>/dev/null | bat --style=numbers --color=always -l diff" \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50%)
+        --height=~50%)
     local remote_branch=${_gd_out##*$'\n'}
 
     if [[ -z "$remote_branch" ]]; then
@@ -739,7 +739,7 @@ if are_binary git bat fzf; then
         --exit-0 \
         --print-query \
         --no-info \
-        --height=5)
+        --height=~5)
     local target_branch=${_gcd_out##*$'\n'}
 
     if [[ -z "$target_branch" ]]; then
@@ -811,7 +811,7 @@ if are_binary git bat fzf; then
         --no-input \
         --header="$1" \
         --reverse \
-        --height=4 \
+        --height=~4 \
         --no-info \
         --no-multi \
         --exit-0)
@@ -844,7 +844,7 @@ if are_binary git bat fzf; then
         --select-1 \
         --exit-0 \
         --no-info \
-        --height=10)
+        --height=~10)
 
     if [[ -n "$selected_branch" ]]; then
       git pull origin "$selected_branch"
@@ -884,7 +884,7 @@ if are_binary git bat fzf; then
         --no-info \
         --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50% \
+        --height=~50% \
         "${_binds[@]}")
     local commit=${_commit_line%% *}
 
@@ -909,7 +909,7 @@ if are_binary git bat fzf; then
         --no-info \
         --preview='line={}; git stash show -p --color=always "${line%%:*}" 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50%)
+        --height=~50%)
 
     if [[ -z "$selected" ]]; then
       return 0
@@ -949,7 +949,7 @@ if are_binary git bat fzf; then
         --bind 'shift-tab:toggle-all' \
         --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
         --preview-window='up:90%:wrap:nohidden' \
-        --height=50%)
+        --height=~50%)
 
     if [[ -z "$_selected" ]]; then
       return 0
@@ -1062,23 +1062,23 @@ if are_binary git fzf; then
       return 0
     fi
 
-    # Fixed 3-item list + preview scaled to terminal height
+    # Up to 3 list rows + 1 prompt + 8-line preview
     local _list_h=4 # prompt(1) + items(3)
-    local _prev_h=$((${LINES:-40} * 50 / 100))
+    local _prev_h=8
     local selected=$(echo "$display_list" |
       fzf --prompt="(Enter: switch/create, Ctrl+C: wizard create from scratch)> " \
         --print-query \
         --exit-0 \
         --no-info \
-        --height=$((_list_h + _prev_h)) \
+        --height=~$((_list_h + _prev_h)) \
         --preview='
           line={}
           if [[ ${line%% *} == "[worktree]" ]]; then
             p=${line##*  →  }
-            git -C "$p" log --oneline --color=always -10 2>/dev/null
+            git -C "$p" log --oneline --color=always -8 2>/dev/null
           else
             b=${line#"[branch]   "}
-            git log --oneline --color=always -10 "$b" 2>/dev/null
+            git log --oneline --color=always -8 "$b" 2>/dev/null
           fi
         ' \
         --preview-window="down:${_prev_h}:wrap:nohidden")
