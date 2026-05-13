@@ -1,0 +1,13 @@
+#compdef denv
+
+_denv() {
+  local -a actions
+  actions=(
+    'on:write .envrc (dotenv) and allow it'
+    'off:revoke and delete .envrc if we created it'
+    'status:show direnv status for current directory'
+  )
+  _describe -t actions 'denv action' actions
+}
+
+_denv "$@"

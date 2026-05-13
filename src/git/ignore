@@ -1,2 +1,4 @@
 .worktrees
 .gwt-*
+.envrc
+.direnv/

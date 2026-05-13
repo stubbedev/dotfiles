@@ -1354,3 +1354,40 @@ if is_binary fzf; then
     clear
   }
 fi
+
+if is_binary direnv; then
+  # Toggle direnv for the current directory.
+  #   denv on     write .envrc (defaults to `dotenv`) and allow it
+  #   denv off    revoke and delete a .envrc that we created
+  #   denv status print direnv status for the current directory
+  function denv {
+    local action="${1:-status}"
+    case "$action" in
+      on)
+        if [[ ! -e .envrc ]]; then
+          print -- 'dotenv' > .envrc
+          echo "denv: wrote .envrc (dotenv)"
+        fi
+        direnv allow
+        ;;
+      off)
+        direnv revoke 2>/dev/null
+        if [[ -f .envrc ]]; then
+          if [[ "$(<.envrc)" == "dotenv" ]]; then
+            rm -f .envrc
+            echo "denv: removed .envrc"
+          else
+            echo "denv: .envrc has custom content, not deleting" >&2
+          fi
+        fi
+        ;;
+      status)
+        direnv status
+        ;;
+      *)
+        echo "denv: unknown action '$action' (use: on|off|status)" >&2
+        return 1
+        ;;
+    esac
+  }
+fi
