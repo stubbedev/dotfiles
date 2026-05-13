@@ -198,27 +198,14 @@ _: {
           echo "Unsupported distribution (no apt-get/dnf/pacman). Theme files staged but boot integration skipped." >&2
         fi
 
-        # ---------------------------------------------------------------
-        # 6. Suppress the "Terminating Plymouth..." flash on VT1 between
-        #    the splash and the display manager. plymouth-quit.service
-        #    fires as soon as multi-user.target is reached — *before*
-        #    display-manager.service has grabbed the framebuffer —
-        #    exposing the bare VT for a fraction of a second. Masking it
-        #    leaves plymouth-quit-wait.service as the single terminator
-        #    (ordered before display-manager), so plymouth keeps the
-        #    splash up until the DM takes the KMS scanout, then quits in
-        #    one step. Mirrors the NixOS fix
-        #    (modules/nixos/plymouth.nix: plymouth-quit.wantedBy = []).
-        #
-        #    mask (not disable): the unit's WantedBy symlink may live in
-        #    /lib/systemd/system/multi-user.target.wants/ via vendor
-        #    preset, which `systemctl disable` won't touch. mask is
-        #    idempotent and reversible with `systemctl unmask`.
-        # ---------------------------------------------------------------
-        if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files plymouth-quit.service >/dev/null 2>&1; then
-          if [ "$(systemctl is-enabled plymouth-quit.service 2>/dev/null)" != "masked" ]; then
-            sudo systemctl mask plymouth-quit.service
-          fi
+        # Unmask plymouth-quit.service if a previous activation masked it.
+        # Masking that unit deadlocks boot: it is what runs `plymouth quit`,
+        # and plymouth-quit-wait.service only blocks on plymouth's exit —
+        # without the quit signal, the splash never clears and the display
+        # manager stays gated behind it.
+        if command -v systemctl >/dev/null 2>&1 \
+           && [ "$(systemctl is-enabled plymouth-quit.service 2>/dev/null)" = "masked" ]; then
+          sudo systemctl unmask plymouth-quit.service
         fi
       '';
     };
