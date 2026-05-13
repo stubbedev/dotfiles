@@ -319,8 +319,11 @@ function _gwt_denv_on {
 function _gwt_postcreate {
   local _wt="$1" _main="$2"
   [[ -z "$_wt" ]] && return 0
+  # Allow .envrc synchronously before returning so the interactive shell's
+  # next precmd doesn't print a "blocked" error. The .envrc is linked from
+  # main and stable, so a single allow up front is enough.
+  _gwt_denv_on "$_wt"
   if [[ -n "$GWT_NO_INSTALL" ]]; then
-    _gwt_denv_on "$_wt"
     return 0
   fi
   local _log="$_wt/.gwt-postcreate.log"
@@ -360,7 +363,6 @@ function _gwt_postcreate {
     _stacks[cargo]="cargo fetch"
   fi
   if (( ${#_stacks[@]} == 0 )); then
-    _gwt_denv_on "$_wt"
     return 0
   fi
   local _name _cmd _slog
