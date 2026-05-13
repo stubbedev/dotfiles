@@ -1307,7 +1307,7 @@ if is_binary uv; then
   }
 fi
 
-function _phpstorm_remote_dev_bin {
+function phpstorm_remote_dev_bin {
   local _candidates=(
     "$HOME/.local/share/JetBrains/Toolbox/apps/phpstorm/bin/remote-dev-server.sh"
     "$HOME/.local/share/JetBrains/Toolbox/apps/PhpStorm/bin/remote-dev-server.sh"
@@ -1320,7 +1320,7 @@ function _phpstorm_remote_dev_bin {
   return 1
 }
 
-if _phpstorm_remote_dev_bin >/dev/null; then
+if phpstorm_remote_dev_bin >/dev/null; then
   function phpstorm_headless {
     local _project=$(realpath "${1:-$PWD}" 2>/dev/null)
     if [[ -z "$_project" || ! -d "$_project" ]]; then
@@ -1331,7 +1331,11 @@ if _phpstorm_remote_dev_bin >/dev/null; then
       echo "phpstorm_headless: already running for $_project"
       return 0
     fi
-    local _bin=$(_phpstorm_remote_dev_bin)
+    local _bin=$(phpstorm_remote_dev_bin)
+    if [[ -z "$_bin" ]]; then
+      echo "phpstorm_headless: remote-dev-server.sh not found" >&2
+      return 1
+    fi
     local _log="${TMPDIR:-/tmp}/phpstorm-headless-${_project//\//_}.log"
     nohup "$_bin" run "$_project" >"$_log" 2>&1 &!
     echo "phpstorm_headless: started for $_project (log: $_log)"
