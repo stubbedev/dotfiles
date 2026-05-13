@@ -10,10 +10,20 @@ SELECTED_NAME=$(basename "$SELECTED" | tr '.' '_')
 TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 
 if command -v direnv >/dev/null 2>&1; then
-  if ! grep -qxF 'dotenv' "$SELECTED/.envrc" 2>/dev/null; then
-    print -- 'dotenv' >> "$SELECTED/.envrc"
-  fi
-  direnv allow "$SELECTED" >/dev/null 2>&1
+  # Backgrounded so the tmux switch is never blocked. The new session's
+  # first precmd fires direnv's hook; by then `direnv allow` has run
+  # and the .env vars are available. Fast path (well-formed .envrc)
+  # just re-allows; cold path defers to `denv on` so logic stays
+  # single-sourced in src/zsh/funcs.
+  (
+    if [[ -f "$SELECTED/.envrc" ]] \
+        && grep -qxF 'dotenv_if_exists' "$SELECTED/.envrc" \
+        && ! grep -qxF 'dotenv' "$SELECTED/.envrc"; then
+      direnv allow "$SELECTED" >/dev/null 2>&1
+    else
+      zsh -ic "cd ${(q)SELECTED} && denv on" >/dev/null 2>&1
+    fi
+  ) &!
 fi
 # `tmux has-session` (no -t) succeeds iff the server is running.
 # pgrep tmux substring-matches our own comm (`tmux-pick-proje`,

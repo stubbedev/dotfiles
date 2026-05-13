@@ -123,10 +123,27 @@ function _settings_init {
   # into the shell — without this precmd hook, `direnv allow` just
   # writes the auth file but no subsequent prompt evaluates
   # `direnv export zsh`, so $VARS stay unset.
+  #
+  # The chatty "direnv: loading …" + "direnv: export +FOO +BAR …" lines
+  # aren't controlled by DIRENV_LOG_FORMAT (hardcoded in `direnv export`
+  # itself in 2.37.1), so we wrap the upstream hook to filter stderr
+  # through grep. Real errors (`direnv: error …`, blocked .envrc, parse
+  # errors) still pass through.
   if is_binary direnv && ! (( $+functions[_direnv_hook] )); then
       function _settings_gen_direnv_init { direnv hook zsh; }
       _cached_eval "$_cache_dir/direnv_init.zsh" "${commands[direnv]:A}" _settings_gen_direnv_init
       unfunction _settings_gen_direnv_init
+      if (( $+functions[_direnv_hook] )); then
+          # The "loading" / "export" lines are prefixed with an ANSI
+          # color reset (\x1b[0m / \x1b[2m), so a `^direnv:` anchor
+          # misses them. Plain substring match catches both colored and
+          # plain output. Real errors (`direnv: error …`) pass through.
+          function _direnv_hook {
+              trap -- '' SIGINT
+              eval "$(direnv export zsh 2> >(grep --line-buffered -vE 'direnv: (loading|export) ' >&2))"
+              trap - SIGINT
+          }
+      fi
   fi
 
   if is_binary pyenv; then

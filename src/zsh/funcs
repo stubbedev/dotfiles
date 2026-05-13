@@ -1392,18 +1392,42 @@ if is_binary direnv; then
   #   denv off    revoke and delete a .envrc that we created
   #   denv status print direnv status for the current directory
   function denv {
+    # Use dotenv_if_exists (not plain `dotenv`) so direnv stays silent
+    # when a project has no .env yet — plain `dotenv` calls log_error,
+    # which prints to stderr regardless of DIRENV_LOG_FORMAT.
+    local marker='dotenv_if_exists'
     local action="${1:-status}"
     case "$action" in
       on)
-        if ! grep -qxF 'dotenv' .envrc 2>/dev/null; then
-          print -- 'dotenv' >> .envrc
+        # Build the desired set of .envrc lines from what's already
+        # there, dropping any bare `dotenv` line (legacy / stray) so it
+        # doesn't fire log_error when .env is absent. Then ensure
+        # `dotenv_if_exists` is present. Any non-dotenv user-authored
+        # lines are preserved verbatim so a hand-written .envrc isn't
+        # clobbered.
+        local _content=""
+        if [[ -f .envrc ]]; then
+          _content="$(grep -vxF 'dotenv' .envrc || true)"
         fi
+        if ! print -r -- "$_content" | grep -qxF "$marker"; then
+          if [[ -n "$_content" ]]; then
+            _content="${_content}"$'\n'"$marker"
+          else
+            _content="$marker"
+          fi
+        fi
+        print -r -- "$_content" > .envrc
         direnv allow
         ;;
       off)
         direnv revoke 2>/dev/null
         if [[ -f .envrc ]]; then
-          if [[ "$(<.envrc)" == "dotenv" ]]; then
+          # Remove a .envrc we authored ourselves. Match either the
+          # current marker or the legacy `dotenv` line so old projects
+          # clean up cleanly.
+          local content
+          content="$(<.envrc)"
+          if [[ "$content" == "$marker" || "$content" == "dotenv" ]]; then
             rm -f .envrc
             echo "denv: removed .envrc"
           else

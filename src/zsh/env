@@ -14,3 +14,9 @@ for _hm_session_vars in \
   fi
 done
 unset _hm_session_vars
+
+# Silence direnv's "loading .envrc / export +FOO +BAR ..." banner. With
+# dozens of vars in a project .env (Laravel apps especially) the dump
+# floods the terminal on every cd into the project root. Empty format =
+# no info log lines; `direnv: error ...` still prints unconditionally.
+export DIRENV_LOG_FORMAT=""
