@@ -288,7 +288,7 @@ function _gwt_link_files {
   else
     _patterns=('.env' '.env.local' '.env.*.local' '.envrc')
   fi
-  local _pat _src _rel _dst _linked_envrc=0
+  local _pat _src _rel _dst
   for _pat in "${_patterns[@]}"; do
     for _src in "$_main"/${~_pat}; do
       [[ -e "$_src" || -L "$_src" ]] || continue
@@ -298,26 +298,38 @@ function _gwt_link_files {
       mkdir -p "${_dst:h}"
       if ln -s "$_src" "$_dst" 2>/dev/null; then
         echo "gwt: linked $_rel"
-        [[ "$_rel" == ".envrc" ]] && _linked_envrc=1
       fi
     done
   done
-  if (( _linked_envrc )) && command -v direnv >/dev/null 2>&1; then
-    direnv allow "$_wt" 2>/dev/null && echo "gwt: direnv allowed $_wt"
-  fi
 }
 
 # Run project setup in the new worktree. If <main>/.gwt-postcreate exists and
 # is executable, run it (project owns the setup). Otherwise detect a lockfile
 # and dispatch the matching install command. Output goes to
 # <worktree>/.gwt-postcreate.log. Skipped when GWT_NO_INSTALL=1.
+# Run `denv on` in $1, then notify any direnv-hooked interactive shell whose
+# cwd is inside that worktree so it picks up the new .envrc/.env immediately
+# (without waiting for the next precmd).
+function _gwt_denv_on {
+  local _wt="$1"
+  (( $+functions[denv] )) || return 0
+  ( cd "$_wt" 2>/dev/null && denv on >/dev/null 2>&1 )
+}
+
 function _gwt_postcreate {
   local _wt="$1" _main="$2"
-  [[ -z "$_wt" || -n "$GWT_NO_INSTALL" ]] && return 0
+  [[ -z "$_wt" ]] && return 0
+  if [[ -n "$GWT_NO_INSTALL" ]]; then
+    _gwt_denv_on "$_wt"
+    return 0
+  fi
   local _log="$_wt/.gwt-postcreate.log"
   if [[ -n "$_main" && -x "$_main/.gwt-postcreate" ]]; then
     echo "gwt: running $_main/.gwt-postcreate in bg → tail -f $_log"
-    ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" </dev/null >"$_log" 2>&1 ) &!
+    (
+      cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" </dev/null >"$_log" 2>&1
+      _gwt_denv_on "$_wt"
+    ) &!
     return 0
   fi
   # Detect every present stack; spawn each install in its own bg job with
@@ -347,14 +359,33 @@ function _gwt_postcreate {
   if [[ -f "$_wt/Cargo.toml" ]] && command -v cargo >/dev/null 2>&1; then
     _stacks[cargo]="cargo fetch"
   fi
-  (( ${#_stacks[@]} == 0 )) && return 0
+  if (( ${#_stacks[@]} == 0 )); then
+    _gwt_denv_on "$_wt"
+    return 0
+  fi
   local _name _cmd _slog
   for _name in ${(k)_stacks}; do
     _cmd=${_stacks[$_name]}
     _slog="$_wt/.gwt-postcreate.$_name.log"
     echo "gwt: $_name in bg ($_cmd) → tail -f $_slog"
-    ( cd "$_wt" && eval "$_cmd" </dev/null >"$_slog" 2>&1 ) &!
   done
+  # Spawn all installs as children of one outer subshell so we can `wait`
+  # them (zsh can only wait on its own children — `&!` would disown them).
+  # When all finish, run denv on so .envrc is allowed against the .env that
+  # postcreate may have produced. The outer subshell is itself disowned via
+  # `&!` so the user's interactive shell can return immediately.
+  (
+    local -a _pids=()
+    local _n _c _l
+    for _n in ${(k)_stacks}; do
+      _c=${_stacks[$_n]}
+      _l="$_wt/.gwt-postcreate.$_n.log"
+      ( cd "$_wt" && eval "$_c" </dev/null >"$_l" 2>&1 ) &
+      _pids+=($!)
+    done
+    wait "${_pids[@]}"
+    _gwt_denv_on "$_wt"
+  ) &!
 }
 
 # Run <main>/.gwt-predelete in the worktree before it is removed. Synchronous
