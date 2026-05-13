@@ -148,10 +148,15 @@ function _checkout_branch_or_worktree {
     _base=""
   fi
 
+  # Direct-checkout paths (lines below) need the resolved origin/$_base so a
+  # stale local ref doesn't silently base the new branch on yesterday's commit.
+  # Worktree-routing paths pass the unresolved $_base to _gwt_create, which
+  # runs _resolve_base itself — don't double-resolve there.
   local -a _action
   if [[ "$_mode" == "create" ]]; then
     if [[ -n "$_base" ]]; then
-      _action=(git checkout -b "$_target" "$_base")
+      local _resolved_base=$(_resolve_base "$_base")
+      _action=(git checkout -b "$_target" "$_resolved_base")
     else
       _action=(git checkout -b "$_target")
     fi
