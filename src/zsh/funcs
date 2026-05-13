@@ -1395,9 +1395,8 @@ if is_binary direnv; then
     local action="${1:-status}"
     case "$action" in
       on)
-        if [[ ! -e .envrc ]]; then
-          print -- 'dotenv' > .envrc
-          echo "denv: wrote .envrc (dotenv)"
+        if ! grep -qxF 'dotenv' .envrc 2>/dev/null; then
+          print -- 'dotenv' >> .envrc
         fi
         direnv allow
         ;;

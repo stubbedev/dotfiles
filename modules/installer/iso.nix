@@ -195,6 +195,13 @@ in
 
         networking.hostName = lib.mkForce "stubbe-iso";
 
+        # Live ISO uses iwd + impala instead of NetworkManager. impala is a
+        # ratatui TUI for iwd; it's lighter than nmtui and gives an
+        # interactive WiFi picker on the install tty. NM is force-disabled
+        # because it claims wpa_supplicant and conflicts with iwd.
+        networking.networkmanager.enable = lib.mkForce false;
+        networking.wireless.iwd.enable = true;
+
         # The ISO's only job is to run stb-install-nixos. Skip greetd and
         # autologin root on tty1 so the live boot lands directly at a root
         # shell. The installed system still uses greetd from
@@ -227,7 +234,30 @@ in
           "profile.d/stb-welcome.sh".text = ''
             [ "$(id -u)" -eq 0 ] || return 0
             printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'
-            printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n\n'
+            printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n'
+            printf '       \033[2m(--host <attr> to install a different host, --help for flags)\033[0m\n\n'
+            # Auto-launch impala on tty1 when no default route is present,
+            # so the live image hands the user a WiFi picker instead of a
+            # cold shell. Once a route appears (ethernet plugged in or
+            # impala connects), subsequent logins skip the TUI.
+            if [ -z "''${STB_WIFI_TUI_RAN:-}" ] \
+                && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] \
+                && ! ip -4 route show default | grep -q .; then
+              export STB_WIFI_TUI_RAN=1
+              command -v impala >/dev/null && impala || true
+            fi
+            # Surface live-ISO IPs + remote-install command. Useful for
+            # headless installs (no monitor / no keyboard) where the user
+            # boots the USB, looks up the assigned IP from their router,
+            # and would otherwise have to guess. Skip loopback + LL.
+            ips="$(ip -4 -o addr show scope global 2>/dev/null \
+                     | awk '{ split($4, a, "/"); print a[1] }' \
+                     | paste -sd ' ' -)"
+            if [ -n "$ips" ]; then
+              first_ip="$(echo "$ips" | awk '{print $1}')"
+              printf 'Live IP(s): \033[1m%s\033[0m\n' "$ips"
+              printf 'Remote install: \033[1mssh root@%s\033[0m (SSH key auth, no password)\n\n' "$first_ip"
+            fi
           '';
         };
 
@@ -243,6 +273,12 @@ in
           curl
           git
           gptfdisk
+          impala
+          # Standalone memtest86+ binary. The installation-cd's grub menu
+          # isn't extensible without forking nixpkgs, so we ship the EFI
+          # blob in the live system and document `kexec` from the live tty
+          # as the way to run it (see stb-welcome.sh).
+          memtest86plus
           parted
           rsync
           inputs.disko.packages.${system}.default

@@ -8,6 +8,13 @@ fi
 
 SELECTED_NAME=$(basename "$SELECTED" | tr '.' '_')
 TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
+
+if command -v direnv >/dev/null 2>&1; then
+  if ! grep -qxF 'dotenv' "$SELECTED/.envrc" 2>/dev/null; then
+    print -- 'dotenv' >> "$SELECTED/.envrc"
+  fi
+  direnv allow "$SELECTED" >/dev/null 2>&1
+fi
 # `tmux has-session` (no -t) succeeds iff the server is running.
 # pgrep tmux substring-matches our own comm (`tmux-pick-proje`,
 # truncated to 15 chars) and would falsely report a server, so the

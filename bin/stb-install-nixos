@@ -1,22 +1,58 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# stb-install-nixos — live-ISO installer for the stubbe-nixos host.
+# stb-install-nixos — live-ISO installer for stubbe NixOS hosts.
 #
-# Detects every fixed (non-removable) disk attached to the live system,
-# excludes the disk the live ISO is booted from, formats them as ONE
-# multi-device btrfs volume labeled `stubbe`, lays down the subvolume
-# structure that modules/nixos/filesystems.nix expects, runs
-# `nixos-install` against /etc/nixos/dotfiles#stubbe-nixos, replaces the
-# read-only /etc/nixos/dotfiles store-path with a writable git checkout owned by the
-# primary user, and prompts for that user's password.
+# Detects fixed disks attached to the live system, prompts to pick which
+# disks to wipe, formats them as ONE multi-device btrfs volume labeled
+# `stubbe`, lays down the subvolume structure that
+# modules/nixos/filesystems.nix expects, runs `nixos-install` against
+# /etc/nixos/dotfiles#<host>, replaces the read-only
+# /etc/nixos/dotfiles store-path with a writable git checkout owned by
+# the primary user, and prompts for that user's password.
 #
 # Run as root from a tty in the live ISO.
+#
+# Flags:
+#   --host  <attr>   nixosConfigurations attribute to install
+#                    (default: stubbe-nixos)
+#   --flake <path>   Flake to install from
+#                    (default: /etc/nixos/dotfiles)
+#   --no-reboot      Skip the post-install reboot prompt
+#   -h, --help       Show this message
+
+usage() {
+  sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+REPO_URL="git@github.com:stubbedev/dotfiles.git"
+FLAKE_PATH="/etc/nixos/dotfiles"
+FLAKE_ATTR="stubbe-nixos"
+PRIMARY_USER="stubbe"
+SKIP_REBOOT=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --host)      FLAKE_ATTR="${2:?--host requires an argument}"; shift 2 ;;
+    --flake)     FLAKE_PATH="${2:?--flake requires an argument}"; shift 2 ;;
+    --no-reboot) SKIP_REBOOT=1; shift ;;
+    -h|--help)   usage; exit 0 ;;
+    *)           echo "stb-install-nixos: unknown argument: $1" >&2; usage >&2; exit 1 ;;
+  esac
+done
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "stb-install-nixos: must run as root" >&2
   exit 1
 fi
+
+# Tee full transcript to a log file so the user can scroll back through
+# nixos-install's output after it scrolls off the tty (the live ISO has
+# no scrollback in framebuffer mode) and so a failed install leaves an
+# artifact to share for debugging.
+LOG="/tmp/stb-install-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee "$LOG") 2>&1
+echo "stb-install-nixos: transcript -> $LOG"
 
 require() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -28,6 +64,7 @@ require() {
 require lsblk
 require sgdisk
 require wipefs
+require blkdiscard
 require mkfs.btrfs
 require mkfs.vfat
 require nixos-install
@@ -36,10 +73,7 @@ require findmnt
 require udevadm
 require partprobe
 require git
-
-REPO_URL="git@github.com:stubbedev/dotfiles.git"
-FLAKE_ATTR="stubbe-nixos"
-PRIMARY_USER="stubbe"
+require timedatectl
 
 cleanup() {
   # Best-effort unmount on failure so the live system isn't left holding
@@ -54,6 +88,45 @@ if mountpoint -q /mnt 2>/dev/null; then
   echo "stb-install-nixos: /mnt is already mounted; run 'umount -R /mnt' first" >&2
   exit 1
 fi
+
+# --- Network preflight ------------------------------------------------
+#
+# nixos-install pulls from cache.nixos.org. With no default route it
+# fails late with cryptic curl(6) errors after a full evaluation pass.
+# Detect early; if missing, hand the user impala so they can join WiFi
+# before we burn time on partitioning.
+echo "==> Checking network"
+if ! ip -4 route show default 2>/dev/null | grep -q .; then
+  echo "No default route. Launching impala (WiFi picker)."
+  echo "Connect to a network, quit impala, then we'll continue."
+  if command -v impala >/dev/null; then
+    impala || true
+  else
+    echo "stb-install-nixos: impala not installed; configure networking manually" >&2
+  fi
+  if ! ip -4 route show default 2>/dev/null | grep -q .; then
+    echo "stb-install-nixos: still no default route, aborting" >&2
+    exit 1
+  fi
+fi
+
+# Cache hits and TLS to cache.nixos.org both require a sane clock. Live
+# RTCs on machines that sat in a drawer can be years off; nudge NTP
+# before nixos-install rather than chasing a 'certificate not yet valid'
+# error mid-install.
+echo "==> Syncing clock (NTP)"
+timedatectl set-ntp true 2>/dev/null || true
+systemctl start systemd-timesyncd 2>/dev/null || true
+# Wait briefly for an initial sync; don't block forever — offline mirror
+# installs are still possible.
+for _ in $(seq 1 20); do
+  if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes; then
+    break
+  fi
+  sleep 0.5
+done
+
+# --- Disk discovery + selection --------------------------------------
 
 # Resolve which physical disk hosts the live ISO so we exclude it from
 # the wipe set. PKNAME walks lsblk's parent-of relation, which works for
@@ -83,14 +156,50 @@ fi
 # disk. The RM=0 filter is a safety net so an unrelated USB stick plugged
 # into the box at install time can't be wiped, and also skips the live
 # media itself when detect_live_disk fails.
-mapfile -t candidates < <(
+mapfile -t eligible < <(
   lsblk -dno NAME,TYPE,RM \
     | awk -v live="$live_disk" '$2=="disk" && $3=="0" && $1!=live && $1!~/^zram/ { print $1 }'
 )
 
-if [ "${#candidates[@]}" -eq 0 ]; then
+if [ "${#eligible[@]}" -eq 0 ]; then
   echo "stb-install-nixos: no eligible disks found" >&2
   echo "(live disk: '${live_disk:-unknown}', filter: type=disk, RM=0)" >&2
+  exit 1
+fi
+
+echo ""
+echo "Eligible install disks (live USB '${live_disk:-unknown}' excluded):"
+i=0
+for d in "${eligible[@]}"; do
+  sz=$(lsblk -dno SIZE  "/dev/$d" 2>/dev/null | tr -d ' ')
+  model=$(lsblk -dno MODEL "/dev/$d" 2>/dev/null | sed 's/[[:space:]]*$//')
+  printf "  [%d] %-12s %-10s %s\n" "$((i+1))" "$d" "$sz" "$model"
+  i=$((i+1))
+done
+echo ""
+echo "Pick disks to ERASE and install onto (space-separated indexes, or 'all'."
+echo "First selected disk hosts the EFI System Partition; any others join the"
+echo "btrfs volume as additional data members.)"
+read -r -p "> " selection
+
+# Parse selection into an ordered `candidates` array. Order matters —
+# the first entry hosts /boot.
+candidates=()
+if [ "$selection" = "all" ]; then
+  candidates=("${eligible[@]}")
+else
+  for tok in $selection; do
+    [[ "$tok" =~ ^[0-9]+$ ]] || { echo "stb-install-nixos: bad index '$tok'" >&2; exit 1; }
+    idx=$((tok - 1))
+    if [ "$idx" -lt 0 ] || [ "$idx" -ge "${#eligible[@]}" ]; then
+      echo "stb-install-nixos: index $tok out of range" >&2
+      exit 1
+    fi
+    candidates+=("${eligible[$idx]}")
+  done
+fi
+if [ "${#candidates[@]}" -eq 0 ]; then
+  echo "stb-install-nixos: no disks selected" >&2
   exit 1
 fi
 
@@ -120,8 +229,11 @@ for d in "${candidates[@]}"; do
 done
 
 echo ""
-echo "Detected disks (live USB '${live_disk:-unknown}' and removable media excluded):"
+echo "Selected for wipe:"
 lsblk -dno NAME,SIZE,MODEL "${candidates[@]/#/\/dev\/}"
+echo ""
+echo "Host:  ${FLAKE_ATTR}"
+echo "Flake: ${FLAKE_PATH}"
 echo ""
 read -r -p "Proceed and ERASE all listed disks? [y/N] " confirm
 case "$confirm" in
@@ -137,6 +249,15 @@ boot_dev="/dev/${boot_disk}"
 echo ""
 echo "==> Wiping ${#candidates[@]} disk(s)"
 for d in "${candidates[@]}"; do
+  rota=$(lsblk -dno ROTA "/dev/$d" 2>/dev/null | head -1 | tr -d ' ')
+  if [ "$rota" = "0" ]; then
+    # SSDs: blkdiscard is orders of magnitude faster than overwriting
+    # and resets the FTL's wear-leveling state. Best-effort — discard
+    # may be refused on some host bridges / hardware-RAID virtual disks.
+    echo "  blkdiscard /dev/$d (SSD)"
+    blkdiscard -f "/dev/$d" 2>/dev/null \
+      || echo "  blkdiscard failed on /dev/$d, falling back to wipefs only" >&2
+  fi
   wipefs -a "/dev/$d"
   sgdisk --zap-all "/dev/$d"
 done
@@ -219,48 +340,48 @@ mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
 # mount sees /boot the same way the installed system will.
 mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 
-echo "==> Running nixos-install --flake /etc/nixos/dotfiles#${FLAKE_ATTR}"
+echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
 # --impure so graphics.nix can read /proc/driver/nvidia/version (populated
 # by the live ISO when an NVIDIA card is present — see iso.nix kernelModules)
 # and enable the nvidia driver in the installed system iff the target has one.
-nixos-install --root /mnt --flake "/etc/nixos/dotfiles#${FLAKE_ATTR}" --no-root-password --impure
+nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password --impure
 
 # Resolve uid/gid from the installed system — needed for ownership
 # regardless of whether the git clone succeeds.
 user_uid="$(nixos-enter --root /mnt --command "id -u ${PRIMARY_USER}")"
 user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
 
-# Replace the read-only /etc/nixos/dotfiles store path with a live git checkout so
-# `nixos-rebuild switch --flake /etc/nixos/dotfiles#...` works after first boot.
+# Replace the read-only ${FLAKE_PATH} store path with a live git checkout so
+# `nixos-rebuild switch --flake ${FLAKE_PATH}#...` works after first boot.
 # Non-fatal: a network outage or missing SSH key shouldn't brick an
 # otherwise complete install. The user can re-clone after first boot.
 clone_ok=false
-echo "==> Cloning ${REPO_URL} into /mnt/etc/nixos/dotfiles"
-mkdir -p /mnt/etc/nixos
-rm -rf /mnt/etc/nixos/dotfiles
+echo "==> Cloning ${REPO_URL} into /mnt${FLAKE_PATH}"
+mkdir -p "/mnt$(dirname "${FLAKE_PATH}")"
+rm -rf "/mnt${FLAKE_PATH}"
 if GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
-    git clone "$REPO_URL" /mnt/etc/nixos/dotfiles; then
+    git clone "$REPO_URL" "/mnt${FLAKE_PATH}"; then
   clone_ok=true
-  chown -R "${user_uid}:${user_gid}" /mnt/etc/nixos/dotfiles
+  chown -R "${user_uid}:${user_gid}" "/mnt${FLAKE_PATH}"
 else
   echo "" >&2
   echo "WARNING: git clone failed (no network, or SSH key not authorized)." >&2
   echo "Install is complete. After first boot, run as root:" >&2
-  echo "  mkdir -p /etc/nixos && git clone ${REPO_URL} /etc/nixos/dotfiles" >&2
-  echo "  chown -R ${PRIMARY_USER}:${PRIMARY_USER} /etc/nixos/dotfiles" >&2
+  echo "  mkdir -p $(dirname "${FLAKE_PATH}") && git clone ${REPO_URL} ${FLAKE_PATH}" >&2
+  echo "  chown -R ${PRIMARY_USER}:${PRIMARY_USER} ${FLAKE_PATH}" >&2
 fi
 
 home_dir="/mnt/home/${PRIMARY_USER}"
 mkdir -p "$home_dir"
 if [[ "$clone_ok" == true ]]; then
-  ln -sfn /etc/nixos/dotfiles "${home_dir}/.stubbe"
+  ln -sfn "${FLAKE_PATH}" "${home_dir}/.stubbe"
   chown -h "${user_uid}:${user_gid}" "${home_dir}/.stubbe"
 fi
 chown "${user_uid}:${user_gid}" "$home_dir"
 
 # Copy the user's SSH keys from /root/.ssh (where modules/installer/iso.nix
 # baked them on the live ISO) into the installed user's home. Required
-# for: git push/pull on the /etc/nixos/dotfiles clone, sops-nix decryption at HM
+# for: git push/pull on the ${FLAKE_PATH} clone, sops-nix decryption at HM
 # activation (modules/sops.nix reads ~/.ssh/id_ed25519 to derive an age
 # identity), and general SSH access from the new machine. cp -a preserves
 # the 0600/0644 modes the tmpfiles rule set.
@@ -271,6 +392,24 @@ if [ -d /root/.ssh ]; then
   cp -a /root/.ssh/. "$ssh_dst"/
   chown -R "${user_uid}:${user_gid}" "$ssh_dst"
   chmod 700 "$ssh_dst"
+fi
+
+# Secure Boot first-boot hint. lanzaboote requires sbctl keys generated
+# and enrolled into firmware before signed boot works. We detect by
+# probing for sbctl in the installed system; auto-enrolling is risky
+# (some firmware refuses to revert) so we generate keys but leave
+# enrollment to the user on first boot.
+if nixos-enter --root /mnt -c 'command -v sbctl' >/dev/null 2>&1; then
+  if ! nixos-enter --root /mnt -c '[ -d /var/lib/sbctl/keys ]' 2>/dev/null; then
+    echo "==> Generating Secure Boot keys (sbctl create-keys)"
+    nixos-enter --root /mnt -c 'sbctl create-keys' || \
+      echo "  sbctl create-keys failed; generate manually after first boot" >&2
+  fi
+  echo ""
+  echo "Secure Boot: keys are in /var/lib/sbctl. On first boot, put firmware"
+  echo "in Setup Mode (clear platform keys in BIOS), then run:"
+  echo "  sudo sbctl enroll-keys --microsoft"
+  echo "  sudo sbctl verify"
 fi
 
 # nixos-install ran with --no-root-password and modules/nixos/users.nix
@@ -285,6 +424,16 @@ trap - EXIT
 
 echo ""
 echo "Install complete."
-echo "  Flake checkout: /etc/nixos/dotfiles (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
-echo "  Reboot, log in as '${PRIMARY_USER}', then iterate via:"
-echo "    sudo nixos-rebuild switch --flake /etc/nixos/dotfiles#${FLAKE_ATTR} --impure"
+echo "  Flake checkout: ${FLAKE_PATH} (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
+echo "  Transcript: ${LOG}"
+echo "  Log in as '${PRIMARY_USER}', then iterate via:"
+echo "    sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR} --impure"
+echo ""
+
+if [ "$SKIP_REBOOT" -ne 1 ]; then
+  read -r -p "Reboot now? [y/N] " r
+  case "$r" in
+    y|Y) echo "Rebooting…"; sync; reboot ;;
+    *)   echo "Skipping reboot. Run 'reboot' when ready." ;;
+  esac
+fi
