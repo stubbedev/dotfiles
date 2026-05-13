@@ -119,6 +119,16 @@ function _settings_init {
       unfunction _settings_gen_starship_init
   fi
 
+  # direnv hook. Required for `denv on` to actually export .env vars
+  # into the shell — without this precmd hook, `direnv allow` just
+  # writes the auth file but no subsequent prompt evaluates
+  # `direnv export zsh`, so $VARS stay unset.
+  if is_binary direnv && ! (( $+functions[_direnv_hook] )); then
+      function _settings_gen_direnv_init { direnv hook zsh; }
+      _cached_eval "$_cache_dir/direnv_init.zsh" "${commands[direnv]:A}" _settings_gen_direnv_init
+      unfunction _settings_gen_direnv_init
+  fi
+
   if is_binary pyenv; then
       export PYENV_ROOT="$HOME/.pyenv"
       [[ ":$PATH:" == *":$PYENV_ROOT/bin:"* ]]    || PATH="$PYENV_ROOT/bin:$PATH"
