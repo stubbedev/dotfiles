@@ -61,6 +61,20 @@
 				"uvx",
 				"mcp-nixos"
 			]
+		},
+		"logseq-mcp": {
+			"type": "local",
+			"command": [
+				"uv",
+				"run",
+				"--with",
+				"mcp-logseq",
+				"mcp-logseq"
+			],
+			"environment": {
+				"LOGSEQ_API_TOKEN": "logseq",
+				"LOGSEQ_API_URL": "http://localhost:12315"
+			}
 		}
 	},
 	"instructions": ["~/.stubbe/src/opencode/plugin/shell-strategy/INFO.md"]

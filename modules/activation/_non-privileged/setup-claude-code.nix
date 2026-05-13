@@ -71,6 +71,20 @@ _: {
                 command = "uvx";
                 args = [ "mcp-nixos" ];
               };
+              logseq-mcp = {
+                type = "stdio";
+                command = "uv";
+                args = [
+                  "run"
+                  "--with"
+                  "mcp-logseq"
+                  "mcp-logseq"
+                ];
+                env = {
+                  LOGSEQ_API_TOKEN = "logseq";
+                  LOGSEQ_API_URL = "http://localhost:12315";
+                };
+              };
             };
           };
         }}
