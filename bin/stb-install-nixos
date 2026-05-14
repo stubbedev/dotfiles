@@ -9,7 +9,8 @@ set -euo pipefail
 # modules/nixos/filesystems.nix expects, runs `nixos-install` against
 # /etc/nixos/dotfiles#<host>, replaces the read-only
 # /etc/nixos/dotfiles store-path with a writable git checkout owned by
-# the primary user, and prompts for that user's password.
+# the primary user, and applies the user password captured at the start
+# of the run.
 #
 # Run as root from a tty in the live ISO.
 #
@@ -19,6 +20,10 @@ set -euo pipefail
 #   --flake <path>   Flake to install from
 #                    (default: /etc/nixos/dotfiles)
 #   --no-reboot      Skip the post-install reboot prompt
+#   --dry-run        Print the plan and exit before any destructive action
+#   --resume         Skip wipe/partition/format/mount; expect /mnt already
+#                    set up (use after a mid-install failure to retry the
+#                    nixos-install step without re-wiping)
 #   -h, --help       Show this message
 
 usage() {
@@ -30,21 +35,38 @@ FLAKE_PATH="/etc/nixos/dotfiles"
 FLAKE_ATTR="stubbe-nixos"
 PRIMARY_USER="stubbe"
 SKIP_REBOOT=0
+DRY_RUN=0
+RESUME=0
+# Pin so a wizard update can't surprise a reinstall mid-engagement.
+# Bump deliberately when picking up new wizard features.
+NIXOS_WIZARD_REV="386def227ec27ea61bdfd9c3e7afeab7da39102a"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --host)      FLAKE_ATTR="${2:?--host requires an argument}"; shift 2 ;;
     --flake)     FLAKE_PATH="${2:?--flake requires an argument}"; shift 2 ;;
     --no-reboot) SKIP_REBOOT=1; shift ;;
+    --dry-run)   DRY_RUN=1; shift ;;
+    --resume)    RESUME=1; shift ;;
     -h|--help)   usage; exit 0 ;;
     *)           echo "stb-install-nixos: unknown argument: $1" >&2; usage >&2; exit 1 ;;
   esac
 done
 
+if [ "$DRY_RUN" -eq 1 ] && [ "$RESUME" -eq 1 ]; then
+  echo "stb-install-nixos: --dry-run and --resume are mutually exclusive" >&2
+  exit 1
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "stb-install-nixos: must run as root" >&2
   exit 1
 fi
+
+# Stash the original stdio so we can hand a clean tty to nixos-wizard if
+# the user picks the Custom branch — its TUI redraws don't survive being
+# piped through tee.
+exec 3>&1 4>&2
 
 # Tee full transcript to a log file so the user can scroll back through
 # nixos-install's output after it scrolls off the tty (the live ISO has
@@ -74,18 +96,21 @@ require udevadm
 require partprobe
 require git
 require timedatectl
+require curl
 
 cleanup() {
   # Best-effort unmount on failure so the live system isn't left holding
-  # locks on /mnt that block a retry.
-  if mountpoint -q /mnt 2>/dev/null; then
+  # locks on /mnt that block a retry — UNLESS we're in --resume mode,
+  # where /mnt was set up by a prior run and tearing it down would force
+  # the user to re-mount everything before they can re-resume.
+  if [ "$RESUME" -eq 0 ] && mountpoint -q /mnt 2>/dev/null; then
     umount -R /mnt 2>/dev/null || true
   fi
 }
 trap cleanup EXIT
 
-if mountpoint -q /mnt 2>/dev/null; then
-  echo "stb-install-nixos: /mnt is already mounted; run 'umount -R /mnt' first" >&2
+if [ "$RESUME" -eq 0 ] && mountpoint -q /mnt 2>/dev/null; then
+  echo "stb-install-nixos: /mnt is already mounted; run 'umount -R /mnt' first, or pass --resume" >&2
   exit 1
 fi
 
@@ -126,225 +151,334 @@ for _ in $(seq 1 20); do
   sleep 0.5
 done
 
-# --- Disk discovery + selection --------------------------------------
-
-# Resolve which physical disk hosts the live ISO so we exclude it from
-# the wipe set. PKNAME walks lsblk's parent-of relation, which works for
-# NVMe (/dev/nvme0n1p1 → nvme0n1) and mmc devices where naive trailing-
-# digit stripping breaks. Try the common live-ISO mountpoints in order.
-detect_live_disk() {
-  local mp src parent
-  for mp in /iso /run/initramfs/live /nix/.ro-store /; do
-    src="$(findmnt -no SOURCE "$mp" 2>/dev/null || true)"
-    [ -n "$src" ] && [ -b "$src" ] || continue
-    parent="$(lsblk -no PKNAME "$src" 2>/dev/null | head -1)"
-    if [ -n "$parent" ]; then
-      echo "$parent"
-      return
-    fi
-  done
-}
-
-live_disk="$(detect_live_disk || true)"
-if [ -z "$live_disk" ]; then
-  echo "stb-install-nixos: WARNING — could not detect live ISO disk." >&2
-  echo "Relying on the RM=0 filter to exclude the live USB. Verify the" >&2
-  echo "candidate list below DOES NOT contain the disk you booted from." >&2
-fi
-
-# Eligible install targets: type=disk, non-removable (RM=0), not the live
-# disk. The RM=0 filter is a safety net so an unrelated USB stick plugged
-# into the box at install time can't be wiped, and also skips the live
-# media itself when detect_live_disk fails.
-mapfile -t eligible < <(
-  lsblk -dno NAME,TYPE,RM \
-    | awk -v live="$live_disk" '$2=="disk" && $3=="0" && $1!=live && $1!~/^zram/ { print $1 }'
-)
-
-if [ "${#eligible[@]}" -eq 0 ]; then
-  echo "stb-install-nixos: no eligible disks found" >&2
-  echo "(live disk: '${live_disk:-unknown}', filter: type=disk, RM=0)" >&2
+# Captive portals and broken DNS pass the route check but fail the
+# actual fetch. TLS needs a sane clock, so the probe runs after NTP.
+# Caught here it's a 10s timeout; caught late (inside nixos-install)
+# it's 5+ minutes of evaluation before a cryptic curl(6) bubbles up.
+echo "==> Probing cache.nixos.org"
+if ! curl -fsS --max-time 10 https://cache.nixos.org/nix-cache-info >/dev/null 2>&1; then
+  echo "stb-install-nixos: can't reach cache.nixos.org (captive portal? DNS? clock?), aborting" >&2
   exit 1
 fi
 
-echo ""
-echo "Eligible install disks (live USB '${live_disk:-unknown}' excluded):"
-i=0
-for d in "${eligible[@]}"; do
-  sz=$(lsblk -dno SIZE  "/dev/$d" 2>/dev/null | tr -d ' ')
-  model=$(lsblk -dno MODEL "/dev/$d" 2>/dev/null | sed 's/[[:space:]]*$//')
-  printf "  [%d] %-12s %-10s %s\n" "$((i+1))" "$d" "$sz" "$model"
-  i=$((i+1))
-done
-echo ""
-echo "Pick disks to ERASE and install onto (space-separated indexes, or 'all'."
-echo "First selected disk hosts the EFI System Partition; any others join the"
-echo "btrfs volume as additional data members.)"
-read -r -p "> " selection
+# --- Mode picker -----------------------------------------------------
+#
+# Custom mode hands off to nixos-wizard (archinstall-style TUI) which
+# generates its own NixOS config — it does NOT install the stubbe flake.
+# Pick custom only when the target should be a vanilla machine
+# independent of this repo. The wizard is pinned to a rev so a future
+# wizard update can't surprise a reinstall.
+if [ "$RESUME" -eq 0 ]; then
+  echo ""
+  echo "Install mode:"
+  echo "  [1] Quick  — install ${FLAKE_ATTR} from ${FLAKE_PATH} (default)"
+  echo "  [2] Custom — hand off to nixos-wizard (km-clay/nixos-wizard)"
+  echo "               Wizard generates its own config; the stubbe flake is NOT used."
+  read -r -p "> " mode
+  case "${mode:-1}" in
+    1) ;;
+    2)
+      echo ""
+      echo "Launching nixos-wizard (rev ${NIXOS_WIZARD_REV:0:12})..."
+      # Restore the original tty so the wizard's full-screen redraws
+      # aren't mangled by line-buffered tee, and clear our trap so a
+      # failed exec doesn't trigger umount -R /mnt.
+      trap - EXIT
+      exec >&3 2>&4
+      exec nix --extra-experimental-features 'nix-command flakes' \
+        run "github:km-clay/nixos-wizard/${NIXOS_WIZARD_REV}"
+      ;;
+    *)
+      echo "stb-install-nixos: invalid mode '$mode'" >&2
+      exit 1
+      ;;
+  esac
+fi
 
-# Parse selection into an ordered `candidates` array. Order matters —
-# the first entry hosts /boot.
-candidates=()
-if [ "$selection" = "all" ]; then
-  candidates=("${eligible[@]}")
-else
-  for tok in $selection; do
-    [[ "$tok" =~ ^[0-9]+$ ]] || { echo "stb-install-nixos: bad index '$tok'" >&2; exit 1; }
-    idx=$((tok - 1))
-    if [ "$idx" -lt 0 ] || [ "$idx" -ge "${#eligible[@]}" ]; then
-      echo "stb-install-nixos: index $tok out of range" >&2
+# --- Password capture (quick install path) ---------------------------
+#
+# Asked up front so the user can walk away during nixos-install. The
+# plaintext lives only in this shell's memory and travels into
+# nixos-enter via a pipe at the end, so it doesn't leak into the tee'd
+# transcript. Skipping this here means resume runs also re-prompt —
+# fine, since a partial install may not have applied the password yet.
+echo ""
+echo "==> Password for ${PRIMARY_USER} (applied after install)"
+while :; do
+  read -rsp "Password: " pw1; echo ""
+  read -rsp "Confirm:  " pw2; echo ""
+  if [ -z "$pw1" ]; then
+    echo "Password can't be empty."
+    continue
+  fi
+  if [ "$pw1" != "$pw2" ]; then
+    echo "Passwords don't match, try again."
+    continue
+  fi
+  break
+done
+USER_PASSWORD="$pw1"
+unset pw1 pw2
+
+# --- Disk discovery / selection / wipe / partition / format / mount --
+#
+# All of this is skipped in --resume mode, where /mnt is expected to
+# already host the subvol layout from a prior aborted run.
+
+if [ "$RESUME" -eq 0 ]; then
+
+  # Resolve which physical disk hosts the live ISO so we exclude it from
+  # the wipe set. PKNAME walks lsblk's parent-of relation, which works for
+  # NVMe (/dev/nvme0n1p1 → nvme0n1) and mmc devices where naive trailing-
+  # digit stripping breaks. Try the common live-ISO mountpoints in order.
+  detect_live_disk() {
+    local mp src parent
+    for mp in /iso /run/initramfs/live /nix/.ro-store /; do
+      src="$(findmnt -no SOURCE "$mp" 2>/dev/null || true)"
+      [ -n "$src" ] && [ -b "$src" ] || continue
+      parent="$(lsblk -no PKNAME "$src" 2>/dev/null | head -1)"
+      if [ -n "$parent" ]; then
+        echo "$parent"
+        return
+      fi
+    done
+  }
+
+  live_disk="$(detect_live_disk || true)"
+  if [ -z "$live_disk" ]; then
+    echo "stb-install-nixos: WARNING — could not detect live ISO disk." >&2
+    echo "Relying on the RM=0 filter to exclude the live USB. Verify the" >&2
+    echo "candidate list below DOES NOT contain the disk you booted from." >&2
+  fi
+
+  # Eligible install targets: type=disk, non-removable (RM=0), not the live
+  # disk. The RM=0 filter is a safety net so an unrelated USB stick plugged
+  # into the box at install time can't be wiped, and also skips the live
+  # media itself when detect_live_disk fails.
+  mapfile -t eligible < <(
+    lsblk -dno NAME,TYPE,RM \
+      | awk -v live="$live_disk" '$2=="disk" && $3=="0" && $1!=live && $1!~/^zram/ { print $1 }'
+  )
+
+  if [ "${#eligible[@]}" -eq 0 ]; then
+    echo "stb-install-nixos: no eligible disks found" >&2
+    echo "(live disk: '${live_disk:-unknown}', filter: type=disk, RM=0)" >&2
+    exit 1
+  fi
+
+  echo ""
+  echo "Eligible install disks (live USB '${live_disk:-unknown}' excluded):"
+  i=0
+  for d in "${eligible[@]}"; do
+    sz=$(lsblk -dno SIZE  "/dev/$d" 2>/dev/null | tr -d ' ')
+    model=$(lsblk -dno MODEL "/dev/$d" 2>/dev/null | sed 's/[[:space:]]*$//')
+    printf "  [%d] %-12s %-10s %s\n" "$((i+1))" "$d" "$sz" "$model"
+    i=$((i+1))
+  done
+  echo ""
+  echo "Pick disks to ERASE and install onto (space-separated indexes, or 'all'."
+  echo "First selected disk hosts the EFI System Partition; any others join the"
+  echo "btrfs volume as additional data members.)"
+  read -r -p "> " selection
+
+  # Parse selection into an ordered `candidates` array. Order matters —
+  # the first entry hosts /boot.
+  candidates=()
+  if [ "$selection" = "all" ]; then
+    candidates=("${eligible[@]}")
+  else
+    for tok in $selection; do
+      [[ "$tok" =~ ^[0-9]+$ ]] || { echo "stb-install-nixos: bad index '$tok'" >&2; exit 1; }
+      idx=$((tok - 1))
+      if [ "$idx" -lt 0 ] || [ "$idx" -ge "${#eligible[@]}" ]; then
+        echo "stb-install-nixos: index $tok out of range" >&2
+        exit 1
+      fi
+      candidates+=("${eligible[$idx]}")
+    done
+  fi
+  if [ "${#candidates[@]}" -eq 0 ]; then
+    echo "stb-install-nixos: no disks selected" >&2
+    exit 1
+  fi
+
+  MIN_BYTES=$(( 20 * 1024 * 1024 * 1024 ))
+  for d in "${candidates[@]}"; do
+    sz=$(lsblk -dno SIZE --bytes "/dev/$d" 2>/dev/null || echo 0)
+    if (( sz < MIN_BYTES )); then
+      echo "stb-install-nixos: /dev/$d is too small ($(( sz / 1024 / 1024 / 1024 )) GiB < 20 GiB minimum)" >&2
       exit 1
     fi
-    candidates+=("${eligible[$idx]}")
   done
-fi
-if [ "${#candidates[@]}" -eq 0 ]; then
-  echo "stb-install-nixos: no disks selected" >&2
-  exit 1
-fi
 
-MIN_BYTES=$(( 20 * 1024 * 1024 * 1024 ))
-for d in "${candidates[@]}"; do
-  sz=$(lsblk -dno SIZE --bytes "/dev/$d" 2>/dev/null || echo 0)
-  if (( sz < MIN_BYTES )); then
-    echo "stb-install-nixos: /dev/$d is too small ($(( sz / 1024 / 1024 / 1024 )) GiB < 20 GiB minimum)" >&2
-    exit 1
-  fi
-done
-
-# Refuse if any candidate disk has live mounts or md/LUKS/LVM children —
-# wipefs would fail mid-loop and leave a partially-wiped state.
-for d in "${candidates[@]}"; do
-  if findmnt -no SOURCE 2>/dev/null | grep -qE "^/dev/${d}(p?[0-9]+)?\b"; then
-    echo "stb-install-nixos: /dev/$d (or its partitions) has an active mount, refusing" >&2
-    findmnt | grep -E "^/dev/${d}" >&2 || true
-    exit 1
-  fi
-  child_types="$(lsblk -no TYPE "/dev/$d" 2>/dev/null | tail -n +2 | sort -u)"
-  if echo "$child_types" | grep -qE '^(raid[0-9]+|crypt|lvm)$'; then
-    echo "stb-install-nixos: /dev/$d has md/LUKS/LVM children, refusing" >&2
-    lsblk "/dev/$d" >&2 || true
-    exit 1
-  fi
-done
-
-echo ""
-echo "Selected for wipe:"
-lsblk -dno NAME,SIZE,MODEL "${candidates[@]/#/\/dev\/}"
-echo ""
-echo "Host:  ${FLAKE_ATTR}"
-echo "Flake: ${FLAKE_PATH}"
-echo ""
-read -r -p "Proceed and ERASE all listed disks? [y/N] " confirm
-case "$confirm" in
-  y|Y) ;;
-  *) echo "Aborted."; exit 0 ;;
-esac
-
-# First disk hosts the EFI System Partition; data partition + every other
-# disk become members of the btrfs volume.
-boot_disk="${candidates[0]}"
-boot_dev="/dev/${boot_disk}"
-
-echo ""
-echo "==> Wiping ${#candidates[@]} disk(s)"
-for d in "${candidates[@]}"; do
-  rota=$(lsblk -dno ROTA "/dev/$d" 2>/dev/null | head -1 | tr -d ' ')
-  if [ "$rota" = "0" ]; then
-    # SSDs: blkdiscard is orders of magnitude faster than overwriting
-    # and resets the FTL's wear-leveling state. Best-effort — discard
-    # may be refused on some host bridges / hardware-RAID virtual disks.
-    echo "  blkdiscard /dev/$d (SSD)"
-    blkdiscard -f "/dev/$d" 2>/dev/null \
-      || echo "  blkdiscard failed on /dev/$d, falling back to wipefs only" >&2
-  fi
-  wipefs -a "/dev/$d"
-  sgdisk --zap-all "/dev/$d"
-done
-udevadm settle
-
-echo "==> Partitioning $boot_dev (1G EFI + remainder for btrfs)"
-sgdisk \
-  --new=1:0:+1G --typecode=1:ef00 --change-name=1:STBBOOT \
-  --new=2:0:0   --typecode=2:8300 --change-name=2:stubbe-data \
-  "$boot_dev"
-partprobe "$boot_dev" \
-  || echo "stb-install-nixos: partprobe warned on $boot_dev, continuing after udevadm settle" >&2
-udevadm settle
-
-# NVMe / mmc devices use pN partition suffix; SATA / virtio use plain N.
-case "$boot_disk" in
-  nvme*|mmcblk*) boot_part="${boot_dev}p1"; first_data="${boot_dev}p2" ;;
-  *)             boot_part="${boot_dev}1";  first_data="${boot_dev}2"  ;;
-esac
-
-# Kernel may take a moment to expose new partition nodes even after
-# partprobe + udevadm settle. Poll up to 10 s before giving up.
-wait_for_part() {
-  local path="$1" i
-  for (( i=0; i<40; i++ )); do
-    [[ -b "$path" ]] && return 0
-    sleep 0.25
+  # Refuse if any candidate disk has live mounts or md/LUKS/LVM children —
+  # wipefs would fail mid-loop and leave a partially-wiped state.
+  for d in "${candidates[@]}"; do
+    if findmnt -no SOURCE 2>/dev/null | grep -qE "^/dev/${d}(p?[0-9]+)?\b"; then
+      echo "stb-install-nixos: /dev/$d (or its partitions) has an active mount, refusing" >&2
+      findmnt | grep -E "^/dev/${d}" >&2 || true
+      exit 1
+    fi
+    child_types="$(lsblk -no TYPE "/dev/$d" 2>/dev/null | tail -n +2 | sort -u)"
+    if echo "$child_types" | grep -qE '^(raid[0-9]+|crypt|lvm)$'; then
+      echo "stb-install-nixos: /dev/$d has md/LUKS/LVM children, refusing" >&2
+      lsblk "/dev/$d" >&2 || true
+      exit 1
+    fi
   done
-  echo "stb-install-nixos: timed out waiting for block device $path" >&2
-  return 1
-}
-wait_for_part "$boot_part"
-wait_for_part "$first_data"
 
-extra_data=()
-for d in "${candidates[@]:1}"; do
-  extra_data+=("/dev/$d")
-done
+  echo ""
+  echo "Selected for wipe (existing filesystems shown so nothing precious gets nuked):"
+  # -f surfaces FSTYPE/LABEL/UUID per partition; without -d we recurse into
+  # the partition tree so the user sees what they're about to lose.
+  lsblk -o NAME,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINT "${candidates[@]/#/\/dev\/}"
+  echo ""
+  echo "Host:  ${FLAKE_ATTR}"
+  echo "Flake: ${FLAKE_PATH}"
 
-echo "==> mkfs.vfat $boot_part (label STBBOOT)"
-mkfs.vfat -F32 -n STBBOOT "$boot_part"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo ""
+    echo "Dry run — exiting before any destructive action. No disks touched."
+    echo "Transcript: ${LOG}"
+    exit 0
+  fi
 
-# Single-disk btrfs can't host raid1 metadata, so fall back to dup. With
-# 2+ disks raid1 metadata mirrors so losing one disk doesn't trash the
-# filesystem header. Data stays `single` to keep capacity = sum of disks.
-if [ "${#extra_data[@]}" -eq 0 ]; then
-  meta_profile="dup"
+  echo ""
+  read -r -p "Proceed and ERASE all listed disks? [y/N] " confirm
+  case "$confirm" in
+    y|Y) ;;
+    *) echo "Aborted."; exit 0 ;;
+  esac
+
+  # First disk hosts the EFI System Partition; data partition + every other
+  # disk become members of the btrfs volume.
+  boot_disk="${candidates[0]}"
+  boot_dev="/dev/${boot_disk}"
+
+  echo ""
+  echo "==> Wiping ${#candidates[@]} disk(s)"
+  for d in "${candidates[@]}"; do
+    rota=$(lsblk -dno ROTA "/dev/$d" 2>/dev/null | head -1 | tr -d ' ')
+    if [ "$rota" = "0" ]; then
+      # SSDs: blkdiscard is orders of magnitude faster than overwriting
+      # and resets the FTL's wear-leveling state. Best-effort — discard
+      # may be refused on some host bridges / hardware-RAID virtual disks.
+      echo "  blkdiscard /dev/$d (SSD)"
+      blkdiscard -f "/dev/$d" 2>/dev/null \
+        || echo "  blkdiscard failed on /dev/$d, falling back to wipefs only" >&2
+    fi
+    wipefs -a "/dev/$d"
+    sgdisk --zap-all "/dev/$d"
+  done
+  udevadm settle
+
+  echo "==> Partitioning $boot_dev (1G EFI + remainder for btrfs)"
+  sgdisk \
+    --new=1:0:+1G --typecode=1:ef00 --change-name=1:STBBOOT \
+    --new=2:0:0   --typecode=2:8300 --change-name=2:stubbe-data \
+    "$boot_dev"
+  partprobe "$boot_dev" \
+    || echo "stb-install-nixos: partprobe warned on $boot_dev, continuing after udevadm settle" >&2
+  udevadm settle
+
+  # NVMe / mmc devices use pN partition suffix; SATA / virtio use plain N.
+  case "$boot_disk" in
+    nvme*|mmcblk*) boot_part="${boot_dev}p1"; first_data="${boot_dev}p2" ;;
+    *)             boot_part="${boot_dev}1";  first_data="${boot_dev}2"  ;;
+  esac
+
+  # Kernel may take a moment to expose new partition nodes even after
+  # partprobe + udevadm settle. Poll up to 10 s before giving up.
+  wait_for_part() {
+    local path="$1" i
+    for (( i=0; i<40; i++ )); do
+      [[ -b "$path" ]] && return 0
+      sleep 0.25
+    done
+    echo "stb-install-nixos: timed out waiting for block device $path" >&2
+    return 1
+  }
+  wait_for_part "$boot_part"
+  wait_for_part "$first_data"
+
+  extra_data=()
+  for d in "${candidates[@]:1}"; do
+    extra_data+=("/dev/$d")
+  done
+
+  echo "==> mkfs.vfat $boot_part (label STBBOOT)"
+  mkfs.vfat -F32 -n STBBOOT "$boot_part"
+
+  # Single-disk btrfs can't host raid1 metadata, so fall back to dup. With
+  # 2+ disks raid1 metadata mirrors so losing one disk doesn't trash the
+  # filesystem header. Data stays `single` to keep capacity = sum of disks.
+  if [ "${#extra_data[@]}" -eq 0 ]; then
+    meta_profile="dup"
+  else
+    meta_profile="raid1"
+  fi
+
+  echo "==> mkfs.btrfs (label stubbe, -d single -m ${meta_profile}) over $first_data ${extra_data[*]:-}"
+  mkfs.btrfs -f -L stubbe -d single -m "$meta_profile" "$first_data" "${extra_data[@]}"
+  udevadm settle
+
+  echo "==> Creating subvolumes"
+  mount -o compress=zstd,noatime "$first_data" /mnt
+  btrfs subvolume create /mnt/@
+  btrfs subvolume create /mnt/@home
+  btrfs subvolume create /mnt/@nix
+  btrfs subvolume create /mnt/@var
+  btrfs subvolume create /mnt/@persist
+  # Snapshot @ while it's still empty. modules/nixos/impermanence.nix
+  # rolls @ back to this snapshot on every boot when host.impermanent is
+  # true, leaving /etc and /var blank for the activation script to refill.
+  # Taken now (always) so flipping host.impermanent on later doesn't
+  # require reinstalling.
+  btrfs subvolume snapshot -r /mnt/@ /mnt/@-blank
+  umount /mnt
+
+  mount_opts="compress=zstd,noatime"
+  echo "==> Mounting subvolumes under /mnt"
+  mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
+  mkdir -p /mnt/{home,nix,var,persist,boot,etc}
+  mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
+  mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
+  mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
+  mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
+  # fmask/dmask matches modules/nixos/filesystems.nix so the install-time
+  # mount sees /boot the same way the installed system will.
+  mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
+
 else
-  meta_profile="raid1"
+  # --resume: trust that /mnt was set up by a prior run and just verify
+  # the expected layout. We don't try to re-derive boot_part / first_data
+  # because nothing past this point needs them — nixos-install reads from
+  # /mnt directly.
+  echo "==> Resume mode: verifying /mnt layout"
+  for mp in /mnt /mnt/home /mnt/nix /mnt/var /mnt/persist /mnt/boot; do
+    if ! mountpoint -q "$mp" 2>/dev/null; then
+      echo "stb-install-nixos: $mp is not a mountpoint; can't resume" >&2
+      echo "  expected btrfs subvols @/@home/@nix/@var/@persist under /mnt, EFI at /mnt/boot" >&2
+      exit 1
+    fi
+  done
 fi
-
-echo "==> mkfs.btrfs (label stubbe, -d single -m ${meta_profile}) over $first_data ${extra_data[*]:-}"
-mkfs.btrfs -f -L stubbe -d single -m "$meta_profile" "$first_data" "${extra_data[@]}"
-udevadm settle
-
-echo "==> Creating subvolumes"
-mount -o compress=zstd,noatime "$first_data" /mnt
-btrfs subvolume create /mnt/@
-btrfs subvolume create /mnt/@home
-btrfs subvolume create /mnt/@nix
-btrfs subvolume create /mnt/@var
-btrfs subvolume create /mnt/@persist
-# Snapshot @ while it's still empty. modules/nixos/impermanence.nix
-# rolls @ back to this snapshot on every boot when host.impermanent is
-# true, leaving /etc and /var blank for the activation script to refill.
-# Taken now (always) so flipping host.impermanent on later doesn't
-# require reinstalling.
-btrfs subvolume snapshot -r /mnt/@ /mnt/@-blank
-umount /mnt
-
-mount_opts="compress=zstd,noatime"
-echo "==> Mounting subvolumes under /mnt"
-mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
-mkdir -p /mnt/{home,nix,var,persist,boot,etc}
-mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
-mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
-mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
-mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
-# fmask/dmask matches modules/nixos/filesystems.nix so the install-time
-# mount sees /boot the same way the installed system will.
-mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 
 echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
 # --impure so graphics.nix can read /proc/driver/nvidia/version (populated
 # by the live ISO when an NVIDIA card is present — see iso.nix kernelModules)
 # and enable the nvidia driver in the installed system iff the target has one.
 nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password --impure
+
+# Apply the password captured up front. chpasswd reads "user:plaintext"
+# from stdin and uses the installed system's default crypt method
+# (yescrypt on current NixOS), so this matches what `passwd` would have
+# produced. The pipe means the plaintext is never written to a file and
+# never appears in the tee'd transcript.
+echo "==> Setting password for ${PRIMARY_USER}"
+printf '%s:%s\n' "${PRIMARY_USER}" "${USER_PASSWORD}" \
+  | nixos-enter --root /mnt -c "chpasswd"
+unset USER_PASSWORD
 
 # Resolve uid/gid from the installed system — needed for ownership
 # regardless of whether the git clone succeeds.
@@ -358,7 +492,7 @@ user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
 clone_ok=false
 echo "==> Cloning ${REPO_URL} into /mnt${FLAKE_PATH}"
 mkdir -p "/mnt$(dirname "${FLAKE_PATH}")"
-rm -rf "/mnt${FLAKE_PATH}"
+rm -rf "/mnt${FLAKE_PATH:?}"
 if GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
     git clone "$REPO_URL" "/mnt${FLAKE_PATH}"; then
   clone_ok=true
@@ -394,40 +528,42 @@ if [ -d /root/.ssh ]; then
   chmod 700 "$ssh_dst"
 fi
 
-# Secure Boot first-boot hint. lanzaboote requires sbctl keys generated
+# Secure Boot first-boot prep. lanzaboote requires sbctl keys generated
 # and enrolled into firmware before signed boot works. We detect by
 # probing for sbctl in the installed system; auto-enrolling is risky
 # (some firmware refuses to revert) so we generate keys but leave
-# enrollment to the user on first boot.
+# enrollment to the user on first boot. The user-facing hint moves to
+# the final summary so it doesn't get buried in earlier output.
+sbctl_present=false
 if nixos-enter --root /mnt -c 'command -v sbctl' >/dev/null 2>&1; then
+  sbctl_present=true
   if ! nixos-enter --root /mnt -c '[ -d /var/lib/sbctl/keys ]' 2>/dev/null; then
     echo "==> Generating Secure Boot keys (sbctl create-keys)"
     nixos-enter --root /mnt -c 'sbctl create-keys' || \
       echo "  sbctl create-keys failed; generate manually after first boot" >&2
   fi
+fi
+
+sync
+trap - EXIT
+
+echo ""
+echo "==================================================================="
+echo "Install complete."
+echo "  Host:           ${FLAKE_ATTR}"
+echo "  Flake checkout: ${FLAKE_PATH} (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
+echo "  Transcript:     ${LOG}"
+echo ""
+echo "Log in as '${PRIMARY_USER}', then iterate via:"
+echo "  sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR} --impure"
+if [ "$sbctl_present" = true ]; then
   echo ""
   echo "Secure Boot: keys are in /var/lib/sbctl. On first boot, put firmware"
   echo "in Setup Mode (clear platform keys in BIOS), then run:"
   echo "  sudo sbctl enroll-keys --microsoft"
   echo "  sudo sbctl verify"
 fi
-
-# nixos-install ran with --no-root-password and modules/nixos/users.nix
-# doesn't set a password for the primary user, so without this prompt
-# the installed system has no console login.
-echo ""
-echo "==> Set password for ${PRIMARY_USER}"
-nixos-enter --root /mnt -c "passwd ${PRIMARY_USER}"
-
-sync
-trap - EXIT
-
-echo ""
-echo "Install complete."
-echo "  Flake checkout: ${FLAKE_PATH} (clone of ${REPO_URL}, owned by ${PRIMARY_USER})"
-echo "  Transcript: ${LOG}"
-echo "  Log in as '${PRIMARY_USER}', then iterate via:"
-echo "    sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR} --impure"
+echo "==================================================================="
 echo ""
 
 if [ "$SKIP_REBOOT" -ne 1 ]; then
