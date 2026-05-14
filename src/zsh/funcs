@@ -551,10 +551,10 @@ if are_binary git bat fzf; then
     fi
 
     if [[ -n "$_matched" ]]; then
-      _confirm_destructive "[WARN] Push: $_matched" || return 0
+      _confirm_destructive "Push: $_matched" || return 0
     fi
     if [[ -n "$_diverged" ]]; then
-      _confirm_destructive "[WARN] Push: $_diverged" || return 0
+      _confirm_destructive "Push: $_diverged" || return 0
     fi
 
     git push -u origin "$branch_name"
@@ -784,7 +784,7 @@ if are_binary git bat fzf; then
     in_git_repo || return 1
     local _n=$(git stash list 2>/dev/null | wc -l)
     (( _n == 0 )) && { echo "Stash is empty."; return 0; }
-    _confirm_destructive "[WARN] Drop all $_n stash(es)" || return 0
+    _confirm_destructive "Drop all $_n stash(es)" || return 0
     git stash clear
   }
   # Confirm a destructive action with a single keypress. Default is Yes —
@@ -804,13 +804,13 @@ if are_binary git bat fzf; then
   function gw {
     in_git_repo || return 1
     if [[ "$1" == "--all" || "$1" == "-a" ]]; then
-      _confirm_destructive "[WARN] Wipe working changes + entire stash stack" || return 0
+      _confirm_destructive "Wipe working changes + entire stash stack" || return 0
       git stash push -u >/dev/null 2>&1
       git stash clear
       return 0
     fi
     [[ -z "$(git status --porcelain)" ]] && return 0
-    _confirm_destructive "[WARN] Local Branch: Wipe Non-Pushed Changes" || return 0
+    _confirm_destructive "Wipe non-pushed changes on local branch" || return 0
     git stash push -u >/dev/null && git stash drop
   }
 
@@ -1124,11 +1124,11 @@ if are_binary git fzf; then
     local _force=""
     if (( ${#_msgs[@]} )); then
       local _why=${(j:, :)_msgs}
-      _confirm_destructive "[WARN] Worktree '$worktree_path' has $_why — destroy?" || return 0
+      _confirm_destructive "Worktree '$worktree_path' has $_why — destroy?" || return 0
       _force="--force"
     fi
     if ! _gwt_predelete "$worktree_path" "$repo_root"; then
-      _confirm_destructive "[WARN] predelete hook failed — destroy '$worktree_path' anyway?" || return 0
+      _confirm_destructive "predelete hook failed — destroy '$worktree_path' anyway?" || return 0
     fi
     git worktree remove ${_force} "$worktree_path" || return 1
     git worktree prune --expire now >/dev/null 2>&1
