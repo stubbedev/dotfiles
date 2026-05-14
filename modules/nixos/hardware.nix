@@ -25,6 +25,7 @@ _: {
       boot.kernelModules = [
         "kvm-intel"
         "kvm-amd"
+        "tun"
       ];
 
       # Microcode + redistributable firmware. mkDefault on the cpu
