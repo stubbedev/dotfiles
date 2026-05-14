@@ -21,6 +21,7 @@ _hm() {
     'whoami:Print this machine'\''s age recipient pubkey for sops'
     'trust:Add an age recipient to .sops.yaml and re-wrap secrets/*'
     'secret:Edit, set, or rotate an encrypted file under secrets/'
+    'cache:Wipe cached state (nvim|zsh|locks|all)'
     'iso:Build the NixOS installer ISO or burn it to a USB device'
     'search:Search for nix packages'
     'help:Print help message'
@@ -223,6 +224,22 @@ _hm() {
               else
                 _message 'secret name (e.g. intelephense)'
               fi
+              ;;
+          esac
+          return 0
+          ;;
+        cache)
+          # `hm cache nvim|zsh|locks|all` — see hm_cache() in bin/hm.
+          case $CURRENT in
+            2)
+              local -a targets
+              targets=(
+                'nvim:Clear ~/.local/{share,state}/nvim and ~/.cache/nvim'
+                'zsh:Wipe src/zsh/{plugins.d,fpaths.d} and ~/.zcompdump; kick zsh-plugin-update'
+                'locks:Wipe ~/.local/state/nix/home-manager/*.lock.sum (re-prompts on next switch)'
+                'all:nvim + zsh (does NOT touch locks)'
+              )
+              _describe -t cache-targets 'cache target' targets
               ;;
           esac
           return 0

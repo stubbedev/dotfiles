@@ -1,4 +1,7 @@
-{ config, inputs, ... }:
+{ config, inputs, self, ... }:
+let
+  cache = import (self + "/lib/nix-cache.nix");
+in
 {
   flake.modules.nixos.nixSettings =
     { ... }:
@@ -10,18 +13,12 @@
 
       # Daemon-level substituters. These are what `nixos-rebuild` and any
       # root-side nix invocation read; the HM-side copy in
-      # modules/home/nix.nix only applies to user-mode `nix` calls and to
-      # the standalone-HM target on non-NixOS hosts. Without this, system
-      # rebuilds miss the nix-community cache (fenix, lanzaboote, hy3, etc.)
-      # and rebuild from source.
-      nix.settings.substituters = [
-        "https://cache.nixos.org"
-        "https://nix-community.cachix.org"
-      ];
-      nix.settings.trusted-public-keys = [
-        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      ];
+      # modules/home/nix.nix only applies to the standalone-HM target on
+      # non-NixOS hosts (useGlobalPkgs gates it off here). Without this,
+      # system rebuilds miss the nix-community cache (fenix, lanzaboote,
+      # hy3, etc.) and rebuild from source.
+      nix.settings.substituters = cache.substituters;
+      nix.settings.trusted-public-keys = cache.trusted-public-keys;
 
       # Hardlink-dedupe identical files in the store on every add, instead
       # of waiting for the weekly `nix.optimise` run. Cheap per-build cost,

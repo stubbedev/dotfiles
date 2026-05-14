@@ -24,9 +24,8 @@ The structure is as follows:
 ├── flake.nix              # dendritic flake-parts entrypoint
 ├── flake.lock
 ├── lib.nix                # shared lib helpers (xdgSource, sudoPromptScript, ...)
-├── lib/                   # extra shared libs (system-info)
-├── constants.nix          # path constants (paths.dotfiles, paths.shared, ...)
-├── gfx.nix
+├── lib/                   # extra shared libs (gfx wrappers, plymouth theme, mcp servers, nix cache, system-info)
+├── constants.nix          # path + theme constants (paths.dotfiles, theme.icon, ...)
 ├── modules/               # dendritic modules tree (auto-loaded via import-tree)
 │   ├── activation/        # home-manager activation scripts (privileged + non-privileged)
 │   ├── files/             # home.file declarations
@@ -38,8 +37,10 @@ The structure is as follows:
 │   ├── theme/
 │   └── features.nix
 ├── bin/
-│   ├── stb*               # personal CLI (also installed into ~/.nix-profile/bin/)
+│   ├── hm*                # home-manager / nixos-rebuild front-end (templated)
+│   ├── nixos-iso*         # build / burn the installer ISO (templated)
 │   ├── stb-install*       # bootstrap (run from the checkout, before Nix exists)
+│   ├── stb-install-nixos* # ISO-resident NixOS installer
 │   ├── tmux-*             # tmux launcher wrappers
 │   ├── tmux-pick-*        # interactive tmux picker (fzf+tmux)
 │   └── fzf-pick-*         # headless fzf pickers (return a string)
@@ -68,12 +69,8 @@ command:
 
 `git clone --depth 1 git@github.com:stubbedev/dotfiles.git && cd dotfiles && ./bin/stb-install`
 
-The installer will prompt you with options on what to install.
-
-After installation you can use the `stb` followed by an option to add stuff to
-your config.
-
-If you provide no option the wizard will list the available options.
+The installer will prompt you with options on what to install. Once Nix and
+home-manager are up, day-to-day rebuilds run through `hm` (see below).
 
 ## APPLYING THE NIX/HOME-MANAGER CONFIG
 

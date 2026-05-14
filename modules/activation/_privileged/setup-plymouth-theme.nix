@@ -1,21 +1,11 @@
-_: {
+{ self, ... }:
+{
   enableIf = { config, ... }: config.features.theming;
   args =
     { pkgs, homeLib, ... }:
     let
-      # nixpkgs ships catppuccin-plymouth hardcoded to the macchiato
-      # flavor. Upstream has all four — swap sourceRoot + install paths
-      # to package mocha, matching the Kvantum/GTK Catppuccin Mocha set.
-      theme = pkgs.catppuccin-plymouth.overrideAttrs (_: {
-        pname = "catppuccin-mocha-plymouth";
-        sourceRoot = "source/themes/catppuccin-mocha";
-        installPhase = ''
-          runHook preInstall
-          mkdir -p $out/share/plymouth/themes/catppuccin-mocha
-          cp * $out/share/plymouth/themes/catppuccin-mocha
-          runHook postInstall
-        '';
-      });
+      # Shared with modules/nixos/plymouth.nix.
+      theme = (import (self + "/lib/plymouth.nix") { inherit pkgs; }).catppuccinMochaPlymouth;
     in
     homeLib.mkInstallPrompt {
       subject = "Catppuccin Mocha Plymouth theme";

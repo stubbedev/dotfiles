@@ -1,26 +1,16 @@
 { self, inputs, ... }:
 {
   flake.modules.nixos.polkit =
-    { lib, ... }:
+    { config, lib, ... }:
     let
       homeLib = import (self + "/lib.nix") { inherit (inputs.nixpkgs) lib; inherit self; };
 
-      username = "stubbe";
+      username = config.host.primaryUser;
       # NixOS with useUserPackages places the home-manager profile at
       # /etc/profiles/per-user/<user>; this mirrors config.home.profileDirectory
       # used in the standalone-HM activation (setup-vpn-polkit.nix).
       profileDir = "/etc/profiles/per-user/${username}";
-      # pkexec resolves symlinks before matching allowedPrograms. Reference
-      # the helper via a *content-addressed* store path so both the polkit
-      # rule and the live script (modules/home/scripts.nix) point at the
-      # same canonical path AND that path is stable across rebuilds.
-      # Keying on `self + "/..."` re-hashes on every commit, which would
-      # also retrigger the sudo prompt in the standalone-HM activation
-      # module — `builtins.path` hashes only the helper file's contents.
-      helperPath = toString (builtins.path {
-        name = "power-profile-helper";
-        path = self + "/src/_shared/scripts/power.profile.helper.sh";
-      });
+      helperPath = homeLib.powerProfileHelperPath;
     in
     {
       security.polkit.enable = true;

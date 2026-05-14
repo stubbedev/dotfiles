@@ -14,10 +14,7 @@
 
         ${homeLib.installSystemFile {
           target = "/etc/udev/rules.d/90-usb-autosuspend-disable.rules";
-          content = ''
-            # managed-by: home-manager usb-autosuspend-disable v1
-            ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="on"
-          '';
+          content = builtins.readFile (self + "/src/udev/rules.d/90-usb-autosuspend-disable.rules");
         }}
 
         ${homeLib.installSystemFile {

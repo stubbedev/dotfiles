@@ -1,4 +1,21 @@
 _: {
+  # Feature-flag contract:
+  #
+  #   features.desktop      Interactive workstation: GUI + the tools needed
+  #                         to drive one (rofi, alacritty, mail TUI, theming,
+  #                         clipboard, …). Baseline CLI tools (git, tmux,
+  #                         jq, ripgrep) are NOT gated on this — they ship
+  #                         unconditionally via modules/packages/cli/core.nix.
+  #
+  #   features.development  Extra language toolchains beyond the baseline
+  #                         (nodejs/bun/pnpm, go, neovide, jetbrains-toolbox,
+  #                         the nixd/nh/nil tooling pack, direnv).
+  #                         Independent of `desktop`: a remote build box can
+  #                         have development=true, desktop=false.
+  #
+  # Other flags below are toggles for individual subsystems (docker, hyprland,
+  # niri, k8s, php, slack, …). All default true on stubbe's machines; flip
+  # them off per-host where appropriate.
   flake.modules.homeManager.features =
     { lib, ... }:
     {
@@ -6,12 +23,12 @@ _: {
         desktop = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable desktop UI packages and configuration.";
+          description = "Enable interactive workstation UI (GUI apps, compositor support, theming). Does NOT control baseline CLI tools.";
         };
         development = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable development tools and languages.";
+          description = "Enable extra language toolchains beyond the CLI baseline (node, go, rust via fenix, jetbrains-toolbox).";
         };
         docker = lib.mkOption {
           type = lib.types.bool;

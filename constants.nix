@@ -9,8 +9,15 @@
     term = "${config.home.profileDirectory}/bin/alacritty";
   };
 
+  # Theme names referenced across modules. Keep in lockstep with what
+  # modules/theme/gtk.nix actually selects.
   theme = {
-    iconTheme = "stubbe";
-    gtkTheme = "stubbe";
+    icon = "Tela-circle-purple-dark";
+    cursor = "Vimix-cursors";
+    cursorSize = 24;
+    gtk = "catppuccin-mocha-mauve-standard";
+    kvantum = "Catppuccin-Mocha-Mauve";
+    sddm = "catppuccin-mocha-mauve";
+    plymouth = "catppuccin-mocha";
   };
 }

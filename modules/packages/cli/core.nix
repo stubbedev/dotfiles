@@ -1,13 +1,14 @@
-# Core CLI utilities and build tools
+# Core CLI utilities and build tools. Unconditional — these are the
+# baseline tooling we expect on every interactive shell (headless or
+# not). Don't gate on features.desktop: a headless host without `git`
+# or `tmux` would be unusable.
 _: {
   flake.modules.homeManager.packagesCliCore =
     {
       pkgs,
-      lib,
-      config,
       ...
     }:
-    lib.mkIf config.features.desktop {
+    {
       home.packages = with pkgs; [
         # Shell and terminal
         bc

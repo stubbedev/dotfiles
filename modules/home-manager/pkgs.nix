@@ -4,11 +4,13 @@ let
     system:
     import inputs.nixpkgs {
       inherit system;
+      # Mirror modules/nixos/nix-settings.nix so standalone-HM and NixOS
+      # builds resolve packages against the same nixpkgs config.
       config = {
         allowUnfree = true;
-        allowUnfreePredicate = _: true;
-        allowInsecure = true;
-        allowInsecurePredicate = _: true;
+        permittedInsecurePackages = [
+          "dcraw-9.28.0"
+        ];
       };
       overlays = builtins.attrValues config.flake.overlays;
     };

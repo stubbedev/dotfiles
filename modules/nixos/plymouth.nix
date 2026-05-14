@@ -1,4 +1,5 @@
-_: {
+{ self, ... }:
+{
   flake.modules.nixos.plymouth =
     {
       lib,
@@ -7,21 +8,10 @@ _: {
       ...
     }:
     let
-      # nixpkgs ships `catppuccin-plymouth` hardcoded to the macchiato
-      # flavor. Upstream has all four — swap the sourceRoot and install
-      # paths to package the mocha variant instead, matching the Kvantum
-      # theme (Catppuccin-Mocha-Mauve, modules/theme/qt.nix).
-      catppuccin-mocha-plymouth = pkgs.catppuccin-plymouth.overrideAttrs (_: {
-        pname = "catppuccin-mocha-plymouth";
-        sourceRoot = "source/themes/catppuccin-mocha";
-        installPhase = ''
-          runHook preInstall
-          sed -i 's:\(^ImageDir=\)/usr:\1'"$out"':' catppuccin-mocha.plymouth
-          mkdir -p $out/share/plymouth/themes/catppuccin-mocha
-          cp * $out/share/plymouth/themes/catppuccin-mocha
-          runHook postInstall
-        '';
-      });
+      # Shared with modules/activation/_privileged/setup-plymouth-theme.nix.
+      inherit (import (self + "/lib/plymouth.nix") { inherit pkgs; })
+        catppuccinMochaPlymouth
+        ;
 
       # Fedora carries this patch against the same 24.004.60 we use:
       # https://src.fedoraproject.org/rpms/plymouth — file
@@ -58,7 +48,7 @@ _: {
         enable = true;
         package = patchedPlymouth;
         theme = "catppuccin-mocha";
-        themePackages = [ catppuccin-mocha-plymouth ];
+        themePackages = [ catppuccinMochaPlymouth ];
       };
 
       # Quiet kernel + low console log level keep the splash readable

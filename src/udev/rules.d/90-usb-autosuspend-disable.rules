@@ -1,0 +1,4 @@
+# managed-by: stubbedev dotfiles — src/udev/rules.d/90-usb-autosuspend-disable.rules
+# Consumed by modules/activation/_privileged/setup-usb-autosuspend-disable.nix
+# (non-NixOS) and modules/nixos/udev.nix (NixOS).
+ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="on"

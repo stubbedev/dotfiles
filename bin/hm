@@ -1,0 +1,591 @@
+#!/usr/bin/env bash
+# Personal home-manager / nixos-rebuild front-end.
+# Source lives in the dotfiles repo; the installed copy under
+# config.home.profileDirectory/bin is built by mkScriptBin from
+# modules/home/scripts.nix with @KEY@ markers substituted at build time.
+set -euo pipefail
+
+hm_flake_dir="${HM_FLAKE_DIR:-@FLAKE_DIR@}"
+
+has_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+if has_cmd readlink; then
+  hm_flake_dir=$(readlink -f "$hm_flake_dir" 2>/dev/null || echo "$hm_flake_dir")
+fi
+
+hm_flake_ref="path:$hm_flake_dir"
+
+# On NixOS the home-manager CLI isn't installed (submoduleSupport
+# path in upstream programs/home-manager.nix gates `home.packages`
+# on `!submoduleSupport.enable`), so switch/build shell out to
+# nixos-rebuild against nixosConfigurations.<hostname>. Override
+# the resolved attr with HM_NIXOS_CONFIG if the flake key differs.
+is_nixos() {
+  [ -r /etc/os-release ] && grep -q '^ID=nixos' /etc/os-release
+}
+
+nixos_attr() {
+  echo "${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
+}
+
+run_hm_subcmd() {
+  local subcmd="$1"; shift
+  if is_nixos; then
+    local prefix=()
+    case "$subcmd" in
+      # Verbs that mutate /run, /nix/var/nix/profiles/system,
+      # /boot etc. nixos-rebuild itself can self-sudo with --sudo
+      # in newer versions, but explicit sudo here keeps behaviour
+      # uniform across nixpkgs revisions.
+      switch|boot|test|dry-activate)
+        prefix=(sudo)
+        ;;
+      # Pure build / introspection verbs — no privileged writes.
+      build|dry-build|build-vm|build-vm-with-bootloader|repl)
+        ;;
+      *)
+        echo "hm $subcmd: unavailable on NixOS. Supported subcommands: switch, boot, test, build, dry-build, dry-activate, build-vm, build-vm-with-bootloader, repl, rollback, gc, generations." >&2
+        return 1
+        ;;
+    esac
+
+    # On NixOS, HM activations run inside the home-manager-<user>.service
+    # oneshot unit. Their stdout is swallowed by journald
+    # (SyslogIdentifier=hm-activate-<user>), so `nixos-rebuild` shows
+    # nothing for them. For verbs that actually fire activations,
+    # snapshot a cutoff timestamp and replay the new journal lines
+    # afterwards so "Activating <step>" lines surface back here.
+    local hm_tag="" since=""
+    case "$subcmd" in
+      switch|test)
+        if has_cmd journalctl; then
+          hm_tag="hm-activate-${USER:-$(id -un)}"
+          since=$(date '+%Y-%m-%d %H:%M:%S')
+        fi
+        ;;
+    esac
+
+    local rc=0
+    "${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@" || rc=$?
+
+    if [[ -n "$hm_tag" ]]; then
+      local hm_lines
+      hm_lines=$(journalctl -t "$hm_tag" --since "$since" --no-pager --output=cat 2>/dev/null || true)
+      if [[ -n "$hm_lines" ]]; then
+        echo
+        echo "--- home-manager activation ($hm_tag) ---"
+        printf '%s\n' "$hm_lines"
+      fi
+    fi
+
+    return $rc
+  else
+    case "$subcmd" in
+      # nixos-rebuild-only verbs — no home-manager equivalent.
+      boot|test|dry-activate|dry-build|build-vm|build-vm-with-bootloader|repl)
+        echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
+        return 1
+        ;;
+      *)
+        home-manager "$subcmd" --flake "$hm_flake_ref" --impure "$@"
+        ;;
+    esac
+  fi
+}
+
+run_rollback() {
+  if is_nixos; then
+    sudo nixos-rebuild switch --rollback "$@"
+  else
+    echo "hm rollback: not implemented for standalone home-manager. Use 'home-manager generations' to list, then run '<gen>/activate' from the desired generation." >&2
+    return 2
+  fi
+}
+
+run_gc() {
+  # Default to -d so the most common intent (drop old generations
+  # and free their store paths) doesn't need an extra arg.
+  local gc_args=("$@")
+  if [ "${#gc_args[@]}" -eq 0 ]; then
+    gc_args=("-d")
+  fi
+  if is_nixos; then
+    # sudo so the system profile is also collected, not just the
+    # invoking user's. nix-collect-garbage scopes by who runs it.
+    sudo nix-collect-garbage "${gc_args[@]}"
+  else
+    nix-collect-garbage "${gc_args[@]}"
+  fi
+}
+
+run_generations() {
+  if is_nixos; then
+    # NixOS system profile — nixos-rebuild list-generations is
+    # the supported listing API and includes Current/Specialisation.
+    nixos-rebuild list-generations "$@"
+  else
+    home-manager generations "$@"
+  fi
+}
+
+ensure_sudo() {
+  if [[ "${1:-}" == "true" ]]; then
+    echo "Requesting sudo..."
+    sudo -v
+  fi
+}
+
+update_system() {
+  local needs_sudo="false"
+
+  if has_cmd pacman || has_cmd apt || has_cmd dnf || has_cmd snap; then
+    needs_sudo="true"
+  fi
+
+  ensure_sudo "$needs_sudo"
+
+  if has_cmd pacman; then
+    echo "Updating pacman packages"
+    sudo pacman -Syu --noconfirm
+  fi
+
+  if has_cmd apt; then
+    echo "Updating apt packages"
+    sudo apt update
+    sudo apt upgrade -y
+    sudo apt autoremove -y
+  fi
+
+  if has_cmd dnf; then
+    echo "Updating dnf packages"
+    sudo dnf upgrade -y
+  fi
+
+  if has_cmd snap; then
+    echo "Updating snap packages"
+    sudo snap refresh
+  fi
+
+  if has_cmd flatpak; then
+    echo "Updating flatpak packages"
+    flatpak update -y
+    flatpak uninstall --unused -y
+  fi
+
+  if has_cmd nix; then
+    echo "Updating nix inputs"
+    nix flake update --flake "$hm_flake_ref"
+  fi
+
+  if has_cmd nix-channel; then
+    nix-channel --update
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+Usage: hm <command> [args]
+
+Commands:
+  update              Update system package managers and nix inputs
+  upgrade             Update system packages and apply switch
+  whoami              Print "<hostname> <age-pubkey>" for this machine
+  trust [name] <key>  Add an age recipient to .sops.yaml and re-wrap secrets/*
+                        - hm trust <name> <pubkey>
+                        - hm trust <pubkey>           (auto-named)
+                        - cmd | hm trust              (e.g. ssh other hm whoami | hm trust)
+  secret edit <name>  Open secrets/<name> in $EDITOR via sops, binary mode (creates if absent)
+  secret set <name>   Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)
+  secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
+  cache <target>      Wipe cached state (target: nvim|zsh|locks|all)
+  iso build [args]    Build the NixOS installer ISO
+  iso path [args]     Build the ISO and print its store path
+  iso devices         List removable/block devices
+  iso burn <dev> --yes  Build the ISO and write it to a USB device
+
+  switch              Build and activate (default boot entry on NixOS)
+  boot                Build and set as next-boot only (NixOS)
+  test                Activate without making it the default (NixOS)
+  build               Build without activating
+  dry-build           Show what would build, don't fetch/build
+  dry-activate        Show what activate would do, don't activate (NixOS)
+  build-vm            Build a VM image of the configuration (NixOS)
+  build-vm-with-bootloader  Same, including bootloader (NixOS)
+  repl                Open a nix repl scoped to the configuration (NixOS)
+  rollback            Roll back to the previous generation
+  generations         List system/home-manager generations
+  gc [args]           nix-collect-garbage (defaults to -d)
+  news                Read home-manager release notes (non-NixOS)
+  instantiate         home-manager instantiate (non-NixOS)
+  help                Show this help message
+
+On NixOS the build/activate verbs delegate to `[sudo ]nixos-rebuild
+<cmd> --flake <flake>#<host> --impure`. The host attr defaults to
+`hostname -s`; override with HM_NIXOS_CONFIG=<attr>. Verbs without
+a NixOS counterpart (news/instantiate) error on NixOS; verbs without
+a home-manager counterpart (boot/test/dry-activate/dry-build/build-vm
+/repl) error on non-NixOS. Unknown args fall through to home-manager
+on non-NixOS.
+EOF
+}
+
+hm_whoami() {
+  if [ ! -f "$HOME/.ssh/id_ed25519.pub" ]; then
+    echo "hm whoami: ~/.ssh/id_ed25519.pub not found" >&2
+    return 1
+  fi
+  local pubkey host
+  pubkey=$(@SSH_TO_AGE@ < "$HOME/.ssh/id_ed25519.pub")
+  host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
+  printf '%s %s\n' "$host" "$pubkey"
+}
+
+hm_trust() {
+  local name="" pubkey=""
+
+  # Resolve (name, pubkey) from one of three forms:
+  #   1) hm trust <name> <pubkey>            — explicit
+  #   2) hm trust <pubkey>                   — auto-name
+  #   3) cmd | hm trust                      — stdin "<name> <pubkey>" or "<pubkey>"
+  if [ "$#" -ge 2 ]; then
+    name="$1"; pubkey="$2"
+  elif [ "$#" -eq 1 ]; then
+    pubkey="$1"
+  elif [ "$#" -eq 0 ] && [ ! -t 0 ]; then
+    local line
+    if ! IFS= read -r line || [ -z "$line" ]; then
+      echo "hm trust: empty stdin (expected '<name> <pubkey>' or '<pubkey>')" >&2
+      return 2
+    fi
+    # shellcheck disable=SC2086
+    set -- $line
+    if [ "$#" -ge 2 ]; then
+      name="$1"; pubkey="$2"
+    else
+      pubkey="$1"
+    fi
+  else
+    cat <<EOF >&2
+Usage:
+  hm trust <name> <pubkey>      # explicit
+  hm trust <pubkey>             # auto-name from hostname or pubkey suffix
+  <cmd> | hm trust              # e.g. ssh laptop2 hm whoami | hm trust
+EOF
+    return 2
+  fi
+
+  # Auto-derive name if not supplied. Prefer the local hostname when
+  # the pubkey is *this machine's* SSH-derived recipient; otherwise
+  # fall back to the pubkey's last 8 chars so the line is at least
+  # eyeball-distinguishable.
+  if [ -z "$name" ]; then
+    local local_pubkey=""
+    if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
+      local_pubkey=$(@SSH_TO_AGE@ < "$HOME/.ssh/id_ed25519.pub" 2>/dev/null || true)
+    fi
+    if [ -n "$local_pubkey" ] && [ "$pubkey" = "$local_pubkey" ]; then
+      name=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
+    else
+      name="${pubkey: -8}"
+    fi
+  fi
+
+  if [[ ! "$name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo "hm trust: derived name '$name' must match [A-Za-z0-9_-]+" >&2
+    return 2
+  fi
+
+  # Validate the bech32-encoded age pubkey by attempting an
+  # encryption with it. age fails fast on a bad checksum, so we
+  # don't mutate .sops.yaml on bad input.
+  if ! @AGE@ -r "$pubkey" -o /dev/null </dev/null 2>/dev/null; then
+    echo "hm trust: '$pubkey' is not a valid age recipient pubkey" >&2
+    return 2
+  fi
+
+  local sops_yaml="$hm_flake_dir/.sops.yaml"
+  if [ ! -f "$sops_yaml" ]; then
+    echo "hm trust: $sops_yaml not found" >&2
+    return 1
+  fi
+
+  if grep -qF "$pubkey" "$sops_yaml"; then
+    echo "hm trust: $pubkey already present in .sops.yaml — nothing to do."
+    return 0
+  fi
+
+  # Snapshot for rollback if any sops updatekeys call fails.
+  local backup
+  backup=$(mktemp)
+  cp "$sops_yaml" "$backup"
+
+  rollback() {
+    cp "$backup" "$sops_yaml"
+    rm -f "$backup"
+    echo "hm trust: rolled back .sops.yaml" >&2
+  }
+
+  # Append the new recipient line directly after the last existing
+  # 'age1...' entry under the age list. Awk preserves comments and
+  # surrounding structure, unlike a YAML round-trip.
+  local tmp
+  tmp=$(mktemp)
+  awk -v new="          - $pubkey  # $name" '
+    /^          - age1/ { last = NR }
+    { lines[NR] = $0 }
+    END {
+      for (i = 1; i <= NR; i++) {
+        print lines[i]
+        if (i == last) print new
+      }
+    }
+  ' "$sops_yaml" > "$tmp"
+  mv "$tmp" "$sops_yaml"
+
+  echo "Added $name → $pubkey to .sops.yaml"
+
+  # Re-wrap each existing secrets file's data key for the new recipient.
+  # Any failure rolls .sops.yaml back so the repo isn't left half-edited.
+  shopt -s nullglob
+  local secret count=0
+  for secret in "$hm_flake_dir"/secrets/*; do
+    [ -f "$secret" ] || continue
+    echo "Re-wrapping $(basename "$secret")"
+    if ! @SOPS@ updatekeys --yes "$secret"; then
+      rollback
+      return 1
+    fi
+    count=$((count + 1))
+  done
+  rm -f "$backup"
+
+  cat <<MSG
+
+Trusted $name across $count secret file(s).
+Review:  git -C "$hm_flake_dir" diff -- .sops.yaml secrets/
+Commit:  git -C "$hm_flake_dir" add .sops.yaml secrets/ && \\
+         git -C "$hm_flake_dir" commit -m "trust: add $name age recipient"
+MSG
+}
+
+hm_cache() {
+  local target="${1:-}"
+  case "$target" in
+    nvim)
+      echo "Clearing nvim cache (~/.local/{share,state}/nvim and ~/.cache/nvim)..."
+      rm -rf \
+        "$HOME/.local/share/nvim" \
+        "$HOME/.local/state/nvim" \
+        "$HOME/.cache/nvim"
+      ;;
+    zsh)
+      # plugins.d — repopulated by the zsh-plugin-update systemd user
+      #             service (kicked below); see modules/home/zsh-plugin-updater.nix.
+      # fpaths.d  — repopulated by setup-shell-completions activation;
+      #             requires `hm switch` to rebuild.
+      # zcompdump — regenerated by setup-zsh activation; also needs switch.
+      echo "Resetting zsh plugins + completion cache..."
+      rm -rf \
+        "$hm_flake_dir/src/zsh/plugins.d" \
+        "$hm_flake_dir/src/zsh/fpaths.d"
+      rm -f "$HOME/.zcompdump" "$HOME/.zcompdump.zwc"
+      if has_cmd systemctl \
+         && systemctl --user cat zsh-plugin-update.service >/dev/null 2>&1; then
+        echo "Kicking zsh-plugin-update.service..."
+        systemctl --user start zsh-plugin-update.service || true
+      fi
+      echo "Run 'hm switch' to repopulate fpaths.d and rebuild zcompdump."
+      ;;
+    locks)
+      # Privileged activations (modules/activation/_privileged/*) skip
+      # themselves on each switch when their lock file matches the action
+      # hash + state-input hash. Wiping the lock files forces every gated
+      # activation to re-prompt for sudo on the next switch — useful when
+      # a system file has drifted out from under us (manual edit, package
+      # upgrade clobber, …) and we want home-manager to reassert the
+      # managed copy. See lib.nix:sudoPromptScript.
+      local lock_dir="$HOME/.local/state/nix/home-manager"
+      if [ -d "$lock_dir" ]; then
+        local count
+        count=$(find "$lock_dir" -maxdepth 1 -name '*.lock.sum' -type f | wc -l)
+        if [ "$count" -gt 0 ]; then
+          echo "Wiping $count activation lock(s) at $lock_dir..."
+          find "$lock_dir" -maxdepth 1 -name '*.lock.sum' -type f -delete
+        else
+          echo "No activation locks under $lock_dir; nothing to do."
+        fi
+      else
+        echo "$lock_dir does not exist; nothing to do."
+      fi
+      echo "Next 'hm switch' will re-prompt for each privileged activation."
+      ;;
+    all)
+      hm_cache nvim
+      hm_cache zsh
+      ;;
+    ""|-h|--help)
+      cat <<EOF >&2
+Usage: hm cache <target>
+
+Targets:
+  nvim         Clear ~/.local/{share,state}/nvim and ~/.cache/nvim.
+  zsh          Remove src/zsh/{plugins.d,fpaths.d} and ~/.zcompdump*, kick the
+               zsh-plugin-update user service to re-clone plugins. Run
+               'hm switch' afterwards to repopulate fpaths.d and rebuild
+               zcompdump.
+  locks        Wipe ~/.local/state/nix/home-manager/*.lock.sum so every
+               privileged activation re-prompts for sudo on next switch.
+  all          nvim + zsh. Does NOT touch locks — that's intentional
+               (re-prompts for sudo on every gated activation; opt-in only).
+EOF
+      [ -z "$target" ] && return 2 || return 0
+      ;;
+    *)
+      echo "hm cache: unknown target '$target' (want nvim|zsh|locks|all)" >&2
+      return 2
+      ;;
+  esac
+}
+
+hm_secret() {
+  local action="${1:-}"
+  local name="${2:-}"
+  if [ -z "$action" ] || [ -z "$name" ]; then
+    echo "Usage: hm secret {edit|set|rotate} <name>" >&2
+    return 2
+  fi
+  # All secrets are binary-mode single-blob files under secrets/<name>.
+  local path="$hm_flake_dir/secrets/$name"
+  case "$action" in
+    edit)
+      # sops handles both create and edit transparently. Pass binary
+      # input/output types so creating a new secret opens an empty
+      # buffer (no yaml starter template).
+      @SOPS@ --input-type binary --output-type binary "$path"
+      ;;
+    set)
+      # Replace the secret value without opening an editor. On a TTY
+      # we prompt twice and confirm; piped input goes straight in
+      # (e.g. `secret-tool lookup ... | hm secret set vpn-konform`).
+      local pw=""
+      if [ -t 0 ]; then
+        read -srp "New value for $name: " pw
+        echo
+        local pw2=""
+        read -srp "Confirm: " pw2
+        echo
+        if [ "$pw" != "$pw2" ]; then
+          echo "hm secret set: values do not match" >&2
+          return 1
+        fi
+        unset pw2
+      else
+        pw=$(cat)
+      fi
+      if [ -z "$pw" ]; then
+        echo "hm secret set: refusing to write empty value" >&2
+        return 1
+      fi
+      # --filename-override makes sops apply the creation_rules for
+      # secrets/<name> even though stdin doesn't have a real path.
+      # Write to a sibling tmp file then rename so a failure mid-
+      # encrypt can't truncate the existing secret.
+      local tmp="$path.new"
+      if ! printf '%s' "$pw" | @SOPS@ --encrypt \
+          --input-type binary --output-type binary \
+          --filename-override "$path" /dev/stdin > "$tmp"; then
+        rm -f "$tmp"
+        unset pw
+        echo "hm secret set: encryption failed" >&2
+        return 1
+      fi
+      mv "$tmp" "$path"
+      unset pw
+      echo "Updated secrets/$name. Run 'hm switch' to deploy, then commit."
+      ;;
+    rotate)
+      if [ ! -f "$path" ]; then
+        echo "hm secret rotate: $path does not exist" >&2
+        return 1
+      fi
+      @SOPS@ --rotate -i \
+        --input-type binary --output-type binary "$path"
+      echo "Re-rolled data key for $name. Recipients unchanged."
+      ;;
+    *)
+      echo "hm secret: unknown action '$action' (want edit|set|rotate)" >&2
+      return 2
+      ;;
+  esac
+}
+
+case "${1:-}" in
+  update)
+    shift
+    update_system
+    ;;
+  upgrade)
+    shift
+    update_system
+    rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+    run_hm_subcmd switch "$@"
+    ;;
+  whoami)
+    shift
+    hm_whoami
+    ;;
+  trust)
+    shift
+    hm_trust "$@"
+    ;;
+  secret)
+    shift
+    hm_secret "$@"
+    ;;
+  cache)
+    shift
+    hm_cache "$@"
+    ;;
+  iso)
+    shift
+    nixos-iso "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  switch|boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
+    rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+    subcmd="$1"
+    shift
+    run_hm_subcmd "$subcmd" "$@"
+    ;;
+  rollback)
+    shift
+    rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+    run_rollback "$@"
+    ;;
+  gc)
+    shift
+    run_gc "$@"
+    ;;
+  generations)
+    shift
+    run_generations "$@"
+    ;;
+  "")
+    # `hm` with no args: show usage rather than tripping `set -u`
+    # on `$1` below, or proxying an empty arg to home-manager.
+    usage
+    exit 2
+    ;;
+  *)
+    rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+    if is_nixos; then
+      echo "hm: '$1' is not supported on NixOS — the home-manager CLI is not available in submodule mode. Try 'hm help'." >&2
+      exit 2
+    fi
+    home-manager --impure "$@"
+    ;;
+esac

@@ -1,20 +1,27 @@
-_: {
+{ self, ... }:
+{
   flake.modules.homeManager.nix =
-    { pkgs, lib, ... }:
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
+    let
+      cache = import (self + "/lib/nix-cache.nix");
+    in
     {
       programs.home-manager.enable = true;
 
-      nix = {
+      # Daemon-level substituters live in modules/nixos/nix-settings.nix
+      # on NixOS hosts (useGlobalPkgs makes HM read those same overlaid
+      # pkgs, and only the daemon's substituters actually fetch). On
+      # standalone HM we set them here so user-mode `nix` calls hit the
+      # same caches.
+      nix = lib.mkIf (config.host.platform != "nixos") {
         package = lib.mkDefault pkgs.nix;
         settings = {
-          substituters = [
-            "https://cache.nixos.org"
-            "https://nix-community.cachix.org"
-          ];
-          trusted-public-keys = [
-            "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-            "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-          ];
+          inherit (cache) substituters trusted-public-keys;
         };
       };
     };

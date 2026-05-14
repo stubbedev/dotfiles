@@ -15,7 +15,7 @@ rec {
   # GFX wrappers (nixGL)
   # ============================================================
 
-  gfxLib = import ./gfx.nix { inherit lib pkgs systemInfo isNixOS; };
+  gfxLib = import ./lib/gfx.nix { inherit lib pkgs systemInfo isNixOS; };
   inherit (gfxLib)
     gfx
     gfxName
@@ -312,6 +312,18 @@ rec {
   # ============================================================
   # Live symlinks (point ~/.config/<x> at ~/.stubbe/src/<y>)
   # ============================================================
+
+  # Content-addressed store path for the power-profile helper script.
+  # pkexec resolves symlinks before matching allowedPrograms, so the
+  # polkit rule and the live script (in scripts.nix) must point at the
+  # same canonical path AND that path must be stable across rebuilds.
+  # Keying on `self + "/..."` would re-hash on every commit and retrigger
+  # the sudo prompt in setup-power-profile-fix.nix; `builtins.path` hashes
+  # only the helper file's contents instead.
+  powerProfileHelperPath = toString (builtins.path {
+    name = "power-profile-helper";
+    path = self + "/src/_shared/scripts/power.profile.helper.sh";
+  });
 
   # Render an idempotent symlink-replacement snippet. Used in non-
   # privileged activations to point a config dir at the live src/ tree

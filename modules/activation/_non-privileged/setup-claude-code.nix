@@ -1,14 +1,24 @@
-_: {
+{ self, ... }:
+{
   enableIf = { config, ... }: config.features.claudeCode;
   args =
     {
       config,
+      lib,
       homeLib,
       ...
     }:
     let
-      chromeExecutable = "${config.home.profileDirectory}/bin/google-chrome-stable";
-      firefoxExecutable = "${config.home.profileDirectory}/bin/firefox";
+      servers = import (self + "/lib/mcp-servers.nix") {
+        chromePath = "${config.home.profileDirectory}/bin/google-chrome-stable";
+        firefoxPath = "${config.home.profileDirectory}/bin/firefox";
+      };
+      # Claude's .claude.json shape: { type, command, args, env? }
+      toClaude = _: server: {
+        type = "stdio";
+        inherit (server) command args;
+      } // lib.optionalAttrs (server ? env) { inherit (server) env; };
+      mcpServers = lib.mapAttrs toClaude servers;
     in
     {
       actionScript = ''
@@ -22,6 +32,7 @@ _: {
               refreshInterval = 5;
             };
             includeCoAuthoredBy = false;
+            tui = "fullscreen";
           };
         }}
 
@@ -29,63 +40,7 @@ _: {
           name = "claude-config-patch";
           target = "${config.home.homeDirectory}/.claude.json";
           patch = {
-            mcpServers = {
-              chrome-devtools = {
-                type = "stdio";
-                command = "npx";
-                args = [
-                  "-y"
-                  "chrome-devtools-mcp@latest"
-                  "--no-usage-statistics"
-                  "--executable-path"
-                  chromeExecutable
-                ];
-              };
-              firefox-devtools = {
-                type = "stdio";
-                command = "npx";
-                args = [
-                  "-y"
-                  "firefox-devtools-mcp@latest"
-                  "--firefox-path"
-                  firefoxExecutable
-                ];
-              };
-              atlassian-mcp = {
-                type = "stdio";
-                command = "npx";
-                args = [ "-y" "@stubbedev/atlassian-mcp@latest" ];
-              };
-              sentry-mcp = {
-                type = "stdio";
-                command = "npx";
-                args = [ "-y" "@stubbedev/sentry-mcp@latest" ];
-              };
-              jenkins-mcp = {
-                type = "stdio";
-                command = "npx";
-                args = [ "-y" "@stubbedev/jenkins-mcp@latest" ];
-              };
-              nix-mcp = {
-                type = "stdio";
-                command = "uvx";
-                args = [ "mcp-nixos" ];
-              };
-              logseq-mcp = {
-                type = "stdio";
-                command = "uv";
-                args = [
-                  "run"
-                  "--with"
-                  "mcp-logseq"
-                  "mcp-logseq"
-                ];
-                env = {
-                  LOGSEQ_API_TOKEN = "logseq";
-                  LOGSEQ_API_URL = "http://localhost:12315";
-                };
-              };
-            };
+            inherit mcpServers;
           };
         }}
       '';
