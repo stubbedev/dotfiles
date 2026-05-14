@@ -7,7 +7,16 @@ _git_shortcuts() {
         typeset -ga _gsc_br_cache=("${reply[@]}")
         typeset -g _gsc_br_time=$now _gsc_br_pwd=$PWD
       fi
-      _describe 'branches' _gsc_br_cache
+      # Filter current branch at use time (not cache time) so a `git checkout`
+      # without leaving $PWD doesn't show a stale current.
+      local _cur=$(git branch --show-current 2>/dev/null)
+      local -a _filtered=()
+      local _b
+      for _b in "${_gsc_br_cache[@]}"; do
+        [[ "$_b" == "$_cur" ]] && continue
+        _filtered+=("$_b")
+      done
+      _describe 'branches' _filtered
       ;;
     gwtd)
       local now=$EPOCHSECONDS
@@ -21,9 +30,6 @@ _git_shortcuts() {
         typeset -g _gsc_wt_time=$now _gsc_wt_pwd=$PWD
       fi
       _describe 'worktrees' _gsc_wt_cache
-      ;;
-    ghr|gr)
-      _arguments '1:commits to reset:(1 2 3 4 5 6 7 8 9 10)'
       ;;
     gg|gf|gw)
       _arguments '1:flag:((--all\:"include\ all\ remotes/stash"))'

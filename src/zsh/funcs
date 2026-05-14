@@ -1,38 +1,23 @@
 #!/usr/bin/env zsh
 # shellcheck disable=SC1091
 
-if is_binary php; then
-  function art {
-    if is_file "$PWD/artisan"; then
-      php artisan "$@"
-    elif is_binary artisan; then
-      artisan "$@"
-    else
-      echo "No artisan on current PATH"
-    fi
-  }
-fi
-
 typeset -gA _git_shorthand_docs=(
   gcm 'git commit with auto ticket prefix; trailing \ opens editor; explicit ABC-1234: prefix overrides'
   gp 'git push (warns on protected branches, release/*, hotfix/*, gp.protected patterns, upstream-ahead)'
   gcb 'checkout or create branch (feature/bugfix/hotfix prefixes)'
-  gcr 'create release branch with semver bump (major/minor/patch)'
-  ga 'interactively stage files (single panel, M/A/D markers, type-aware preview)'
+  ga 'interactively stage files (single panel, M/A/D markers, type-aware action)'
   gsd 'show working tree diff'
-  gd 'diff current branch against another branch'
-  gcd 'export branch diff to a patch file'
+  gd 'three-dot diff: changes on another branch since fork point with current'
+  gcd 'export three-dot branch diff to a patch file'
   gst 'git status (short format)'
   gg 'git pull current branch from origin (--all for all branches)'
   gf 'git fetch (--all for all remotes)'
-  ghr 'hard reset HEAD~[N] (discard last N commits and changes; default N=1)'
-  gr 'soft reset HEAD~[N] (undo last N commits, keep changes staged; default N=1)'
   gsa 'stash all local changes'
+  gcs 'clear the entire stash stack (with confirmation)'
   gw 'wipe local changes (stash + drop; --all drops the entire stash stack)'
   ggo 'pull from a selected origin branch'
-  gl 'interactive git log browser (ctrl-y copy hash, ctrl-x cherry-pick, ctrl-r revert)'
+  gl 'interactive git log (multi-select; ctrl-y copy hash, ctrl-x cherry-pick, ctrl-r revert)'
   gsp 'interactive stash pop (fzf select from stash list)'
-  gcp 'interactive cherry-pick from log (multi-select, oldest first, conflict hints)'
   gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch)'
   gwtd 'remove a git worktree'
   gwth 'scaffold .gwt-postcreate / .gwt-predelete hooks in repo root and open in $EDITOR'
@@ -441,7 +426,7 @@ function _branch_wizard {
   if [[ -z "$_name" ]]; then
     local _p="(Enter: branch name [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> "
     [[ -n "$_label" ]] && _p="(Enter: new branch from $_label [Ticket: ABC-1234 || Tag: 4.3.21], Ctrl+C: cancel)> "
-    _name=$(fzf --prompt="$_p" --height=~1 --reverse --no-info --print-query </dev/null)
+    _name=$(fzf --prompt="$_p" --height=~1 --no-info --print-query </dev/null)
     [[ -z "$_name" ]] && return 1
   fi
 
@@ -461,7 +446,7 @@ function _branch_wizard {
       _branch_base_out=$(_default_branch) || return 1
     fi
 
-    local _suffix=$(fzf --height=~1 --reverse --no-info --print-query \
+    local _suffix=$(fzf --height=~1 --no-info --print-query \
       --prompt="(Enter: select suffix)> " </dev/null)
     if [[ -n "$_suffix" ]]; then
       _suffix=${_suffix:l}
@@ -497,7 +482,6 @@ if are_binary git bat fzf; then
 
     local commit_message=$(fzf --height=~1 \
       --query="$initial_query" \
-      --reverse \
       --no-info \
       --print-query \
       --prompt="$commit_prompt" </dev/null)
@@ -575,64 +559,39 @@ if are_binary git bat fzf; then
 
     git push -u origin "$branch_name"
   }
-  function gcr {
-    in_git_repo || return 1
-
-    local current_tag=${$(git tag --sort=version:refname)[-1]}
-    local increment_action=$(printf 'Major\nMinor\nPatch\n' |
-      fzf --prompt="(Enter: select action)> " \
-        --height=~4 \
-        --no-input \
-        --no-info)
-
-    [[ $current_tag =~ '^([0-9]+)\.([0-9]+)\.([0-9]+)' ]]
-    local major=$match[1]
-    local minor=$match[2]
-    local patch=$match[3]
-
-    case $increment_action in
-    "Major")
-      major=$((major + 1))
-      ;;
-    "Minor")
-      minor=$((minor + 1))
-      ;;
-    "Patch")
-      patch=$((patch + 1))
-      ;;
-    *)
-      return 0
-      ;;
-    esac
-    local release_branch="$major.$minor.$patch"
-    local _release_base=$(_default_branch) || return 1
-    _checkout_branch_or_worktree "release/$release_branch" create "$_release_base"
-  }
   function gcb {
     in_git_repo || return 1
 
     local initial_query="${1:-}"
+    local current_branch=$(git branch --show-current)
     _list_git_branches
-    local git_branches=${(F)reply}
+    # Drop the current branch: with --select-1 it would auto-accept itself
+    # when it's the only branch, blocking the Ctrl+C → wizard path.
+    local -a _avail=()
+    local _b
+    for _b in "${reply[@]}"; do
+      [[ "$_b" == "$current_branch" ]] && continue
+      _avail+=("$_b")
+    done
+    local git_branches=${(F)_avail}
 
-    # Up to 3 list rows + 1 prompt + 8-line preview
     local _list_h=4 # prompt(1) + items(3)
-    local _prev_h=8
-    local _gcb_out=$(echo "$git_branches" |
-      fzf --prompt="(Enter: checkout branch, Ctrl+C: create new branch)> " \
-        --query="$initial_query" \
-        --bind 'enter:accept' \
-        --exact \
-        --select-1 \
-        --exit-0 \
-        --print-query \
-        --no-info \
-        --preview='git log --oneline --color=always -8 {} 2>/dev/null' \
-        --preview-window="down:${_prev_h}:wrap:nohidden" \
-        --height=~$((_list_h + _prev_h)))
+    local _gcb_out=""
+    if [[ -n "$git_branches" ]]; then
+      _gcb_out=$(echo "$git_branches" |
+        fzf --prompt="(Enter: checkout, Ctrl+C: create new)> " \
+          --query="$initial_query" \
+          --bind 'enter:accept' \
+          --exact \
+          --select-1 \
+          --exit-0 \
+          --print-query \
+          --no-info \
+          --height=~$_list_h)
+    fi
     local branch_name=${_gcb_out##*$'\n'}
 
-    if [[ -n "$branch_name" && ${reply[(r)$branch_name]} == "$branch_name" ]]; then
+    if [[ -n "$branch_name" && ${_avail[(r)$branch_name]} == "$branch_name" ]]; then
       _checkout_branch_or_worktree "$branch_name"
       return 0
     fi
@@ -652,7 +611,7 @@ if are_binary git bat fzf; then
     cd "$_git_root"
 
     # Build a single list of rows: "<M|D|A>\t<path>". One panel, type-aware
-    # preview, type-aware action (M → `git add -p`; D/A → `git add`).
+    # action (M → `git add -p`; D/A → `git add`).
     local git_status=$(git status --porcelain)
     local -a _rows=()
     local _gs_line _xy _rest _wt _path
@@ -694,17 +653,7 @@ if are_binary git bat fzf; then
     done
 
     local _selected=$(printf '%s' "$_display" | fzf --multi \
-      --preview='
-        line={}
-        typ=${line:0:1}
-        path=${line:3}
-        case "$typ" in
-          M) git diff --color=always -- "$path" | bat --style=numbers --color=always -l diff ;;
-          D) git diff --diff-filter=D --color=always -- "$path" | bat --style=numbers --color=always -l diff ;;
-          A) bat --style=numbers --color=always -- "$path" 2>/dev/null || cat -- "$path" ;;
-        esac' \
-      --preview-window='up:85%:wrap:nohidden' \
-      --prompt="(Tab: toggle, Shift+Tab: toggle all, Enter: stage, Ctrl+C: cancel)> " \
+      --prompt="(Tab: toggle, Enter: stage, Ctrl+C: cancel)> " \
       --header="[M]odified → patch mode  [D]eleted → stage removal  [A]dded → stage untracked" \
       --bind 'shift-tab:toggle-all' \
       --bind 'tab:toggle' \
@@ -751,16 +700,14 @@ if are_binary git bat fzf; then
         --exit-0 \
         --print-query \
         --no-info \
-        --preview="git diff ${current_branch}..{} 2>/dev/null | bat --style=numbers --color=always -l diff" \
-        --preview-window='up:90%:wrap:nohidden' \
-        --height=~50%)
+        --height=~10)
     local remote_branch=${_gd_out##*$'\n'}
 
     if [[ -z "$remote_branch" ]]; then
       return 0
     fi
 
-    git diff "$current_branch".."$remote_branch" --color | bat --style=numbers --color=always -l diff
+    git diff "$current_branch"..."$remote_branch" --color | bat --style=numbers --color=always -l diff
   }
 
   function gcd {
@@ -789,7 +736,7 @@ if are_binary git bat fzf; then
     local clean_target=${${target_branch#remotes/origin/}//\//-}
     local patch_file="${clean_current}--${clean_target}.diff"
 
-    git diff $current_branch..$target_branch >"$patch_file"
+    git diff $current_branch...$target_branch >"$patch_file"
 
     if [[ -f "$patch_file" ]]; then
       echo "✅ Patch file created: $patch_file"
@@ -826,34 +773,25 @@ if are_binary git bat fzf; then
       git fetch
     fi
   }
-  function ghr {
-    in_git_repo || return 1
-    local _n=${1:-1}
-    _confirm_destructive "[WARN] Hard reset HEAD~$_n (drops last $_n commit(s) + working changes)" || return 0
-    git reset --hard "HEAD~$_n"
-  }
-  function gr {
-    in_git_repo || return 1
-    local _n=${1:-1}
-    git reset --soft "HEAD~$_n"
-  }
   function gsa {
     in_git_repo || return 1
 
     git stash
   }
-  # Confirm a destructive action via fzf Yes/No. Returns 0 on Yes, 1 otherwise.
+  function gcs {
+    in_git_repo || return 1
+    local _n=$(git stash list 2>/dev/null | wc -l)
+    (( _n == 0 )) && { echo "Stash is empty."; return 0; }
+    _confirm_destructive "[WARN] Drop all $_n stash(es)" || return 0
+    git stash clear
+  }
+  # Confirm a destructive action with a single keypress. Returns 0 on y/Y,
+  # 1 on anything else (incl. Enter). Default is No.
   function _confirm_destructive {
-    local choice=$(printf 'No\nYes\n' |
-      fzf \
-        --no-input \
-        --header="$1" \
-        --reverse \
-        --height=~4 \
-        --no-info \
-        --no-multi \
-        --exit-0)
-    [[ "$choice" == "Yes" ]]
+    local _reply
+    read -k1 "_reply?$1 [y/N] "
+    echo
+    [[ "$_reply" == [yY] ]]
   }
 
   function gw {
@@ -901,11 +839,16 @@ if are_binary git bat fzf; then
     elif command -v pbcopy >/dev/null 2>&1; then _clip='pbcopy'
     fi
 
+    # Multi-select: Tab to mark commits, then Ctrl+X cherry-picks the lot.
+    # `{+1}` is space-separated hashes (newest-first since git log is);
+    # `tac` flips to oldest-first so cherry-pick replays history forward.
     local -a _binds=(
-      --bind 'ctrl-x:become(git cherry-pick {1})'
-      --bind 'ctrl-r:become(git revert {1})'
+      --bind 'tab:toggle'
+      --bind 'shift-tab:toggle-all'
+      --bind 'ctrl-x:become(printf "%s\n" {+1} | tac | xargs git cherry-pick)'
+      --bind 'ctrl-r:become(git revert {+1})'
     )
-    local _prompt_hints="Enter: show, Ctrl+X: cherry-pick, Ctrl+R: revert"
+    local _prompt_hints="Tab: toggle, Enter: show, Ctrl+X: cherry-pick, Ctrl+R: revert"
     if [[ -n "$_clip" ]]; then
       _binds+=(--bind "ctrl-y:execute-silent(printf '%s' {1} | $_clip)")
       _prompt_hints+=", Ctrl+Y: copy hash"
@@ -914,15 +857,14 @@ if are_binary git bat fzf; then
 
     local _commit_line=$(git log --oneline --color=always |
       fzf --ansi \
+        --multi \
         --prompt="($_prompt_hints)> " \
         --query="$initial_query" \
         --no-sort \
         --exact \
         --exit-0 \
         --no-info \
-        --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
-        --preview-window='up:90%:wrap:nohidden' \
-        --height=~50% \
+        --height=~10 \
         "${_binds[@]}")
     local commit=${_commit_line%% *}
 
@@ -945,9 +887,7 @@ if are_binary git bat fzf; then
         --no-sort \
         --exit-0 \
         --no-info \
-        --preview='line={}; git stash show -p --color=always "${line%%:*}" 2>/dev/null | bat --style=numbers --color=always -l diff' \
-        --preview-window='up:90%:wrap:nohidden' \
-        --height=~50%)
+        --height=~10)
 
     if [[ -z "$selected" ]]; then
       return 0
@@ -955,58 +895,6 @@ if are_binary git bat fzf; then
 
     local stash_ref=${selected%%:*}
     git stash pop "$stash_ref"
-  }
-
-  function gcp {
-    in_git_repo || return 1
-
-    # Refuse to start if a cherry-pick is already in progress — surface the
-    # half-finished state instead of stacking another on top.
-    if [[ -f "$(git rev-parse --git-dir 2>/dev/null)/CHERRY_PICK_HEAD" ]]; then
-      echo "Cherry-pick already in progress:"
-      echo "  Continue: git cherry-pick --continue"
-      echo "  Skip:     git cherry-pick --skip"
-      echo "  Abort:    git cherry-pick --abort"
-      return 1
-    fi
-
-    if [[ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
-      _confirm_destructive "[WARN] Working tree not clean — cherry-pick may abort mid-way. Continue?" || return 0
-    fi
-
-    local initial_query="${1:-}"
-    local _selected=$(git log --oneline --color=always --all |
-      fzf --ansi \
-        --multi \
-        --prompt="(Tab: toggle commit, Enter: cherry-pick selection, Ctrl+C: cancel)> " \
-        --query="$initial_query" \
-        --no-sort \
-        --exit-0 \
-        --no-info \
-        --bind 'tab:toggle' \
-        --bind 'shift-tab:toggle-all' \
-        --preview='git show --stat --patch --color=always {1} 2>/dev/null | bat --style=numbers --color=always -l diff' \
-        --preview-window='up:90%:wrap:nohidden' \
-        --height=~50%)
-
-    if [[ -z "$_selected" ]]; then
-      return 0
-    fi
-
-    # Extract hashes, reverse so oldest commit applies first (log is newest-first).
-    # (Oa) = reverse-array order flag.
-    local -a _lines=(${(f)_selected})
-    local -a _hashes=("${_lines[@]%% *}")
-    git cherry-pick "${(Oa)_hashes[@]}"
-    local _rc=$?
-    if (( _rc != 0 )); then
-      echo ""
-      echo "Cherry-pick stopped (exit $_rc). Working tree may have conflicts."
-      echo "  Resolve + stage, then: git cherry-pick --continue"
-      echo "  Skip current commit:   git cherry-pick --skip"
-      echo "  Abort entirely:        git cherry-pick --abort"
-      return $_rc
-    fi
   }
 
 fi
@@ -1095,31 +983,18 @@ if are_binary git fzf; then
       display_list+="[branch]   $branch"$'\n'
     done <<<"$available_branches"
 
-    if [[ -z "$display_list" ]]; then
-      echo "No worktrees or available branches found."
-      return 0
-    fi
-
-    # Up to 3 list rows + 1 prompt + 8-line preview
+    # Empty list (e.g. fresh repo with only the current branch) → skip fzf
+    # and fall through to the create path so the wizard still runs.
     local _list_h=4 # prompt(1) + items(3)
-    local _prev_h=8
-    local selected=$(echo "$display_list" |
-      fzf --prompt="(Enter: switch/create, Ctrl+C: wizard create from scratch)> " \
-        --print-query \
-        --exit-0 \
-        --no-info \
-        --height=~$((_list_h + _prev_h)) \
-        --preview='
-          line={}
-          if [[ ${line%% *} == "[worktree]" ]]; then
-            p=${line##*  →  }
-            git -C "$p" log --oneline --color=always -8 2>/dev/null
-          else
-            b=${line#"[branch]   "}
-            git log --oneline --color=always -8 "$b" 2>/dev/null
-          fi
-        ' \
-        --preview-window="down:${_prev_h}:wrap:nohidden")
+    local selected=""
+    if [[ -n "$display_list" ]]; then
+      selected=$(echo "$display_list" |
+        fzf --prompt="(Enter: switch/create, Ctrl+C: wizard)> " \
+          --print-query \
+          --exit-0 \
+          --no-info \
+          --height=~$_list_h)
+    fi
 
     local query=${selected%%$'\n'*}
     local match=${selected##*$'\n'}
@@ -1300,18 +1175,8 @@ EOF
   }
 fi
 
-function view_git_file {
-  local _url="${1//github.com/raw.githubusercontent.com}"
-  _url="${_url//\/blob\//\/refs\/heads\/}"
-  if is_binary bat; then
-    curl -s "$_url" | bat -f -l "${1##*\.}"
-  else
-    curl -s "$_url"
-  fi
-}
-
 if is_binary ss; then
-  function pop {
+  function onport {
     ss -lptn " sport = :$1"
   }
 fi
@@ -1342,32 +1207,6 @@ if is_binary uv; then
       uv venv ./venv
     fi
     is_file "$PWD/venv/bin/activate" && source "$PWD/venv/bin/activate"
-  }
-fi
-
-function phpstorm_app_bin {
-  local _candidates=(
-    "$HOME/.local/share/JetBrains/Toolbox/apps/phpstorm/bin/phpstorm"
-    "$HOME/.local/share/JetBrains/Toolbox/apps/PhpStorm/bin/phpstorm"
-    "/opt/phpstorm/bin/phpstorm"
-  )
-  local _c
-  for _c in "${_candidates[@]}"; do
-    [[ -x "$_c" ]] && { echo "$_c"; return 0; }
-  done
-  return 1
-}
-
-if phpstorm_app_bin >/dev/null; then
-  function phpstorm_headless {
-    local _project=$(realpath "${1:-$PWD}" 2>/dev/null)
-    if [[ -z "$_project" || ! -d "$_project" ]]; then
-      echo "phpstorm_headless: not a directory: ${1:-$PWD}" >&2
-      return 1
-    fi
-    local _bin=$(phpstorm_app_bin)
-    nohup "$_bin" "$_project" >/dev/null 2>&1 &!
-    echo "phpstorm_headless: opening $_project as new project in PhpStorm"
   }
 fi
 
