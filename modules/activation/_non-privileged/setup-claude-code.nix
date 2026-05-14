@@ -33,6 +33,7 @@
             };
             includeCoAuthoredBy = false;
             tui = "fullscreen";
+            editorMode = "vi";
           };
         }}
 
