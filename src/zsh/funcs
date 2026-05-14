@@ -575,9 +575,11 @@ if are_binary git bat fzf; then
     done
     local git_branches=${(F)_avail}
 
-    local _list_h=4 # prompt(1) + items(3)
+    local _max_items=3
     local _gcb_out=""
     if [[ -n "$git_branches" ]]; then
+      local _n=${#_avail[@]}
+      (( _n > _max_items )) && _n=$_max_items
       _gcb_out=$(echo "$git_branches" |
         fzf --prompt="(Enter: checkout, Ctrl+C: create new)> " \
           --query="$initial_query" \
@@ -587,7 +589,7 @@ if are_binary git bat fzf; then
           --exit-0 \
           --print-query \
           --no-info \
-          --height=~$_list_h)
+          --height=$((_n + 2)))
     fi
     local branch_name=${_gcb_out##*$'\n'}
 
@@ -785,13 +787,18 @@ if are_binary git bat fzf; then
     _confirm_destructive "[WARN] Drop all $_n stash(es)" || return 0
     git stash clear
   }
-  # Confirm a destructive action with a single keypress. Returns 0 on y/Y,
-  # 1 on anything else (incl. Enter). Default is No.
+  # Confirm a destructive action with a single keypress. Default is Yes —
+  # Enter (or anything not n/N) confirms; only n/N cancels.
   function _confirm_destructive {
+    local _Y=$'\e[33m' _G=$'\e[32m' _R=$'\e[31m' _Z=$'\e[0m'
     local _reply
-    read -k1 "_reply?$1 [y/N] "
-    echo
-    [[ "$_reply" == [yY] ]]
+    read -ks 1 "_reply?${_Y}$1 [${_G}Y${_Y}/${_R}n${_Y}]${_Z} "
+    if [[ "$_reply" == [nN] ]]; then
+      print -r -- "${_R}n${_Z}"
+      return 1
+    fi
+    print -r -- "${_G}Y${_Z}"
+    return 0
   }
 
   function gw {
@@ -984,16 +991,21 @@ if are_binary git fzf; then
     done <<<"$available_branches"
 
     # Empty list (e.g. fresh repo with only the current branch) → skip fzf
-    # and fall through to the create path so the wizard still runs.
-    local _list_h=4 # prompt(1) + items(3)
+    # and fall through to the create path so the wizard still runs. Size
+    # the window exactly to the visible row count (capped at 3) + separator
+    # + prompt; fzf's `~` adaptive height reserves an extra slot we don't want.
+    local _max_items=3
     local selected=""
     if [[ -n "$display_list" ]]; then
+      local -a _dl=(${(f)display_list})
+      local _n=${#_dl[@]}
+      (( _n > _max_items )) && _n=$_max_items
       selected=$(echo "$display_list" |
         fzf --prompt="(Enter: switch/create, Ctrl+C: wizard)> " \
           --print-query \
           --exit-0 \
           --no-info \
-          --height=~$_list_h)
+          --height=$((_n + 2)))
     fi
 
     local query=${selected%%$'\n'*}
