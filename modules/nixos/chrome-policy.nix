@@ -10,14 +10,9 @@ _: {
       newtabUrl = "file://${userHome}/.local/share/stubbedev/newtab.html";
     in
     lib.mkIf (hmFeatures.browsers or false) {
-      # NewTabPageLocation drives both the new tab page and new windows
-      # (a new window opens a new tab page). HomepageLocation points the
-      # home page / home button at the same minimal local page.
+      # Shared policy body (new-tab/homepage URLs + force-installed
+      # extensions) — see modules/packages/chrome/_policy.nix.
       environment.etc."opt/chrome/policies/managed/stubbedev-newtab.json".text =
-        builtins.toJSON {
-          NewTabPageLocation = newtabUrl;
-          HomepageLocation = newtabUrl;
-          HomepageIsNewTabPage = false;
-        };
+        builtins.toJSON (import ../packages/chrome/_policy.nix { inherit newtabUrl; });
     };
 }

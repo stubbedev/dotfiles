@@ -4,23 +4,18 @@ _: {
     { homeLib, config, ... }:
     let
       newtabUrl = "file://${config.xdg.dataHome}/stubbedev/newtab.html";
-      # NewTabPageLocation drives both the new tab page and new windows
-      # (a new window opens a new tab page). HomepageLocation points the
-      # home page / home button at the same minimal local page.
-      policy = {
-        NewTabPageLocation = newtabUrl;
-        HomepageLocation = newtabUrl;
-        HomepageIsNewTabPage = false;
-      };
+      # Shared policy body (new-tab/homepage URLs + force-installed
+      # extensions) — see modules/packages/chrome/_policy.nix.
+      policy = import ../../packages/chrome/_policy.nix { inherit newtabUrl; };
     in
     homeLib.mkInstallPrompt {
       subject = "Chrome new-tab policy";
       body = ''
         Drop a Chrome enterprise policy at
-        /etc/opt/chrome/policies/managed/stubbedev-newtab.json so the new
-        tab page, new windows and the homepage open the minimal local
-        page at ~/.local/share/stubbedev/newtab.html. That lets SurfingKeys
-        inject its content script without the "can't run here" banner.
+        /etc/opt/chrome/policies/managed/stubbedev-newtab.json. It points
+        the new tab page, new windows and the homepage at the minimal
+        local page ~/.local/share/stubbedev/newtab.html, and force-installs
+        the managed extensions (SurfingKeys, Bitwarden, React DevTools, …).
 
         On NixOS this file is owned by modules/nixos/chrome-policy.nix and
         this activation is gated off.

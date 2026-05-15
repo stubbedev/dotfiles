@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+  Minimal local new-tab / new-window page.
+  Read and interpolated by Nix via homeLib.substituteFile —
+  see modules/packages/browser-newtab.nix. @BG@/@FG@/@MUTED@ are
+  filled in with the Catppuccin Mocha palette at build time.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>New Tab</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: @BG@;
+      color: @FG@;
+      font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+    }
+    #time { font-size: 5rem; font-weight: 600; letter-spacing: 0.04em; }
+    #date { font-size: 1.2rem; color: @MUTED@; }
+  </style>
+</head>
+<body>
+  <div id="time">--:--</div>
+  <div id="date"></div>
+  <script>
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function tick() {
+      var d = new Date();
+      document.getElementById("time").textContent =
+        pad(d.getHours()) + ":" + pad(d.getMinutes());
+      document.getElementById("date").textContent =
+        d.toLocaleDateString(undefined, {
+          weekday: "long", year: "numeric", month: "long", day: "numeric"
+        });
+    }
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
