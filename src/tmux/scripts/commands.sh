@@ -10,8 +10,8 @@ toggle_window() {
   current_path=$(tmux display-message -p -F "#{pane_current_path}")
 
   if [ "$current_window" = "$window_name" ]; then
-    tmux last-window
-    return
+    tmux last-window 2>/dev/null || true
+    return 0
   fi
 
   if tmux select-window -t "=$window_name" 2>/dev/null; then

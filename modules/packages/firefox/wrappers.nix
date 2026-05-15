@@ -23,9 +23,22 @@ _: {
       # Upstream's firefox.desktop uses Exec=firefox (PATH-resolved), so
       # bundling upstream alongside the wrapper picks up icons and the
       # desktop entry while still routing the binary through our wrapper.
+      #
+      # extraPolicies bakes a distribution/policies.json into the Firefox
+      # package. Firefox always opens the home page for a new window, so
+      # pointing Homepage at the minimal local new-tab page covers
+      # new windows; the new *tab* page has no Firefox policy and is
+      # handled by Tridactyl's `set newtab` instead (see tridactyl.nix).
       home.packages = [
         (homeLib.mkWrappedPackage {
-          pkg = pkgs.firefox;
+          pkg = pkgs.firefox.override {
+            extraPolicies = {
+              Homepage = {
+                URL = "file://${config.xdg.dataHome}/stubbedev/newtab.html";
+                StartPage = "homepage";
+              };
+            };
+          };
           unset = [ "MOZ_LEGACY_PROFILES" ];
           prefix.LD_LIBRARY_PATH = "${pkgs.libpng.out}/lib";
         })
