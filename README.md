@@ -168,4 +168,26 @@ recovered from `/persist/old/` on the running system OR by mounting
 `@-blank`'s pre-rollback parent (the previous boot's `@-old` if you
 keep one) — neither is automatic; treat the audit step as mandatory.
 
+## SURFINGKEYS (CHROME) SETUP
+
+The SurfingKeys extension is force-installed and its config is written
+by home-manager (`modules/packages/chrome/surfingkeys.nix` →
+`~/.config/surfingkeys/config.js`). Two one-time steps remain — Chrome
+deliberately walls these off from policy, so they cannot be automated.
+They persist in the profile afterwards, surviving updates and rebuilds.
+
+```
+1. chrome://extensions → SurfingKeys → Details →
+   enable "Allow access to file URLs".
+   (Needed so SurfingKeys can read config.js and inject into the
+   file:// new-tab page.)
+
+2. Open SurfingKeys' settings (toolbar icon → SurfingKeys settings) and
+   set "Load settings from:" to the absolute file URL:
+       file:///home/stubbe/.config/surfingkeys/config.js
+```
+
+Tridactyl on Firefox needs no equivalent steps — its add-on, native
+messenger and `tridactylrc` are all managed declaratively.
+
 ![This is the caption for the next figure link (or table)](./src/wallpapers/traffic.png)
