@@ -33,18 +33,43 @@
   <div id="time">--:--</div>
   <div id="date"></div>
   <script>
-    function pad(n) { return String(n).padStart(2, "0"); }
-    function tick() {
-      var d = new Date();
-      document.getElementById("time").textContent =
-        pad(d.getHours()) + ":" + pad(d.getMinutes());
-      document.getElementById("date").textContent =
-        d.toLocaleDateString(undefined, {
-          weekday: "long", year: "numeric", month: "long", day: "numeric"
+    const pad = (n) => String(n).padStart(2, "0");
+
+    class Clock {
+      // Private fields — `this` resolves to the instance inside methods
+      // because they are real methods called as `clock.tick()`.
+      #timeEl = document.getElementById("time");
+      #dateEl = document.getElementById("date");
+      #lastTime = "";
+      #lastDate = "";
+
+      tick() {
+        const now = new Date();
+
+        const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        if (time !== this.#lastTime) {
+          this.#lastTime = time;
+          this.#timeEl.textContent = time;
+        }
+
+        const date = now.toLocaleDateString(undefined, {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
         });
+        if (date !== this.#lastDate) {
+          this.#lastDate = date;
+          this.#dateEl.textContent = date;
+        }
+      }
     }
-    tick();
-    setInterval(tick, 1000);
+
+    const clock = new Clock();
+    clock.tick();
+    // Arrow wrapper keeps the call form `clock.tick()`, so `this` stays
+    // the instance — `setInterval(clock.tick, …)` would detach it.
+    setInterval(() => clock.tick(), 1000);
   </script>
 </body>
 </html>
