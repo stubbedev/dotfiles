@@ -325,6 +325,15 @@ rec {
     path = self + "/src/_shared/scripts/power.profile.helper.sh";
   });
 
+  # Canonical URL of the local new-tab / new-window page. `srv` serves it
+  # as a static site at https://start.local (registered once with
+  # `srv add` — see the README). A file:// page can't be used: Tridactyl's
+  # `set newtab` double-opens file:// URLs (tridactyl#530); serving over
+  # https also gives one URL that works for both Firefox and Chrome.
+  # Shared so tridactylrc, the Firefox Homepage policy and the Chrome
+  # enterprise policy all agree.
+  browserNewtabUrl = "https://start.local/";
+
   # Render an idempotent symlink-replacement snippet. Used in non-
   # privileged activations to point a config dir at the live src/ tree
   # in the dotfiles checkout, so edits are reflected without re-running

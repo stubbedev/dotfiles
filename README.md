@@ -168,6 +168,31 @@ recovered from `/persist/old/` on the running system OR by mounting
 `@-blank`'s pre-rollback parent (the previous boot's `@-old` if you
 keep one) — neither is automatic; treat the audit step as mandatory.
 
+## BROWSER NEW-TAB PAGE
+
+The minimal new-tab / new-window page (`src/browser/newtab.html`) is
+installed by home-manager to `~/.local/share/stubbedev/newtab/` and is
+served by `srv` as a static site at `https://start.local`. Firefox
+(Tridactyl `set newtab` + the Homepage policy) and Chrome (enterprise
+policy) all point there — a file:// page can't be used because
+Tridactyl's `set newtab` double-opens file:// URLs (tridactyl#530).
+
+A non-privileged activation
+(`modules/activation/_non-privileged/setup-srv-newtab.nix`) registers the
+site with `srv` automatically on `home-manager switch` — idempotent, and
+skipped once it is registered. It does need `srv install` (Docker,
+Traefik, mkcert) to have been run once first; until then the activation
+skips quietly and retries on the next switch. The equivalent manual
+command is:
+
+```sh
+srv add ~/.local/share/stubbedev/newtab --domain start.local --local
+```
+
+`--local` issues a mkcert certificate; srv re-serves the site on boot,
+and page edits land on the next switch with no re-run (srv serves the
+directory live).
+
 ## SURFINGKEYS (CHROME) SETUP
 
 The SurfingKeys extension is force-installed and its config is written
@@ -179,8 +204,7 @@ They persist in the profile afterwards, surviving updates and rebuilds.
 ```
 1. chrome://extensions → SurfingKeys → Details →
    enable "Allow access to file URLs".
-   (Needed so SurfingKeys can read config.js and inject into the
-   file:// new-tab page.)
+   (Needed so SurfingKeys can read config.js from a file:// URL.)
 
 2. Open SurfingKeys' settings (toolbar icon → SurfingKeys settings) and
    set "Load settings from:" to the absolute file URL:

@@ -1,20 +1,21 @@
 _: {
   enableIf = { config, ... }: config.features.browsers;
   args =
-    { homeLib, config, ... }:
+    { homeLib, ... }:
     let
-      newtabUrl = "file://${config.xdg.dataHome}/stubbedev/newtab.html";
-      # Shared policy body (new-tab/homepage URLs + force-installed
+      # Shared policy body (new-tab/homepage URL + force-installed
       # extensions) — see modules/packages/chrome/_policy.nix.
-      policy = import ../../packages/chrome/_policy.nix { inherit newtabUrl; };
+      policy = import ../../packages/chrome/_policy.nix {
+        newtabUrl = homeLib.browserNewtabUrl;
+      };
     in
     homeLib.mkInstallPrompt {
       subject = "Chrome new-tab policy";
       body = ''
         Drop a Chrome enterprise policy at
         /etc/opt/chrome/policies/managed/stubbedev-newtab.json. It points
-        the new tab page, new windows and the homepage at the minimal
-        local page ~/.local/share/stubbedev/newtab.html, and force-installs
+        the new tab page, new windows and the homepage at the local
+        new-tab page (https://start.local, served by srv), and force-installs
         the managed extensions (SurfingKeys, Bitwarden, React DevTools, …).
 
         On NixOS this file is owned by modules/nixos/chrome-policy.nix and

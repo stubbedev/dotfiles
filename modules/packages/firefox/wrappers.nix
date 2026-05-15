@@ -42,9 +42,11 @@ _: {
         # extraPolicies bakes a distribution/policies.json into the Firefox
         # package:
         #   Homepage          — Firefox always opens the home page for a new
-        #                       window, so this covers new windows (the new
+        #                       window, so this covers new windows. The new
         #                       *tab* page has no Firefox policy and is
-        #                       handled by Tridactyl's `set newtab`).
+        #                       handled by Tridactyl's `set newtab`; both
+        #                       point at homeLib.browserNewtabUrl so the new
+        #                       tab and new window load the same page.
         #   ExtensionSettings — force-installs the managed add-ons from AMO.
         #
         # extraPrefs is an autoconfig (.cfg) snippet — unlike the Preferences
@@ -56,7 +58,7 @@ _: {
             pkg = pkgs.firefox.override {
               extraPolicies = {
                 Homepage = {
-                  URL = "file://${config.xdg.dataHome}/stubbedev/newtab.html";
+                  URL = homeLib.browserNewtabUrl;
                   StartPage = "homepage";
                 };
                 ExtensionSettings = builtins.mapAttrs (_id: slug: {

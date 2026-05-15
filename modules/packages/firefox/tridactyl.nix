@@ -2,6 +2,7 @@ _: {
   linuxOnlyHomeModules.packagesFirefoxTridactyl =
     {
       pkgs,
+      homeLib,
       lib,
       config,
       ...
@@ -114,7 +115,9 @@ _: {
             bind <Space>qq qall
 
             " --- Minimal new-tab page (skips Tridactyl's notice page) ---
-            set newtab file://${config.xdg.dataHome}/stubbedev/newtab.html
+            " Served by srv at https://start.local. `set newtab` double-opens
+            " file:// URLs (tridactyl#530), so an https URL is used instead.
+            set newtab ${homeLib.browserNewtabUrl}
 
             colourscheme catppuccin-mocha
           '';
