@@ -195,23 +195,39 @@ directory live).
 
 ## SURFINGKEYS (CHROME) SETUP
 
-The SurfingKeys extension is force-installed and its config is written
-by home-manager (`modules/packages/chrome/surfingkeys.nix` →
-`~/.config/surfingkeys/config.js`). Two one-time steps remain — Chrome
-deliberately walls these off from policy, so they cannot be automated.
-They persist in the profile afterwards, surviving updates and rebuilds.
+The SurfingKeys extension is force-installed and its config — the
+LazyVim-style keymap and the Catppuccin Mocha theme — is written by
+home-manager (`modules/packages/chrome/surfingkeys.nix` →
+`~/.config/surfingkeys/config.js`). Several one-time steps remain: Chrome
+walls the extension's storage off from policy, so they can't be
+automated. They persist in the profile afterwards, surviving updates
+and rebuilds.
+
+**All steps are required.** SurfingKeys is Manifest V3, so executing the
+JS config needs Chrome's "Allow User Scripts" permission; without it (or
+without Advanced mode) SurfingKeys ignores the config entirely and stays
+on its default, unstyled UI — a white omnibar, no keymap:
 
 ```
-1. chrome://extensions → SurfingKeys → Details →
-   enable "Allow access to file URLs".
-   (Needed so SurfingKeys can read config.js from a file:// URL.)
+1. chrome://extensions → toggle "Developer mode" on (top-right).
 
-2. Open SurfingKeys' settings (toolbar icon → SurfingKeys settings) and
-   set "Load settings from:" to the absolute file URL:
+2. chrome://extensions → SurfingKeys → "Details", enable BOTH:
+     • "Allow User Scripts"        — lets SurfingKeys run config.js
+     • "Allow access to file URLs" — lets it read config.js (file://)
+
+3. SurfingKeys settings (toolbar icon → SurfingKeys settings) →
+   turn on "Advanced mode".
+
+4. In the same settings page, set "Load settings from:" to the
+   absolute file URL:
        file:///home/stubbe/.config/surfingkeys/config.js
 ```
 
+After step 4, click Save and reload — the Catppuccin theme, the bottom
+omnibar and the LazyVim keymap all take effect.
+
 Tridactyl on Firefox needs no equivalent steps — its add-on, native
-messenger and `tridactylrc` are all managed declaratively.
+messenger and `tridactylrc` (including `set newtab https://start.local`)
+are all managed declaratively.
 
 ![This is the caption for the next figure link (or table)](./src/wallpapers/traffic.png)
