@@ -16,6 +16,29 @@ _: {
           url = "https://raw.githubusercontent.com/devnullvoid/tridactyl/9de4bee31e4687e90b25e57e927114533863d775/themes/catppuccin-mocha.css";
           hash = "sha256-X6R9FKpOv1W904AvLTdtz3mdqLohcNWjXNNufIs5HNU=";
         };
+
+        # Explicit CSS selector for `hint -c`. Replacing Tridactyl's default
+        # element detection (which also hints anything with cursor:pointer,
+        # a bare [tabindex], etc. — far too much on modern SPAs) with this
+        # list keeps hints to genuinely interactive elements.
+        hintSelector = builtins.concatStringsSep ", " [
+          "a"
+          "area"
+          "button"
+          "input:not([disabled]):not([type=hidden])"
+          "select"
+          "textarea"
+          "summary"
+          "details"
+          "iframe"
+          "[role=link]"
+          "[role=button]"
+          "[role=tab]"
+          "[role=checkbox]"
+          "[role=menuitem]"
+          "[onclick]"
+          "[contenteditable=true]"
+        ];
       in
       {
         # Native messenger. Tridactyl can only read its rc file, discover
@@ -54,6 +77,15 @@ _: {
             " <Esc> clears the search highlight, like LazyVim, while still
             " doing Tridactyl's default normal-mode reset.
             bind <Escape> composite nohlsearch ; mode normal ; hidecmdline
+
+            " --- Hints ---
+            " -c restricts hints to an explicit CSS selector, dropping the
+            " default cursor:pointer / bare-tabindex heuristics that hint
+            " far too many nodes on modern sites. `;f` keeps the unfiltered
+            " hint mode for the occasional JS-only clickable <div>.
+            bind f hint -c ${hintSelector}
+            bind F hint -bc ${hintSelector}
+            bind ;f hint
 
             " --- Tabs == LazyVim buffers ---
             " Overrides Tridactyl's default H/L (history back/forward);

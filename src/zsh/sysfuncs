@@ -16,8 +16,14 @@ function is_file {
   [[ -f "$1" ]]
 }
 
+# Reload the shell. Re-sourcing ~/.zshrc into the live shell accumulates
+# state — plugins such as fast-syntax-highlighting and zsh-autosuggestions
+# wrap ZLE widgets, so each re-source stacks another wrapper layer and the
+# shell gets slower every reload. `exec` replaces the process with a fresh
+# one instead: a clean reload, no accumulation. cwd and exported env carry
+# over; non-exported vars and the job table do not.
 function src_zsh {
-  is_file "$HOME/.zshrc" && source "$HOME/.zshrc"
+  exec zsh
 }
 
 # Source $cache, regenerating it by calling $generator (a function or

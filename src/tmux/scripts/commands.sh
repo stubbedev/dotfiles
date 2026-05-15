@@ -292,6 +292,18 @@ reload_animation() {
   done
 }
 
+reload() {
+  # Bound to both M-r and M-R. In a zsh pane, hand off to zsh's own reload
+  # widget (it re-sources tmux and exec's a fresh zsh, with no echoed text);
+  # otherwise just reload the tmux config here.
+  if [[ "$(tmux display-message -p '#{pane_current_command}')" == *zsh ]]; then
+    tmux send-keys M-R
+  else
+    tmux source-file "$HOME/.config/tmux/tmux.conf"
+  fi
+  reload_animation
+}
+
 move_pane() {
   local direction="$1"
   local pane_id pane_count edge_flag target_token target_pane
@@ -415,6 +427,6 @@ case "$1" in
 "move_pane_to_window")      move_pane_to_window "$2" ;;
 "session_init")             session_init ;;
 "set_ssh_flag")             set_ssh_flag "$2" ;;
-"reload_animation")         reload_animation ;;
+"reload")                   reload ;;
 "pending_animation")        pending_animation "$2" "$3" "$4" ;;
 esac

@@ -1,4 +1,4 @@
 #!/usr/bin/env zsh
 
-SELECTED_DIR="$(find . -maxdepth 5 -mindepth 1 -type d ! -path '*/\.*' -print 2>/dev/null | fzf --algo=v1 --query="$*")"
+SELECTED_DIR="$(find . -maxdepth 5 -mindepth 1 -type d ! -path '*/\.*' -print 2>/dev/null | fzf --no-multi --algo=v1 --query="$*")"
 echo "${SELECTED_DIR:-}"

@@ -2,9 +2,30 @@
 
 function _settings_init {
   bindkey "^Xa" _expand_alias
-  bindkey -s "^[R" "src_zsh^M"
-  bindkey -s "^[o" "nvim^M"
-  bindkey -s "^[O" "nvim .^M"
+
+  # Bind a key to run a command. Commands that exec, attach, or take over
+  # the terminal (exec zsh, tmux attach, nvim) misbehave — or kill the
+  # shell — when run from inside a ZLE widget, so the command is deferred
+  # to a one-shot precmd hook that fires once ZLE has exited. accept-line
+  # on an empty buffer drives that prompt cycle without echoing any text.
+  autoload -Uz add-zsh-hook
+  function _bind_run {
+    local key=$1 cmd=$2
+    local tag="${key//[^A-Za-z0-9]/_}"
+    local widget="_run_$tag" hook="_runhook_$tag"
+    functions[$hook]="add-zsh-hook -d precmd $hook; ${cmd}"
+    functions[$widget]="add-zsh-hook precmd $hook; BUFFER=''; zle accept-line"
+    zle -N "$widget"
+    bindkey "$key" "$widget"
+  }
+
+  # Reload — re-source tmux (when inside it) and exec a fresh zsh. Bound on
+  # both Alt-r and Alt-R; inside tmux these are handled by tmux itself.
+  local _reload_cmd='[[ -n $TMUX ]] && tmux source-file "$HOME/.config/tmux/tmux.conf"; src_zsh'
+  _bind_run "^[R" "$_reload_cmd"
+  _bind_run "^[r" "$_reload_cmd"
+  _bind_run "^[o" "nvim"
+  _bind_run "^[O" "nvim ."
   function _git_shorthand_descriptions {
     (( CURRENT != 1 )) && return 1
     (( ${#_git_shorthand_docs} == 0 )) && return 1
@@ -82,7 +103,6 @@ function _settings_init {
   HISTTIMEFORMAT="[%F %T] "
   SAVEHIST=10000
   HISTSIZE=10000
-  ZSH_FZF_HISTORY_SEARCH_BIND='^r'
 
   setopt APPEND_HISTORY
   setopt SHARE_HISTORY
@@ -90,24 +110,30 @@ function _settings_init {
   setopt HIST_IGNORE_ALL_DUPS
   setopt COMPLETE_ALIASES
 
-  bindkey -s "^[A" "tmux-lazy-docker^M"
-  bindkey -s "^[t" "tmux-new-session^M"
-  bindkey -s "^[g" "tmux-lazy-git^M"
-  bindkey -s "^[a" "tmux-system-monitor^M"
-  bindkey -s "^[h" "tmux-claude^M"
+  _bind_run "^[A" "tmux-lazy-docker"
+  _bind_run "^[t" "tmux-new-session"
+  _bind_run "^[g" "tmux-lazy-git"
+  _bind_run "^[a" "tmux-system-monitor"
+  _bind_run "^[h" "tmux-claude"
 
   local _cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
 
   if is_binary fzf; then
-      bindkey -s "^[f" "tmux-pick-project^M"
-      bindkey -s "^[F" "fzf-project-picker^M"
-      bindkey -s "^[d" "tmux-pick-session^M"
-      bindkey -s "^[D" "fzf-directory-picker^M"
-      # Strip fzf's default `bindkey '^I'` (Tab) line so fzf-tab keeps Tab.
+      _bind_run "^[f" "tmux-pick-project"
+      _bind_run "^[F" "fzf-project-picker"
+      _bind_run "^[d" "tmux-pick-session"
+      _bind_run "^[D" "fzf-directory-picker"
+      # Strip fzf's `bindkey '^I'` (Tab) line so fzf-tab keeps Tab, and its
+      # Alt-C `bindkey`s (cd widget — unused). The `zle -N fzf-cd-widget`
+      # line stays so the `if` block fzf wraps them in is not left empty.
       function _settings_gen_fzf_init {
         local _out
+        local -a _lines
         _out=$(fzf --zsh 2>/dev/null) || return 1
-        print -r -- "${(F)${(f)_out:#bindkey '^I'*}}"
+        _lines=( "${(@f)_out}" )
+        _lines=( "${(@)_lines:#bindkey '^I'*}" )
+        _lines=( "${(@)_lines:#*bindkey*fzf-cd-widget}" )
+        print -r -- "${(F)_lines}"
       }
       _cached_eval "$_cache_dir/fzf_init.zsh" "${commands[fzf]:A}" _settings_gen_fzf_init
       unfunction _settings_gen_fzf_init
@@ -157,6 +183,8 @@ function _settings_init {
           pyenv "$@"
       }
   fi
+
+  unfunction _bind_run
 }
 _settings_init
 unfunction _settings_init

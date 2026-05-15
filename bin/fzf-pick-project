@@ -46,9 +46,9 @@ all_results() {
 }
 
 if [[ -n "$AWK_FILTER" ]]; then
-  SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | fzf --query="$INITIAL_QUERY")"
+  SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | fzf --no-multi --query="$INITIAL_QUERY")"
 else
-  SELECTED_PATH="$(all_results | fzf --query="$INITIAL_QUERY")"
+  SELECTED_PATH="$(all_results | fzf --no-multi --query="$INITIAL_QUERY")"
 fi
 
 echo "${SELECTED_PATH:-}"
