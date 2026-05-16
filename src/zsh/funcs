@@ -793,11 +793,10 @@ if are_binary git bat fzf; then
     local _Y=$'\e[33m' _G=$'\e[32m' _R=$'\e[31m' _Z=$'\e[0m'
     local _reply
     read -ks 1 "_reply?${_Y}$1 [${_G}Y${_Y}/${_R}n${_Y}]${_Z} "
+    print
     if [[ "$_reply" == [nN] ]]; then
-      print -r -- "${_R}n${_Z}"
       return 1
     fi
-    print -r -- "${_G}Y${_Z}"
     return 0
   }
 
