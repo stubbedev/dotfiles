@@ -1,0 +1,124 @@
+/*
+  SurfingKeys theme — mirrors the Tridactyl Catppuccin Mocha command line
+  (devnullvoid/tridactyl → themes/catppuccin-mocha.css).
+
+  Tridactyl and SurfingKeys have different DOMs, so the Tridactyl rules are
+  re-expressed against SurfingKeys' omnibar elements:
+    Tridactyl #command-line-holder / #completions  → #sk_omnibar
+    Tridactyl #tridactyl-input                     → #sk_omnibarSearchArea input
+    Tridactyl .option (completion row)             → #sk_omnibarSearchResult li
+    Tridactyl .option.focused                      → li.focused
+    Tridactyl td.icon { display:none }             → .icon { display:none }
+    Tridactyl .TridactylStatusIndicator            → #sk_status
+
+  Applied via settings.theme — see modules/packages/chrome/surfingkeys.nix.
+
+  Catppuccin Mocha: base #1e1e2e  mantle #181825  crust #11111b
+    text #cdd6f4  subtext0 #a6adc8  overlay0 #6c7086
+    surface0 #313244  surface1 #45475a
+    lavender #b4befe  blue #89b4fa  green #a6e3a1
+    peach #fab387  pink #f5c2e7  mauve #cba6f7
+*/
+
+.sk_theme {
+  /* Tridactyl --font (themes/catppuccin-mocha.css). */
+  font-family: "Monaspace Krypton", "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+  background: #1e1e2e;
+  color: #cdd6f4;
+}
+
+.sk_theme input { color: #cdd6f4; }
+.sk_theme .url { color: #a6e3a1; }              /* Tridactyl --completions-url (green) */
+.sk_theme .annotation { color: #a6adc8; }
+.sk_theme .omnibar_highlight { color: #cba6f7; } /* search match (mauve) */
+.sk_theme .omnibar_folder,
+.sk_theme .omnibar_timestamp,
+.sk_theme .omnibar_visitcount { color: #6c7086; }
+.sk_theme .feature_name,
+.sk_theme .feature_name span { color: #fab387; } /* Tridactyl section header (peach) */
+.sk_theme .separator { display: none; } /* hide the ➤ prompt arrow */
+.sk_theme .prompt,
+.sk_theme .resultPage { color: #b4befe; }
+
+/* Omnibar — Tridactyl's command line: flat dark, 2px lavender border. */
+#sk_omnibar {
+  background: #1e1e2e;
+  border: 2px solid #b4befe;
+  box-shadow: 0 0 20px #11111b;
+}
+/* Exact Tridactyl placement: its #cmdline_iframe is top:25% left:10%
+   width:80%. SurfingKeys' #sk_omnibar is already left:10% width:80%;
+   only the vertical offset differs (.sk_omnibar_middle defaults to
+   top:10%), so pin it to 25%. ID+class outranks the stock class. */
+#sk_omnibar.sk_omnibar_middle {
+  top: 25%;
+}
+#sk_omnibarSearchArea {
+  border-bottom: 1px solid #313244;
+}
+#sk_omnibarSearchArea input,
+#sk_omnibarSearchArea > input {
+  background: transparent;
+  color: #cdd6f4;
+  font-size: 1.5rem;          /* Tridactyl #tridactyl-input */
+}
+
+/* Result rows — flat list, no favicon icons (Tridactyl hides td.icon).
+   0.8rem matches Tridactyl's #completions table (smaller than the input). */
+#sk_omnibarSearchResult .icon { display: none !important; }
+#sk_omnibarSearchResult > ul > li,
+.sk_theme #sk_omnibarSearchResult > ul > li:nth-child(odd) {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  font-size: 0.8rem;
+}
+#sk_omnibarSearchResult .title { color: #89b4fa; }   /* Tridactyl --completions-title (blue) */
+#sk_omnibarSearchResult .url { color: #a6e3a1; }
+.sk_theme #sk_omnibarSearchResult > ul > li.focused {
+  background: #181825;                                /* Tridactyl --currentline (mantle) */
+  font-weight: bold;
+}
+#sk_omnibarSearchResult > ul > li.focused .title { color: #f5c2e7; } /* focused title (pink) */
+#sk_omnibarSearchResult > ul > li.focused .url { color: #a6e3a1; }
+
+/* Mode indicator — bottom-right box, mirroring Tridactyl's status
+   indicator. settings.showModeStatus keeps it always visible. */
+#sk_status {
+  position: fixed !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  left: auto !important;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid #b4befe;
+  font-size: 12pt;
+  padding: 0.3em 0.8em;
+}
+
+/* which-key (pending-key candidates) — full-width bar across the bottom
+   with larger text, instead of the stock small bottom-right box. */
+#sk_keystroke {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  left: 0;
+  right: 0;
+  width: 100%;
+  float: none;
+  border-top: 2px solid #b4befe;
+  font-size: 14pt;
+  padding: 0.6em 1em;
+}
+#sk_keystroke kbd { font-size: 1em; }
+
+/* usage / help / editor popups */
+#sk_usage,
+#sk_popup,
+#sk_editor {
+  background: #1e1e2e;
+  color: #cdd6f4;
+}
+.sk_theme kbd {
+  background: #313244;
+  color: #cdd6f4;
+  border-color: #45475a;
+}
