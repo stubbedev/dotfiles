@@ -55,18 +55,28 @@ _: {
       };
 
       # Default file manager + browser for D-Bus / xdg-open / portal callers.
-      xdg.mimeApps = {
-        enable = true;
-        defaultApplications = {
-          "inode/directory" = "pcmanfm.desktop";
-          "x-scheme-handler/file" = "pcmanfm.desktop";
-          "x-scheme-handler/http" = "com.google.Chrome.desktop";
-          "x-scheme-handler/https" = "com.google.Chrome.desktop";
-          "x-scheme-handler/about" = "com.google.Chrome.desktop";
-          "x-scheme-handler/unknown" = "com.google.Chrome.desktop";
-          "text/html" = "com.google.Chrome.desktop";
-          "application/xhtml+xml" = "com.google.Chrome.desktop";
+      # Browser default differs per target: Firefox on NixOS, Chrome on
+      # standalone home-manager.
+      xdg.mimeApps =
+        let
+          browser =
+            if config.host.platform == "nixos" then
+              "firefox.desktop"
+            else
+              "com.google.Chrome.desktop";
+        in
+        {
+          enable = true;
+          defaultApplications = {
+            "inode/directory" = "pcmanfm.desktop";
+            "x-scheme-handler/file" = "pcmanfm.desktop";
+            "x-scheme-handler/http" = browser;
+            "x-scheme-handler/https" = browser;
+            "x-scheme-handler/about" = browser;
+            "x-scheme-handler/unknown" = browser;
+            "text/html" = browser;
+            "application/xhtml+xml" = browser;
+          };
         };
-      };
     };
 }
