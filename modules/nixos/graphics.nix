@@ -74,6 +74,50 @@ in
         package = config.boot.kernelPackages.nvidiaPackages.production;
       };
 
+      # Workaround for the machine hanging at the very end of `poweroff`
+      # / `reboot`: fans, CPU and the GPU's RGB strip stay powered and
+      # the screen goes black, but power is never actually cut.
+      #
+      # Before cutting power, the kernel runs every driver's
+      # `.shutdown()` callback inside `device_shutdown()`. The
+      # proprietary NVIDIA driver's shutdown callback can deadlock
+      # there. This host's CPU is an "F" SKU with no iGPU, so the
+      # NVIDIA modules drive the only display and stay pinned until
+      # very late shutdown — the driver is always present when
+      # device_shutdown() runs.
+      #
+      # Fix: unbind the framebuffer console (fbcon keeps nvidia_drm
+      # pinned even after the compositor exits) and unload the NVIDIA
+      # stack in an ExecStop hook. `before = greetd.service` makes
+      # systemd stop this unit *after* the display manager on shutdown
+      # (stop order is the reverse of start order), so the compositor
+      # has already released the GPU. Every step is `|| true` — a
+      # failed unload must never make shutdown worse than it is.
+      systemd.services.nvidia-unload-on-shutdown = lib.mkIf hasNvidia {
+        description = "Unload NVIDIA modules before power-off (shutdown-hang workaround)";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "greetd.service" "display-manager.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = "${pkgs.coreutils}/bin/true";
+          TimeoutStopSec = 20;
+          ExecStop = pkgs.writeShellScript "nvidia-unload-on-shutdown" ''
+            # Detach fbcon from the NVIDIA framebuffer so nothing pins
+            # nvidia_drm once the compositor is gone.
+            for vt in /sys/class/vtconsole/vtcon*; do
+              if grep -qi 'frame buffer' "$vt/name" 2>/dev/null; then
+                echo 0 > "$vt/bind" 2>/dev/null || true
+              fi
+            done
+            # Unload in dependency order; never block shutdown on it.
+            for m in nvidia_drm nvidia_modeset nvidia_uvm nvidia; do
+              ${pkgs.kmod}/bin/modprobe -r "$m" 2>/dev/null || true
+            done
+          '';
+        };
+      };
+
       # Force the matching GPU driver into stage 1 so Plymouth has a
       # real DRM device to attach to, instead of the EFI framebuffer
       # surrogate that simpledrm exposes briefly before being torn down

@@ -29,7 +29,7 @@
     #date { font-size: 1.2rem; color: @MUTED@; }
   </style>
 </head>
-<body>
+<body tabindex="-1">
   <div id="time">--:--</div>
   <div id="date"></div>
   <script>
@@ -70,6 +70,15 @@
     // Arrow wrapper keeps the call form `clock.tick()`, so `this` stays
     // the instance — `setInterval(clock.tick, …)` would detach it.
     setInterval(() => clock.tick(), 1000);
+
+    // Pull focus to the page. Browsers park the cursor in the address bar
+    // when this loads as the new-tab / home page (Tridactyl's `set newtab`
+    // redirects from about:newtab, which is urlbar-focused). A focusable
+    // <body> plus an explicit focus() after load takes it back.
+    addEventListener("load", () => {
+      window.focus();
+      document.body.focus();
+    });
   </script>
 </body>
 </html>

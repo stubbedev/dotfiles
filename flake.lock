@@ -1211,7 +1211,7 @@
       },
       "locked": {
         "lastModified": 1778833368,
-        "narHash": "sha256-ilC2KTBzjyvDvR+rUUBs25HFK15EDlKx2lK+AAHYXqw=",
+        "narHash": "sha256-CG8GziHcpjj6I5QREQQJeH8OCA4we52NFa2mTvmimxw=",
         "owner": "stubbedev",
         "repo": "srv",
         "rev": "aa954afd0b1e76f339f0418b060d3c2b80fb92aa",
