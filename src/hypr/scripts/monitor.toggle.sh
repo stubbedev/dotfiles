@@ -58,7 +58,7 @@ listen_events() {
             continue
           fi
           apply_toggle
-          hyprctl setcursor Vimix-cursors 24 >/dev/null 2>&1 || true
+          hyprctl setcursor "${XCURSOR_THEME:-default}" "${XCURSOR_SIZE:-24}" >/dev/null 2>&1 || true
           systemctl --user restart waybar.service || true
           last_action=$(date +%s)
           ;;
