@@ -1234,14 +1234,19 @@ if are_binary git fzf; then
       [[ -t 0 ]] || return 0
       _confirm_destructive "predelete hook failed — destroy '$_wt' anyway?" || return 0
     fi
-    _gwt_force_remove "$_wt" || return 1
 
+    # `git worktree remove` rm's vendor/ + node_modules/ — multi-second on
+    # Laravel-sized trees. Detach so the foreground shell returns now;
+    # _gwt_remove_if_clean uses the same pattern.
     local _wt_root="$_main/.worktrees"
-    local _parent="${_wt:h}"
-    while [[ "$_parent" == "$_wt_root"/* ]]; do
-      rmdir "$_parent" 2>/dev/null || break
-      _parent="${_parent:h}"
-    done
+    (
+      _gwt_force_remove "$_wt" >/dev/null 2>&1 || exit 1
+      local _parent="${_wt:h}"
+      while [[ "$_parent" == "$_wt_root"/* ]]; do
+        rmdir "$_parent" 2>/dev/null || break
+        _parent="${_parent:h}"
+      done
+    ) &!
   }
 
   # Scaffold .gwt-postcreate and .gwt-predelete in the repo root if missing,
