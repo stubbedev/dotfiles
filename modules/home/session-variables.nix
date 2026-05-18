@@ -3,6 +3,7 @@
   flake.modules.homeManager.sessionVariables =
     {
       config,
+      constants,
       lib,
       pkgs,
       ...
@@ -10,6 +11,13 @@
     {
       home.sessionVariables =
         {
+          # Cursor — single source of truth in constants.nix. Mirrored on the
+          # NixOS side via modules/nixos/desktop.nix so login shells and PAM
+          # see the same values. Hyprland's exec-once setcursor and
+          # src/hypr/scripts/monitor.toggle.sh read these at runtime.
+          XCURSOR_THEME = constants.theme.cursor;
+          XCURSOR_SIZE = toString constants.theme.cursorSize;
+
           # Nix configuration
           NIXPKGS_ALLOW_UNFREE = "1";
           NIXPKGS_ALLOW_INSECURE = "1";

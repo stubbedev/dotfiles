@@ -4,6 +4,7 @@ _: {
       pkgs,
       lib,
       config,
+      constants,
       ...
     }:
     lib.mkIf config.features.theming {
@@ -11,7 +12,7 @@ _: {
         enable = true;
 
         theme = {
-          name = "catppuccin-mocha-mauve-standard";
+          name = constants.theme.gtk;
           package = pkgs.catppuccin-gtk.override {
             variant = "mocha";
             accents = [ "mauve" ];
@@ -20,16 +21,16 @@ _: {
         };
 
         iconTheme = {
-          name = "Tela-circle-purple-dark";
+          name = constants.theme.icon;
           package = pkgs.tela-circle-icon-theme.override {
             colorVariants = [ "purple" ];
           };
         };
 
         cursorTheme = {
-          name = "Vimix-cursors";
+          name = constants.theme.cursor;
           package = pkgs.vimix-cursors;
-          size = 24;
+          size = constants.theme.cursorSize;
         };
 
         gtk3.extraConfig = {

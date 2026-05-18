@@ -1,6 +1,13 @@
-_: {
+{ self, ... }:
+{
   flake.modules.nixos.desktop =
     { pkgs, ... }:
+    let
+      # constants.theme has no `config` dependency (only constants.paths does),
+      # so the stub config below is safe. Single source of truth lives in
+      # constants.nix; modules/home/session-variables.nix mirrors this for HM.
+      constants = import (self + "/constants.nix") { config = { home.homeDirectory = ""; }; };
+    in
     {
       # HM-side modules/theme/dconf.nix writes dconf keys (color-scheme,
       # blueman). On NixOS, the dconf service must be enabled system-wide
@@ -30,6 +37,12 @@ _: {
       environment.sessionVariables = {
         MOZ_ENABLE_WAYLAND = "1";
         MOZ_USE_XINPUT2 = "1";
+
+        # Cursor — system-wide so PAM/login shells and any session manager
+        # (greetd, sddm, gdm) export these before the compositor starts.
+        # HM mirror: modules/home/session-variables.nix.
+        XCURSOR_THEME = constants.theme.cursor;
+        XCURSOR_SIZE = toString constants.theme.cursorSize;
       };
 
       # Provides the Catppuccin-Mocha-Mauve Kvantum theme files.
