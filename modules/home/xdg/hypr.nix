@@ -2,6 +2,7 @@ _: {
   flake.modules.homeManager.xdgHypr =
     {
       config,
+      constants,
       lib,
       pkgs,
       systemInfo,
@@ -38,6 +39,14 @@ _: {
               in
               ''
               # Nix Generated
+              # Cursor — single source of truth: constants.theme.cursor/cursorSize.
+              # Mirrored by HM home.sessionVariables and (on NixOS) by
+              # environment.sessionVariables, but those don't propagate into
+              # Hyprland's process tree under non-NixOS session managers (SDDM
+              # on Ubuntu doesn't source hm-session-vars.sh), so we set them
+              # via Hyprland's own env= directive here too.
+              env = XCURSOR_THEME,${constants.theme.cursor}
+              env = XCURSOR_SIZE,${toString constants.theme.cursorSize}
               ${lib.optionalString systemInfo.hasNvidia ''
               # Additional ENV VARS
               env = __GLX_VENDOR_LIBRARY_NAME,nvidia
