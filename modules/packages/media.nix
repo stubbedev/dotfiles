@@ -32,11 +32,44 @@ _: {
           hash = "sha256-3azk4XIflnpVA5uv9WSEAiXguqHU9UMiR8oczRRzt8E=";
         };
       });
+
+      # libembroidery ships the `sew` CLI for converting/inspecting machine
+      # embroidery files. Not in nixpkgs; built from upstream main since
+      # there are no tagged releases yet (v1.0 still pre-release).
+      libembroidery = pkgs.stdenv.mkDerivation {
+        pname = "libembroidery";
+        version = "unstable-2026-04-21";
+        src = pkgs.fetchFromGitHub {
+          owner = "Embroidermodder";
+          repo = "libembroidery";
+          rev = "58d1d71ac100a1b83024023548289799a52f9f73";
+          hash = "sha256-ha8xxmUxbz6BcnHNq1mGp+yT7mnSFNcIafEluQ6EgHU=";
+        };
+        nativeBuildInputs = [ pkgs.cmake ];
+        # Upstream tests have a -Wformat-security issue and arc_test fails on
+        # pre-1.0 main; the `sew` CLI itself builds and runs fine.
+        hardeningDisable = [ "format" ];
+        doCheck = false;
+        # CMakeLists installs `embroidery.h` from source root, but the header
+        # actually lives in `include/`. Patch the install path.
+        postPatch = ''
+          substituteInPlace CMakeLists.txt \
+            --replace-fail "FILES embroidery.h" "FILES include/embroidery.h"
+        '';
+        meta = {
+          description = "Library and `sew` CLI for reading/writing machine embroidery files";
+          homepage = "https://www.libembroidery.org";
+          license = lib.licenses.zlib;
+          mainProgram = "sew";
+          platforms = lib.platforms.unix;
+        };
+      };
     in
     lib.mkIf config.features.media {
       home.packages = with pkgs; [
         # Image processing (CLI tools, no wrapping needed)
         imagemagick
+        libembroidery
         pngquant
         exiftool
         dcraw
