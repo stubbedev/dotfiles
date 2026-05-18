@@ -21,6 +21,7 @@ typeset -gA _git_shorthand_docs=(
   gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch)'
   gwtd 'remove a git worktree'
   gwte 'cd to main repo root (exit linked worktree); does not remove the worktree'
+  gwtc 'cd to main repo root and remove the linked worktree we just exited'
   gwth 'scaffold .gwt-postcreate / .gwt-predelete hooks in repo root and open in $EDITOR'
 )
 
@@ -1162,6 +1163,44 @@ if are_binary git fzf; then
     _in_linked_worktree && _was_wt=1
     cd "$_main" || return 1
     (( _was_wt )) && typeset -g _GWT_LAST="$_start_pwd"
+  }
+
+  # Like gwte (cd to main repo root from a linked worktree) but also removes
+  # the worktree we just exited. Destroy semantics mirror gwtd: confirm when
+  # dirty or has unpushed commits, run .gwt-predelete first, prune empty
+  # parent dirs under .worktrees/.
+  function gwtc {
+    in_git_repo || { echo "gwtc: not in a git repo"; return 1; }
+    local _main
+    _main=$(_git_main_root) || { echo "gwtc: cannot determine main repo root"; return 1; }
+    if [[ "$_main" == "$_git_root" ]]; then
+      echo "gwtc: not in a linked worktree — nothing to clean"
+      return 1
+    fi
+    local _wt="$_git_root"
+    cd "$_main" || return 1
+
+    local -a _msgs=()
+    _worktree_is_dirty "$_wt" && _msgs+=("uncommitted changes")
+    _worktree_has_unpushed "$_wt" && _msgs+=("unpushed commits")
+    local _force=""
+    if (( ${#_msgs[@]} )); then
+      local _why=${(j:, :)_msgs}
+      _confirm_destructive "Worktree '$_wt' has $_why — destroy?" || return 0
+      _force="--force"
+    fi
+    if ! _gwt_predelete "$_wt" "$_main"; then
+      _confirm_destructive "predelete hook failed — destroy '$_wt' anyway?" || return 0
+    fi
+    git worktree remove ${_force} "$_wt" || return 1
+    git worktree prune --expire now >/dev/null 2>&1
+
+    local _wt_root="$_main/.worktrees"
+    local _parent="${_wt:h}"
+    while [[ "$_parent" == "$_wt_root"/* ]]; do
+      rmdir "$_parent" 2>/dev/null || break
+      _parent="${_parent:h}"
+    done
   }
 
   # Scaffold .gwt-postcreate and .gwt-predelete in the repo root if missing,
