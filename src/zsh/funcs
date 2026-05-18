@@ -57,6 +57,25 @@ function _git_main_root {
   fi
 }
 
+# Remove a worktree, then make sure both git metadata and the on-disk path
+# are gone. `git worktree remove` can leave the directory behind when files
+# are held open by background processes (e.g. _gwt_postcreate still running
+# npm/composer when a claude exit triggers gwtc). Fall back to rm -rf so the
+# next `git worktree add <path>` doesn't refuse on "path already exists".
+# $1 worktree path, $2 optional flag (e.g. --force). Returns 0 if path gone.
+function _gwt_force_remove {
+  local _wt="$1" _flag="$2"
+  [[ -z "$_wt" ]] && return 1
+  if [[ -n "$_flag" ]]; then
+    git worktree remove "$_flag" "$_wt" 2>/dev/null
+  else
+    git worktree remove "$_wt" 2>/dev/null
+  fi
+  [[ -e "$_wt" ]] && rm -rf "$_wt" 2>/dev/null
+  git worktree prune --expire now >/dev/null 2>&1
+  [[ ! -e "$_wt" ]]
+}
+
 # Remove the previous worktree if we've moved out of it. Caller must have
 # already verified it was clean before the switch. Skipped if the worktree
 # has commits that aren't on its upstream — those would be silently lost.
@@ -74,11 +93,7 @@ function _gwt_remove_if_clean {
     echo "gwt: keeping $_prev (predelete hook failed)"
     return 0
   fi
-  (
-    if git worktree remove "$_prev" 2>/dev/null; then
-      git worktree prune --expire now >/dev/null 2>&1
-    fi
-  ) &!
+  ( _gwt_force_remove "$_prev" >/dev/null 2>&1 ) &!
 }
 
 # Emit one "<path>\t<branch>" line per linked worktree on a branch.
@@ -413,6 +428,25 @@ function _gwt_attach {
   local _main=$(_git_main_root) || _main="$_git_root"
   local _wt_path="$_main/.worktrees/$_branch"
   mkdir -p "${_wt_path:h}"
+
+  # Orphaned worktree dir (e.g. previous `git worktree remove` rm'd metadata
+  # but files were held open by a background job): try to repair before
+  # falling through, since `git worktree add` would otherwise refuse.
+  if [[ -e "$_wt_path" && -f "$_wt_path/.git" ]]; then
+    if git -C "$_main" worktree repair "$_wt_path" 2>/dev/null \
+       && git -C "$_main" worktree list --porcelain 2>/dev/null | grep -qxF "worktree $_wt_path"; then
+      cd "$_wt_path" || return 1
+      echo "gwt: recovered orphaned worktree at $_wt_path"
+      _gwt_link_files "$_main" "$_wt_path"
+      return 0
+    fi
+  fi
+  if [[ -e "$_wt_path" ]]; then
+    echo "gwt: $_wt_path exists but is not a tracked worktree" >&2
+    echo "     remove it manually and retry: rm -rf $_wt_path" >&2
+    return 1
+  fi
+
   git worktree add "$_wt_path" "$_branch" || return 1
   cd "$_wt_path" || return 1
   _gwt_link_files "$_main" "$_wt_path"
@@ -1136,8 +1170,7 @@ if are_binary git fzf; then
     if ! _gwt_predelete "$worktree_path" "$repo_root"; then
       _confirm_destructive "predelete hook failed — destroy '$worktree_path' anyway?" || return 0
     fi
-    git worktree remove ${_force} "$worktree_path" || return 1
-    git worktree prune --expire now >/dev/null 2>&1
+    _gwt_force_remove "$worktree_path" "$_force" || return 1
 
     # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
     # removing feature/foo).
@@ -1201,8 +1234,7 @@ if are_binary git fzf; then
       [[ -t 0 ]] || return 0
       _confirm_destructive "predelete hook failed — destroy '$_wt' anyway?" || return 0
     fi
-    git worktree remove "$_wt" || return 1
-    git worktree prune --expire now >/dev/null 2>&1
+    _gwt_force_remove "$_wt" || return 1
 
     local _wt_root="$_main/.worktrees"
     local _parent="${_wt:h}"
