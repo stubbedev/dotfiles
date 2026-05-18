@@ -80,8 +80,8 @@ gestures {
 }
 
 cursor {
-    xcursor-theme "Vimix-cursors"
-    xcursor-size 24
+    xcursor-theme "@XCURSOR_THEME@"
+    xcursor-size @XCURSOR_SIZE@
 }
 
 hotkey-overlay {
@@ -103,6 +103,14 @@ environment {
     ELECTRON_OZONE_PLATFORM_HINT "auto"
 
     COLOR_SCHEME "prefer-dark"
+
+    // Cursor — single source of truth: constants.theme.cursor/cursorSize.
+    // Niri reads xcursor-theme/size from cursor{} above for its own cursor;
+    // these env vars propagate to spawned children so GTK/Qt apps and any
+    // hotplug-recovery scripts (parity with hypr/scripts/monitor.toggle.sh)
+    // see the same theme.
+    XCURSOR_THEME "@XCURSOR_THEME@"
+    XCURSOR_SIZE "@XCURSOR_SIZE@"
 }
 
 // Native xwayland-satellite integration: niri creates the X11 socket,
