@@ -418,8 +418,11 @@ function _gwt_attach {
   _gwt_postcreate "$_wt_path" "$_main"
 }
 
-# Interactive branch-name builder. Echoes final name on stdout; sets
-# `_branch_base_out` to the chosen base. Returns 1 on cancel.
+# Interactive branch-name builder. Echoes "<name>\t<base>" on stdout — both
+# fields are produced inside `$(...)` so callers must parse the tab-separated
+# result; an earlier version stashed the base in a global and lost it to the
+# command-substitution subshell, silently basing new branches on HEAD.
+# Returns 1 on cancel.
 #   $1 initial token (may be empty); $2 default-base label for the prompt.
 function _branch_wizard {
   local _initial="$1" _label="$2"
@@ -431,10 +434,10 @@ function _branch_wizard {
     [[ -z "$_name" ]] && return 1
   fi
 
-  local _final=""
+  local _final="" _base=""
   local _tag_mask='^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$'
   if [[ $_name =~ $_tag_mask ]]; then
-    _branch_base_out=$(_default_branch) || return 1
+    _base=$(_default_branch) || return 1
     _final="release/$_name"
   else
     local _prefix=$(echo -e "feature\nbugfix\nhotfix" |
@@ -442,9 +445,9 @@ function _branch_wizard {
     [[ -z "$_prefix" ]] && return 1
 
     if [[ "$_prefix" == "hotfix" ]]; then
-      _branch_base_out=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 1
+      _base=$(_pick_base_branch "(Enter: select base branch for hotfix)> ") || return 1
     else
-      _branch_base_out=$(_default_branch) || return 1
+      _base=$(_default_branch) || return 1
     fi
 
     local _suffix=$(fzf --height=~1 --no-info --print-query \
@@ -462,7 +465,7 @@ function _branch_wizard {
     echo "Invalid branch name: $_final" >&2
     return 1
   fi
-  echo "$_final"
+  printf '%s\t%s\n' "$_final" "$_base"
 }
 
 if are_binary git bat fzf; then
@@ -599,9 +602,10 @@ if are_binary git bat fzf; then
       return 0
     fi
 
-    local new_branch_name
-    new_branch_name=$(_branch_wizard "$branch_name" "") || return 0
-    _checkout_branch_or_worktree "$new_branch_name" create "$_branch_base_out"
+    local _wiz_out new_branch_name new_branch_base
+    _wiz_out=$(_branch_wizard "$branch_name" "") || return 0
+    IFS=$'\t' read -r new_branch_name new_branch_base <<<"$_wiz_out"
+    _checkout_branch_or_worktree "$new_branch_name" create "$new_branch_base"
   }
 
   function ga {
@@ -1025,8 +1029,9 @@ if are_binary git fzf; then
           _base=$(_default_branch) || return 0
         fi
       else
-        _new_name=$(_branch_wizard "$_new_name" "") || return 0
-        _base=$_branch_base_out
+        local _wiz_out
+        _wiz_out=$(_branch_wizard "$_new_name" "") || return 0
+        IFS=$'\t' read -r _new_name _base <<<"$_wiz_out"
       fi
       # Wizard may have produced an already-existing branch — handle the
       # swap-to-existing case the same way `_checkout_branch_or_worktree`
