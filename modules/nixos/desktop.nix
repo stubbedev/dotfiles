@@ -22,6 +22,16 @@ _: {
         platformTheme = "qt5ct";
       };
 
+      # Route GTK apps (notably Firefox) through their Wayland backends so
+      # libinput touchpad gestures — two-finger scroll, pinch-zoom, swipe
+      # back/forward — reach the application instead of getting swallowed
+      # by XWayland's lack of XInput2 gesture support. MOZ_USE_XINPUT2
+      # covers the X11-fallback path.
+      environment.sessionVariables = {
+        MOZ_ENABLE_WAYLAND = "1";
+        MOZ_USE_XINPUT2 = "1";
+      };
+
       # Provides the Catppuccin-Mocha-Mauve Kvantum theme files.
       # The Qt5 plugin (libsForQt5.qtstyleplugin-kvantum) and Qt6 plugin
       # (kdePackages.qtstyleplugin-kvantum) are installed via home-manager

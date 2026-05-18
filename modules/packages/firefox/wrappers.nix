@@ -53,6 +53,15 @@ _: {
         # policy it can set any pref. browser.tabs.inTitlebar = 0 forces the
         # system title bar (what Customize > Title Bar toggles); lockPref so
         # it can't be switched off.
+        #
+        # Touchpad: MOZ_ENABLE_WAYLAND routes Firefox through GTK's Wayland
+        # backend so libinput gesture events (two-finger scroll, pinch,
+        # horizontal swipe) reach the browser. Under XWayland those events
+        # are swallowed unless MOZ_USE_XINPUT2 is set, so set both for the
+        # X11-fallback path. apz.gtk.touchpad_pinch.enabled enables
+        # pinch-to-zoom on the GTK/Wayland path; browser.gesture.swipe.*
+        # binds horizontal swipes to history navigation (default values,
+        # re-asserted in case a profile overrode them).
         home.packages = [
           (homeLib.mkWrappedPackage {
             pkg = pkgs.firefox.override {
@@ -68,7 +77,17 @@ _: {
               };
               extraPrefs = ''
                 lockPref("browser.tabs.inTitlebar", 0);
+                lockPref("apz.allow_zooming", true);
+                lockPref("apz.gtk.touchpad_pinch.enabled", true);
+                lockPref("apz.gtk.kinetic_scroll.enabled", true);
+                lockPref("widget.disable-swipe-tracker", false);
+                lockPref("browser.gesture.swipe.left", "Browser:BackOrBackDuplicate");
+                lockPref("browser.gesture.swipe.right", "Browser:ForwardOrForwardDuplicate");
               '';
+            };
+            env = {
+              MOZ_ENABLE_WAYLAND = "1";
+              MOZ_USE_XINPUT2 = "1";
             };
             unset = [ "MOZ_LEGACY_PROFILES" ];
             prefix.LD_LIBRARY_PATH = "${pkgs.libpng.out}/lib";
