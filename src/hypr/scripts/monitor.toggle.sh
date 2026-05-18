@@ -50,9 +50,17 @@ listen_events() {
     while IFS= read -r line; do
       case "$line" in
         monitoradded*|monitorremoved*)
+          # Debounce: ignore events fired within 2s of our last action to avoid
+          # the reload→monitoradded→reload loop (hyprctl reload re-applies all
+          # monitor keywords, which Hyprland re-emits as monitor events).
+          now=$(date +%s)
+          if [ $((now - ${last_action:-0})) -lt 2 ]; then
+            continue
+          fi
           apply_toggle
-          hyprctl reload >/dev/null 2>&1 || true
+          hyprctl setcursor Vimix-cursors 24 >/dev/null 2>&1 || true
           systemctl --user restart waybar.service || true
+          last_action=$(date +%s)
           ;;
         *) ;;
       esac
