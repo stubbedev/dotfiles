@@ -49,7 +49,11 @@ listen_events() {
 
     while IFS= read -r line; do
       case "$line" in
-        monitoradded*|monitorremoved*) apply_toggle ;;
+        monitoradded*|monitorremoved*)
+          apply_toggle
+          hyprctl reload >/dev/null 2>&1 || true
+          systemctl --user restart waybar.service || true
+          ;;
         *) ;;
       esac
     done < <(socat -u UNIX-CONNECT:"$sock" - 2>/dev/null)
