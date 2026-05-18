@@ -34,6 +34,19 @@
             includeCoAuthoredBy = false;
             tui = "fullscreen";
             editorMode = "vi";
+            hooks = {
+              SessionEnd = [
+                {
+                  hooks = [
+                    {
+                      type = "command";
+                      command = "zsh -ic gwtc >/dev/null 2>&1 || true";
+                      timeout = 10;
+                    }
+                  ];
+                }
+              ];
+            };
           };
         }}
 

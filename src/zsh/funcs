@@ -21,7 +21,7 @@ typeset -gA _git_shorthand_docs=(
   gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch)'
   gwtd 'remove a git worktree'
   gwte 'cd to main repo root (exit linked worktree); does not remove the worktree'
-  gwtc 'cd to main repo root and remove the linked worktree we just exited'
+  gwtc 'cd to main repo root and remove the linked worktree we just exited (skips if dirty/unpushed)'
   gwth 'scaffold .gwt-postcreate / .gwt-predelete hooks in repo root and open in $EDITOR'
 )
 
@@ -1166,9 +1166,11 @@ if are_binary git fzf; then
   }
 
   # Like gwte (cd to main repo root from a linked worktree) but also removes
-  # the worktree we just exited. Destroy semantics mirror gwtd: confirm when
-  # dirty or has unpushed commits, run .gwt-predelete first, prune empty
-  # parent dirs under .worktrees/.
+  # the worktree we just exited. Skips silently when the worktree has
+  # uncommitted changes or unpushed commits — never destroys work. Runs
+  # .gwt-predelete before removal and prunes empty parent dirs under
+  # .worktrees/. Non-interactive (no tty on stdin, e.g. Claude Code SessionEnd
+  # hook) also skips the cd-to-main so the calling shell isn't disturbed.
   function gwtc {
     in_git_repo || { echo "gwtc: not in a git repo"; return 1; }
     local _main
@@ -1178,21 +1180,28 @@ if are_binary git fzf; then
       return 1
     fi
     local _wt="$_git_root"
-    cd "$_main" || return 1
 
+    # Skip on dirty / unpushed — never destroy work. Non-interactive (e.g.
+    # Claude Code SessionEnd hook) also skips the cd-to-main so the parent
+    # shell isn't disturbed.
     local -a _msgs=()
     _worktree_is_dirty "$_wt" && _msgs+=("uncommitted changes")
     _worktree_has_unpushed "$_wt" && _msgs+=("unpushed commits")
-    local _force=""
     if (( ${#_msgs[@]} )); then
-      local _why=${(j:, :)_msgs}
-      _confirm_destructive "Worktree '$_wt' has $_why — destroy?" || return 0
-      _force="--force"
+      if [[ -t 0 ]]; then
+        local _why=${(j:, :)_msgs}
+        echo "gwtc: keeping '$_wt' ($_why)"
+      fi
+      return 0
     fi
+
+    cd "$_main" || return 1
+
     if ! _gwt_predelete "$_wt" "$_main"; then
+      [[ -t 0 ]] || return 0
       _confirm_destructive "predelete hook failed — destroy '$_wt' anyway?" || return 0
     fi
-    git worktree remove ${_force} "$_wt" || return 1
+    git worktree remove "$_wt" || return 1
     git worktree prune --expire now >/dev/null 2>&1
 
     local _wt_root="$_main/.worktrees"
