@@ -20,6 +20,7 @@ typeset -gA _git_shorthand_docs=(
   gsp 'interactive stash pop (fzf select from stash list)'
   gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch)'
   gwtd 'remove a git worktree'
+  gwte 'cd to main repo root (exit linked worktree); does not remove the worktree'
   gwth 'scaffold .gwt-postcreate / .gwt-predelete hooks in repo root and open in $EDITOR'
 )
 
@@ -1140,6 +1141,22 @@ if are_binary git fzf; then
       rmdir "$_parent" 2>/dev/null || break
       _parent="${_parent:h}"
     done
+  }
+
+  # cd back to the main repo root (the non-worktree checkout). From a linked
+  # worktree this exits to main; from a subdir of any worktree it surfaces to
+  # that checkout's root. The worktree itself is left intact — pair with gwtd
+  # if you also want to remove it.
+  function gwte {
+    in_git_repo || { echo "gwte: not in a git repo"; return 1; }
+    local _main
+    _main=$(_git_main_root) || { echo "gwte: cannot determine main repo root"; return 1; }
+    [[ "$PWD" == "$_main" ]] && return 0
+    local _start_pwd="$PWD"
+    local _was_wt=0
+    _in_linked_worktree && _was_wt=1
+    cd "$_main" || return 1
+    (( _was_wt )) && typeset -g _GWT_LAST="$_start_pwd"
   }
 
   # Scaffold .gwt-postcreate and .gwt-predelete in the repo root if missing,

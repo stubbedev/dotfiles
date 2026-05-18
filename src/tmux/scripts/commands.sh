@@ -56,6 +56,16 @@ session_init() {
   tmux set-option -q -t "$target" @stubbe_has_git "$has_git"
 }
 
+branch_ticket() {
+  local path="$1"
+  [ -z "$path" ] && return
+  local branch
+  branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null) || return
+  local ticket
+  ticket=$(printf '%s' "$branch" | grep -oE '[A-Z]+-[0-9]+' | head -1)
+  [ -n "$ticket" ] && printf ' %s' "$ticket"
+}
+
 set_ssh_flag() {
   local sess="${1:-$(tmux display-message -p '#S')}"
   local flag=0
@@ -427,6 +437,7 @@ case "$1" in
 "move_pane_to_window")      move_pane_to_window "$2" ;;
 "session_init")             session_init ;;
 "set_ssh_flag")             set_ssh_flag "$2" ;;
+"branch_ticket")            branch_ticket "$2" ;;
 "reload")                   reload ;;
 "pending_animation")        pending_animation "$2" "$3" "$4" ;;
 esac
