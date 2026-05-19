@@ -125,7 +125,44 @@ toggle_claude_window() {
     return
   fi
 
-  toggle_window "claude" tmux-claude
+  local current_path worktree current_window
+  current_path=$(tmux display-message -p -F "#{pane_current_path}")
+  current_window=$(tmux display-message -p '#W')
+  worktree=$(git -C "$current_path" rev-parse --show-toplevel 2>/dev/null)
+
+  if [ -z "$worktree" ]; then
+    toggle_window "claude" tmux-claude
+    return
+  fi
+
+  if [ "$current_window" = "claude" ]; then
+    tmux last-window 2>/dev/null || true
+    return 0
+  fi
+
+  local target sess win wname wpath wt
+  while IFS=$'\t' read -r sess win wname wpath; do
+    [ "$wname" = "claude" ] || continue
+    wt=$(git -C "$wpath" rev-parse --show-toplevel 2>/dev/null)
+    if [ "$wt" = "$worktree" ]; then
+      target="${sess}:${win}"
+      break
+    fi
+  done < <(tmux list-windows -a -F '#{session_name}	#{window_index}	#{window_name}	#{pane_current_path}')
+
+  if [ -n "$target" ]; then
+    local current_session target_session
+    current_session=$(tmux display-message -p '#S')
+    target_session="${target%%:*}"
+    if [ "$target_session" = "$current_session" ]; then
+      tmux select-window -t "$target"
+    else
+      tmux switch-client -t "$target"
+    fi
+    return 0
+  fi
+
+  tmux new-window -c "$current_path" -n "claude" tmux-claude
 }
 
 pane_is_pinned() {
