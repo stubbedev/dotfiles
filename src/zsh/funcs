@@ -1381,16 +1381,17 @@ if is_binary direnv; then
       off)
         direnv revoke 2>/dev/null
         if [[ -f .envrc ]]; then
-          # Remove a .envrc we authored ourselves. Match either the
-          # current marker or the legacy `dotenv` line so old projects
-          # clean up cleanly.
-          local content
-          content="$(<.envrc)"
-          if [[ "$content" == "$marker" || "$content" == "dotenv" ]]; then
+          # Strip the marker lines we author (current + legacy). If
+          # anything else remains, keep the file with the stripped
+          # contents; otherwise remove it.
+          local _remaining
+          _remaining=$(grep -vxF -e "$marker" -e 'dotenv' .envrc || true)
+          if [[ -z "$_remaining" ]]; then
             rm -f .envrc
             echo "denv: removed .envrc"
           else
-            echo "denv: .envrc has custom content, not deleting" >&2
+            print -r -- "$_remaining" > .envrc
+            echo "denv: stripped marker from .envrc (kept custom content)"
           fi
         fi
         ;;
