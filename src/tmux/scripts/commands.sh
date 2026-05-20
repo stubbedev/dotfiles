@@ -69,7 +69,14 @@ branch_ticket() {
 set_ssh_flag() {
   local sess="${1:-$(tmux display-message -p '#S')}"
   local flag=0
-  [[ $(tmux show-environment -t "$sess" SSH_CONNECTION 2>/dev/null) == SSH_CONNECTION=* ]] && flag=1
+  local pid
+  while IFS= read -r pid; do
+    [ -z "$pid" ] && continue
+    if tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -q '^SSH_CONNECTION='; then
+      flag=1
+      break
+    fi
+  done < <(tmux list-clients -t "$sess" -F '#{client_pid}' 2>/dev/null)
   tmux set-option -q -t "$sess" @stubbe_ssh "$flag"
 }
 
