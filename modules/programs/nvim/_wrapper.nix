@@ -18,7 +18,7 @@
     "code"
   ];
 
-  config.extraPackages = with pkgs; [
+  config.runtimePkgs = with pkgs; [
     # ── LSPs ────────────────────────────────────────────────
     # Core / always-on
     nixd
