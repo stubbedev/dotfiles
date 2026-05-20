@@ -44,6 +44,14 @@ _: {
         # IDE toolbox (GUI app)
         (homeLib.gfx jetbrains-toolbox)
         openconnect
+
+        # Native/Rust build perf — fast linker + rustc wrapper.
+        # Used by repos whose `.cargo/config.toml` wires
+        # `linker = "clang"` + `-fuse-ld=mold`, and by `RUSTC_WRAPPER=sccache`.
+        mold
+        clang
+        sccache
+        cargo-sweep
       ];
     };
 }
