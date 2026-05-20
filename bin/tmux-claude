@@ -4,7 +4,13 @@ if ! command -v claude &>/dev/null; then
   exit 0
 fi
 
-if [[ -z "$TMUX" ]]; then
+inline=0
+if [[ "$1" == "--inline" ]]; then
+  inline=1
+  shift
+fi
+
+if [[ -z "$TMUX" || $inline -eq 1 ]]; then
   claude --dangerously-skip-permissions "$@"
 else
   tmux renamew "claude"

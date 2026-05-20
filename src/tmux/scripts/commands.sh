@@ -165,6 +165,13 @@ toggle_claude_window() {
   tmux new-window -c "$current_path" -n "claude" tmux-claude
 }
 
+claude_inline_pane() {
+  if ! command -v tmux-claude >/dev/null 2>&1; then
+    return
+  fi
+  tmux respawn-pane -k "zsh -ic 'tmux-claude --inline; exec zsh -i'"
+}
+
 pane_is_pinned() {
   [ "$(tmux show-options -t "$1" -pqv @pinned)" = "1" ]
 }
@@ -470,6 +477,7 @@ case "$1" in
 "toggle_sysmon_window")     toggle_sysmon_window ;;
 "toggle_lazydocker_window") toggle_lazydocker_window ;;
 "toggle_claude_window")     toggle_claude_window ;;
+"claude_inline_pane")       claude_inline_pane ;;
 "move_pane")                move_pane "$2" ;;
 "move_pane_to_window")      move_pane_to_window "$2" ;;
 "session_init")             session_init ;;
