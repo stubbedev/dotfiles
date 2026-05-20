@@ -1363,11 +1363,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1779297285,
-        "narHash": "sha256-zmkVkBmJxmaum9Php4Zo0mi5uFMiWW4RgJBBl72HmEg=",
+        "lastModified": 1779306095,
+        "narHash": "sha256-xoTV+ZZyZARBpOFeZ2w/M1bu9jrFZEcXaiYPGVmmXKs=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "a883747f558d14f77c30dab621849852ca30868a",
+        "rev": "8abd0c2e92b7d7533c06594608dc6893c87934cc",
         "type": "github"
       },
       "original": {
@@ -1383,11 +1383,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779290416,
-        "narHash": "sha256-lDjsI4RjSYSjhyyi9BPWUlQ3yOUf7ZBlKC/2n7SkZoY=",
+        "lastModified": 1779297405,
+        "narHash": "sha256-VFoBwH7ZjVxCnvZTb5ODRXt70sLtWMxstive0N+RS50=",
         "owner": "BirdeeHub",
         "repo": "nix-wrapper-modules",
-        "rev": "30d44d83c759e22e70f7d974f1af6e93513a836d",
+        "rev": "e7ed7a1205945befdf2e0d73ba7df91d935e5af1",
         "type": "github"
       },
       "original": {

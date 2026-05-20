@@ -49,7 +49,7 @@ _: {
         # Used by repos whose `.cargo/config.toml` wires
         # `linker = "clang"` + `-fuse-ld=mold`, and by `RUSTC_WRAPPER=sccache`.
         mold
-        clang
+        (lib.setPrio 15 clang)
         sccache
         cargo-sweep
       ];
