@@ -415,20 +415,12 @@ function _gwt_postcreate {
 function _gwt_predelete {
   local _wt="$1" _main="$2"
   [[ -z "$_wt" || -n "$GWT_NO_HOOKS" ]] && return 0
-  # Treeman ownership: full teardown (predelete hooks + DB drops +
-  # `git worktree remove`) lives in `treeman wt delete --force`. We
-  # fire that detached so the shell switch doesn't wait on slow DB
-  # drops; the disowned subshell logs to `$GWT_MAIN/.treeman-
-  # predelete-<basename>.log` and survives the calling shell exiting.
-  # `_gwt_force_remove` still runs (also backgrounded) — under the
-  # race, whichever finishes first wins; `git worktree prune` cleans
-  # up afterwards.
+  # Treeman ownership (v0.3.0+): `wt delete` itself returns in <2s
+  # via the daemon's WorktreeTeardown RPC (gated by the repo's
+  # `worktrees.async_delete: true`). No zsh-side bg subshell needed.
   if _treeman_active "$_main"; then
-    local _bg_log="$_main/.treeman-predelete-${_wt:t}.log"
-    (
-      treeman wt delete "$_wt" --force --repo "$_main"
-    ) </dev/null >"$_bg_log" 2>&1 &!
-    return 0
+    treeman wt delete "$_wt" --force --repo "$_main"
+    return $?
   fi
   [[ -n "$_main" && -x "$_main/.gwt-predelete" ]] || return 0
   ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-predelete" </dev/null )
