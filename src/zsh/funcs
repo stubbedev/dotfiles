@@ -315,6 +315,12 @@ function _gwt_link_files {
 function _gwt_denv_on {
   local _wt="$1"
   (( $+functions[denv] )) || return 0
+  # Only enable when the linked .envrc is denv-authored. Bare existence
+  # isn't enough — a hand-written .envrc shouldn't be touched, and repos
+  # without .envrc at all shouldn't get one created.
+  local _envrc="$_wt/.envrc"
+  [[ -e "$_envrc" || -L "$_envrc" ]] || return 0
+  grep -qxFe 'dotenv_if_exists' -e 'dotenv' "$_envrc" 2>/dev/null || return 0
   ( cd "$_wt" 2>/dev/null && denv on >/dev/null 2>&1 )
 }
 
