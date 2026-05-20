@@ -34,6 +34,10 @@
     # against nixpkgs-unstable; following our nixpkgs causes cache misses.
     fenix.url = "github:nix-community/fenix";
     srv.url = "github:stubbedev/srv";
+    treeman = {
+      url = "github:stubbedev/treeman";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     cship = {
       url = "github:stephenleo/cship";
       flake = false;

@@ -20,7 +20,7 @@
           homeLib
           self
           ;
-        inherit (inputs) hyprland hy3 fenix srv;
+        inherit (inputs) hyprland hy3 fenix srv treeman;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
       };
     };

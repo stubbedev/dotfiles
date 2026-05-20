@@ -1,44 +1,42 @@
 #!/usr/bin/env bash
 
-# React to display and lid events by reapplying the monitor config.
+# React to display and lid events by reloading Hyprland's config.
 #
 # Hyprland's built-in monitor-rule reapplication on hotplug is unreliable
-# (notably on Thunderbolt dock unplug): outputs end up in a stuck single-color
-# state, geometry doesn't match the rule, or the workspace lands on a now-gone
-# output. We work around that by re-feeding every "monitor =" line from
-# monitors.conf back to Hyprland via `hyprctl keyword monitor` on each event.
-# Hyprland recomputes geometry from scratch and the output recovers.
+# (notably on Thunderbolt dock unplug): waybar surfaces stay bound to the
+# departed output (renders as solid color), the cursor reverts to the
+# default theme, and per-monitor scale/position can drift from monitors.conf.
+# `hyprctl reload` rebinds layer-shell surfaces, reissues setcursor, and
+# re-applies every `monitor =` rule in one shot — the only command observed
+# to recover the session without restarting Hyprland.
+#
+# Why udev, not socket2:
+#   Hyprland's own monitoradded/monitorremoved events on socket2 are
+#   well-known to fire unreliably — see hyprwm/Hyprland#1341 ("~10% of
+#   the time") and discussion #5644 which recommends udev DRM events as
+#   the canonical hotplug signal. udev sees the kernel-level HOTPLUG=1
+#   uevent for every DRM card connector change, with no compositor in
+#   the path. The same script remains usable on any Wayland compositor.
+#
+# Loop guard:
+#   `hyprctl reload` itself doesn't emit udev events, so unlike the
+#   previous socket2 design we have no inherent feedback loop. The 1s
+#   debounce remains to collapse the short udev burst the kernel emits
+#   when multiple connectors flap together (common on dock unplug).
 #
 # Usage:
 #   monitor.toggle.sh           one-shot (used by the lid switch bind)
-#   monitor.toggle.sh daemon    long-running listener; runs the same logic
-#                               on Hyprland monitoradded/monitorremoved events
+#   monitor.toggle.sh daemon    long-running listener; reacts to DRM
+#                               hotplug events from udev
 
-MONITORS_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
-
-# Re-feed every "monitor = <spec>" line back to hyprctl. Idempotent in
-# steady state — Hyprland skips no-op changes — but each real change does
-# re-emit monitoradded/monitorremoved, so callers must debounce.
-apply_monitors() {
-  [ -r "$MONITORS_CONF" ] || return 0
-
-  local line spec
-  while IFS= read -r line; do
-    line="${line%%#*}"
-    line="${line#"${line%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
-    case "$line" in
-      monitor*=*)
-        spec="${line#*=}"
-        spec="${spec#"${spec%%[![:space:]]*}"}"
-        hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
-        ;;
-    esac
-  done < "$MONITORS_CONF"
+# Re-apply Hyprland's full config. Reloads monitors, layer-shell, cursor.
+apply_reload() {
+  hyprctl reload >/dev/null 2>&1 || true
 }
 
-# Disable the built-in panel when the lid is closed. Re-enable is handled
-# implicitly by apply_monitors above (it reapplies the eDP rule from config).
+# Disable the built-in panel when the lid is closed. The open case is
+# handled implicitly by apply_reload above, which re-applies the eDP rule
+# from monitors.conf and brings the panel back to its configured state.
 apply_lid() {
   # ACPI lid bind fires before /proc/acpi/button/lid/*/state updates on some
   # hardware (notably when docked via Thunderbolt). Brief sleep avoids reading
@@ -57,42 +55,29 @@ apply_lid() {
 }
 
 react() {
-  apply_monitors
+  apply_reload
   apply_lid
 }
 
 listen_events() {
-  local sock="${XDG_RUNTIME_DIR}/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock"
   local last_action=0
 
   # Initial sync so reality matches config after a Hyprland (re)start.
   react
 
-  while true; do
-    if [ ! -S "$sock" ]; then
-      sleep 1
+  # udevadm emits one HOTPLUG=1 property line per DRM hotplug uevent.
+  # Process substitution keeps `last_action` in this shell rather than
+  # the subshell that a pipe would create.
+  while IFS= read -r line; do
+    [ "$line" = "HOTPLUG=1" ] || continue
+
+    now=$(date +%s)
+    if [ $((now - last_action)) -lt 1 ]; then
       continue
     fi
-
-    while IFS= read -r line; do
-      case "$line" in
-        monitoradded*|monitorremoved*)
-          # Debounce: our own apply_monitors call re-emits monitor events for
-          # every rule it changes. Without this window we'd recurse on every
-          # dock plug/unplug. 2s comfortably covers the cascade.
-          now=$(date +%s)
-          if [ $((now - last_action)) -lt 2 ]; then
-            continue
-          fi
-          react
-          last_action=$(date +%s)
-          ;;
-        *) ;;
-      esac
-    done < <(socat -u UNIX-CONNECT:"$sock" - 2>/dev/null)
-
-    sleep 1
-  done
+    react
+    last_action=$(date +%s)
+  done < <(udevadm monitor --property --udev --subsystem-match=drm 2>/dev/null)
 }
 
 if [ "${1:-}" = "daemon" ]; then

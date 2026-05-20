@@ -85,6 +85,11 @@ _: {
           default = true;
           description = "Enable srv site management tool.";
         };
+        treeman = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable treeman per-worktree DB orchestrator + treemand systemd user daemon.";
+        };
         php = lib.mkOption {
           type = lib.types.bool;
           default = true;
