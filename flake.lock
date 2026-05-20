@@ -1266,7 +1266,7 @@
       },
       "locked": {
         "lastModified": 1779083727,
-        "narHash": "sha256-gAmlIf+KpORsPksVWtFBHZXNOgNI1Z/vMsdP+IW5ipM=",
+        "narHash": "sha256-hoVj25H/7nTrS9lX2AMoBlFq6KG1l5Ju3eFaqHUvynI=",
         "owner": "stubbedev",
         "repo": "srv",
         "rev": "644e57f99fcd2e3a8269a40c909eb9dd5e3cdf54",
@@ -1363,11 +1363,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1779294606,
-        "narHash": "sha256-e7IimbhQm9VQdAe/6j3kdxSJDaLYVBffXMOU1BWhO9Y=",
+        "lastModified": 1779297285,
+        "narHash": "sha256-zmkVkBmJxmaum9Php4Zo0mi5uFMiWW4RgJBBl72HmEg=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "347b292a07bfe522775caaef5ba6997ff9950a94",
+        "rev": "a883747f558d14f77c30dab621849852ca30868a",
         "type": "github"
       },
       "original": {

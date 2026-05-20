@@ -416,12 +416,19 @@ function _gwt_predelete {
   local _wt="$1" _main="$2"
   [[ -z "$_wt" || -n "$GWT_NO_HOOKS" ]] && return 0
   # Treeman ownership: full teardown (predelete hooks + DB drops +
-  # `git worktree remove`) lives in `treeman wt delete --force`.
-  # Returns the daemon's exit code so _gwt_remove_if_clean's caller
-  # can still bail on failure.
+  # `git worktree remove`) lives in `treeman wt delete --force`. We
+  # fire that detached so the shell switch doesn't wait on slow DB
+  # drops; the disowned subshell logs to `$GWT_MAIN/.treeman-
+  # predelete-<basename>.log` and survives the calling shell exiting.
+  # `_gwt_force_remove` still runs (also backgrounded) — under the
+  # race, whichever finishes first wins; `git worktree prune` cleans
+  # up afterwards.
   if _treeman_active "$_main"; then
-    treeman wt delete "$_wt" --force --repo "$_main"
-    return $?
+    local _bg_log="$_main/.treeman-predelete-${_wt:t}.log"
+    (
+      treeman wt delete "$_wt" --force --repo "$_main"
+    ) </dev/null >"$_bg_log" 2>&1 &!
+    return 0
   fi
   [[ -n "$_main" && -x "$_main/.gwt-predelete" ]] || return 0
   ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-predelete" </dev/null )
@@ -434,17 +441,34 @@ function _gwt_create {
   local _main=$(_git_main_root) || _main="$_git_root"
   local _wt_path="$_main/.worktrees/$_branch"
   mkdir -p "${_wt_path:h}"
-  # Treeman owns the create end-to-end: git worktree add → symlinks
-  # (`worktrees.links`) → env scoping (`env_scoping.patches`) →
-  # store register → hooks.postcreate → prepare (DB ensure + dump +
-  # migrate + paratest clones). Pass `--path` so the dotfiles
+  # Treeman owns the create end-to-end. To keep the shell responsive
+  # we split it into two phases:
+  #
+  #   FOREGROUND (sync; fast — typically <2s):
+  #     git worktree add → symlinks (`worktrees.links`) → env scoping
+  #     (`env_scoping.patches`) → store register.
+  #
+  #   BACKGROUND (detached; slow — composer + paratest clones can
+  #   take 30s+):
+  #     hooks.postcreate → prepare (DB ensure + dump-load + migrate +
+  #     paratest clones).
+  #
+  # Output of the background tail lands in `.treeman-postcreate.log`
+  # inside the worktree. Pass `--path` so the dotfiles
   # `.worktrees/<branch>` convention is honored regardless of the
   # repo's `worktrees.root` config.
   if _treeman_active "$_main"; then
-    local -a _create_args=(wt create "$_branch" --path "$_wt_path" --repo "$_main")
+    local -a _create_args=(wt create "$_branch" --path "$_wt_path" --repo "$_main" --skip-hooks --skip-prepare)
     [[ -n "$_base" ]] && _create_args+=(--from "$_base")
     treeman "${_create_args[@]}" || return 1
     cd "$_wt_path" || return 1
+    local _bg_log="$_wt_path/.treeman-postcreate.log"
+    echo "gwt: treeman postcreate + prepare in bg → tail -f $_bg_log"
+    (
+      cd "$_wt_path" \
+        && treeman hook run postcreate --worktree "$_wt_path" \
+        && treeman prepare --worktree "$_wt_path"
+    ) </dev/null >"$_bg_log" 2>&1 &!
     return 0
   fi
   local _base_ref=""
@@ -476,11 +500,15 @@ function _gwt_attach {
       echo "gwt: recovered orphaned worktree at $_wt_path"
       if _treeman_active "$_main"; then
         # Adopt the recovered path into the treeman registry; re-run
-        # the symlink/env/hook/prepare pass so its state matches what
-        # `wt create` would produce.
+        # the postcreate hooks + prepare in bg so its state matches
+        # a fresh `wt create` without blocking the shell switch.
         treeman wt register "$_wt_path" --branch "$_branch" --repo "$_main" >/dev/null 2>&1 || true
-        treeman hook run postcreate --worktree "$_wt_path" 2>/dev/null || true
-        treeman prepare --worktree "$_wt_path" 2>/dev/null || true
+        local _bg_log="$_wt_path/.treeman-postcreate.log"
+        echo "gwt: treeman postcreate + prepare in bg → tail -f $_bg_log"
+        (
+          treeman hook run postcreate --worktree "$_wt_path"
+          treeman prepare --worktree "$_wt_path"
+        ) </dev/null >"$_bg_log" 2>&1 &!
       else
         _gwt_link_files "$_main" "$_wt_path"
       fi
@@ -493,11 +521,18 @@ function _gwt_attach {
     return 1
   fi
 
-  # Existing branch — let treeman own the full attach (it skips the
-  # `-b` flag when the branch already exists, then runs hooks + prepare).
+  # Existing branch — treeman wt create skips the `-b` flag when the
+  # branch already exists. Same fg/bg split as `_gwt_create`.
   if _treeman_active "$_main"; then
-    treeman wt create "$_branch" --path "$_wt_path" --repo "$_main" || return 1
+    treeman wt create "$_branch" --path "$_wt_path" --repo "$_main" --skip-hooks --skip-prepare || return 1
     cd "$_wt_path" || return 1
+    local _bg_log="$_wt_path/.treeman-postcreate.log"
+    echo "gwt: treeman postcreate + prepare in bg → tail -f $_bg_log"
+    (
+      cd "$_wt_path" \
+        && treeman hook run postcreate --worktree "$_wt_path" \
+        && treeman prepare --worktree "$_wt_path"
+    ) </dev/null >"$_bg_log" 2>&1 &!
     return 0
   fi
 
