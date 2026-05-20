@@ -76,16 +76,6 @@ function _gwt_force_remove {
   [[ ! -e "$_wt" ]]
 }
 
-# True iff <main> declares a treeman config and the treeman binary is
-# on $PATH. When true, gwt delegates create/postcreate/predelete to
-# `treeman` so the daemon owns env scoping, DB clones, watcher
-# spawning, etc., and we don't double-fire alongside the bash
-# `.gwt-*` hooks.
-function _treeman_active {
-  local _main="$1"
-  [[ -n "$_main" && -f "$_main/.treeman.yaml" ]] && command -v treeman >/dev/null 2>&1
-}
-
 # Remove the previous worktree if we've moved out of it. Caller must have
 # already verified it was clean before the switch. Skipped if the worktree
 # has commits that aren't on its upstream — those would be silently lost.
@@ -415,13 +405,6 @@ function _gwt_postcreate {
 function _gwt_predelete {
   local _wt="$1" _main="$2"
   [[ -z "$_wt" || -n "$GWT_NO_HOOKS" ]] && return 0
-  # Treeman ownership (v0.3.0+): `wt delete` itself returns in <2s
-  # via the daemon's WorktreeTeardown RPC (gated by the repo's
-  # `worktrees.async_delete: true`). No zsh-side bg subshell needed.
-  if _treeman_active "$_main"; then
-    treeman wt delete "$_wt" --force --repo "$_main"
-    return $?
-  fi
   [[ -n "$_main" && -x "$_main/.gwt-predelete" ]] || return 0
   ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-predelete" </dev/null )
 }
@@ -433,21 +416,6 @@ function _gwt_create {
   local _main=$(_git_main_root) || _main="$_git_root"
   local _wt_path="$_main/.worktrees/$_branch"
   mkdir -p "${_wt_path:h}"
-  # Treeman owns the create end-to-end. `worktrees.async_create: true`
-  # (the default since v0.1.5) makes `wt create` perform the fast
-  # phase inline (git worktree add → symlinks → env scoping → store
-  # register) and RPC the daemon to run the slow tail (postcreate
-  # hooks + prepare) in the background — `treeman wt create` returns
-  # in <2s. Pass `--path` so the dotfiles `.worktrees/<branch>`
-  # convention is honored regardless of the repo's
-  # `worktrees.root` config.
-  if _treeman_active "$_main"; then
-    local -a _create_args=(wt create "$_branch" --path "$_wt_path" --repo "$_main")
-    [[ -n "$_base" ]] && _create_args+=(--from "$_base")
-    treeman "${_create_args[@]}" || return 1
-    cd "$_wt_path" || return 1
-    return 0
-  fi
   local _base_ref=""
   [[ -n "$_base" ]] && _base_ref=$(_resolve_base "$_base")
   if [[ -n "$_base_ref" ]]; then
@@ -475,16 +443,7 @@ function _gwt_attach {
        && git -C "$_main" worktree list --porcelain 2>/dev/null | grep -qxF "worktree $_wt_path"; then
       cd "$_wt_path" || return 1
       echo "gwt: recovered orphaned worktree at $_wt_path"
-      if _treeman_active "$_main"; then
-        # Adopt the recovered path into the treeman registry; the
-        # daemon's `WorktreeFinalize` RPC reruns postcreate + prepare
-        # in its own runtime so this shell doesn't block.
-        treeman wt register "$_wt_path" --branch "$_branch" --repo "$_main" >/dev/null 2>&1 || true
-        treeman wt finalize "$_wt_path" --repo "$_main" \
-          || echo "gwt: warn — daemon finalize failed; rerun \`treeman prepare\`"
-      else
-        _gwt_link_files "$_main" "$_wt_path"
-      fi
+      _gwt_link_files "$_main" "$_wt_path"
       return 0
     fi
   fi
@@ -492,15 +451,6 @@ function _gwt_attach {
     echo "gwt: $_wt_path exists but is not a tracked worktree" >&2
     echo "     remove it manually and retry: rm -rf $_wt_path" >&2
     return 1
-  fi
-
-  # Existing branch — treeman wt create skips the `-b` flag when the
-  # branch already exists. The daemon owns the slow tail via
-  # `worktrees.async_create`.
-  if _treeman_active "$_main"; then
-    treeman wt create "$_branch" --path "$_wt_path" --repo "$_main" || return 1
-    cd "$_wt_path" || return 1
-    return 0
   fi
 
   git worktree add "$_wt_path" "$_branch" || return 1
