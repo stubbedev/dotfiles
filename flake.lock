@@ -1363,11 +1363,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1779284620,
-        "narHash": "sha256-10JNjaJGNV+jfPgaanHVSwQhBIldm6Hjt4HUBgnhCpE=",
+        "lastModified": 1779294606,
+        "narHash": "sha256-e7IimbhQm9VQdAe/6j3kdxSJDaLYVBffXMOU1BWhO9Y=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "2aecd7387f0c4d4f76990957d4d2431a72e32850",
+        "rev": "347b292a07bfe522775caaef5ba6997ff9950a94",
         "type": "github"
       },
       "original": {
