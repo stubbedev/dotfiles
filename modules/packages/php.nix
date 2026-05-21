@@ -48,6 +48,15 @@ _: {
         upload_max_filesize = 2G
         max_input_time = 300
         max_execution_time = 300
+
+        ; Performance defaults. xdebug stays loaded but inert (xdebug.mode=off)
+        ; — set XDEBUG_MODE=debug,develop in the shell to turn it on per
+        ; session. pcov same idea: loaded but inert until a coverage run
+        ; passes -dpcov.enabled=1. opcache in CLI keeps validate_timestamps=1
+        ; so source edits are picked up immediately.
+        xdebug.mode = off
+        pcov.enabled = 0
+        opcache.enable_cli = 1
       '';
 
       # === Builders =========================================================
