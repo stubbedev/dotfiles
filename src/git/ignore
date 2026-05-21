@@ -1,4 +1,6 @@
 .worktrees
 .gwt-*
+.treeman.yaml
+.treeman/
 .envrc
 .direnv/
