@@ -65,5 +65,23 @@
           RestartSec = 2;
         };
       };
+
+      # Force a daemon restart on every `hm switch`. home-manager's
+      # sd-switch only restarts a unit when the unit file content
+      # changed — when the treeman flake input bumps the file body
+      # changes (ExecStart store path moves) and the restart fires on
+      # its own. But for in-place rebuilds (e.g. a `nix flake update`
+      # that didn't move the lock, or a manual `home-manager build`
+      # against a dirty worktree) the unit looks identical and the
+      # daemon stays on the old binary. Always-restart kicks the
+      # daemon so the running process matches the activated
+      # generation. `try-restart` is a no-op when the unit isn't
+      # active, so a host with `features.treeman = false` (or one
+      # that hasn't enabled the unit yet) doesn't error.
+      home.activation.restartTreemand = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+        if command -v systemctl >/dev/null 2>&1; then
+          systemctl --user try-restart treemand.service 2>/dev/null || true
+        fi
+      '';
     };
 }
