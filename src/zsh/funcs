@@ -1010,7 +1010,13 @@ if are_binary git fzf treeman; then
       local _why=${(j:, :)_msgs}
       _confirm_destructive "Worktree '$worktree_path' has $_why — destroy?" || return 0
     fi
-    treeman wt delete "$worktree_path" --repo "$repo_root" --foreground --force || return 1
+    # Don't pass --foreground: that bypasses the daemon RPC and runs
+    # predelete + db teardown + `git worktree remove --force` synchronously
+    # in this shell. For a Laravel checkout that means rm -rf on a
+    # 250k-file vendor/+node_modules/ tree plus N DROP DATABASE roundtrips
+    # in the foreground — which is exactly the gwtd-hangs / system-lag
+    # path we just hit. Daemon handles it in the background.
+    treeman wt delete "$worktree_path" --repo "$repo_root" --force || return 1
 
     # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
     # removing feature/foo). Treeman removes the leaf path but leaves
