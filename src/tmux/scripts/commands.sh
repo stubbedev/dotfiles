@@ -176,7 +176,9 @@ claude_inline_pane() {
   if ! command -v tmux-claude >/dev/null 2>&1; then
     return
   fi
-  tmux respawn-pane -k "zsh -ic 'tmux-claude --inline; exec zsh -i'"
+  local current_path
+  current_path=$(tmux display-message -p -F "#{pane_current_path}")
+  tmux respawn-pane -k -c "$current_path" "zsh -ic 'tmux-claude --inline; exec zsh -i'"
 }
 
 pane_is_pinned() {

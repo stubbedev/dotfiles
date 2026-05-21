@@ -27,6 +27,12 @@ _: {
       # targets configure PAM identically. `use_authtok` reuses the new
       # password pam_unix already collected earlier in the password stack.
       passwordLine="password optional pam_gnome_keyring.so use_authtok"
+      # Idempotency check uses a tolerant regex: distro-shipped stack lines
+      # like `-auth   optional        pam_gnome_keyring.so` (dash prefix,
+      # tabs, multi-space) used to escape a literal-string match and we
+      # appended a duplicate on every activation. Now we match any
+      # non-comment line in the right phase that references
+      # pam_gnome_keyring.so.
       pamFiles=(
         /etc/pam.d/login
         /etc/pam.d/ly
@@ -34,12 +40,33 @@ _: {
         /etc/pam.d/gdm
         /etc/pam.d/sddm
       )
+      hasPhase() {
+        local file="$1" phase="$2"
+        grep -qE "^[[:space:]]*-?''${phase}[[:space:]]+\S+[[:space:]]+.*pam_gnome_keyring\.so" "$file"
+      }
       for file in "''${pamFiles[@]}"; do
         [ -f "$file" ] || continue
-        grep -qF "$authLine" "$file" || printf '%s\n' "$authLine" | sudo tee -a "$file" > /dev/null
-        grep -qF "$sessionLine" "$file" || printf '%s\n' "$sessionLine" | sudo tee -a "$file" > /dev/null
-        grep -qF "$passwordLine" "$file" || printf '%s\n' "$passwordLine" | sudo tee -a "$file" > /dev/null
+        hasPhase "$file" auth     || printf '%s\n' "$authLine"     | sudo tee -a "$file" > /dev/null
+        hasPhase "$file" session  || printf '%s\n' "$sessionLine"  | sudo tee -a "$file" > /dev/null
+        hasPhase "$file" password || printf '%s\n' "$passwordLine" | sudo tee -a "$file" > /dev/null
       done
+
+      # Ubuntu's stock /etc/pam.d/sddm puts `auth sufficient pam_unix.so` and
+      # `auth sufficient pam_fprintd.so` BEFORE `@include common-auth`. The
+      # `sufficient` short-circuit means pam_unix collects the password and
+      # exits the auth stack with success — the `-auth optional
+      # pam_gnome_keyring.so` line further down never runs, so pam_gnome_keyring
+      # at session phase has no password and logs
+      # "gkr-pam: no password is available for user". Comment those two lines
+      # out so the stack falls through to common-auth (which uses
+      # `[success=1 default=ignore]` for pam_unix — non-short-circuit) and the
+      # keyring auth line gets PAM_AUTHTOK. Idempotent: the regex only matches
+      # uncommented lines.
+      if [ -f /etc/pam.d/sddm ]; then
+        sudo sed -i -E \
+          's|^(auth[[:space:]]+sufficient[[:space:]]+pam_unix\.so.*)|# \1|; s|^(auth[[:space:]]+sufficient[[:space:]]+pam_fprintd\.so.*)|# \1|' \
+          /etc/pam.d/sddm
+      fi
     '';
   };
 }

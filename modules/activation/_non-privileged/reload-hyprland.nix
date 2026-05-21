@@ -61,6 +61,14 @@ _: {
 
           ${hyprctl} reload >/dev/null 2>&1 || exit 0
 
+          # Reload re-enables eDP-1 from monitors.conf; re-apply lid-closed
+          # disable before workspace restore so workspaces don't migrate back.
+          if grep -qi closed /proc/acpi/button/lid/*/state 2>/dev/null; then
+            builtin=$(${hyprctl} monitors all -j 2>/dev/null \
+              | jq -r 'first(.[] | select(.name | test("eDP|LVDS"))).name // empty')
+            [ -n "$builtin" ] && ${hyprctl} keyword monitor "$builtin, disable" >/dev/null 2>&1 || true
+          fi
+
           while IFS=' ' read -r mon ws; do
             [ -n "$mon" ] && [ -n "$ws" ] || continue
             ${hyprctl} dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
