@@ -71,7 +71,7 @@ function _gwt_remove_if_clean {
     echo "gwt: keeping $_prev (has unpushed commits)"
     return 0
   fi
-  ( treeman wt delete "$_prev" --force --repo "$_main" >/dev/null 2>&1 ) &!
+  ( treeman wt delete "$_prev" --yes --force --repo "$_main" >/dev/null 2>&1 ) &!
 }
 
 # Emit one "<path>\t<branch>" line per linked worktree on a branch.
@@ -1050,7 +1050,7 @@ if are_binary git fzf treeman; then
     # 250k-file vendor/+node_modules/ tree plus N DROP DATABASE roundtrips
     # in the foreground — which is exactly the gwtd-hangs / system-lag
     # path we just hit. Daemon handles it in the background.
-    treeman wt delete "$worktree_path" --repo "$repo_root" --force || return 1
+    treeman wt delete "$worktree_path" --yes --repo "$repo_root" --force || return 1
     # Empty-parent cleanup (e.g. `.worktrees/feature/` after removing
     # `feature/foo`) is now handled inside `treeman wt delete` —
     # synchronously on the foreground path, daemon-side on the async
