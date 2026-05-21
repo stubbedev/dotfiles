@@ -1,6 +1,6 @@
 { inputs, ... }:
 let
-  inherit (inputs) srv treeman;
+  inherit (inputs) srv;
 in
 {
   args =
@@ -16,7 +16,6 @@ in
       stubbeDir = if constants != null then constants.paths.dotfiles else "${homeDir}/.stubbe";
       inherit (pkgs.stdenv.hostPlatform) system;
       srvBin = "${srv.packages.${system}.srv}/bin/srv";
-      treemanBin = "${treeman.packages.${system}.treeman}/bin/treeman";
     in
     {
       actionScript = ''
@@ -26,9 +25,6 @@ in
         ${pkgs.lazygit}/bin/lazygit completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_lazygit 2>/dev/null
         ${lib.optionalString config.features.srv ''
           ${srvBin} completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_srv 2>/dev/null
-        ''}
-        ${lib.optionalString config.features.treeman ''
-          ${treemanBin} completions zsh > ${stubbeDir}/src/zsh/fpaths.d/_treeman 2>/dev/null
         ''}
         ${lib.optionalString config.features.k8s ''
           ${pkgs.kubectl}/bin/kubectl completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_kubectl 2>/dev/null

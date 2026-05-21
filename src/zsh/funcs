@@ -22,7 +22,6 @@ typeset -gA _git_shorthand_docs=(
   gwtd 'remove a git worktree'
   gwte 'cd to main repo root (exit linked worktree); does not remove the worktree'
   gwtc 'cd to main repo root and remove the linked worktree we just exited (skips if dirty/unpushed)'
-  gwth 'scaffold .gwt-postcreate / .gwt-predelete hooks in repo root and open in $EDITOR'
 )
 
 # Walk up directory tree looking for .git (handles regular repos and worktrees).
@@ -57,28 +56,11 @@ function _git_main_root {
   fi
 }
 
-# Remove a worktree, then make sure both git metadata and the on-disk path
-# are gone. `git worktree remove` can leave the directory behind when files
-# are held open by background processes (e.g. _gwt_postcreate still running
-# npm/composer when a claude exit triggers gwtc). Fall back to rm -rf so the
-# next `git worktree add <path>` doesn't refuse on "path already exists".
-# $1 worktree path, $2 optional flag (e.g. --force). Returns 0 if path gone.
-function _gwt_force_remove {
-  local _wt="$1" _flag="$2"
-  [[ -z "$_wt" ]] && return 1
-  if [[ -n "$_flag" ]]; then
-    git worktree remove "$_flag" "$_wt" 2>/dev/null
-  else
-    git worktree remove "$_wt" 2>/dev/null
-  fi
-  [[ -e "$_wt" ]] && rm -rf "$_wt" 2>/dev/null
-  git worktree prune --expire now >/dev/null 2>&1
-  [[ ! -e "$_wt" ]]
-}
-
 # Remove the previous worktree if we've moved out of it. Caller must have
 # already verified it was clean before the switch. Skipped if the worktree
 # has commits that aren't on its upstream — those would be silently lost.
+# Delegates teardown to `treeman wt delete` (runs predelete hooks + DB
+# scoping cleanup + git worktree remove).
 function _gwt_remove_if_clean {
   local _prev="$1"
   [[ -z "$_prev" ]] && return 0
@@ -89,11 +71,7 @@ function _gwt_remove_if_clean {
     echo "gwt: keeping $_prev (has unpushed commits)"
     return 0
   fi
-  if ! _gwt_predelete "$_prev" "$_main"; then
-    echo "gwt: keeping $_prev (predelete hook failed)"
-    return 0
-  fi
-  ( _gwt_force_remove "$_prev" >/dev/null 2>&1 ) &!
+  ( treeman wt delete "$_prev" --force --repo "$_main" >/dev/null 2>&1 ) &!
 }
 
 # Emit one "<path>\t<branch>" line per linked worktree on a branch.
@@ -272,191 +250,45 @@ function _resolve_base {
   fi
 }
 
-# Symlink uncommitted-but-needed files from the main repo into a new worktree.
-# Defaults: .env, .env.local, .env.*.local, .envrc. A .gwt-link file in the
-# main repo root overrides the defaults (one glob pattern per line, # comments).
-function _gwt_link_files {
-  local _main="$1" _wt="$2"
-  [[ -z "$_main" || -z "$_wt" || "$_main" == "$_wt" ]] && return 0
-  emulate -L zsh
-  setopt null_glob
-  local -a _patterns
-  if [[ -f "$_main/.gwt-link" ]]; then
-    local _line
-    while IFS= read -r _line; do
-      [[ -z $_line || $_line == \#* ]] && continue
-      _patterns+=("$_line")
-    done <"$_main/.gwt-link"
-  else
-    _patterns=('.env' '.env.local' '.env.*.local' '.envrc')
-  fi
-  local _pat _src _rel _dst
-  for _pat in "${_patterns[@]}"; do
-    for _src in "$_main"/${~_pat}; do
-      [[ -e "$_src" || -L "$_src" ]] || continue
-      _rel=${_src#$_main/}
-      _dst="$_wt/$_rel"
-      [[ -e "$_dst" || -L "$_dst" ]] && continue
-      mkdir -p "${_dst:h}"
-      if ln -s "$_src" "$_dst" 2>/dev/null; then
-        echo "gwt: linked $_rel"
-      fi
-    done
-  done
+# Bootstrap a .treeman.yaml in the main repo if one isn't already there.
+# treeman init walks the framework detector and emits a tailored config
+# (Laravel/Rails/Django/...); framework-less repos still get a usable stub
+# with repo.name + worktrees.root + worktrees.links. Treeman wt create
+# requires this file — every gwt entry point calls it before delegating.
+# `treeman init` is cwd-relative (no --repo flag), so we run it from $_main
+# in a subshell to avoid disturbing the caller's PWD.
+function _ensure_treeman_yaml {
+  local _main="$1"
+  [[ -z "$_main" ]] && return 1
+  [[ -f "$_main/.treeman.yaml" ]] && return 0
+  echo "gwt: bootstrapping .treeman.yaml via treeman init"
+  ( cd "$_main" && treeman init )
 }
 
-# Run project setup in the new worktree. If <main>/.gwt-postcreate exists and
-# is executable, run it (project owns the setup). Otherwise detect a lockfile
-# and dispatch the matching install command. Output goes to
-# <worktree>/.gwt-postcreate.log. Skipped when GWT_NO_INSTALL=1.
-# Run `denv on` in $1, then notify any direnv-hooked interactive shell whose
-# cwd is inside that worktree so it picks up the new .envrc/.env immediately
-# (without waiting for the next precmd).
-function _gwt_denv_on {
-  local _wt="$1"
-  (( $+functions[denv] )) || return 0
-  # Only enable when the linked .envrc is denv-authored. Bare existence
-  # isn't enough — a hand-written .envrc shouldn't be touched, and repos
-  # without .envrc at all shouldn't get one created.
-  local _envrc="$_wt/.envrc"
-  [[ -e "$_envrc" || -L "$_envrc" ]] || return 0
-  grep -qxFe 'dotenv_if_exists' -e 'dotenv' "$_envrc" 2>/dev/null || return 0
-  ( cd "$_wt" 2>/dev/null && denv on >/dev/null 2>&1 )
-}
-
-function _gwt_postcreate {
-  local _wt="$1" _main="$2"
-  [[ -z "$_wt" ]] && return 0
-  # Allow .envrc synchronously before returning so the interactive shell's
-  # next precmd doesn't print a "blocked" error. The .envrc is linked from
-  # main and stable, so a single allow up front is enough.
-  _gwt_denv_on "$_wt"
-  if [[ -n "$GWT_NO_INSTALL" ]]; then
-    return 0
-  fi
-  local _log="$_wt/.gwt-postcreate.log"
-  if [[ -n "$_main" && -x "$_main/.gwt-postcreate" ]]; then
-    echo "gwt: running $_main/.gwt-postcreate in bg → tail -f $_log"
-    (
-      cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-postcreate" </dev/null >"$_log" 2>&1
-      _gwt_denv_on "$_wt"
-    ) &!
-    return 0
-  fi
-  # Detect every present stack; spawn each install in its own bg job with
-  # its own log so output doesn't interleave. JS managers are mutually
-  # exclusive (at most one lockfile per project).
-  local -A _stacks=()
-  if [[ -f "$_wt/composer.lock" || -f "$_wt/composer.json" ]] && command -v composer >/dev/null 2>&1; then
-    _stacks[composer]="composer install --no-interaction"
-  fi
-  # JS manager preference: yarn > bun > pnpm > npm. Fall back to plain
-  # `npm install` for projects without a manager-specific lockfile.
-  if [[ -f "$_wt/yarn.lock" ]] && command -v yarn >/dev/null 2>&1; then
-    _stacks[yarn]="yarn install --frozen-lockfile"
-  elif [[ -f "$_wt/bun.lockb" ]] && command -v bun >/dev/null 2>&1; then
-    _stacks[bun]="bun install"
-  elif [[ -f "$_wt/pnpm-lock.yaml" ]] && command -v pnpm >/dev/null 2>&1; then
-    _stacks[pnpm]="pnpm install"
-  elif [[ -f "$_wt/package.json" ]] && command -v npm >/dev/null 2>&1; then
-    _stacks[npm]="npm install"
-  fi
-  if [[ -f "$_wt/uv.lock" ]] && command -v uv >/dev/null 2>&1; then
-    _stacks[uv]="uv sync"
-  fi
-  if [[ -f "$_wt/go.mod" ]] && command -v go >/dev/null 2>&1; then
-    _stacks[go]="go mod download"
-  fi
-  if [[ -f "$_wt/Cargo.toml" ]] && command -v cargo >/dev/null 2>&1; then
-    _stacks[cargo]="cargo fetch"
-  fi
-  if (( ${#_stacks[@]} == 0 )); then
-    return 0
-  fi
-  local _name _cmd _slog
-  for _name in ${(k)_stacks}; do
-    _cmd=${_stacks[$_name]}
-    _slog="$_wt/.gwt-postcreate.$_name.log"
-    echo "gwt: $_name in bg ($_cmd) → tail -f $_slog"
-  done
-  # Spawn all installs as children of one outer subshell so we can `wait`
-  # them (zsh can only wait on its own children — `&!` would disown them).
-  # When all finish, run denv on so .envrc is allowed against the .env that
-  # postcreate may have produced. The outer subshell is itself disowned via
-  # `&!` so the user's interactive shell can return immediately.
-  (
-    local -a _pids=()
-    local _n _c _l
-    for _n in ${(k)_stacks}; do
-      _c=${_stacks[$_n]}
-      _l="$_wt/.gwt-postcreate.$_n.log"
-      ( cd "$_wt" && eval "$_c" </dev/null >"$_l" 2>&1 ) &
-      _pids+=($!)
-    done
-    wait "${_pids[@]}"
-    _gwt_denv_on "$_wt"
-  ) &!
-}
-
-# Run <main>/.gwt-predelete in the worktree before it is removed. Synchronous
-# (caller needs the result to decide whether to proceed). Cwd is the worktree
-# being removed. Skipped when GWT_NO_HOOKS=1 or the hook is absent/not
-# executable. Returns the hook's exit code (0 if no hook).
-function _gwt_predelete {
-  local _wt="$1" _main="$2"
-  [[ -z "$_wt" || -n "$GWT_NO_HOOKS" ]] && return 0
-  [[ -n "$_main" && -x "$_main/.gwt-predelete" ]] || return 0
-  ( cd "$_wt" && GWT_MAIN="$_main" GWT_WT="$_wt" "$_main/.gwt-predelete" </dev/null )
-}
-
-# Create a new worktree at .worktrees/<branch> (slashes preserved), cd in,
-# link env files, kick off dep install in the background.
+# Create or attach a worktree at .worktrees/<branch> via treeman. Treeman
+# owns the full lifecycle: git worktree add, env-file symlinks, env
+# scoping, per-worktree DB scaffolding, postcreate hooks, and prepare.
+# `wt create` is idempotent across new vs. existing branches — pass --from
+# only when starting a new branch from a non-default base. The slow tail
+# (postcreate + prepare) is RPC'd to the daemon when
+# worktrees.async_create is on (default), so the call returns in <2s.
 function _gwt_create {
   local _branch="$1" _base="$2"
   local _main=$(_git_main_root) || _main="$_git_root"
-  local _wt_path="$_main/.worktrees/$_branch"
-  mkdir -p "${_wt_path:h}"
-  local _base_ref=""
-  [[ -n "$_base" ]] && _base_ref=$(_resolve_base "$_base")
-  if [[ -n "$_base_ref" ]]; then
-    git worktree add -b "$_branch" "$_wt_path" "$_base_ref" || return 1
-  else
-    git worktree add -b "$_branch" "$_wt_path" || return 1
-  fi
-  cd "$_wt_path" || return 1
-  _gwt_link_files "$_main" "$_wt_path"
-  _gwt_postcreate "$_wt_path" "$_main"
+  _ensure_treeman_yaml "$_main" || return 1
+  local -a _args=(wt create "$_branch" --repo "$_main")
+  [[ -n "$_base" ]] && _args+=(--from "$_base")
+  treeman "${_args[@]}" || return 1
+  local _wt
+  _wt=$(treeman wt switch "$_branch" --repo "$_main") || return 1
+  cd "$_wt" || return 1
 }
 
-# Attach an existing branch to a new worktree at the canonical path.
+# Attach an existing branch — same call as _gwt_create with no --from.
+# Kept as a distinct entry point so _checkout_branch_or_worktree's
+# create-vs-checkout routing stays readable.
 function _gwt_attach {
-  local _branch="$1"
-  local _main=$(_git_main_root) || _main="$_git_root"
-  local _wt_path="$_main/.worktrees/$_branch"
-  mkdir -p "${_wt_path:h}"
-
-  # Orphaned worktree dir (e.g. previous `git worktree remove` rm'd metadata
-  # but files were held open by a background job): try to repair before
-  # falling through, since `git worktree add` would otherwise refuse.
-  if [[ -e "$_wt_path" && -f "$_wt_path/.git" ]]; then
-    if git -C "$_main" worktree repair "$_wt_path" 2>/dev/null \
-       && git -C "$_main" worktree list --porcelain 2>/dev/null | grep -qxF "worktree $_wt_path"; then
-      cd "$_wt_path" || return 1
-      echo "gwt: recovered orphaned worktree at $_wt_path"
-      _gwt_link_files "$_main" "$_wt_path"
-      return 0
-    fi
-  fi
-  if [[ -e "$_wt_path" ]]; then
-    echo "gwt: $_wt_path exists but is not a tracked worktree" >&2
-    echo "     remove it manually and retry: rm -rf $_wt_path" >&2
-    return 1
-  fi
-
-  git worktree add "$_wt_path" "$_branch" || return 1
-  cd "$_wt_path" || return 1
-  _gwt_link_files "$_main" "$_wt_path"
-  _gwt_postcreate "$_wt_path" "$_main"
+  _gwt_create "$1"
 }
 
 # Interactive branch-name builder. Echoes "<name>\t<base>" on stdout — both
@@ -951,7 +783,7 @@ if are_binary git bat fzf; then
 
 fi
 
-if are_binary git fzf; then
+if are_binary git fzf treeman; then
   function gwt {
     in_git_repo || return 1
 
@@ -1167,19 +999,17 @@ if are_binary git fzf; then
     local -a _msgs=()
     _worktree_is_dirty "$worktree_path" && _msgs+=("uncommitted changes")
     _worktree_has_unpushed "$worktree_path" && _msgs+=("unpushed commits")
-    local _force=""
+    local -a _del=(wt delete "$worktree_path" --repo "$repo_root" --foreground)
     if (( ${#_msgs[@]} )); then
       local _why=${(j:, :)_msgs}
       _confirm_destructive "Worktree '$worktree_path' has $_why — destroy?" || return 0
-      _force="--force"
+      _del+=(--force)
     fi
-    if ! _gwt_predelete "$worktree_path" "$repo_root"; then
-      _confirm_destructive "predelete hook failed — destroy '$worktree_path' anyway?" || return 0
-    fi
-    _gwt_force_remove "$worktree_path" "$_force" || return 1
+    treeman "${_del[@]}" || return 1
 
     # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
-    # removing feature/foo).
+    # removing feature/foo). Treeman removes the leaf path but leaves
+    # intermediate dirs behind.
     local _wt_root="$repo_root/.worktrees"
     local _parent="${worktree_path:h}"
     while [[ "$_parent" == "$_wt_root"/* ]]; do
@@ -1191,7 +1021,8 @@ if are_binary git fzf; then
   # cd back to the main repo root (the non-worktree checkout). From a linked
   # worktree this exits to main; from a subdir of any worktree it surfaces to
   # that checkout's root. The worktree itself is left intact — pair with gwtd
-  # if you also want to remove it.
+  # if you also want to remove it. Delegates to `treeman wt back` so the
+  # main-repo path comes from treeman's registry (no `git rev-parse` round-trip).
   function gwte {
     in_git_repo || { echo "gwte: not in a git repo"; return 1; }
     local _main
@@ -1200,16 +1031,21 @@ if are_binary git fzf; then
     local _start_pwd="$PWD"
     local _was_wt=0
     _in_linked_worktree && _was_wt=1
-    cd "$_main" || return 1
+    local _out _dest
+    _out=$(treeman wt back 2>/dev/null) || _out=""
+    _dest=${_out%%$'\n'*}
+    [[ -z "$_dest" ]] && _dest="$_main"
+    cd "$_dest" || return 1
     (( _was_wt )) && typeset -g _GWT_LAST="$_start_pwd"
   }
 
   # Like gwte (cd to main repo root from a linked worktree) but also removes
   # the worktree we just exited. Skips silently when the worktree has
-  # uncommitted changes or unpushed commits — never destroys work. Runs
-  # .gwt-predelete before removal and prunes empty parent dirs under
-  # .worktrees/. Non-interactive (no tty on stdin, e.g. Claude Code SessionEnd
-  # hook) also skips the cd-to-main so the calling shell isn't disturbed.
+  # uncommitted changes or unpushed commits — never destroys work.
+  # Delegates removal to `treeman wt back --remove` (runs predelete hooks,
+  # tears down per-worktree DB state, then `git worktree remove`).
+  # Non-interactive (no tty on stdin, e.g. Claude Code SessionEnd hook)
+  # also skips the cd-to-main so the calling shell isn't disturbed.
   function gwtc {
     in_git_repo || { echo "gwtc: not in a git repo"; return 1; }
     local _main
@@ -1220,9 +1056,6 @@ if are_binary git fzf; then
     fi
     local _wt="$_git_root"
 
-    # Skip on dirty / unpushed — never destroy work. Non-interactive (e.g.
-    # Claude Code SessionEnd hook) also skips the cd-to-main so the parent
-    # shell isn't disturbed.
     local -a _msgs=()
     _worktree_is_dirty "$_wt" && _msgs+=("uncommitted changes")
     _worktree_has_unpushed "$_wt" && _msgs+=("unpushed commits")
@@ -1234,68 +1067,22 @@ if are_binary git fzf; then
       return 0
     fi
 
-    cd "$_main" || return 1
+    # `treeman wt back --remove` rechecks dirty+unpushed itself and prints
+    # the main path on stdout line 1, then a status line ("ok: queued: …")
+    # on line 2. The teardown is detached by the daemon so the foreground
+    # shell returns immediately. Take just the path.
+    local _out _dest
+    _out=$(treeman wt back --remove) || return 1
+    _dest=${_out%%$'\n'*}
+    cd "$_dest" || return 1
 
-    if ! _gwt_predelete "$_wt" "$_main"; then
-      [[ -t 0 ]] || return 0
-      _confirm_destructive "predelete hook failed — destroy '$_wt' anyway?" || return 0
-    fi
-
-    # `git worktree remove` rm's vendor/ + node_modules/ — multi-second on
-    # Laravel-sized trees. Detach so the foreground shell returns now;
-    # _gwt_remove_if_clean uses the same pattern.
+    # Prune empty parent dirs under .worktrees/ (treeman removes the leaf).
     local _wt_root="$_main/.worktrees"
-    (
-      _gwt_force_remove "$_wt" >/dev/null 2>&1 || exit 1
-      local _parent="${_wt:h}"
-      while [[ "$_parent" == "$_wt_root"/* ]]; do
-        rmdir "$_parent" 2>/dev/null || break
-        _parent="${_parent:h}"
-      done
-    ) &!
-  }
-
-  # Scaffold .gwt-postcreate and .gwt-predelete in the repo root if missing,
-  # then open both in $EDITOR. Idempotent — existing files are left untouched.
-  function gwth {
-    in_git_repo || return 1
-    local _main=$(_git_main_root) || _main="$_git_root"
-    local _post="$_main/.gwt-postcreate"
-    local _pre="$_main/.gwt-predelete"
-
-    if [[ ! -e "$_post" ]]; then
-      cat >"$_post" <<'EOF'
-#!/usr/bin/env bash
-# Runs in the background after `gwt` creates a new worktree. Replaces the
-# built-in lockfile-based dep install — wire up whatever your project needs
-# (compose up, db seed, env scaffolding, etc.).
-# Cwd:  the new worktree.
-# Env:  GWT_MAIN (main repo root), GWT_WT (this worktree path).
-# Logs: <worktree>/.gwt-postcreate.log (stdout + stderr).
-set -euo pipefail
-EOF
-      chmod +x "$_post"
-      echo "gwth: created $_post"
-    fi
-
-    if [[ ! -e "$_pre" ]]; then
-      cat >"$_pre" <<'EOF'
-#!/usr/bin/env bash
-# Runs synchronously before `gwtd` removes a worktree, and before the
-# auto-removal of a clean linked worktree on switch via `gwt`. Use for
-# external cleanup that git itself won't do (drop branch DB, tear down
-# compose project, remove reverse-proxy entry, etc.).
-# Cwd: the worktree being removed.
-# Env: GWT_MAIN (main repo root), GWT_WT (worktree path).
-# Exit non-zero to block the removal — interactive `gwtd` will prompt to
-# override, the silent auto-remove path will keep the worktree.
-set -euo pipefail
-EOF
-      chmod +x "$_pre"
-      echo "gwth: created $_pre"
-    fi
-
-    ${EDITOR:-vi} "$_post" "$_pre"
+    local _parent="${_wt:h}"
+    while [[ "$_parent" == "$_wt_root"/* ]]; do
+      rmdir "$_parent" 2>/dev/null || break
+      _parent="${_parent:h}"
+    done
   }
 fi
 

@@ -34,7 +34,7 @@ _git_shortcuts() {
     gg|gf|gw)
       _arguments '1:flag:((--all\:"include\ all\ remotes/stash"))'
       ;;
-    gwte|gwtc|gwth)
+    gwte|gwtc)
       # No positional args — suppress default file completion.
       return 0
       ;;
