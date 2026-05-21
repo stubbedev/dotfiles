@@ -999,13 +999,18 @@ if are_binary git fzf treeman; then
     local -a _msgs=()
     _worktree_is_dirty "$worktree_path" && _msgs+=("uncommitted changes")
     _worktree_has_unpushed "$worktree_path" && _msgs+=("unpushed commits")
-    local -a _del=(wt delete "$worktree_path" --repo "$repo_root" --foreground)
+    # Always pass --force to treeman: this fn's own dirty/unpushed
+    # checks already gate at the .git-status-porcelain level (which
+    # respects .gitignore), and the confirmation prompt above guards
+    # the dirty case. Without --force, `git worktree remove` refuses
+    # on ANY untracked file including gitignored build artifacts —
+    # vendor/, node_modules/, .treeman-hooks/ — which is the wrong
+    # default for a worktree the user just asked to destroy.
     if (( ${#_msgs[@]} )); then
       local _why=${(j:, :)_msgs}
       _confirm_destructive "Worktree '$worktree_path' has $_why — destroy?" || return 0
-      _del+=(--force)
     fi
-    treeman "${_del[@]}" || return 1
+    treeman wt delete "$worktree_path" --repo "$repo_root" --foreground --force || return 1
 
     # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
     # removing feature/foo). Treeman removes the leaf path but leaves
@@ -1071,8 +1076,14 @@ if are_binary git fzf treeman; then
     # the main path on stdout line 1, then a status line ("ok: queued: …")
     # on line 2. The teardown is detached by the daemon so the foreground
     # shell returns immediately. Take just the path.
+    #
+    # `--force` is passed because we already gated on dirty/unpushed at
+    # the porcelain-status level above; without it the underlying `git
+    # worktree remove` refuses on gitignored build artifacts (vendor/,
+    # node_modules/, .treeman-hooks/) and gwtc fails on every
+    # post-composer / post-yarn worktree.
     local _out _dest
-    _out=$(treeman wt back --remove) || return 1
+    _out=$(treeman wt back --remove --force) || return 1
     _dest=${_out%%$'\n'*}
     cd "$_dest" || return 1
 
