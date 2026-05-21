@@ -95,8 +95,22 @@ function _list_worktrees {
 }
 
 # Print the path of the worktree that has $1 checked out, or nothing if none.
+# Tries `treeman wt resolve` first (registry lookup, sub-ms); on any
+# treeman failure — old binary missing the subcommand, repo not yet
+# registered, no match — falls through to the porcelain parser so the
+# function stays correct against non-treeman repos too. The treeman path
+# emits stderr on miss; silence it to keep parity with the old silent
+# return-1 contract.
 function _worktree_path_for_branch {
   local _target="$1" _path _branch
+  if (( $+commands[treeman] )); then
+    local _main=$(_git_main_root 2>/dev/null) || _main=""
+    if [[ -n "$_main" ]]; then
+      local _p
+      _p=$(treeman wt resolve "$_target" --repo "$_main" 2>/dev/null)
+      [[ -n "$_p" ]] && { echo "$_p"; return 0; }
+    fi
+  fi
   while IFS=$'\t' read -r _path _branch; do
     [[ "$_branch" == "$_target" ]] && { echo "$_path"; return 0; }
   done < <(_list_worktrees)
@@ -161,6 +175,14 @@ function _checkout_branch_or_worktree {
   else
     _gwt_attach "$_target"
   fi
+}
+
+# Strip leading/trailing whitespace from a string.
+function _trim_ws {
+  local v="$1"
+  v="${v#"${v%%[![:space:]]*}"}"
+  v="${v%"${v##*[![:space:]]}"}"
+  print -r -- "$v"
 }
 
 # Fork-free branch listing: sets $reply to sorted-unique branch array.
@@ -439,7 +461,7 @@ if are_binary git bat fzf; then
   function gcb {
     in_git_repo || return 1
 
-    local initial_query="${1:-}"
+    local initial_query=$(_trim_ws "${1:-}")
     local current_branch=$(git branch --show-current)
     _list_git_branches
     # Drop the current branch: with --select-1 it would auto-accept itself
@@ -468,7 +490,7 @@ if are_binary git bat fzf; then
           --no-info \
           --height=$((_n + 2)))
     fi
-    local branch_name=${_gcb_out##*$'\n'}
+    local branch_name=$(_trim_ws "${_gcb_out##*$'\n'}")
 
     if [[ -n "$branch_name" && ${_avail[(r)$branch_name]} == "$branch_name" ]]; then
       _checkout_branch_or_worktree "$branch_name"
@@ -789,13 +811,25 @@ if are_binary git fzf treeman; then
 
     local _start_pwd="$PWD"
 
-    # `gwt -` — toggle to the previously-visited worktree.
+    # `gwt -` — toggle to the previously-visited worktree. Falls back to
+    # `treeman wt prev` when the per-shell `$_GWT_LAST` is unset (fresh
+    # tab, post-resume tmux session) so cross-shell toggle still works
+    # off the SQLite-backed last_visited_at timestamp.
     if [[ "$1" == "-" ]]; then
-      if [[ -z "$_GWT_LAST" || ! -d "$_GWT_LAST" ]]; then
+      local _target=""
+      if [[ -n "$_GWT_LAST" && -d "$_GWT_LAST" ]]; then
+        _target="$_GWT_LAST"
+      else
+        local _main=$(_git_main_root 2>/dev/null) || _main=""
+        if [[ -n "$_main" ]]; then
+          _target=$(treeman wt prev --repo "$_main" 2>/dev/null)
+        fi
+      fi
+      if [[ -z "$_target" || ! -d "$_target" ]]; then
         echo "gwt: no previous worktree"
         return 1
       fi
-      cd "$_GWT_LAST" || return 1
+      cd "$_target" || return 1
       typeset -g _GWT_LAST="$_start_pwd"
       return 0
     fi
@@ -885,8 +919,8 @@ if are_binary git fzf treeman; then
           --height=$((_n + 2)))
     fi
 
-    local query=${selected%%$'\n'*}
-    local match=${selected##*$'\n'}
+    local query=$(_trim_ws "${selected%%$'\n'*}")
+    local match=$(_trim_ws "${selected##*$'\n'}")
 
     # No match (typed-new OR Ctrl+C) → enter create path. Names that already
     # contain a slash (e.g. `feature/foo`, `release/1.2.3`) are taken as-is
@@ -1017,16 +1051,10 @@ if are_binary git fzf treeman; then
     # in the foreground — which is exactly the gwtd-hangs / system-lag
     # path we just hit. Daemon handles it in the background.
     treeman wt delete "$worktree_path" --repo "$repo_root" --force || return 1
-
-    # Clean up empty parent dirs inside .worktrees/ (e.g. feature/ after
-    # removing feature/foo). Treeman removes the leaf path but leaves
-    # intermediate dirs behind.
-    local _wt_root="$repo_root/.worktrees"
-    local _parent="${worktree_path:h}"
-    while [[ "$_parent" == "$_wt_root"/* ]]; do
-      rmdir "$_parent" 2>/dev/null || break
-      _parent="${_parent:h}"
-    done
+    # Empty-parent cleanup (e.g. `.worktrees/feature/` after removing
+    # `feature/foo`) is now handled inside `treeman wt delete` —
+    # synchronously on the foreground path, daemon-side on the async
+    # teardown path. No shell-side rmdir loop needed.
   }
 
   # cd back to the main repo root (the non-worktree checkout). From a linked
@@ -1092,14 +1120,8 @@ if are_binary git fzf treeman; then
     _out=$(treeman wt back --remove --force) || return 1
     _dest=${_out%%$'\n'*}
     cd "$_dest" || return 1
-
-    # Prune empty parent dirs under .worktrees/ (treeman removes the leaf).
-    local _wt_root="$_main/.worktrees"
-    local _parent="${_wt:h}"
-    while [[ "$_parent" == "$_wt_root"/* ]]; do
-      rmdir "$_parent" 2>/dev/null || break
-      _parent="${_parent:h}"
-    done
+    # Empty-parent cleanup (e.g. `.worktrees/feature/` after removing
+    # `feature/foo`) is handled inside treeman's teardown path.
   }
 fi
 
