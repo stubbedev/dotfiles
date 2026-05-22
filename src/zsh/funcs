@@ -461,7 +461,7 @@ if are_binary git bat fzf; then
   function gcb {
     in_git_repo || return 1
 
-    local initial_query=$(_trim_ws "${1:-}")
+    local initial_query=$(_trim_ws "${*:-}")
     local current_branch=$(git branch --show-current)
     _list_git_branches
     # Drop the current branch: with --select-1 it would auto-accept itself
@@ -590,7 +590,7 @@ if are_binary git bat fzf; then
   function gd {
     in_git_repo || return 1
 
-    local initial_query="${1:-}"
+    local initial_query="${*:-}"
     local current_branch=$(git branch --show-current)
     _list_git_branches
     local git_branches=${(F)reply}
@@ -615,7 +615,7 @@ if are_binary git bat fzf; then
   function gcd {
     in_git_repo || return 1
 
-    local initial_query="${1:-}"
+    local initial_query="${*:-}"
     local current_branch=$(git branch --show-current)
     _list_git_branches
     local git_branches=${(F)reply}
@@ -716,7 +716,7 @@ if are_binary git bat fzf; then
   function ggo {
     in_git_repo || return 1
 
-    local initial_query="${1:-}"
+    local initial_query="${*:-}"
     _list_git_branches
     local git_branches=${(F)reply}
 
@@ -735,7 +735,7 @@ if are_binary git bat fzf; then
   function gl {
     in_git_repo || return 1
 
-    local initial_query="${1:-}"
+    local initial_query="${*:-}"
 
     # Resolve a clipboard binary at call time so the fzf subshell gets a
     # concrete command (it doesn't inherit zsh aliases).
@@ -916,6 +916,7 @@ if are_binary git fzf treeman; then
           --print-query \
           --exit-0 \
           --no-info \
+          --query="${*:-}" \
           --height=$((_n + 2)))
     fi
 
