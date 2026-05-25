@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+CLAUDE_WINDOW_NAME="claude"
+
 toggle_window() {
   local window_name="$1"
   shift
@@ -138,18 +140,18 @@ toggle_claude_window() {
   worktree=$(git -C "$current_path" rev-parse --show-toplevel 2>/dev/null)
 
   if [ -z "$worktree" ]; then
-    toggle_window "claude" tmux-claude
+    toggle_window "$CLAUDE_WINDOW_NAME" tmux-claude
     return
   fi
 
-  if [ "$current_window" = "claude" ]; then
+  if [ "$current_window" = "$CLAUDE_WINDOW_NAME" ]; then
     tmux last-window 2>/dev/null || true
     return 0
   fi
 
   local target sess win wname wpath wt
   while IFS=$'\t' read -r sess win wname wpath; do
-    [ "$wname" = "claude" ] || continue
+    [ "$wname" = "$CLAUDE_WINDOW_NAME" ] || continue
     wt=$(git -C "$wpath" rev-parse --show-toplevel 2>/dev/null)
     if [ "$wt" = "$worktree" ]; then
       target="${sess}:${win}"
@@ -169,7 +171,7 @@ toggle_claude_window() {
     return 0
   fi
 
-  tmux new-window -c "$current_path" -n "claude" tmux-claude
+  tmux new-window -c "$current_path" -n "$CLAUDE_WINDOW_NAME" tmux-claude
 }
 
 claude_inline_pane() {
@@ -178,7 +180,8 @@ claude_inline_pane() {
   fi
   local current_path
   current_path=$(tmux display-message -p -F "#{pane_current_path}")
-  tmux respawn-pane -k -c "$current_path" "zsh -ic 'tmux-claude --inline; exec zsh -i'"
+  tmux respawn-pane -k -c "$current_path" \
+    "zsh -ic 'tmux rename-window ${CLAUDE_WINDOW_NAME}; tmux-claude --inline; tmux set-window-option automatic-rename on; exec zsh -i'"
 }
 
 pane_is_pinned() {
