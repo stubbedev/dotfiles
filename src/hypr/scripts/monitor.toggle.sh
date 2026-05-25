@@ -59,6 +59,13 @@ react() {
   apply_lid
 }
 
+# Restart WirePlumber so it re-evaluates ALSA card availability after a
+# dock/undock. Without this, HDMI/DP sinks tied to the dock can linger as
+# unavailable or fail to reappear in pavucontrol until the next login.
+restart_wireplumber() {
+  systemctl --user restart wireplumber.service >/dev/null 2>&1 || true
+}
+
 listen_events() {
   local last_action=0
 
@@ -76,6 +83,7 @@ listen_events() {
       continue
     fi
     react
+    restart_wireplumber
     last_action=$(date +%s)
   done < <(udevadm monitor --property --udev --subsystem-match=drm 2>/dev/null)
 }
