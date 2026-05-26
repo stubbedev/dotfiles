@@ -17,6 +17,28 @@ _: {
         enable = true;
         remotePlay.openFirewall = true;
         dedicatedServer.openFirewall = true;
+        # Hyprland's setcap wrapper leaks CAP_SYS_NICE into children's
+        # ambient set, which trips bwrap's "Unexpected capabilities but
+        # not setuid" check and prevents Steam's FHS env from launching.
+        # Override buildFHSEnv's bubblewrap to strip ambient caps before
+        # invoking the real bwrap. Done via .override (not a wholesale
+        # package replacement) so the NixOS module's own .override on
+        # programs.steam.package still works.
+        package = pkgs.steam.override (_prev: {
+          buildFHSEnv = pkgs.buildFHSEnv.override {
+            bubblewrap = pkgs.symlinkJoin {
+              name = "bubblewrap-strip-ambient-caps";
+              paths = [ pkgs.bubblewrap ];
+              nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+              postBuild = ''
+                rm $out/bin/bwrap
+                makeWrapper ${pkgs.util-linux}/bin/setpriv $out/bin/bwrap \
+                  --add-flags "--ambient-caps=-all" \
+                  --add-flags "${pkgs.bubblewrap}/bin/bwrap"
+              '';
+            };
+          };
+        });
       };
 
       # GameMode optimises CPU governor / IO niceness while a game runs.
