@@ -309,8 +309,17 @@ function _gwt_create {
 # Attach an existing branch — same call as _gwt_create with no --from.
 # Kept as a distinct entry point so _checkout_branch_or_worktree's
 # create-vs-checkout routing stays readable.
+# Remote-only branches (exist at origin/$b but not refs/heads/$b) need an
+# explicit --from origin/$b; without it treeman creates a fresh local
+# branch based on the default branch instead of the remote tip.
 function _gwt_attach {
-  _gwt_create "$1"
+  local _branch="$1"
+  if ! git rev-parse --verify --quiet "refs/heads/$_branch" >/dev/null 2>&1 \
+     && git rev-parse --verify --quiet "refs/remotes/origin/$_branch" >/dev/null 2>&1; then
+    _gwt_create "$_branch" "origin/$_branch"
+  else
+    _gwt_create "$_branch"
+  fi
 }
 
 # Interactive branch-name builder. Echoes "<name>\t<base>" on stdout — both
