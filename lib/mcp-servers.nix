@@ -13,8 +13,9 @@
       "-y"
       "chrome-devtools-mcp@latest"
       "--no-usage-statistics"
-      "--executable-path"
-      chromePath
+      "--auto-connect"
+      # "--executable-path"
+      # chromePath
     ];
   };
   firefox-devtools = {
