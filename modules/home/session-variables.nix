@@ -53,6 +53,17 @@
           # adds the same path so the bins resolve.
           PNPM_HOME = "${config.home.homeDirectory}/.local/share/pnpm";
 
+          # Silence libva (VA-API) driver-probe spam. Headless Electron
+          # (Cypress) and other apps probe VA-API at startup; on this host
+          # the prebuilt Electron bundles an old libva whose ABI doesn't
+          # match the system intel-media-driver (missing __vaDriverInit_1_0),
+          # and the 32-bit driver pulled in by hardware.graphics.enable32Bit
+          # sits in the search path (wrong ELF class). Both are harmless —
+          # Chromium falls back to software render — but log noisily.
+          # 0 = silent, 1 = errors only, 2 = errors+info (default). Note this
+          # mutes ALL libva errors system-wide, video accel only (not audio).
+          LIBVA_MESSAGING_LEVEL = "0";
+
           # Theme and custom variables
           DEPLOYER_REMOTE_USER = "abs";
 
