@@ -72,6 +72,7 @@ _: {
         libembroidery
         pngquant
         exiftool
+        c2patool
         dcraw
         libraw
         librsvg
