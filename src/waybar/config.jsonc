@@ -11,6 +11,7 @@
 	"modules-left": ["hyprland/workspaces", "niri/workspaces", "hyprland/submap"],
 	"modules-center": ["custom/mail", "custom/tmux"],
 	"modules-right": [
+		"custom/gpu-screen-recorder",
 		"hyprland/language",
     "niri/language",
 		"pulseaudio",
@@ -22,6 +23,15 @@
 		"custom/konform-vpn",
 		"power-profiles-daemon",
 	],
+	"custom/gpu-screen-recorder": {
+		"exec": "screen-record status",
+		"return-type": "json",
+		"format": "{}",
+		"interval": 1,
+		"signal": 9,
+		"on-click": "screen-record toggle",
+		"tooltip": true,
+	},
 	"custom/tmux": {
 		"exec": "~/.config/waybar/scripts/tmux-status.sh",
 		"format": "{}",

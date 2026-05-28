@@ -203,6 +203,25 @@ label:focus {
 	min-width: 100px;
 }
 
+#custom-gpu-screen-recorder {
+	padding: 0 10px;
+	color: @subtext0;
+}
+
+#custom-gpu-screen-recorder.recording {
+	background-color: @red;
+	color: @base;
+	animation-name: blink;
+	animation-duration: 1s;
+	animation-timing-function: steps(12);
+	animation-iteration-count: infinite;
+	animation-direction: alternate;
+}
+
+#custom-gpu-screen-recorder.idle {
+	color: @subtext0;
+}
+
 #custom-konform-vpn {
 	padding: 0 10px;
 }

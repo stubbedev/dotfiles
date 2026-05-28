@@ -209,6 +209,9 @@ binds {
     Shift+Print { screenshot-screen; }
     Mod+Print { screenshot-window; }
 
+    // SCREEN RECORDING (gpu-screen-recorder, focused monitor + audio)
+    Mod+Shift+R { spawn "screen-record" "toggle"; }
+
     // CLIPBOARD
     Mod+V { spawn "bash" "-c" "cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send 'Pasted selection'"; }
     Mod+C { spawn "bash" "-c" "wl-copy \"$(wl-paste -p)\" && notify-send 'Copied selection'"; }

@@ -58,6 +58,7 @@
         mail-unsubscribe.source = "src/aerc/scripts/unsubscribe";
         mail-pager.source = "src/aerc/scripts/nvim-pager.sh";
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
+        screen-record.source = "src/_shared/scripts/screen-record.sh";
         waybar-launch.source = "src/_shared/scripts/waybar.launch.sh";
         power-profile-fix = {
           source = "src/_shared/scripts/power.profile.fix.sh";
