@@ -34,6 +34,7 @@
             includeCoAuthoredBy = false;
             tui = "fullscreen";
             editorMode = "vi";
+            model = "claude-opus-4-8[1m]";
           };
         }}
 
