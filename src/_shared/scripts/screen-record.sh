@@ -331,7 +331,7 @@ toggle() {
 
 status() {
   if ! is_running; then
-    printf '{"text":"","alt":"idle","class":"idle","tooltip":"Screen recorder idle — click to record focused monitor, middle-click for cam overlay"}\n'
+    printf '{"text":" ","alt":"idle","class":"idle","tooltip":"Screen recorder idle — click to record focused monitor, middle-click for cam overlay"}\n'
     return 0
   fi
 
