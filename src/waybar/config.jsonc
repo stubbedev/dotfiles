@@ -11,9 +11,9 @@
 	"modules-left": ["hyprland/workspaces", "niri/workspaces", "hyprland/submap"],
 	"modules-center": ["custom/mail", "custom/tmux"],
 	"modules-right": [
-		"custom/gpu-screen-recorder",
 		"hyprland/language",
     "niri/language",
+		"custom/gpu-screen-recorder",
 		"pulseaudio",
 		"bluetooth",
 		"backlight",
