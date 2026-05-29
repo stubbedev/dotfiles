@@ -30,6 +30,7 @@
 		"interval": 1,
 		"signal": 9,
 		"on-click": "screen-record toggle",
+		"on-click-middle": "screen-record toggle --cam",
 		"tooltip": true,
 	},
 	"custom/tmux": {
