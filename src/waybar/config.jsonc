@@ -9,7 +9,7 @@
 	// Both compositors' workspace widgets are listed; waybar disables
 	// whichever module has no live IPC and renders only the active one.
 	"modules-left": ["hyprland/workspaces", "niri/workspaces", "hyprland/submap"],
-	"modules-center": ["custom/mail", "custom/tmux"],
+	"modules-center": ["custom/mail", "custom/tmux", "custom/treeman"],
 	"modules-right": [
 		"hyprland/language",
     "niri/language",
@@ -37,6 +37,14 @@
 		"exec": "~/.config/waybar/scripts/tmux-status.sh",
 		"format": "{}",
 		"interval": 3,
+	},
+	"custom/treeman": {
+		"exec": "~/.config/waybar/scripts/treeman-status.sh",
+		"return-type": "json",
+		"format": "{}",
+		"interval": 3,
+		"tooltip": true,
+		"on-click": "treeman worktree list",
 	},
 	"custom/mail": {
 		"exec": "~/.config/waybar/scripts/mail-status.sh",
