@@ -234,6 +234,11 @@ label:focus {
 	color: @base;
 }
 
+#custom-treeman.failed {
+	background-color: @red;
+	color: @base;
+}
+
 #custom-treeman.error {
 	background-color: @red;
 	color: @base;

@@ -6,8 +6,9 @@ set -euo pipefail
 # Works on any GPU (AMD/Intel/NVIDIA): h264 maps to whatever hardware encoder
 # the card exposes (VAAPI / NVENC), and KMS capture is promptless wherever the
 # gsr-kms-server setcap wrapper is installed (the NixOS module does this for
-# every vendor; non-NixOS may prompt once via polkit). Audio is captured as
-# two separate tracks: system playback and the default mic.
+# every vendor; non-NixOS may prompt once via polkit). System playback and the
+# default mic are merged into a single audio track so every player (and uploads
+# that strip extra tracks) plays both — `|` mixes sources in one -a flag.
 #
 # Optional webcam overlay (`--cam`): pick a region with slurp, record the
 # webcam to a sidecar file in parallel, and mux it into the final mp4 on
@@ -227,8 +228,7 @@ start() {
     -k "$VIDEO_CODEC" \
     -q "$QUALITY" \
     -fallback-cpu-encoding yes \
-    -a default_output \
-    -a default_input \
+    -a "default_output|default_input" \
     -o "$output" \
     </dev/null >"$LOG_FILE" 2>&1 &
   disown

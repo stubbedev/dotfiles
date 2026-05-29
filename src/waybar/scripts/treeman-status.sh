@@ -10,6 +10,7 @@ set -u
 
 ICON_ACTIVE=$'\U000f04ad'  # nf-md-source_branch_sync
 ICON_IDLE=$'\U000f062c'    # nf-md-source_branch
+ICON_FAILED=$'\U000f0159'  # nf-md-close_network
 
 empty='{"text":"","tooltip":"","class":""}'
 
@@ -25,7 +26,8 @@ esac
 
 printf '%s' "$raw" | jq -c \
     --arg icon_active "$ICON_ACTIVE" \
-    --arg icon_idle "$ICON_IDLE" '
+    --arg icon_idle "$ICON_IDLE" \
+    --arg icon_failed "$ICON_FAILED" '
     # Repo root: main worktree path itself, or path before /.worktrees/,
     # or parent dir for ad-hoc layouts. All string-split, no regex.
     def repo_root:
@@ -38,34 +40,56 @@ printf '%s' "$raw" | jq -c \
         (repo_root | split("/") | .[-1]) as $base
         | if ($base // "") == "" then "?" else $base end;
 
-    map({
-        repo:    repo_label,
-        branch:  (.branch // "-"),
-        state:   (.state // "unknown"),
-        is_main: (.is_main // false),
-        active:  ((.state // "") != "ready"),
+    # Classify each row: failed > active > idle.
+    map(. as $w | {
+        repo:       repo_label,
+        branch:     ($w.branch // "-"),
+        state:      ($w.state // "unknown"),
+        is_main:    ($w.is_main // false),
+        failed:     (($w.state // "") | IN("error", "failed")),
+        processing: (($w.state // "") | IN("preparing", "setup", "teardown")),
+        nonready:   (($w.state // "") != "ready"),
     }) as $rows
-    | ($rows | length)                          as $total
-    | ($rows | map(select(.active)) | length)   as $active
+    | ($rows | length)                            as $total
+    | ($rows | map(select(.failed))     | length) as $n_failed
+    | ($rows | map(select(.processing)) | length) as $n_proc
     | ($rows | group_by(.repo) | map({
-        repo:   .[0].repo,
-        total:  length,
-        items:  sort_by([(.is_main | not), .branch]),
-        active: map(select(.active)),
-      }))                                       as $by_repo
-    | def fmt_item: "  • \(if .is_main then "★ " else "" end)\(.branch)\(if .active then " (\(.state))" else "" end)";
-      if $active > 0 then {
-        text: "\($icon_active) \($active)/\($total)",
-        class: "active",
+        repo:     .[0].repo,
+        total:    length,
+        items:    sort_by([(.is_main | not), .branch]),
+        nonready: map(select(.nonready)),
+      }))                                         as $by_repo
+    | def fmt_item:
+        "  • \(if .is_main then "★ " else "" end)\(.branch)"
+        + (if .nonready then " (\(.state))" else "" end);
+      if $n_failed > 0 then {
+        text: "\($icon_failed) \($n_failed)\(if $n_proc > 0 then "+\($n_proc)" else "" end)/\($total)",
+        class: "failed",
         tooltip: (
-          ["Treeman: \($active) processing / \($total) total"]
+          ["Treeman: \($n_failed) failed\(if $n_proc > 0 then ", \($n_proc) processing" else "" end) / \($total) total"]
           + (
               $by_repo
-              | map(select(.active | length > 0))
+              | map(select(.nonready | length > 0))
               | sort_by(.repo)
               | map(
-                  "\n\(.repo)  (\(.active | length)/\(.total) active)"
-                  + (.active | map("\n" + fmt_item) | join(""))
+                  "\n\(.repo)  (\(.nonready | length)/\(.total) need attention)"
+                  + (.nonready | map("\n" + fmt_item) | join(""))
+                )
+            )
+          | join("\n")
+        ),
+      } elif $n_proc > 0 then {
+        text: "\($icon_active) \($n_proc)/\($total)",
+        class: "active",
+        tooltip: (
+          ["Treeman: \($n_proc) processing / \($total) total"]
+          + (
+              $by_repo
+              | map(select(.nonready | length > 0))
+              | sort_by(.repo)
+              | map(
+                  "\n\(.repo)  (\(.nonready | length)/\(.total) active)"
+                  + (.nonready | map("\n" + fmt_item) | join(""))
                 )
             )
           | join("\n")
