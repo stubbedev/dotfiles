@@ -21,6 +21,7 @@ rec {
     gfxName
     gfxExe
     gfxDirectWithDrivers
+    gfxDriverLibs
     ;
 
   # ============================================================

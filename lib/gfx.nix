@@ -117,4 +117,28 @@ in
   gfxDirectWithDrivers =
     name: program:
     if isNixOS then program else mkDirectWrapperWithDrivers name (lib.getExe program);
+
+  # Make a non-GL tool able to dlopen the GPU vendor libraries it probes
+  # (e.g. btop loading libnvidia-ml.so for NVIDIA stats). Unlike the nixGL
+  # wrappers above, this is NOT a no-op on NixOS: GL apps find their drivers
+  # via glvnd, but a plain dlopen by soname does not, and on NixOS the driver
+  # libs live in /run/opengl-driver/lib — off the default loader path. On
+  # non-NixOS we fall back to nixGL, whose bundle includes those libs.
+  gfxDriverLibs =
+    program:
+    let
+      name = baseNameOf (lib.getExe program);
+    in
+    if isNixOS then
+      pkgs.symlinkJoin {
+        inherit name;
+        paths = [ program ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/${name} \
+            --suffix LD_LIBRARY_PATH : /run/opengl-driver/lib
+        '';
+      }
+    else
+      mkNixGLWrapper name (lib.getExe program);
 }
