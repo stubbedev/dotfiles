@@ -9,10 +9,14 @@
 	// Both compositors' workspace widgets are listed; waybar disables
 	// whichever module has no live IPC and renders only the active one.
 	"modules-left": ["hyprland/workspaces", "niri/workspaces", "hyprland/submap"],
-	"modules-center": ["custom/mail", "custom/tmux", "custom/treeman"],
+	"modules-center": [
+		"custom/mail",
+		// "custom/tmux",
+		"custom/treeman",
+	],
 	"modules-right": [
 		"hyprland/language",
-    "niri/language",
+		"niri/language",
 		"custom/gpu-screen-recorder",
 		"pulseaudio",
 		"bluetooth",
