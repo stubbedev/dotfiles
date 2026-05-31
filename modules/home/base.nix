@@ -7,6 +7,11 @@ _: {
       # HM (non-NixOS) this default is the only definition.
       homeDirectory = lib.mkDefault "/home/stubbe";
       stateVersion = "26.05";
+      # We track nixpkgs nixos-unstable + home-manager master. HM master
+      # bumps its release string ahead of unstable (e.g. HM 26.11 while
+      # unstable is still 26.05), tripping HM's version-mismatch warning.
+      # The skew is intentional and harmless here, so silence the check.
+      enableNixpkgsReleaseCheck = false;
       # User-level PATH. Keep this minimal — every tool we use lands in
       # config.home.profileDirectory/bin via Nix (~/.nix-profile/bin on
       # standalone HM, /etc/profiles/per-user/$USER/bin on NixOS). Two
