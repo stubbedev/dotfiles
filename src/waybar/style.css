@@ -229,21 +229,6 @@ label:focus {
 	color: @subtext0;
 }
 
-#custom-treeman.active {
-	background-color: @yellow;
-	color: @base;
-}
-
-#custom-treeman.failed {
-	background-color: @red;
-	color: @base;
-}
-
-#custom-treeman.error {
-	background-color: @red;
-	color: @base;
-}
-
 #custom-konform-vpn {
 	padding: 0 10px;
 }
