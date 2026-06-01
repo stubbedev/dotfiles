@@ -95,7 +95,7 @@ function _list_worktrees {
 }
 
 # Print the path of the worktree that has $1 checked out, or nothing if none.
-# Tries `treeman wt resolve` first (registry lookup, sub-ms); on any
+# Tries `treeman wt go` first (registry lookup, sub-ms); on any
 # treeman failure — old binary missing the subcommand, repo not yet
 # registered, no match — falls through to the porcelain parser so the
 # function stays correct against non-treeman repos too. The treeman path
@@ -107,7 +107,7 @@ function _worktree_path_for_branch {
     local _main=$(_git_main_root 2>/dev/null) || _main=""
     if [[ -n "$_main" ]]; then
       local _p
-      _p=$(treeman wt resolve "$_target" --repo "$_main" 2>/dev/null)
+      _p=$(treeman wt go "$_target" --repo "$_main" 2>/dev/null)
       [[ -n "$_p" ]] && { echo "$_p"; return 0; }
     fi
   fi
@@ -302,7 +302,7 @@ function _gwt_create {
   [[ -n "$_base" ]] && _args+=(--from "$_base")
   treeman "${_args[@]}" || return 1
   local _wt
-  _wt=$(treeman wt switch "$_branch" --repo "$_main") || return 1
+  _wt=$(treeman wt go "$_branch" --repo "$_main") || return 1
   cd "$_wt" || return 1
 }
 
