@@ -41,6 +41,9 @@ _: {
         # Caddy server
         caddy
 
+        # RDP client
+        freerdp
+
         # IDE toolbox (GUI app)
         (homeLib.gfx jetbrains-toolbox)
         openconnect
