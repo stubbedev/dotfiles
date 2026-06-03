@@ -53,7 +53,6 @@ hl.config({
     },
 
     dwindle = {
-        pseudotile = true,
         preserve_split = true,
     },
 
@@ -109,35 +108,40 @@ hl.config({
 })
 
 -- hy3 plugin config. Plugin itself is loaded in nix.lua via hl.plugin.load.
+-- Guarded on hl.plugin.hy3: plugin.* config keys only exist once the plugin
+-- is loaded, and hl.config errors on unknown keys, so configure only after
+-- the plugin registered itself (per the official Hyprland Lua example).
 -- Tab color keys were renamed in hy3 0.55 (col.active -> active, etc).
-hl.config({
-    plugin = {
-        hy3 = {
-            node_collapse_policy = 2,
-            tabs = {
-                height = 15,
-                padding = 5,
-                render_text = true,
-                text_center = false,
-                text_height = 8,
-                text_padding = 3,
-                active = mauve,
-                active_text = text,
-                urgent = red,
-                urgent_text = text,
-                inactive = surface0,
-                inactive_text = subtext0,
-            },
-            autotile = {
-                enable = true,
-                ephemeral_groups = true,
-                trigger_width = 600,
-                trigger_height = 0,
-                workspaces = "all",
+if hl.plugin.hy3 ~= nil then
+    hl.config({
+        plugin = {
+            hy3 = {
+                node_collapse_policy = 2,
+                tabs = {
+                    height = 15,
+                    padding = 5,
+                    render_text = true,
+                    text_center = false,
+                    text_height = 8,
+                    text_padding = 3,
+                    active = mauve,
+                    active_text = text,
+                    urgent = red,
+                    urgent_text = text,
+                    inactive = surface0,
+                    inactive_text = subtext0,
+                },
+                autotile = {
+                    enable = true,
+                    ephemeral_groups = true,
+                    trigger_width = 600,
+                    trigger_height = 0,
+                    workspaces = "all",
+                },
             },
         },
-    },
-})
+    })
+end
 
 ----------------------------------------------------------------- DEVICE
 -- Per-device block instead of global input.touchpad{}. Global touchpad
@@ -151,7 +155,7 @@ hl.device({
     middle_button_emulation = true,
     clickfinger_behavior = true,
     drag_lock = true,
-    ["tap-to-click"] = true,
+    tap_to_click = true,
     natural_scroll = false,
     scroll_method = "2fg",
     scroll_factor = 1.0,
