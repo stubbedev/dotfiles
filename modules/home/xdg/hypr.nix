@@ -67,6 +67,17 @@ _: {
       luaColors = lib.concatStringsSep "\n    " (
         lib.mapAttrsToList (name: hex: ''${name} = "rgb(${hex})",'') palette
       );
+      # hyprtoolkit (hyprpolkitagent UI etc): 0xAARRGGBB, role -> Mocha shade.
+      hyprtoolkitConf = ''
+        # Catppuccin Mocha (Mauve), generated from the palette above.
+        background=0xff${palette.crust}
+        base=0xff${palette.base}
+        alternate_base=0xff${palette.mantle}
+        text=0xff${palette.text}
+        bright_text=0xff${palette.subtext1}
+        accent=0xff${palette.mauve}
+        accent_secondary=0xff${palette.lavender}
+      '';
     in
     lib.mkIf config.features.hyprland {
       xdg.configFile =
@@ -79,7 +90,6 @@ _: {
           "hypr/hyprlock.conf"
           "hypr/hyprpaper.conf"
           "hypr/hyprsunset.conf"
-          "hypr/hyprtoolkit.conf"
           "hypr/scripts"
         ]
         // {
@@ -128,6 +138,10 @@ _: {
           # single `palette` source above. Sourced by hyprlock.conf and
           # hyprlock.launch.sh (still hyprlang — no Lua config support).
           "hypr/theme.conf".text = themeConf + "\n";
+
+          # hyprtoolkit theme (hyprpolkitagent + other hyprtoolkit GUIs),
+          # generated from the Mocha palette to match the rest of the desktop.
+          "hypr/hyprtoolkit.conf".text = hyprtoolkitConf;
 
           # Generated hl API type stubs (lua_ls). src/hypr/.luarc.json points
           # the language server here.
