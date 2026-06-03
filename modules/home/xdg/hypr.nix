@@ -18,6 +18,55 @@ _: {
       hlMetaStub = pkgs.runCommand "hl.meta.lua" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 ${hyprland}/meta/generateLuaStubs.py --root ${hyprland} --output "$out"
       '';
+
+      # Script dirs (live in the in-tree dotfiles checkout, not /nix/store).
+      hyprScripts = "${constants.paths.dotfiles}/src/hypr/scripts";
+      sharedScripts = "${constants.paths.dotfiles}/src/_shared/scripts";
+
+      # Single source of truth for the Catppuccin Mocha palette (hex, no #).
+      # Generates both the hyprlang theme.conf (sourced by hyprlock) and the
+      # Lua colors returned from nix.lua (used by hyprland.lua), so the palette
+      # is defined exactly once.
+      palette = {
+        rosewater = "f5e0dc";
+        flamingo = "f2cdcd";
+        pink = "f5c2e7";
+        mauve = "cba6f7";
+        red = "f38ba8";
+        maroon = "eba0ac";
+        peach = "fab387";
+        yellow = "f9e2af";
+        green = "a6e3a1";
+        teal = "94e2d5";
+        sky = "89dceb";
+        sapphire = "74c7ec";
+        blue = "89b4fa";
+        lavender = "b4befe";
+        text = "cdd6f4";
+        subtext1 = "bac2de";
+        subtext0 = "a6adc8";
+        overlay2 = "9399b2";
+        overlay1 = "7f849c";
+        overlay0 = "6c7086";
+        surface2 = "585b70";
+        surface1 = "45475a";
+        surface0 = "313244";
+        base = "1e1e2e";
+        mantle = "181825";
+        crust = "11111b";
+      };
+      # hyprlang: `$name = rgb(hex)` plus `$nameAlpha = hex` for each color.
+      # Build the literal `$` via concatenation — `$${name}` is read by Nix as
+      # an escaped literal `${name}`, not interpolation.
+      themeConf = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (
+          name: hex: "$" + name + " = rgb(" + hex + ")\n" + "$" + name + "Alpha = " + hex
+        ) palette
+      );
+      # Lua: `name = "rgb(hex)"` table entries.
+      luaColors = lib.concatStringsSep "\n    " (
+        lib.mapAttrsToList (name: hex: ''${name} = "rgb(${hex})",'') palette
+      );
     in
     lib.mkIf config.features.hyprland {
       xdg.configFile =
@@ -31,10 +80,6 @@ _: {
           "hypr/hyprpaper.conf"
           "hypr/hyprsunset.conf"
           "hypr/hyprtoolkit.conf"
-          # Catppuccin color vars (hyprlang $vars). The compositor uses Lua
-          # locals now, but hyprlock.conf + hyprlock.launch.sh still source
-          # this hyprlang file, so it must stay deployed.
-          "hypr/theme.conf"
           "hypr/scripts"
         ]
         // {
@@ -65,8 +110,24 @@ _: {
               ''}
               -- Plugins
               hl.plugin.load("${hy3-plugin}/lib/libhy3.so")
+
+              -- Nix-derived values consumed by hyprland.lua via require("nix").
+              return {
+                paths = {
+                  scripts = "${hyprScripts}",
+                  shared = "${sharedScripts}",
+                },
+                colors = {
+                  ${luaColors}
+                },
+              }
               '';
           };
+
+          # Catppuccin Mocha palette as hyprlang $vars, generated from the
+          # single `palette` source above. Sourced by hyprlock.conf and
+          # hyprlock.launch.sh (still hyprlang — no Lua config support).
+          "hypr/theme.conf".text = themeConf + "\n";
 
           # Generated hl API type stubs (lua_ls). src/hypr/.luarc.json points
           # the language server here.
