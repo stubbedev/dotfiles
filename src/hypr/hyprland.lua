@@ -31,10 +31,10 @@ hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("TERMINAL", "alacritty")
 
 --------------------------------------------------------------- MONITORS
-hl.monitor({ output = "", mode = "highres", position = "auto", scale = 1 })
-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = 1.5 })
-hl.monitor({ output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", position = "auto", scale = 1 })
-hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", position = "auto", scale = 1.5 })
+hl.monitor({ output = "", mode = "highres", position = "auto", scale = "1" })
+hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "1.5" })
+hl.monitor({ output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", position = "auto", scale = "1" })
+hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", position = "auto", scale = "1.5" })
 
 ----------------------------------------------------------------- CONFIG
 hl.config({
@@ -94,7 +94,6 @@ hl.config({
     misc = {
         disable_hyprland_logo = true,
         disable_splash_rendering = true,
-        vfr = true,
         focus_on_activate = false,
         -- HM activation hook reloads explicitly
         -- (modules/activation/_non-privileged/reload-hyprland.nix) so it can
@@ -124,12 +123,14 @@ if hl.plugin.hy3 ~= nil then
                     text_center = false,
                     text_height = 8,
                     text_padding = 3,
-                    active = mauve,
-                    active_text = text,
-                    urgent = red,
-                    urgent_text = text,
-                    inactive = surface0,
-                    inactive_text = subtext0,
+                    colors = {
+                        active = mauve,
+                        active_text = text,
+                        urgent = red,
+                        urgent_text = text,
+                        inactive = surface0,
+                        inactive_text = subtext0,
+                    },
                 },
                 autotile = {
                     enable = true,
