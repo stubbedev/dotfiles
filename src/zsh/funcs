@@ -18,7 +18,7 @@ typeset -gA _git_shorthand_docs=(
   ggo 'pull from a selected origin branch'
   gl 'interactive git log (multi-select; ctrl-y copy hash, ctrl-x cherry-pick, ctrl-r revert)'
   gsp 'interactive stash pop (fzf select from stash list)'
-  gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch)'
+  gwt 'switch to or create git worktree (name w/o slash → wizard, Ctrl+C → wizard escape hatch; -c/-s/-p flags = non-interactive)'
   gwtd 'remove a git worktree'
   gwte 'cd to main repo root (exit linked worktree); does not remove the worktree'
   gwtc 'cd to main repo root and remove the linked worktree we just exited (skips if dirty/unpushed)'
@@ -841,6 +841,54 @@ if are_binary git fzf treeman; then
       cd "$_target" || return 1
       typeset -g _GWT_LAST="$_start_pwd"
       return 0
+    fi
+
+    # Non-interactive entry for scripts/agents — bypass fzf entirely. Mirrors
+    # the interactive "new branch" path (always a .worktrees/<branch> worktree
+    # via treeman), never `git checkout -b` in place. Echoes the resolved
+    # worktree path on success.
+    #   gwt -c|--create <branch> [-b|--base <base>]  create-or-switch
+    #   gwt -s|--switch <branch>                      switch/attach existing
+    #   gwt -p|--path   <branch>                      echo path only, no cd
+    # --create defaults base to the repo default branch; pass --base for
+    # hotfix or any non-default start point.
+    if [[ "$1" == -* ]]; then
+      local _mode="" _branch="" _base=""
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          -c|--create) _mode="create"; _branch="$2"; shift 2 ;;
+          -s|--switch) _mode="switch"; _branch="$2"; shift 2 ;;
+          -p|--path)   _mode="path";   _branch="$2"; shift 2 ;;
+          -b|--base)   _base="$2";     shift 2 ;;
+          *) echo "gwt: unknown flag '$1'" >&2; return 2 ;;
+        esac
+      done
+      [[ -z "$_mode" ]]   && { echo "gwt: no mode flag (-c/-s/-p)" >&2; return 2; }
+      [[ -z "$_branch" ]] && { echo "gwt: --$_mode needs a branch name" >&2; return 2; }
+
+      local _wt=$(_worktree_path_for_branch "$_branch")
+      case "$_mode" in
+        path)
+          [[ -n "$_wt" ]] || { echo "gwt: no worktree for '$_branch'" >&2; return 1; }
+          echo "$_wt"; return 0 ;;
+        switch)
+          if [[ -n "$_wt" && "$_wt" != "$_git_root" ]]; then
+            cd "$_wt" || return 1
+          else
+            _gwt_attach "$_branch" || return 1
+          fi
+          echo "$PWD"; return 0 ;;
+        create)
+          if [[ -n "$_wt" && "$_wt" != "$_git_root" ]]; then
+            cd "$_wt" || return 1
+          elif git rev-parse --verify --quiet "refs/heads/$_branch" >/dev/null 2>&1; then
+            _gwt_attach "$_branch" || return 1
+          else
+            [[ -z "$_base" ]] && { _base=$(_default_branch) || return 1; }
+            _gwt_create "$_branch" "$_base" || return 1
+          fi
+          echo "$PWD"; return 0 ;;
+      esac
     fi
 
     {
