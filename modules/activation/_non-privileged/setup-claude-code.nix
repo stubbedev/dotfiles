@@ -10,7 +10,6 @@
     }:
     let
       servers = import (self + "/lib/mcp-servers.nix") {
-        chromePath = "${config.home.profileDirectory}/bin/google-chrome-stable";
         firefoxPath = "${config.home.profileDirectory}/bin/firefox";
       };
       # Claude's .claude.json shape: { type, command, args, env? }
