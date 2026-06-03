@@ -1,8 +1,7 @@
-{ chromePath, firefoxPath }:
+{ firefoxPath }:
 {
   # Canonical MCP server definitions. Consumed by:
   #   modules/activation/_non-privileged/setup-claude-code.nix (.claude.json)
-  #   modules/activation/_non-privileged/setup-opencode.nix    (opencode.json)
   #
   # Caller passes absolute paths to chrome / firefox so the chrome-devtools
   # and firefox-devtools servers exec the same binaries the user launches
@@ -14,8 +13,6 @@
       "chrome-devtools-mcp@latest"
       "--no-usage-statistics"
       "--auto-connect"
-      # "--executable-path"
-      # chromePath
     ];
   };
   firefox-devtools = {
@@ -51,18 +48,5 @@
   nix-mcp = {
     command = "uvx";
     args = [ "mcp-nixos" ];
-  };
-  logseq-mcp = {
-    command = "uv";
-    args = [
-      "run"
-      "--with"
-      "mcp-logseq"
-      "mcp-logseq"
-    ];
-    env = {
-      LOGSEQ_API_TOKEN = "logseq";
-      LOGSEQ_API_URL = "http://localhost:12315";
-    };
   };
 }

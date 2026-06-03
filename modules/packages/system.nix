@@ -36,13 +36,6 @@ _: {
 
         exec "$real" "$@"
       '';
-      # Logseq's bundled chrome-sandbox can't be SUID from /nix/store; pass
-      # --disable-setuid-sandbox so it falls back to userns. Matching
-      # AppArmor profile installed by setup-logseq-apparmor on Ubuntu 24.04+.
-      logseqPackage = homeLib.mkWrappedPackage {
-        pkg = pkgs.logseq;
-        flags = [ "--disable-setuid-sandbox" ];
-      };
     in
     lib.mkIf config.features.desktop {
       home.packages = with pkgs; [
@@ -83,9 +76,6 @@ _: {
         # file manager
         yazi
         pcmanfm
-
-        # Note-taking / knowledge base (Electron, GPU accelerated)
-        logseqPackage
       ];
     };
 }

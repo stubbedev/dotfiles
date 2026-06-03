@@ -38,12 +38,13 @@
           };
         }}
 
-        ${homeLib.mergeJsonPatch {
-          name = "claude-config-patch";
+        ${homeLib.setJsonKey {
+          name = "claude-config-mcp";
           target = "${config.home.homeDirectory}/.claude.json";
-          patch = {
-            inherit mcpServers;
-          };
+          key = "mcpServers";
+          # Authoritative: the managed set fully owns .mcpServers, so servers
+          # dropped from lib/mcp-servers.nix disappear instead of lingering.
+          value = mcpServers;
         }}
       '';
     };

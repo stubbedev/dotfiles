@@ -422,6 +422,40 @@ rec {
       fi
     '';
 
+  # Authoritatively set a single top-level key in a JSON file, leaving every
+  # other key untouched. Unlike mergeJsonPatch (deep `*` merge, additive-only),
+  # this REPLACES the key's value wholesale, so entries removed from `value`
+  # actually disappear from the target. Use for a managed subtree that lives
+  # inside an otherwise stateful, externally-owned file (e.g. mcpServers in
+  # ~/.claude.json) where merging would leave stale entries behind.
+  setJsonKey =
+    {
+      name,
+      target,
+      key,
+      value,
+      mode ? "0600",
+    }:
+    let
+      p = requirePkgs "setJsonKey";
+      valueFile = p.writeText "${name}.json" (builtins.toJSON value);
+    in
+    ''
+      mkdir -p "$(dirname "${target}")"
+      if [ -f "${target}" ]; then
+        ${p.jq}/bin/jq --slurpfile v "${valueFile}" '.["${key}"] = $v[0]' "${target}" \
+          > "${target}.hm-tmp"
+        if cmp -s "${target}.hm-tmp" "${target}"; then
+          rm -f "${target}.hm-tmp"
+        else
+          mv "${target}.hm-tmp" "${target}"
+        fi
+      else
+        ${p.jq}/bin/jq -n --slurpfile v "${valueFile}" '{ "${key}": $v[0] }' > "${target}"
+        chmod ${mode} "${target}"
+      fi
+    '';
+
   # ============================================================
   # Sudo-prompt scaffolding (consistent "Install X" / "Install X?")
   # ============================================================
@@ -478,7 +512,7 @@ rec {
   # Wrap a package's binaries with nixGL + makeWrapper, then bundle the
   # result back together with the upstream paths via symlinkJoin. This
   # collapses the gfx-wrap → makeWrapper → symlinkJoin pattern that
-  # repeats for chrome / slack / logseq / firefox / remmina.
+  # repeats for chrome / slack / firefox / remmina.
   #
   # exes:           binaries to wrap. The first uses lib.getExe (the
   #                 package's mainProgram); subsequent entries use
