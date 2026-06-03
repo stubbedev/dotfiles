@@ -61,13 +61,6 @@ hl.config({
         orientation = "center",
     },
 
-    scrolling = {
-        fullscreen_on_one_column = true,
-        direction = "right",
-        column_width = 0.5,
-        follow_min_visible = 0.9,
-    },
-
     ecosystem = {
         no_update_news = true,
         no_donation_nag = true,
@@ -185,8 +178,24 @@ end)
 -------------------------------------------------------------- KEYBINDINGS
 local mod = "SUPER"
 
--- Layout switching (toggles hy3 <-> scroll).
-hl.bind(mod .. " + L", hl.dsp.exec_cmd(scripts .. "/toggle.layout.sh"))
+-- hy3 is the only layout. These dispatch hy3's custom commands; they access
+-- hl.plugin.hy3 at keypress time (the plugin is loaded by then) to avoid any
+-- config-eval ordering races. resize_active uses the native dispatcher.
+local function hy3_focus(d)
+    return function() hl.dispatch(hl.plugin.hy3.move_focus(d)) end
+end
+local function hy3_move(d)
+    return function() hl.dispatch(hl.plugin.hy3.move_window(d)) end
+end
+local function hy3_to_ws(n)
+    return function() hl.dispatch(hl.plugin.hy3.move_to_workspace(tostring(n))) end
+end
+local function hy3_kill()
+    hl.dispatch(hl.plugin.hy3.kill_active())
+end
+local function resize_active(dx, dy)
+    return hl.dsp.window.resize({ x = dx, y = dy, relative = true })
+end
 
 -- Launchers.
 hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("alacritty"))
@@ -202,7 +211,7 @@ hl.bind(mod .. " + C", hl.dsp.exec_cmd([[wl-copy "$(wl-paste -p)" && notify-send
 hl.bind(mod .. " + M", hl.dsp.exec_cmd("mail-open"))
 
 -- General.
-hl.bind(mod .. " + SHIFT + Q", hl.dsp.exec_cmd(scripts .. "/wrapper.killactive.sh"))
+hl.bind(mod .. " + SHIFT + Q", hy3_kill)
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mod .. " + T", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + escape", hl.dsp.exec_cmd(shared .. "/hyprlock.launch.sh"))
@@ -210,50 +219,50 @@ hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 hl.bind(mod .. " + delete", hl.dsp.exit())
 
--- Window focus / movement (wrapper scripts work in both hy3 and scroll layouts).
-hl.bind(mod .. " + left", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh l"))
-hl.bind(mod .. " + right", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh r"))
-hl.bind(mod .. " + up", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh u"))
-hl.bind(mod .. " + down", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh d"))
+-- Window focus / movement (hy3).
+hl.bind(mod .. " + left", hy3_focus("l"))
+hl.bind(mod .. " + right", hy3_focus("r"))
+hl.bind(mod .. " + up", hy3_focus("u"))
+hl.bind(mod .. " + down", hy3_focus("d"))
 
-hl.bind(mod .. " + SHIFT + left", hl.dsp.exec_cmd(scripts .. "/wrapper.movewindow.sh l"))
-hl.bind(mod .. " + SHIFT + right", hl.dsp.exec_cmd(scripts .. "/wrapper.movewindow.sh r"))
-hl.bind(mod .. " + SHIFT + up", hl.dsp.exec_cmd(scripts .. "/wrapper.movewindow.sh u"))
-hl.bind(mod .. " + SHIFT + down", hl.dsp.exec_cmd(scripts .. "/wrapper.movewindow.sh d"))
+hl.bind(mod .. " + SHIFT + left", hy3_move("l"))
+hl.bind(mod .. " + SHIFT + right", hy3_move("r"))
+hl.bind(mod .. " + SHIFT + up", hy3_move("u"))
+hl.bind(mod .. " + SHIFT + down", hy3_move("d"))
 
-hl.bind(mod .. " + CTRL + left", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh -50 0"))
-hl.bind(mod .. " + CTRL + right", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh 50 0"))
-hl.bind(mod .. " + CTRL + up", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh 0 -50"))
-hl.bind(mod .. " + CTRL + down", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh 0 50"))
+hl.bind(mod .. " + CTRL + left", resize_active(-50, 0))
+hl.bind(mod .. " + CTRL + right", resize_active(50, 0))
+hl.bind(mod .. " + CTRL + up", resize_active(0, -50))
+hl.bind(mod .. " + CTRL + down", resize_active(0, 50))
 
--- Focus cycling (works in both layouts).
-hl.bind(mod .. " + mouse_down", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh r"))
-hl.bind(mod .. " + mouse_up", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh l"))
-hl.bind(mod .. " + bracketright", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh r"))
-hl.bind(mod .. " + bracketleft", hl.dsp.exec_cmd(scripts .. "/wrapper.movefocus.sh l"))
+-- Focus cycling.
+hl.bind(mod .. " + mouse_down", hy3_focus("r"))
+hl.bind(mod .. " + mouse_up", hy3_focus("l"))
+hl.bind(mod .. " + bracketright", hy3_focus("r"))
+hl.bind(mod .. " + bracketleft", hy3_focus("l"))
 
--- Workspace scrolling (works in both layouts).
-hl.bind(mod .. " + SHIFT + mouse_down", hl.dsp.exec_cmd(scripts .. "/wrapper.scrollworkspace.sh next"))
-hl.bind(mod .. " + SHIFT + mouse_up", hl.dsp.exec_cmd(scripts .. "/wrapper.scrollworkspace.sh prev"))
-hl.bind(mod .. " + SHIFT + bracketright", hl.dsp.exec_cmd(scripts .. "/wrapper.scrollworkspace.sh next"))
-hl.bind(mod .. " + SHIFT + bracketleft", hl.dsp.exec_cmd(scripts .. "/wrapper.scrollworkspace.sh prev"))
-hl.bind(mod .. " + Tab", hl.dsp.exec_cmd(scripts .. "/wrapper.scrollworkspace.sh next"))
-hl.bind(mod .. " + SHIFT + Tab", hl.dsp.exec_cmd(scripts .. "/wrapper.scrollworkspace.sh prev"))
+-- Workspace scrolling (native relative workspace switch).
+hl.bind(mod .. " + SHIFT + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mod .. " + SHIFT + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mod .. " + SHIFT + bracketright", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mod .. " + SHIFT + bracketleft", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mod .. " + Tab", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mod .. " + SHIFT + Tab", hl.dsp.focus({ workspace = "e-1" }))
 
--- Workspace switch (native) + move-to-workspace (wrapper).
+-- Workspace switch (native) + layout-aware move-to-workspace.
 for i = 1, 10 do
     local key = i % 10
     hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }))
-    hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.exec_cmd(scripts .. "/wrapper.movetoworkspace.sh " .. i))
+    hl.bind(mod .. " + SHIFT + " .. key, hy3_to_ws(i))
 end
 
 -- Resize submap.
 hl.bind(mod .. " + R", hl.dsp.submap("resize_mode"))
 hl.define_submap("resize_mode", function()
-    hl.bind("right", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh 10 0"), { repeating = true })
-    hl.bind("left", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh -10 0"), { repeating = true })
-    hl.bind("up", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh 0 -10"), { repeating = true })
-    hl.bind("down", hl.dsp.exec_cmd(scripts .. "/wrapper.resizeactive.sh 0 10"), { repeating = true })
+    hl.bind("right", resize_active(10, 0), { repeating = true })
+    hl.bind("left", resize_active(-10, 0), { repeating = true })
+    hl.bind("up", resize_active(0, -10), { repeating = true })
+    hl.bind("down", resize_active(0, 10), { repeating = true })
     hl.bind("return", hl.dsp.submap("reset"))
     hl.bind("escape", hl.dsp.submap("reset"))
     hl.bind(mod .. " + R", hl.dsp.submap("reset"))

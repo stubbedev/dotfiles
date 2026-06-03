@@ -22,6 +22,10 @@ _: {
           "hypr/hyprpaper.conf"
           "hypr/hyprsunset.conf"
           "hypr/hyprtoolkit.conf"
+          # Catppuccin color vars (hyprlang $vars). The compositor uses Lua
+          # locals now, but hyprlock.conf + hyprlock.launch.sh still source
+          # this hyprlang file, so it must stay deployed.
+          "hypr/theme.conf"
           "hypr/scripts"
         ]
         // {
