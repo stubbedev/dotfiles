@@ -5,6 +5,9 @@
 -- `hl` is injected by Hyprland at runtime. lua-language-server learns its
 -- API from generated stubs (~/.config/hypr/hl.meta.lua + hy3.meta.lua, built
 -- by modules/home/xdg/hypr.nix) via the workspace.library in .luarc.json.
+--
+-- Structure: each section is a named setup_* function; the call list at the
+-- bottom is the table of contents.
 require("nix")
 
 local mod = "SUPER"
@@ -21,79 +24,88 @@ local c = {
     subtext0 = "rgb(a6adc8)",
 }
 
-------------------------------------------------------------------- ENV
--- PATH, XDG_DATA_DIRS, XCURSOR_THEME, XCURSOR_SIZE come from Home Manager
--- session variables / NixOS environment.sessionVariables (cursor mirrored
--- in nix.lua for non-NixOS session managers).
-for _, e in ipairs({
-    { "XDG_CURRENT_DESKTOP", "Hyprland" },
-    { "XDG_SESSION_TYPE", "wayland" },
-    { "XDG_SESSION_DESKTOP", "Hyprland" },
-    { "GDK_BACKEND", "wayland" },
-    { "GTK_USE_PORTAL", "0" },
-    { "QT_QPA_PLATFORMTHEME", "qt5ct" },
-    { "QT_STYLE_OVERRIDE", "kvantum" },
-    { "COLOR_SCHEME", "prefer-dark" },
-    { "ELECTRON_OZONE_PLATFORM_HINT", "auto" },
-    { "MOZ_ENABLE_WAYLAND", "1" },
-    { "TERMINAL", "alacritty" },
-}) do
-    hl.env(e[1], e[2])
+----------------------------------------------------------------------- ENV
+local function setup_env()
+    -- PATH, XDG_DATA_DIRS, XCURSOR_THEME, XCURSOR_SIZE come from Home Manager
+    -- session variables / NixOS environment.sessionVariables (cursor mirrored
+    -- in nix.lua for non-NixOS session managers).
+    for _, e in ipairs({
+        { "XDG_CURRENT_DESKTOP", "Hyprland" },
+        { "XDG_SESSION_TYPE", "wayland" },
+        { "XDG_SESSION_DESKTOP", "Hyprland" },
+        { "GDK_BACKEND", "wayland" },
+        { "GTK_USE_PORTAL", "0" },
+        { "QT_QPA_PLATFORMTHEME", "qt5ct" },
+        { "QT_STYLE_OVERRIDE", "kvantum" },
+        { "COLOR_SCHEME", "prefer-dark" },
+        { "ELECTRON_OZONE_PLATFORM_HINT", "auto" },
+        { "MOZ_ENABLE_WAYLAND", "1" },
+        { "TERMINAL", "alacritty" },
+    }) do
+        hl.env(e[1], e[2])
+    end
 end
 
---------------------------------------------------------------- MONITORS
-for _, m in ipairs({
-    { output = "", mode = "highres", scale = "1" },
-    { output = "eDP-1", mode = "preferred", scale = "1.5" },
-    { output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", scale = "1" },
-    { output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", scale = "1.5" },
-}) do
-    hl.monitor({ output = m.output, mode = m.mode, position = "auto", scale = m.scale })
+------------------------------------------------------------------ MONITORS
+local function setup_monitors()
+    for _, m in ipairs({
+        { output = "", mode = "highres", scale = "1" },
+        { output = "eDP-1", mode = "preferred", scale = "1.5" },
+        { output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", scale = "1" },
+        { output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", scale = "1.5" },
+    }) do
+        hl.monitor({ output = m.output, mode = m.mode, position = "auto", scale = m.scale })
+    end
 end
 
------------------------------------------------------------------ CONFIG
-hl.config({
-    general = {
-        layout = "hy3",
-        gaps_workspaces = 0,
-        gaps_in = 0,
-        gaps_out = 0,
-        hover_icon_on_border = false,
-        col = {
-            inactive_border = c.crust,
-            nogroup_border = c.crust,
-            active_border = c.mauve,
-            nogroup_border_active = c.mauve,
+-------------------------------------------------------------------- CONFIG
+local function setup_config()
+    hl.config({
+        general = {
+            layout = "hy3",
+            gaps_workspaces = 0,
+            gaps_in = 0,
+            gaps_out = 0,
+            hover_icon_on_border = false,
+            col = {
+                inactive_border = c.crust,
+                nogroup_border = c.crust,
+                active_border = c.mauve,
+                nogroup_border_active = c.mauve,
+            },
         },
-    },
-    dwindle = { preserve_split = true },
-    master = { new_status = "slave", orientation = "center" },
-    ecosystem = { no_update_news = true, no_donation_nag = true },
-    decoration = { blur = { enabled = false } },
-    animations = { enabled = false },
-    input = {
-        repeat_rate = 50,
-        repeat_delay = 300,
-        force_no_accel = true,
-        kb_layout = "us,dk,es",
-        kb_options = "grp:toggle",
-    },
-    misc = {
-        disable_hyprland_logo = true,
-        disable_splash_rendering = true,
-        focus_on_activate = false,
-        -- HM activation hook reloads explicitly
-        -- (modules/activation/_non-privileged/reload-hyprland.nix) so it can
-        -- preserve focused workspace across multi-monitor reload.
-        disable_autoreload = true,
-    },
-    xwayland = { force_zero_scaling = true },
-})
+        dwindle = { preserve_split = true },
+        master = { new_status = "slave", orientation = "center" },
+        ecosystem = { no_update_news = true, no_donation_nag = true },
+        decoration = { blur = { enabled = false } },
+        animations = { enabled = false },
+        input = {
+            repeat_rate = 50,
+            repeat_delay = 300,
+            force_no_accel = true,
+            kb_layout = "us,dk,es",
+            kb_options = "grp:toggle",
+        },
+        misc = {
+            disable_hyprland_logo = true,
+            disable_splash_rendering = true,
+            focus_on_activate = false,
+            -- HM activation hook reloads explicitly
+            -- (modules/activation/_non-privileged/reload-hyprland.nix) so it can
+            -- preserve focused workspace across multi-monitor reload.
+            disable_autoreload = true,
+        },
+        xwayland = { force_zero_scaling = true },
+    })
+end
 
 -- hy3 plugin config. The plugin is loaded in nix.lua via hl.plugin.load;
 -- guard on hl.plugin.hy3 because plugin.* config keys only exist once it has
 -- registered, and hl.config errors on unknown keys (per the official example).
-if hl.plugin.hy3 ~= nil then
+local function setup_plugins()
+    if hl.plugin.hy3 == nil then
+        return
+    end
     hl.config({
         plugin = {
             hy3 = {
@@ -126,49 +138,53 @@ if hl.plugin.hy3 ~= nil then
     })
 end
 
------------------------------------------------------------------ DEVICE
--- Per-device block instead of global input.touchpad{}. Global touchpad
--- settings sometimes fail to re-apply to the i2c-hid touchpad after
--- `hyprctl reload` (triggered on dock unplug by scripts/monitor.toggle.sh),
--- leaving two-finger scroll dead until a Hyprland restart. A device block
--- fully overrides input.touchpad{} (hyprwm/Hyprland#2895), so scroll options
--- must be set here or libinput falls back to its own defaults.
-hl.device({
-    name = "snsl0028:00-2c2f:0028-touchpad",
-    middle_button_emulation = true,
-    clickfinger_behavior = true,
-    drag_lock = true,
-    tap_to_click = true,
-    natural_scroll = false,
-    scroll_method = "2fg",
-    scroll_factor = 1.0,
-    disable_while_typing = false,
-})
+-------------------------------------------------------------------- DEVICE
+local function setup_device()
+    -- Per-device block instead of global input.touchpad{}. Global touchpad
+    -- settings sometimes fail to re-apply to the i2c-hid touchpad after
+    -- `hyprctl reload` (triggered on dock unplug by scripts/monitor.toggle.sh),
+    -- leaving two-finger scroll dead until a Hyprland restart. A device block
+    -- fully overrides input.touchpad{} (hyprwm/Hyprland#2895), so scroll options
+    -- must be set here or libinput falls back to its own defaults.
+    hl.device({
+        name = "snsl0028:00-2c2f:0028-touchpad",
+        middle_button_emulation = true,
+        clickfinger_behavior = true,
+        drag_lock = true,
+        tap_to_click = true,
+        natural_scroll = false,
+        scroll_method = "2fg",
+        scroll_factor = 1.0,
+        disable_while_typing = false,
+    })
+end
 
--------------------------------------------------------------- AUTOSTART
-hl.on("hyprland.start", function()
-    for _, cmd in ipairs({
-        -- Update D-Bus and systemd environment. QT_QPA_PLATFORMTHEME and
-        -- QT_STYLE_OVERRIDE are intentionally NOT imported to systemd to keep
-        -- them from persisting and breaking a later KDE Plasma login.
-        "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP GTK_THEME XDG_DATA_DIRS SSH_AUTH_SOCK HYPRLAND_INSTANCE_SIGNATURE",
-        "compositor-session hyprland",
-        "hyprctl setcursor $XCURSOR_THEME $XCURSOR_SIZE",
-        "hypridle",
-        "hyprsunset",
-        "wl-paste --watch cliphist store",
-        "wl-clip-persist --clipboard regular",
-        "blueman-applet",
-        "nm-applet --indicator",
-        scripts .. "/hy3.tiling.sh",
-        scripts .. "/jetbrains.popup.resize.sh",
-        scripts .. "/monitor.toggle.sh daemon",
-    }) do
-        hl.exec_cmd(cmd)
-    end
-end)
+----------------------------------------------------------------- AUTOSTART
+local function setup_autostart()
+    hl.on("hyprland.start", function()
+        for _, cmd in ipairs({
+            -- Update D-Bus and systemd environment. QT_QPA_PLATFORMTHEME and
+            -- QT_STYLE_OVERRIDE are intentionally NOT imported to systemd to keep
+            -- them from persisting and breaking a later KDE Plasma login.
+            "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP GTK_THEME XDG_DATA_DIRS SSH_AUTH_SOCK HYPRLAND_INSTANCE_SIGNATURE",
+            "compositor-session hyprland",
+            "hyprctl setcursor $XCURSOR_THEME $XCURSOR_SIZE",
+            "hypridle",
+            "hyprsunset",
+            "wl-paste --watch cliphist store",
+            "wl-clip-persist --clipboard regular",
+            "blueman-applet",
+            "nm-applet --indicator",
+            scripts .. "/hy3.tiling.sh",
+            scripts .. "/jetbrains.popup.resize.sh",
+            scripts .. "/monitor.toggle.sh daemon",
+        }) do
+            hl.exec_cmd(cmd)
+        end
+    end)
+end
 
--------------------------------------------------------------- KEYBINDINGS
+--------------------------------------------------------- KEYBIND HELPERS
 -- hy3 is the only layout. These dispatch hy3's custom commands; they access
 -- hl.plugin.hy3 at keypress time (the plugin is loaded by then) to avoid any
 -- config-eval ordering races. resize_active uses the native dispatcher.
@@ -215,87 +231,89 @@ local function resize_active(dx, dy)
     return hl.dsp.window.resize({ x = dx, y = dy, relative = true })
 end
 
--- Launchers.
-hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("alacritty"))
-hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd("pcmanfm"))
-hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd("rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun -location 0 -width 60"))
-hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "run" -modes combi -run-command "/home/stubbe/.stubbe/src/hypr/scripts/rofi.run.sh {cmd}" -location 0 -width 60]]))
-hl.bind(mod .. " + CTRL + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "window" -modes combi]]))
-hl.bind("SHIFT + Print", hl.dsp.exec_cmd("pgrep -x grim >/dev/null || hyprshot -m active -m output --clipboard-only"))
-hl.bind("Print", hl.dsp.exec_cmd("pgrep -x slurp >/dev/null || hyprshot -m region --clipboard-only"))
-hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("screen-record toggle"))
-hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send "Pasted selection"]]))
-hl.bind(mod .. " + C", hl.dsp.exec_cmd([[wl-copy "$(wl-paste -p)" && notify-send "Copied selection"]]))
-hl.bind(mod .. " + M", hl.dsp.exec_cmd("mail-open"))
+----------------------------------------------------------------- KEYBINDS
+local function setup_keybinds()
+    -- Launchers.
+    hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("alacritty"))
+    hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd("pcmanfm"))
+    hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd("rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun -location 0 -width 60"))
+    hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "run" -modes combi -run-command "/home/stubbe/.stubbe/src/hypr/scripts/rofi.run.sh {cmd}" -location 0 -width 60]]))
+    hl.bind(mod .. " + CTRL + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "window" -modes combi]]))
+    hl.bind("SHIFT + Print", hl.dsp.exec_cmd("pgrep -x grim >/dev/null || hyprshot -m active -m output --clipboard-only"))
+    hl.bind("Print", hl.dsp.exec_cmd("pgrep -x slurp >/dev/null || hyprshot -m region --clipboard-only"))
+    hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("screen-record toggle"))
+    hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send "Pasted selection"]]))
+    hl.bind(mod .. " + C", hl.dsp.exec_cmd([[wl-copy "$(wl-paste -p)" && notify-send "Copied selection"]]))
+    hl.bind(mod .. " + M", hl.dsp.exec_cmd("mail-open"))
 
--- Window management.
-hl.bind(mod .. " + SHIFT + Q", hy3_kill)
-hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
-hl.bind(mod .. " + T", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mod .. " + escape", hl.dsp.exec_cmd(shared .. "/hyprlock.launch.sh"))
-hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
-hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
-hl.bind(mod .. " + delete", hl.dsp.exit())
+    -- Window management.
+    hl.bind(mod .. " + SHIFT + Q", hy3_kill)
+    hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
+    hl.bind(mod .. " + T", hl.dsp.window.float({ action = "toggle" }))
+    hl.bind(mod .. " + escape", hl.dsp.exec_cmd(shared .. "/hyprlock.launch.sh"))
+    hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+    hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+    hl.bind(mod .. " + delete", hl.dsp.exit())
 
--- Directional focus (arrows) + move (SHIFT) + resize (CTRL).
-local resize_step = { left = { -50, 0 }, right = { 50, 0 }, up = { 0, -50 }, down = { 0, 50 } }
-for key, d in pairs({ left = "l", right = "r", up = "u", down = "d" }) do
-    hl.bind(mod .. " + " .. key, hy3_focus(d))
-    hl.bind(mod .. " + SHIFT + " .. key, hy3_move(d))
-    hl.bind(mod .. " + CTRL + " .. key, resize_active(resize_step[key][1], resize_step[key][2]))
-end
-
--- Focus cycling (mouse wheel + brackets).
-for key, d in pairs({ mouse_down = "r", bracketright = "r", mouse_up = "l", bracketleft = "l" }) do
-    hl.bind(mod .. " + " .. key, hy3_focus(d))
-end
-
--- Relative workspace switching (mouse wheel + brackets + Tab, all with SHIFT
--- except Tab; native, layout-independent).
-for combo, ws in pairs({
-    ["SHIFT + mouse_down"] = "e+1",
-    ["SHIFT + mouse_up"] = "e-1",
-    ["SHIFT + bracketright"] = "e+1",
-    ["SHIFT + bracketleft"] = "e-1",
-    ["Tab"] = "e+1",
-    ["SHIFT + Tab"] = "e-1",
-}) do
-    hl.bind(mod .. " + " .. combo, hl.dsp.focus({ workspace = ws }))
-end
-
--- Workspace switch (native) + move-active-to-workspace (hy3).
-for i = 1, 10 do
-    local key = i % 10
-    hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }))
-    hl.bind(mod .. " + SHIFT + " .. key, hy3_to_ws(i))
-end
-
--- Resize submap. NB: do not re-bind the enter combo (SUPER+R) inside the
--- submap — in the Lua API that re-triggers on the same press and exits at once.
-hl.bind(mod .. " + R", hl.dsp.submap("resize_mode"))
-hl.define_submap("resize_mode", function()
-    for key, step in pairs({ right = { 10, 0 }, left = { -10, 0 }, up = { 0, -10 }, down = { 0, 10 } }) do
-        hl.bind(key, resize_active(step[1], step[2]), { repeating = true })
+    -- Directional focus (arrows) + move (SHIFT) + resize (CTRL).
+    local resize_step = { left = { -50, 0 }, right = { 50, 0 }, up = { 0, -50 }, down = { 0, 50 } }
+    for key, d in pairs({ left = "l", right = "r", up = "u", down = "d" }) do
+        hl.bind(mod .. " + " .. key, hy3_focus(d))
+        hl.bind(mod .. " + SHIFT + " .. key, hy3_move(d))
+        hl.bind(mod .. " + CTRL + " .. key, resize_active(resize_step[key][1], resize_step[key][2]))
     end
-    hl.bind("return", hl.dsp.submap("reset"))
-    hl.bind("escape", hl.dsp.submap("reset"))
-end)
 
--- Media + brightness + lid keys: all run on the lock screen too ({ locked }).
-for _, b in ipairs({
-    { "XF86AudioPlay", "playerctl play-pause" },
-    { "XF86AudioStop", "playerctl stop" },
-    { "XF86AudioPrev", "playerctl previous" },
-    { "XF86AudioNext", "playerctl next" },
-    { "XF86AudioRaiseVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+" },
-    { "XF86AudioLowerVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" },
-    { "XF86AudioMute", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" },
-    { "XF86AudioMicMute", scripts .. "/audio.control.sh mic-mute" },
-    { "XF86MonBrightnessUp", shared .. "/monitor.brightness.sh increase" },
-    { "XF86MonBrightnessDown", shared .. "/monitor.brightness.sh decrease" },
-    { "switch:Lid Switch", scripts .. "/monitor.toggle.sh" },
-}) do
-    hl.bind(b[1], hl.dsp.exec_cmd(b[2]), { locked = true })
+    -- Focus cycling (mouse wheel + brackets).
+    for key, d in pairs({ mouse_down = "r", bracketright = "r", mouse_up = "l", bracketleft = "l" }) do
+        hl.bind(mod .. " + " .. key, hy3_focus(d))
+    end
+
+    -- Relative workspace switching (native, layout-independent).
+    for combo, ws in pairs({
+        ["SHIFT + mouse_down"] = "e+1",
+        ["SHIFT + mouse_up"] = "e-1",
+        ["SHIFT + bracketright"] = "e+1",
+        ["SHIFT + bracketleft"] = "e-1",
+        ["Tab"] = "e+1",
+        ["SHIFT + Tab"] = "e-1",
+    }) do
+        hl.bind(mod .. " + " .. combo, hl.dsp.focus({ workspace = ws }))
+    end
+
+    -- Workspace switch (native) + move-active-to-workspace (hy3).
+    for i = 1, 10 do
+        local key = i % 10
+        hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }))
+        hl.bind(mod .. " + SHIFT + " .. key, hy3_to_ws(i))
+    end
+
+    -- Resize submap. NB: do not re-bind the enter combo (SUPER+R) inside the
+    -- submap — in the Lua API that re-triggers on the same press and exits at once.
+    hl.bind(mod .. " + R", hl.dsp.submap("resize_mode"))
+    hl.define_submap("resize_mode", function()
+        for key, step in pairs({ right = { 10, 0 }, left = { -10, 0 }, up = { 0, -10 }, down = { 0, 10 } }) do
+            hl.bind(key, resize_active(step[1], step[2]), { repeating = true })
+        end
+        hl.bind("return", hl.dsp.submap("reset"))
+        hl.bind("escape", hl.dsp.submap("reset"))
+    end)
+
+    -- Media + brightness + lid keys: all run on the lock screen too ({ locked }).
+    for _, b in ipairs({
+        { "XF86AudioPlay", "playerctl play-pause" },
+        { "XF86AudioStop", "playerctl stop" },
+        { "XF86AudioPrev", "playerctl previous" },
+        { "XF86AudioNext", "playerctl next" },
+        { "XF86AudioRaiseVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+" },
+        { "XF86AudioLowerVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" },
+        { "XF86AudioMute", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" },
+        { "XF86AudioMicMute", scripts .. "/audio.control.sh mic-mute" },
+        { "XF86MonBrightnessUp", shared .. "/monitor.brightness.sh increase" },
+        { "XF86MonBrightnessDown", shared .. "/monitor.brightness.sh decrease" },
+        { "switch:Lid Switch", scripts .. "/monitor.toggle.sh" },
+    }) do
+        hl.bind(b[1], hl.dsp.exec_cmd(b[2]), { locked = true })
+    end
 end
 
 ------------------------------------------------------------- WINDOW RULES
@@ -316,36 +334,48 @@ local function float_centered(name, match, w, h, extra)
     hl.window_rule(rule)
 end
 
-float_centered("hyprland-share-picker", { class = "^hyprland-share-picker$" }, 500, 400)
-float_centered("gtk-share-picker", { title = "^(Select what to share)$" }, 800, 600)
-float_centered("pavucontrol", { class = "org\\.pulseaudio\\.pavucontrol" }, 800, 600)
-float_centered("blueman-manager", { class = "\\.blueman-manager-wrapped" }, 800, 600)
-float_centered("nm-connection-editor", { class = "nm-connection-editor" }, 800, 600)
-float_centered("vpn-prompt", { class = "vpn-prompt" }, 640, 240, { stay_focused = true })
+local function setup_window_rules()
+    float_centered("hyprland-share-picker", { class = "^hyprland-share-picker$" }, 500, 400)
+    float_centered("gtk-share-picker", { title = "^(Select what to share)$" }, 800, 600)
+    float_centered("pavucontrol", { class = "org\\.pulseaudio\\.pavucontrol" }, 800, 600)
+    float_centered("blueman-manager", { class = "\\.blueman-manager-wrapped" }, 800, 600)
+    float_centered("nm-connection-editor", { class = "nm-connection-editor" }, 800, 600)
+    float_centered("vpn-prompt", { class = "vpn-prompt" }, 640, 240, { stay_focused = true })
 
--- JetBrains IDEs: keep focus on popups/dialogs.
-hl.window_rule({
-    name = "jetbrains-focus",
-    match = { class = "^jetbrains-" },
-    focus_on_activate = true,
-})
-hl.window_rule({
-    name = "jetbrains-stay-focused",
-    match = { class = "^jetbrains-", float = true },
-    stay_focused = true,
-})
+    -- JetBrains IDEs: keep focus on popups/dialogs.
+    hl.window_rule({
+        name = "jetbrains-focus",
+        match = { class = "^jetbrains-" },
+        focus_on_activate = true,
+    })
+    hl.window_rule({
+        name = "jetbrains-stay-focused",
+        match = { class = "^jetbrains-", float = true },
+        stay_focused = true,
+    })
 
--- JetBrains Toolbox (top-right corner).
-hl.window_rule({
-    name = "jetbrains-toolbox",
-    match = { class = "jetbrains-toolbox" },
-    float = true,
-    move = "monitor_w-window_w-1 30",
-    focus_on_activate = true,
-    stay_focused = true,
-})
+    -- JetBrains Toolbox (top-right corner).
+    hl.window_rule({
+        name = "jetbrains-toolbox",
+        match = { class = "jetbrains-toolbox" },
+        float = true,
+        move = "monitor_w-window_w-1 30",
+        focus_on_activate = true,
+        stay_focused = true,
+    })
 
--- Steam: float by default, but tile the main window and friends list.
-hl.window_rule({ name = "steam-float", match = { class = "steam" }, float = true })
-hl.window_rule({ name = "steam-main-tile", match = { class = "steam", title = "^Steam$" }, tile = true })
-hl.window_rule({ name = "steam-friends-tile", match = { class = "steam", title = "^Friends List$" }, tile = true, size = "400 900" })
+    -- Steam: float by default, but tile the main window and friends list.
+    hl.window_rule({ name = "steam-float", match = { class = "steam" }, float = true })
+    hl.window_rule({ name = "steam-main-tile", match = { class = "steam", title = "^Steam$" }, tile = true })
+    hl.window_rule({ name = "steam-friends-tile", match = { class = "steam", title = "^Friends List$" }, tile = true, size = "400 900" })
+end
+
+--------------------------------------------------------------------- MAIN
+setup_env()
+setup_monitors()
+setup_config()
+setup_plugins()
+setup_device()
+setup_autostart()
+setup_keybinds()
+setup_window_rules()
