@@ -184,8 +184,35 @@ local mod = "SUPER"
 local function hy3_focus(d)
     return function() hl.dispatch(hl.plugin.hy3.move_focus(d)) end
 end
+-- Move the focused window, but skip the dispatch if it is already at the
+-- workspace edge in that direction. hy3:movewindow at an edge collapses/creates
+-- a group and shifts sizes by group_inset, shrinking a neighbour — the old
+-- wrapper.movewindow.sh guarded against this the same way.
 local function hy3_move(d)
-    return function() hl.dispatch(hl.plugin.hy3.move_window(d)) end
+    return function()
+        local f = hl.get_active_window()
+        if not f then return end
+        local wins = hl.get_workspace_windows(f.workspace)
+        local edge = false
+        if d == "l" then
+            local m = f.at.x
+            for _, w in ipairs(wins) do if w.at.x < m then m = w.at.x end end
+            edge = f.at.x <= m
+        elseif d == "r" then
+            local m = f.at.x
+            for _, w in ipairs(wins) do if w.at.x > m then m = w.at.x end end
+            edge = f.at.x >= m
+        elseif d == "u" then
+            local m = f.at.y
+            for _, w in ipairs(wins) do if w.at.y < m then m = w.at.y end end
+            edge = f.at.y <= m
+        elseif d == "d" then
+            local m = f.at.y
+            for _, w in ipairs(wins) do if w.at.y > m then m = w.at.y end end
+            edge = f.at.y >= m
+        end
+        if not edge then hl.dispatch(hl.plugin.hy3.move_window(d)) end
+    end
 end
 local function hy3_to_ws(n)
     return function() hl.dispatch(hl.plugin.hy3.move_to_workspace(tostring(n))) end
@@ -265,7 +292,8 @@ hl.define_submap("resize_mode", function()
     hl.bind("down", resize_active(0, 10), { repeating = true })
     hl.bind("return", hl.dsp.submap("reset"))
     hl.bind("escape", hl.dsp.submap("reset"))
-    hl.bind(mod .. " + R", hl.dsp.submap("reset"))
+    -- NB: do not re-bind the enter combo (SUPER+R) inside the submap — in the
+    -- Lua API that re-triggers on the same press and exits immediately.
 end)
 
 -- Media keys.
