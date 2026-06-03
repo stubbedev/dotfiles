@@ -176,11 +176,24 @@ local function setup_autostart()
             "blueman-applet",
             "nm-applet --indicator",
             scripts .. "/hy3.tiling.sh",
-            scripts .. "/jetbrains.popup.resize.sh",
             scripts .. "/monitor.toggle.sh daemon",
         }) do
             hl.exec_cmd(cmd)
         end
+    end)
+end
+
+----------------------------------------------------------- WINDOW EVENTS
+local function setup_window_events()
+    -- JetBrains floating popups sometimes open mis-sized; nudge the height
+    -- +1px then back to force a redraw (replaces jetbrains.popup.resize.sh,
+    -- which did the same over the .socket2.sock event stream).
+    hl.on("window.open", function(w)
+        if not w or not w.floating then return end
+        if not (w.class and w.class:match("^jetbrains%-")) then return end
+        local s = w.size
+        hl.dispatch(hl.dsp.window.resize({ x = s.x, y = s.y + 1, window = w }))
+        hl.dispatch(hl.dsp.window.resize({ x = s.x, y = s.y, window = w }))
     end)
 end
 
@@ -307,7 +320,7 @@ local function setup_keybinds()
         { "XF86AudioRaiseVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+" },
         { "XF86AudioLowerVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" },
         { "XF86AudioMute", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" },
-        { "XF86AudioMicMute", scripts .. "/audio.control.sh mic-mute" },
+        { "XF86AudioMicMute", "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle" },
         { "XF86MonBrightnessUp", shared .. "/monitor.brightness.sh increase" },
         { "XF86MonBrightnessDown", shared .. "/monitor.brightness.sh decrease" },
         { "switch:Lid Switch", scripts .. "/monitor.toggle.sh" },
@@ -377,5 +390,6 @@ setup_config()
 setup_plugins()
 setup_device()
 setup_autostart()
+setup_window_events()
 setup_keybinds()
 setup_window_rules()
