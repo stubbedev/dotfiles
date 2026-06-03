@@ -20,7 +20,7 @@ _: {
       ];
 
       # The portal is a dbus-activated systemd user service and does not
-      # inherit Hyprland's `env =` directives. src/hypr/settings.conf
+      # inherit Hyprland's `hl.env` directives. src/hypr/hyprland.lua
       # deliberately excludes QT_QPA_PLATFORMTHEME and QT_STYLE_OVERRIDE
       # from dbus-update-activation-environment (breaks KDE Plasma login),
       # so scope them to this unit only — hyprland-share-picker is a Qt

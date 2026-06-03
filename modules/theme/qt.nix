@@ -43,7 +43,7 @@ _: {
         '';
 
         # QT_QPA_PLATFORMTHEME=qt5ct (set by NixOS qt module system-wide,
-        # and by compositor env.conf for the session) makes Qt apps read
+        # and by compositor hyprland.lua for the session) makes Qt apps read
         # these. Qt6 apps consult qt6ct/qt6ct.conf with the same format.
         "qt5ct/qt5ct.conf".text = qtCtConf;
         "qt6ct/qt6ct.conf".text = qtCtConf;

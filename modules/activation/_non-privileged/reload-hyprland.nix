@@ -14,7 +14,7 @@ _: {
       # `home-manager switch` from niri or a TTY) so it never blocks activation.
       #
       # Hyprland's built-in config auto-reload is disabled via
-      # misc:disable_autoreload in settings.conf because reloading with multiple
+      # misc.disable_autoreload in hyprland.lua because reloading with multiple
       # monitors re-evaluates monitor rules and re-attaches workspaces, which
       # shifts focus to a different workspace. Doing the reload here lets us
       # capture the focused workspace beforehand and dispatch back to it after.

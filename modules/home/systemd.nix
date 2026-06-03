@@ -130,7 +130,7 @@ _: {
           # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
           # entry — so home-manager's bin-only linking can't surface it and
           # `systemctl --user start hyprpolkitagent` (called from
-          # src/hypr/settings.conf and conceptually from niri) finds no
+          # src/hypr/hyprland.lua and conceptually from niri) finds no
           # unit. Defining the service here fixes both compositors and
           # gives pkexec something to talk to when our 49-openconnect.rules
           # rule doesn't match (e.g. nmcli, brightness, anything that

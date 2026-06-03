@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Listen for Hyprland openwindow events and resize floating JetBrains popup
-# windows by +1px height. Run via exec-once in settings.conf.
+# windows by +1px height. Run via autostart (hl.on hyprland.start) in hyprland.lua.
 
 SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
 
