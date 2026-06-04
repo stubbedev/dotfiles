@@ -1211,11 +1211,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1780599185,
-        "narHash": "sha256-NTXvGpr+w/4HAzIDCGOQczb32Vnzi+FNWLTzAT90aeY=",
+        "lastModified": 1780604525,
+        "narHash": "sha256-jQDlNceAFD+j4IFUFNigp4fazkdFFXm8iKAta+YLQQk=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "85b366c0002736333c3cbd6c59409bd6a5136ca7",
+        "rev": "dcdf6d2641158e618f655fe960cac366ca6cc881",
         "type": "github"
       },
       "original": {

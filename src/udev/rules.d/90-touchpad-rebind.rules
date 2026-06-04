@@ -1,0 +1,16 @@
+# Lunar Lake (staggio) i2c-hid touchpad wedge on Thunderbolt dock unplug.
+#
+# After undocking, the SNSL0028:00 touchpad stays enumerated (visible in
+# `hyprctl devices`, `libinput list-devices`, /proc/bus/input/devices) but
+# emits zero input events. `hyprctl reload` cannot recover it because the
+# stall is in the i2c_hid_acpi driver, not the compositor; only rebinding
+# the driver (unbind + bind) brings the device back. Same class of power-
+# transition wedge as the SOF codec on this machine.
+#
+# The kernel emits a DRM HOTPLUG=1 uevent on every dock connector change,
+# which is the earliest root-context signal of the undock. Hand off to a
+# systemd oneshot via SYSTEMD_WANTS (not RUN+=) so the rebind — which sleeps
+# to let the dock power transition settle — runs outside the udev worker
+# instead of blocking it. TEST guards on the device node so the rule is a
+# no-op on any host without this touchpad.
+ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", ENV{SYSTEMD_WANTS}+="touchpad-rebind.service"
