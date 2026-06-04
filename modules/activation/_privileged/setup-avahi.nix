@@ -15,6 +15,14 @@ _: {
         off there.
       '';
       actionScript = ''
+        # On NixOS the system avahi module owns the daemon and nsswitch, and
+        # /etc/nsswitch.conf is a read-only store symlink. This activation is the
+        # package-install + nsswitch path for *non-NixOS* hosts only. Skip here:
+        # with services.avahi.nssmdns4 = false the `! grep mdns` branch below
+        # would otherwise try to re-insert mdns ahead of `resolve` on every
+        # activation, failing on the read-only file and logging noise.
+        if [ -e /etc/NIXOS ]; then exit 0; fi
+
         # Activations run with a stripped PATH; restore it so command -v
         # finds apt-get / dnf / pacman / ip under /usr/sbin etc.
         PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
