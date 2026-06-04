@@ -51,7 +51,12 @@ set_trigger() {
     return
   fi
 
-  if hyprctl keyword plugin:hy3:autotile:trigger_width "${trigger}" >/dev/null 2>&1; then
+  # `hyprctl keyword` is rejected under the Lua config ("keyword can't work
+  # with non-legacy parsers. Use eval."). Set the plugin option through the
+  # Lua API instead, mirroring the nested hl.config{} shape in hyprland.lua.
+  # The flat "plugin:hy3:autotile:trigger_width" key is unknown to hl.config;
+  # only the nested plugin.hy3.autotile.trigger_width form is accepted.
+  if hyprctl eval "hl.config({ plugin = { hy3 = { autotile = { trigger_width = ${trigger} } } } })" 2>/dev/null | grep -q '^ok$'; then
     last_set="${trigger}"
   fi
 }

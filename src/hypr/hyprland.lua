@@ -306,7 +306,11 @@ local function setup_keybinds()
         hl.bind("escape", hl.dsp.submap("reset"))
     end)
 
-    -- Media + brightness + lid keys: all run on the lock screen too ({ locked }).
+    -- Media + brightness keys: all run on the lock screen too ({ locked }).
+    -- The laptop lid is NOT bound here: since the hyprland 0.55 / aquamarine
+    -- 0.11 bump the `switch:Lid Switch` SWITCH_TOGGLE never reaches Hyprland's
+    -- keybind manager, so the bind is dead. scripts/monitor.toggle.sh's daemon
+    -- reads the lid from libinput directly instead (see listen_lid there).
     for _, b in ipairs({
         { "XF86AudioPlay", "playerctl play-pause" },
         { "XF86AudioStop", "playerctl stop" },
@@ -318,7 +322,6 @@ local function setup_keybinds()
         { "XF86AudioMicMute", "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle" },
         { "XF86MonBrightnessUp", shared .. "/monitor.brightness.sh increase" },
         { "XF86MonBrightnessDown", shared .. "/monitor.brightness.sh decrease" },
-        { "switch:Lid Switch", scripts .. "/monitor.toggle.sh" },
     }) do
         hl.bind(b[1], hl.dsp.exec_cmd(b[2]), { locked = true })
     end

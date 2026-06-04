@@ -25,9 +25,10 @@
 #   when multiple connectors flap together (common on dock unplug).
 #
 # Usage:
-#   monitor.toggle.sh           one-shot (used by the lid switch bind)
+#   monitor.toggle.sh           one-shot reapply (manual / scripts)
 #   monitor.toggle.sh daemon    long-running listener; reacts to DRM
-#                               hotplug events from udev
+#                               hotplug events from udev and to laptop
+#                               lid toggles read from libinput
 
 # Re-apply Hyprland's full config. Reloads monitors, layer-shell, cursor.
 apply_reload() {
@@ -49,8 +50,13 @@ apply_lid() {
 
   [ -z "$builtin" ] && return 0
 
+  # `hyprctl keyword monitor "<name>, disable"` is rejected under the Lua
+  # config ("keyword can't work with non-legacy parsers. Use eval."), so
+  # drive the monitor through the Lua API at runtime instead. hl.monitor
+  # with disabled=true unmaps the panel; apply_reload (run before this in
+  # react) re-applies the eDP rule on the open case.
   if [ "$state" = "closed" ]; then
-    hyprctl keyword monitor "$builtin, disable" >/dev/null 2>&1 || true
+    hyprctl eval "hl.monitor({ output = '$builtin', disabled = true })" >/dev/null 2>&1 || true
   fi
 }
 
@@ -66,11 +72,42 @@ restart_wireplumber() {
   systemctl --user restart wireplumber.service >/dev/null 2>&1 || true
 }
 
+# React to the laptop lid by reading the switch straight from libinput.
+#
+# Why not Hyprland's `bindl=,switch:Lid Switch,exec,...`: since the
+# hyprland v0.55 / aquamarine 0.11 bump the lid SWITCH_TOGGLE no longer
+# reaches Hyprland's keybind manager — libinput still processes it (the
+# log shows "lid: suspending touchpad") but Hyprland never logs
+# "Switch ... fired, triggering binds", so no dispatcher (lua or native)
+# ever runs and the bind is dead. Reading libinput directly is the same
+# compositor-independent approach already used for DRM hotplug below; the
+# user is in the `input` group so no root is needed.
+#
+# react() reads the lid state from /proc and handles both directions
+# (close -> disable eDP, open -> apply_reload re-enables it), so every
+# toggle just calls react() regardless of the reported state.
+listen_lid() {
+  command -v libinput >/dev/null 2>&1 || return 0
+  # Respawn if libinput exits, so a transient backend hiccup doesn't
+  # silently kill lid handling for the rest of the session.
+  while true; do
+    stdbuf -oL libinput debug-events 2>/dev/null \
+      | grep --line-buffered -iE 'switch_toggle.*lid' \
+      | while IFS= read -r _; do react; done
+    sleep 2
+  done
+}
+
 listen_events() {
   local last_action=0
 
   # Initial sync so reality matches config after a Hyprland (re)start.
   react
+
+  # Watch the lid in the background alongside the DRM hotplug loop.
+  listen_lid &
+  local lid_pid=$!
+  trap 'kill "$lid_pid" 2>/dev/null' EXIT INT TERM
 
   # udevadm emits one HOTPLUG=1 property line per DRM hotplug uevent.
   # Process substitution keeps `last_action` in this shell rather than
