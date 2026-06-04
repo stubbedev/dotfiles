@@ -63,20 +63,27 @@ _: {
 
           # Reload re-enables eDP-1 from monitors.conf; re-apply lid-closed
           # disable before workspace restore so workspaces don't migrate back.
+          # `hyprctl keyword` is rejected under the Lua config ("keyword can't
+          # work with non-legacy parsers. Use eval."), so drive the monitor
+          # through the Lua API at runtime instead.
           if grep -qi closed /proc/acpi/button/lid/*/state 2>/dev/null; then
             builtin=$(${hyprctl} monitors all -j 2>/dev/null \
               | jq -r 'first(.[] | select(.name | test("eDP|LVDS"))).name // empty')
-            [ -n "$builtin" ] && ${hyprctl} keyword monitor "$builtin, disable" >/dev/null 2>&1 || true
+            [ -n "$builtin" ] && ${hyprctl} eval "hl.monitor({ output = '$builtin', disabled = true })" >/dev/null 2>&1 || true
           fi
 
+          # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua
+          # config (it is parsed as hl.dispatch(<args>) Lua); pass a Lua
+          # dispatcher expression instead. focusmonitor/workspace both map to
+          # hl.dsp.focus{ monitor = ... } / hl.dsp.focus{ workspace = ... }.
           while IFS=' ' read -r mon ws; do
             [ -n "$mon" ] && [ -n "$ws" ] || continue
-            ${hyprctl} dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
-            ${hyprctl} dispatch workspace "$ws" >/dev/null 2>&1 || true
+            ${hyprctl} dispatch "hl.dsp.focus({ monitor = '$mon' })" >/dev/null 2>&1 || true
+            ${hyprctl} dispatch "hl.dsp.focus({ workspace = $ws })" >/dev/null 2>&1 || true
           done <<<"$per_monitor"
 
           if [ -n "$focused_ws" ]; then
-            ${hyprctl} dispatch workspace "$focused_ws" >/dev/null 2>&1 || true
+            ${hyprctl} dispatch "hl.dsp.focus({ workspace = $focused_ws })" >/dev/null 2>&1 || true
           fi
         ) || true
       '';

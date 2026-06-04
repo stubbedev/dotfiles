@@ -13,7 +13,14 @@ if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null
   addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
   if [[ -n "$addr" ]]; then
     ws=$(hyprctl -j activeworkspace | jq -r '.id')
-    hyprctl dispatch movetoworkspace "$ws,address:$addr"
+    # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua config
+    # (parsed as hl.dispatch(<args>) Lua), and there is no by-address
+    # move-to-workspace dispatcher. Reproduce `movetoworkspace ws,address:addr`
+    # by focusing the window (hy3 moves the *focused* window) then moving it to
+    # the captured workspace with follow — same end state: aerc on the current
+    # workspace, focused.
+    hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })"
+    hyprctl dispatch "hl.plugin.hy3.move_to_workspace('$ws', { follow = true })"
   else
     spawn_term
   fi

@@ -35,6 +35,9 @@ for c in clients:
     [[ "$CLASS" != jetbrains-* ]] && continue
     [[ "$FLOATING" != "1" ]] && continue
 
-    hyprctl dispatch resizewindowpixel "exact ${W} $((H + 1)),address:${ADDRESS}"
-    hyprctl dispatch resizewindowpixel "exact ${W} ${H},address:${ADDRESS}"
+    # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua config
+    # (parsed as hl.dispatch(<args>) Lua). hl.dsp.window.resize with {x,y} sets
+    # the exact size (matching the old "exact W H" form) and window= targets it.
+    hyprctl dispatch "hl.dsp.window.resize({ x = ${W}, y = $((H + 1)), window = 'address:${ADDRESS}' })"
+    hyprctl dispatch "hl.dsp.window.resize({ x = ${W}, y = ${H}, window = 'address:${ADDRESS}' })"
 done
