@@ -1211,11 +1211,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1780604525,
-        "narHash": "sha256-jQDlNceAFD+j4IFUFNigp4fazkdFFXm8iKAta+YLQQk=",
+        "lastModified": 1780605439,
+        "narHash": "sha256-U2OWwwbH697EKE5WnJhpuFHiYBIH2wXkCFMpe2d7jps=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "dcdf6d2641158e618f655fe960cac366ca6cc881",
+        "rev": "b97a34a5304d24b6ee99ef51ab0825573595a542",
         "type": "github"
       },
       "original": {
@@ -1307,11 +1307,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780578450,
-        "narHash": "sha256-rib4jL/ufbXNvQtGvogmFVsctCHqwdBHVlQjtD5PwLY=",
+        "lastModified": 1780637950,
+        "narHash": "sha256-fYpx8WZ5YqY8buPN0Mlz8ne/at2APHEjn1cKWggDTN0=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "27b87007f0fea6973057e7eb4027360e80154094",
+        "rev": "035456ba82e7a7440307ace43015cbf727ffafb4",
         "type": "github"
       },
       "original": {
