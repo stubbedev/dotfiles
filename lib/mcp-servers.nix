@@ -49,4 +49,12 @@
     command = "uvx";
     args = [ "mcp-nixos" ];
   };
+  srv-mcp = {
+    command = "srv";
+    args = [ "mcp" ];
+  };
+  treeman-mcp = {
+    command = "treeman";
+    args = [ "mcp" ];
+  };
 }
