@@ -4,6 +4,7 @@ os:
   editAtLineAndWait: 'nvim +{{line}} {{filename}}'
   editInTerminal: true
 disableStartupPopups: false
+promptToReturnFromSubprocess: false
 keybinding:
   files:
     commitChanges: ''
