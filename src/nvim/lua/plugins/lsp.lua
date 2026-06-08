@@ -227,11 +227,10 @@ return {
           filetypes = { "toml" },
         },
         -- phpantom_lsp binary supplied by the nvim wrapper (runtimePkgs),
-        -- not mason. lspconfig ships a `phpantom` config; pin cmd so it
-        -- resolves the nix-provided binary on PATH.
-        phpantom = {
+        -- not mason. lspconfig ships the `phpantom_lsp` config (cmd +
+        -- filetypes + root_markers); the server key must match that name.
+        phpantom_lsp = {
           mason = false,
-          cmd = { "phpantom_lsp" },
         }
       },
     },

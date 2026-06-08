@@ -25,7 +25,7 @@ return {
     },
     config = true,
     opts = {
-      lsp_server = "phpantom",
+      lsp_server = "phpantom_lsp",
       features = { null_ls = { enable = false } },
       pickers = {
         enable = true,
