@@ -39,7 +39,7 @@
             # live src checkout; the phpantom_lsp binary is on PATH via
             # modules/packages/php.nix.
             extraKnownMarketplaces.phpantom.source = {
-              source = "local";
+              source = "directory";
               path = "${config.home.homeDirectory}/.stubbe/src/claude/phpantom-lsp";
             };
             enabledPlugins = {
