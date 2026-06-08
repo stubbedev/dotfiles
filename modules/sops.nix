@@ -34,7 +34,7 @@
       '';
 
       # Tools for editing/encrypting/managing secrets:
-      #   sops secrets/intelephense.yaml          # edit existing
+      #   sops secrets/foo.yaml                    # edit existing
       #   sops updatekeys secrets/foo.yaml        # re-wrap after .sops.yaml change
       #   ssh-to-age < ~/.ssh/id_ed25519.pub      # derive age recipient pubkey
       home.packages = with pkgs; [

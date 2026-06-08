@@ -48,10 +48,19 @@ let
       };
     };
 
+  # phpantom_lsp ships its own flake; surface packages.default as
+  # pkgs.phpantom_lsp so both NixOS (nix-settings.nix) and home-manager
+  # (home-manager/pkgs.nix) see it through the shared overlay set.
+  phpantomLspOverlay =
+    final: _prev: {
+      phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
+    };
+
 in
 {
   flake.overlays = {
     nixgl = nixglOverlay;
     cship = cshipOverlay;
+    phpantom_lsp = phpantomLspOverlay;
   };
 }

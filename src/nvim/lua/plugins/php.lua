@@ -25,7 +25,7 @@ return {
     },
     config = true,
     opts = {
-      lsp_server = "intelephense",
+      lsp_server = "phpantom",
       features = { null_ls = { enable = false } },
       pickers = {
         enable = true,

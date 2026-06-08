@@ -34,6 +34,18 @@
             tui = "fullscreen";
             editorMode = "vi";
             model = "claude-opus-4-8[1m]";
+            # Use the PHPantom language server for .php instead of the
+            # official intelephense plugin. Local marketplace lives in the
+            # live src checkout; the phpantom_lsp binary is on PATH via
+            # modules/packages/php.nix.
+            extraKnownMarketplaces.phpantom.source = {
+              source = "local";
+              path = "${config.home.homeDirectory}/.stubbe/src/claude/phpantom-lsp";
+            };
+            enabledPlugins = {
+              "phpantom-lsp@phpantom" = true;
+              "php-lsp@claude-plugins-official" = false;
+            };
           };
         }}
 

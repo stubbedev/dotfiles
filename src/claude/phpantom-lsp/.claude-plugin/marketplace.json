@@ -1,0 +1,26 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.json",
+  "name": "phpantom",
+  "description": "PHPantom PHP language server for Claude Code",
+  "owner": {
+    "name": "stubbedev"
+  },
+  "plugins": [
+    {
+      "name": "phpantom-lsp",
+      "description": "PHP language server (PHPantom) for code intelligence",
+      "version": "0.8.0",
+      "source": "./plugins/phpantom-lsp",
+      "category": "development",
+      "strict": false,
+      "lspServers": {
+        "phpantom": {
+          "command": "phpantom_lsp",
+          "extensionToLanguage": {
+            ".php": "php"
+          }
+        }
+      }
+    }
+  ]
+}

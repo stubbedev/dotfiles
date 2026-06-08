@@ -42,6 +42,12 @@
       url = "github:stephenleo/cship";
       flake = false;
     };
+    # PHP language server (Rust). Ships its own flake; we consume
+    # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
+    phpantom_lsp = {
+      url = "github:PHPantom-dev/phpantom_lsp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Used by the installer ISO build for partitioning declaration.
     disko = {
       url = "github:nix-community/disko";

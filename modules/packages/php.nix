@@ -110,6 +110,10 @@ _: {
         frankenphp
         composer
         mago
+        # PHP language server. On global PATH so Claude Code's phpantom-lsp
+        # plugin (src/claude/phpantom-lsp) and any non-nvim consumer find it;
+        # nvim gets its own copy via the wrapper's runtimePkgs.
+        phpantom_lsp
       ];
     };
 }

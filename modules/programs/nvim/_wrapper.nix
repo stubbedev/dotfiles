@@ -38,7 +38,7 @@
     tailwindcss-language-server
 
     # Backend / domain
-    intelephense
+    phpantom_lsp
     templ
     basedpyright
     ruff

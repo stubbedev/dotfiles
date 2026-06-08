@@ -1,0 +1,5 @@
+{
+  "name": "phpantom-lsp",
+  "description": "PHP language server (PHPantom) for code intelligence",
+  "version": "0.8.0"
+}
