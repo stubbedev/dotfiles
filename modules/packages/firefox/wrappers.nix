@@ -83,6 +83,41 @@ _: {
                 lockPref("widget.disable-swipe-tracker", false);
                 lockPref("browser.gesture.swipe.left", "Browser:BackOrBackDuplicate");
                 lockPref("browser.gesture.swipe.right", "Browser:ForwardOrForwardDuplicate");
+
+                // --- Focus page content on new tab / new window ---
+                // Firefox parks the cursor in the urlbar for about:newtab,
+                // and Tridactyl's `set newtab` redirect (-> https://start.local,
+                // homeLib.browserNewtabUrl) can't pull focus back: content JS
+                // cannot steal focus from browser chrome, so the focus() in
+                // src/browser/newtab.html loses the race. Do it from chrome
+                // instead — this autoconfig snippet runs privileged. Hook each
+                // browser window and refocus the selected <browser> shortly
+                // after the window loads or a tab opens. See tridactyl#4967.
+                try {
+                  Services.obs.addObserver({
+                    observe(subject) {
+                      const win = subject;
+                      win.addEventListener("load", () => {
+                        const gBrowser = win.gBrowser;
+                        if (!gBrowser) return;
+                        // Delay past Firefox's own urlbar focus, then take it
+                        // back — but only if the tab is still the active one
+                        // (skips background/middle-click tabs).
+                        const focusContent = (tab) => win.setTimeout(() => {
+                          if (gBrowser.selectedTab === tab) {
+                            gBrowser.selectedBrowser.focus();
+                          }
+                        }, 120);
+                        focusContent(gBrowser.selectedTab);
+                        gBrowser.tabContainer.addEventListener("TabOpen", (e) => {
+                          focusContent(e.target);
+                        });
+                      }, { once: true });
+                    },
+                  }, "domwindowopened");
+                } catch (e) {
+                  Components.utils.reportError(e);
+                }
               '';
             };
             env = {
