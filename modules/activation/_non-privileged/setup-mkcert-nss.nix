@@ -28,10 +28,13 @@ _: {
           # NSS stores; without it mkcert silently skips them.
           export PATH="${pkgs.nss.tools}/bin:$PATH"
           export TRUST_STORES=nss
-          ${pkgs.mkcert}/bin/mkcert -install \
-            || echo "mkcert-nss: 'mkcert -install' failed; browsers may not trust local certs."
+          # Idempotent — runs every switch to catch new browser profiles or a
+          # reset NSS db. Drop its "CA is (already) installed" chatter on
+          # stdout; stderr still surfaces real failures.
+          ${pkgs.mkcert}/bin/mkcert -install >/dev/null \
+            || echo "mkcert-nss: 'mkcert -install' failed; browsers may not trust local certs." >&2
         else
-          echo "mkcert-nss: root CA not generated yet (run 'srv install'); skipping."
+          echo "mkcert-nss: root CA not generated yet (run 'srv install'); skipping." >&2
         fi
       '';
     };

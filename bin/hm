@@ -184,19 +184,6 @@ update_system() {
   fi
 }
 
-# A system package upgrade (apt/dnf upgrading docker/iptables, or a docker
-# daemon restart) flushes the runtime iptables ACCEPT rules srv adds for
-# ports 80/443, leaving HTTPS sites unreachable — the CA and certs stay
-# valid, only the firewall is blocked. srv has no firewall-only verb, so
-# re-run the idempotent installer to re-assert it. No-op when srv isn't set
-# up on this host.
-reassert_srv() {
-  has_cmd srv || return 0
-  srv daemon status >/dev/null 2>&1 || return 0
-  echo "Re-asserting srv firewall after system upgrade"
-  srv install -y || echo "hm upgrade: 'srv install -y' failed; run it manually if HTTPS sites are unreachable." >&2
-}
-
 usage() {
   cat <<'EOF'
 Usage: hm <command> [args]
@@ -550,7 +537,6 @@ case "${1:-}" in
     update_system
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     run_hm_subcmd switch "$@"
-    reassert_srv
     ;;
   whoami)
     shift

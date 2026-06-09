@@ -34,10 +34,11 @@
           exit 0
         fi
 
-        # Register the site once; `srv add` also starts it.
+        # Register the site once; `srv add` also starts it. Drop its
+        # docker-compose progress on stdout (keep stderr for real errors).
         if ! ${srvBin} info start-local >/dev/null 2>&1; then
           ${srvBin} add ${lib.escapeShellArg root} \
-            --domain start.local --name start-local --local </dev/null \
+            --domain start.local --name start-local --local </dev/null >/dev/null \
             || echo "srv-newtab: 'srv add' failed; will retry next switch." >&2
         fi
 

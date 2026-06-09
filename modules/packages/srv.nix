@@ -32,14 +32,15 @@ _: {
       # ExecStart at the flake-pinned binary tracks the current srv and
       # keeps it a GC root, so it never goes stale.
       #
-      # Migration: a previously `srv daemon install`-ed unit leaves a real
-      # file at ~/.config/systemd/user/srv-daemon.service that collides with
-      # this one — run `srv daemon uninstall` once before the first switch.
+      # Migration is automatic — see migrateSrvDaemonUnit below.
       systemd.user.services.srv-daemon = {
         Unit = {
           Description = "srv daemon - Docker container network connector";
           Documentation = "https://github.com/stubbedev/srv";
-          After = [ "docker.service" ];
+          # No `After = docker.service`: this is a *user* unit and ordering
+          # only resolves against other user-manager units, so a dep on the
+          # system docker.service is silently ignored. The docker-not-ready
+          # race is handled by Restart=on-failure below instead.
         };
         Service = {
           Type = "simple";
@@ -57,5 +58,20 @@ _: {
         };
         Install.WantedBy = [ "default.target" ];
       };
+
+      # Auto-migrate off any imperatively-installed daemon unit. `srv daemon
+      # install` writes a *real* file at this path; home-manager links its own
+      # unit there and would abort with "Existing file would be clobbered"
+      # (no backupFileExtension is set). Runs before checkLinkTargets so the
+      # path is clear when HM links. Only a real file is removed — an existing
+      # HM symlink is left untouched, so this is a no-op on already-migrated
+      # hosts and on macOS (no systemd user dir, the test just fails).
+      home.activation.migrateSrvDaemonUnit =
+        lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+          _srv_unit="${config.xdg.configHome}/systemd/user/srv-daemon.service"
+          if [ -e "$_srv_unit" ] && [ ! -L "$_srv_unit" ]; then
+            $DRY_RUN_CMD rm -f $VERBOSE_ARG "$_srv_unit"
+          fi
+        '';
     };
 }
