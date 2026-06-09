@@ -55,6 +55,7 @@
         pkgs.python3
         pkgs.imgcat
         pkgs.freerdp
+        pkgs.redis # provides redis-cli
       ];
     };
 }

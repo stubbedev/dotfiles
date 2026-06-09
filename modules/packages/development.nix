@@ -34,6 +34,7 @@ _: {
         # Database tools (CLI)
         mongodb-tools
         mongosh
+        redis # provides redis-cli
 
         # c3
         c3c
