@@ -45,8 +45,17 @@
           # Node
           NODE_USE_SYSTEM_CA = "1";
           NODE_EXTRA_CA_CERTS = "${config.home.homeDirectory}/.cache/node/extra-ca.pem";
-          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-          SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
+          # Point CLI tools (curl, git, python-requests, openssl) at the OS
+          # trust store, NOT a bare `pkgs.cacert` bundle. The cacert bundle
+          # holds only the public root CAs; it has no way to learn about the
+          # mkcert development CA, so srv-served https sites (start.local …)
+          # fail with "unable to get local issuer certificate" even though the
+          # system trusts mkcert. /etc/ssl/certs/ca-certificates.crt is the
+          # full set *including* mkcert on both targets — security.pki.caBundle
+          # on NixOS (modules/nixos/mkcert.nix), update-ca-certificates output
+          # on a standalone-HM distro (setup-mkcert-trust.nix → mkcert -install).
+          SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
+          SSL_CERT_DIR = "/etc/ssl/certs";
 
           # pnpm global install dir. pnpm reads this and lands binaries
           # directly under PNPM_HOME (no /bin subdir); base.nix sessionPath
