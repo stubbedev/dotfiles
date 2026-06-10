@@ -1,15 +1,47 @@
 { config, inputs, self, ... }:
 let
   cache = import (self + "/lib/nix-cache.nix");
+  # The NixOS module below needs its own `config` (for sops + host options),
+  # which shadows this flake-level one — alias it so `config.flake.overlays`
+  # still resolves.
+  flakeConfig = config;
 in
 {
   flake.modules.nixos.nixSettings =
-    { ... }:
+    { config, ... }:
     {
       nix.settings.experimental-features = [
         "nix-command"
         "flakes"
       ];
+
+      # GitHub API token for flake input fetches. Anonymous api.github.com
+      # is capped at 60 req/hr per IP; `nix flake update` resolves every
+      # input's HEAD against it and exhausts that in one run, falling back
+      # to stale cached revs. An authenticated token lifts the cap to
+      # 5000 req/hr. (Non-NixOS hosts get the same via the privileged
+      # activation in modules/activation/_privileged/setup-nix-github-token.nix.)
+      #
+      # sops-nix decrypts the token into /run and the template renders the
+      # nix.conf line there — so the token never lands in the world-readable
+      # /nix/store copy of nix.conf (which `nix.settings.access-tokens` would
+      # do). owner = primaryUser because `nix flake update` runs unprivileged
+      # even on NixOS, so the user's own client must be able to read it;
+      # root/daemon reads it regardless.
+      sops.secrets."github-token" = {
+        sopsFile = self + "/secrets/github-token";
+        format = "binary";
+      };
+      sops.templates."nix-access-tokens.conf" = {
+        content = "access-tokens = github.com=${config.sops.placeholder."github-token"}";
+        owner = config.host.primaryUser;
+        mode = "0400";
+      };
+      # `!include` (optional form) so an early-boot evaluation before the
+      # secret is rendered doesn't error.
+      nix.extraOptions = ''
+        !include ${config.sops.templates."nix-access-tokens.conf".path}
+      '';
 
       # Daemon-level substituters. These are what `nixos-rebuild` and any
       # root-side nix invocation read; the HM-side copy in
@@ -58,7 +90,7 @@ in
         ];
       };
 
-      nixpkgs.overlays = builtins.attrValues config.flake.overlays;
+      nixpkgs.overlays = builtins.attrValues flakeConfig.flake.overlays;
 
       # Leftover from any pre-flake nix-channel use of this host. Channels
       # are disabled (nix.channel.enable defaults false on flake-only
