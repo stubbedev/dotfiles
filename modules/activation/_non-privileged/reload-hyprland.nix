@@ -61,15 +61,16 @@ _: {
 
           ${hyprctl} reload >/dev/null 2>&1 || exit 0
 
-          # Reload re-enables eDP-1 from monitors.conf; re-apply lid-closed
-          # disable before workspace restore so workspaces don't migrate back.
-          # `hyprctl keyword` is rejected under the Lua config ("keyword can't
-          # work with non-legacy parsers. Use eval."), so drive the monitor
-          # through the Lua API at runtime instead.
+          # Reload re-enables eDP-1 from monitors.conf and auto-positions the
+          # externals to its right; re-apply the lid-closed layout before
+          # workspace restore so workspaces don't migrate back. reflow_monitors
+          # disables eDP and re-packs the externals from 0,0 in one pass, so the
+          # external is not left stranded at a half-screen offset. (`hyprctl
+          # keyword` is rejected under the Lua config — "keyword can't work with
+          # non-legacy parsers. Use eval." — so drive it through the exposed Lua
+          # reflow_monitors instead.)
           if grep -qi closed /proc/acpi/button/lid/*/state 2>/dev/null; then
-            builtin=$(${hyprctl} monitors all -j 2>/dev/null \
-              | jq -r 'first(.[] | select(.name | test("eDP|LVDS"))).name // empty')
-            [ -n "$builtin" ] && ${hyprctl} eval "hl.monitor({ output = '$builtin', disabled = true })" >/dev/null 2>&1 || true
+            ${hyprctl} eval "reflow_monitors(true)" >/dev/null 2>&1 || true
           fi
 
           # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua

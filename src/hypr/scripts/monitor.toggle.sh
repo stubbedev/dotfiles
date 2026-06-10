@@ -44,19 +44,19 @@ apply_lid() {
   # the previous lid state and toggling the wrong direction.
   sleep 0.3
 
-  local state builtin
+  local state
   state=$(grep -oEi 'open|closed' /proc/acpi/button/lid/*/state 2>/dev/null | head -n1 | tr '[:upper:]' '[:lower:]' || echo "open")
-  builtin=$(hyprctl monitors all -j | jq -r '.[] | select(.name | test("eDP|LVDS")) | .name' | head -n1)
 
-  [ -z "$builtin" ] && return 0
-
-  # `hyprctl keyword monitor "<name>, disable"` is rejected under the Lua
-  # config ("keyword can't work with non-legacy parsers. Use eval."), so
-  # drive the monitor through the Lua API at runtime instead. hl.monitor
-  # with disabled=true unmaps the panel; apply_reload (run before this in
-  # react) re-applies the eDP rule on the open case.
+  # On lid-close, disable eDP *and* re-pack the externals from 0,0 in a single
+  # Lua pass. apply_reload (run before this in react) already re-enabled eDP
+  # and auto-positioned the externals to its right; disabling eDP alone would
+  # leave them stranded at a half-screen x offset. reflow_monitors(true) redoes
+  # the whole layout with the panel gone, so the external no longer renders
+  # offset by half. (`hyprctl keyword monitor "...,disable"` is rejected under
+  # the Lua config — "keyword can't work with non-legacy parsers. Use eval." —
+  # so drive it through the exposed Lua reflow_monitors instead.)
   if [ "$state" = "closed" ]; then
-    hyprctl eval "hl.monitor({ output = '$builtin', disabled = true })" >/dev/null 2>&1 || true
+    hyprctl eval "reflow_monitors(true)" >/dev/null 2>&1 || true
   fi
 }
 

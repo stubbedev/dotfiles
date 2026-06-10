@@ -42,15 +42,37 @@ local function setup_env()
 end
 
 ------------------------------------------------------------------ MONITORS
-local function setup_monitors()
-    for _, m in ipairs({
-        { output = "", mode = "highres", scale = "1" },
-        { output = "eDP-1", mode = "preferred", scale = "1.5" },
-        { output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", scale = "1" },
-        { output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", scale = "1.5" },
-    }) do
-        hl.monitor({ output = m.output, mode = m.mode, position = "auto", scale = m.scale })
+-- Single source of truth for monitor rules. Re-applied on every reload and
+-- by scripts/monitor.toggle.sh (and the HM reload hook) on dock/lid events
+-- via the exposed _G.reflow_monitors.
+local monitors = {
+    { output = "", mode = "highres", scale = "1" },
+    { output = "eDP-1", mode = "preferred", scale = "1.5" },
+    { output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", scale = "1" },
+    { output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", scale = "1.5" },
+}
+
+-- Re-apply every monitor rule in one pass. When lid_closed is true the
+-- built-in panel (eDP-1) is disabled *within the same pass* that re-runs
+-- `position = "auto"` for the externals, so they pack from 0,0 with the
+-- panel already gone. Doing the disable and the auto-positioning together is
+-- the whole point: a reload that positions an external to the right of a
+-- still-enabled eDP and only disables the panel afterwards strands the
+-- external at a half-screen x offset (the "workspace shown offset by half"
+-- bug on dock + lid-close), which previously only a manual `hyprctl reload`
+-- cleared.
+function _G.reflow_monitors(lid_closed)
+    for _, m in ipairs(monitors) do
+        local rule = { output = m.output, mode = m.mode, position = "auto", scale = m.scale }
+        if lid_closed and m.output == "eDP-1" then
+            rule.disabled = true
+        end
+        hl.monitor(rule)
     end
+end
+
+local function setup_monitors()
+    reflow_monitors(false)
 end
 
 -------------------------------------------------------------------- CONFIG
