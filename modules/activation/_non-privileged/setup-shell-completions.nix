@@ -24,6 +24,7 @@ in
         ${pkgs.gh}/bin/gh completion -s zsh > ${stubbeDir}/src/zsh/fpaths.d/_gh 2>/dev/null
         ${pkgs.uv}/bin/uv generate-shell-completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_uv 2>/dev/null
         ${pkgs.lazygit}/bin/lazygit completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_lazygit 2>/dev/null
+        ${pkgs.vultr-cli}/bin/vultr-cli completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_vultr-cli 2>/dev/null
         ${lib.optionalString config.features.srv ''
           ${srvBin} completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_srv 2>/dev/null
         ''}
