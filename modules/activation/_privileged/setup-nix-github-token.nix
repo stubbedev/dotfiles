@@ -12,12 +12,28 @@
   # otherwise-locked activation) and written to a root-owned include file.
   # The matching NixOS path lives in modules/nixos/nix-settings.nix.
   args =
-    { pkgs, ... }:
+    { config, ... }:
     let
-      # Re-encrypting the secret (hm secret rotate/edit/set) changes the
-      # ciphertext, which changes this hash, which changes actionScript's
-      # hash, which busts the activation lock so the new token is written.
-      ciphertextHash = builtins.hashString "sha256" (builtins.readFile (self + "/secrets/github-token"));
+      # sudoPromptScript hashes actionScript to gate the sudo prompt: if the
+      # text is byte-identical to last run, the lock holds and we skip. So
+      # actionScript MUST NOT embed anything that churns between switches —
+      # baking ${self} (new store path every commit/dirty tree) or
+      # ${pkgs.sops} (new path on every nixpkgs bump) re-prompts on EVERY
+      # switch. Two stable references instead:
+      #
+      #   secretPath — content-addressed copy of the ciphertext. Hashes the
+      #     file's *contents*, not the flake source, so it's invariant across
+      #     commits but DOES change when the token is re-encrypted
+      #     (hm secret rotate/edit/set) — exactly when we want a re-prompt.
+      #     Same trick as lib.nix:powerProfileHelperPath.
+      #   profileBin — ~/.nix-profile/bin (a fixed string), where sops +
+      #     ssh-to-age live via modules/sops.nix's home.packages. Stable
+      #     across nixpkgs bumps, unlike ${pkgs.sops}.
+      secretPath = toString (builtins.path {
+        name = "github-token";
+        path = self + "/secrets/github-token";
+      });
+      profileBin = "${config.home.profileDirectory}/bin";
     in
     {
       preCheck = ''
@@ -44,15 +60,13 @@
       '';
       promptQuestion = "Install GitHub token into /etc/nix?";
       actionScript = ''
-        # ciphertext-hash: ${ciphertextHash}
-
         # Derive the age identity straight from the SSH key (same path
         # sops-nix uses) so this doesn't depend on ~/.config/sops/age/keys.txt
         # having been materialised yet — its activation runs after ours.
-        ageKey=$(${pkgs.ssh-to-age}/bin/ssh-to-age -private-key -i "$HOME/.ssh/id_ed25519")
-        token=$(SOPS_AGE_KEY="$ageKey" ${pkgs.sops}/bin/sops --decrypt \
+        ageKey=$(${profileBin}/ssh-to-age -private-key -i "$HOME/.ssh/id_ed25519")
+        token=$(SOPS_AGE_KEY="$ageKey" ${profileBin}/sops --decrypt \
           --input-type binary --output-type binary \
-          "${self}/secrets/github-token" | tr -d '\n')
+          "${secretPath}" | tr -d '\n')
         unset ageKey
 
         if [ -z "$token" ]; then
