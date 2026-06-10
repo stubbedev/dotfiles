@@ -222,7 +222,7 @@ _hm() {
               if (( ${#names} )); then
                 _describe -t secrets 'secret file' names
               else
-                _message 'secret name (e.g. intelephense)'
+                _message 'secret name (e.g. github-token)'
               fi
               ;;
           esac

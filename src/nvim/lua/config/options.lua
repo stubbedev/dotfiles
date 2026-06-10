@@ -29,9 +29,6 @@ vim.o.guifont = "JetBrainsMono Nerd Font:h12"
 vim.opt.foldlevel = 99
 vim.opt.foldtext = "v:lua.require'lazyvim.util'.ui.foldtext()"
 
--- Fix PHP default lsp
-vim.g.lazyvim_php_lsp = "intelephense"
-
 vim.lsp.handlers["textDocument/hover"] = function(_, result, ctx, config)
   config = config or {}
   config.focus_id = ctx.method
