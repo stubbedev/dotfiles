@@ -42,22 +42,41 @@ _: {
           done
         }
 
+        # 1. OS trust store — always present, valid PEM, and already includes
+        #    the mkcert CA. Seeding with it guarantees a non-empty bundle so the
+        #    runtime (BoringSSL, via Claude Code) never warns at launch:
+        #    a missing file fails with errno 2 ("system library"), an empty one
+        #    with "PEM routines".
+        add_file "${config.home.sessionVariables.SSL_CERT_FILE}"
+
+        # 2. mkcert root, in case the OS store predates the current CA.
         if [ -n "''${CAROOT-}" ]; then
           add_file "''${CAROOT}/rootCA.pem"
         fi
-
         if command -v mkcert >/dev/null 2>&1; then
           caroot="$(mkcert -CAROOT 2>/dev/null || true)"
           [ -n "$caroot" ] && add_file "$caroot/rootCA.pem"
         fi
 
+        # 3. valet + srv leaf/CA certs (not present in the OS store).
         add_valet_paths
         ${lib.optionalString config.features.srv "add_srv_paths"}
 
+        # Collapse to unique CERTIFICATE blocks, dropping comments and the
+        # OS-store/mkcert-root overlap. BoringSSL stops at the first unparseable
+        # block, so emit only clean cert PEM.
+        awk '
+          /-----BEGIN CERTIFICATE-----/ { inblk = 1; blk = "" }
+          inblk { blk = blk $0 "\n" }
+          /-----END CERTIFICATE-----/ { inblk = 0; if (!seen[blk]++) printf "%s", blk }
+        ' "$tmp" > "$tmp.dedup" && mv "$tmp.dedup" "$tmp"
+
+        # Publish only a non-empty result; otherwise keep the last good bundle
+        # rather than leaving the path missing (which is what triggers the warn).
         if [ -s "$tmp" ]; then
           mv "$tmp" "$bundle"
         else
-          rm -f "$tmp" "$bundle"
+          rm -f "$tmp"
         fi
       '';
     };
