@@ -207,6 +207,64 @@ ensure_sudo() {
   fi
 }
 
+# --- flake.lock git automation -------------------------------------------
+# `hm update`/`upgrade` regenerate flake.lock; keep it committed and synced
+# with the remote without ever stopping on a merge conflict. flake.lock is
+# fully generated, so a merge driver that keeps the in-progress side ("true"
+# = exit 0, take current) makes every rebase/pull non-interactive; we then
+# re-run `nix flake update` so the newest input revs land on top.
+flake_git() {
+  git -C "$hm_flake_dir" "$@"
+}
+
+flake_in_git() {
+  has_cmd git && flake_git rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+flake_has_upstream() {
+  flake_git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1
+}
+
+# Register the flake.lock merge driver locally. Idempotent; .git/config is
+# untracked so it can't ship via the repo. .gitattributes maps
+# `flake.lock merge=flakelock` onto this driver.
+ensure_flakelock_driver() {
+  flake_git config merge.flakelock.name "keep current flake.lock (regenerated)" >/dev/null 2>&1 || true
+  flake_git config merge.flakelock.driver true >/dev/null 2>&1 || true
+}
+
+# Absorb remote commits before regenerating so the new lock lands on top of
+# whatever other hosts already pushed. --autostash protects unrelated dirty
+# work; the merge driver keeps it conflict-free.
+sync_flake_repo() {
+  flake_in_git || return 0
+  flake_has_upstream || return 0
+  flake_git fetch --quiet || return 0
+  flake_git pull --rebase --autostash --quiet || {
+    flake_git rebase --abort >/dev/null 2>&1 || true
+  }
+}
+
+# Commit flake.lock iff it changed, then push. A push race (remote moved
+# between our pull and push) is retried once after another rebase — again
+# conflict-free via the merge driver.
+commit_flake_lock() {
+  flake_in_git || return 0
+  flake_git diff --quiet -- flake.lock 2>/dev/null && return 0   # unchanged
+  flake_git add -- flake.lock || return 0
+  flake_git commit -m "chore: update flake.lock" -- flake.lock >/dev/null || return 0
+  echo "Committed updated flake.lock"
+  flake_has_upstream || return 0
+  flake_git push --quiet 2>/dev/null && return 0
+  flake_git pull --rebase --autostash --quiet || {
+    flake_git rebase --abort >/dev/null 2>&1 || true
+    echo "flake.lock committed locally; push failed (resolve manually)" >&2
+    return 0
+  }
+  flake_git push --quiet 2>/dev/null || \
+    echo "flake.lock committed locally; push failed (resolve manually)" >&2
+}
+
 update_system() {
   local needs_sudo="false"
 
@@ -246,7 +304,12 @@ update_system() {
 
   if has_cmd nix; then
     echo "Updating nix inputs"
+    if flake_in_git; then
+      ensure_flakelock_driver
+      sync_flake_repo
+    fi
     nix flake update --flake "$hm_flake_ref"
+    commit_flake_lock
   fi
 
   if has_cmd nix-channel; then
