@@ -172,6 +172,34 @@ prune_generations() {
   fi
 }
 
+# Run prune_generations detached so a `switch`/`upgrade` hands the prompt
+# back immediately instead of blocking on generation deletion + GC (the
+# slow tail). The child is re-exec'd via the hidden `__prune` subcommand
+# (prune_generations is a shell function a fresh `setsid bash` can't see),
+# setsid off the controlling TTY and disowned so it outlives this shell.
+# Output goes to a log. Set HM_PRUNE_BG=false to keep it foreground.
+dispatch_prune() {
+  if [[ "${HM_PRUNE_BG:-true}" != "true" ]]; then
+    prune_generations
+    return
+  fi
+
+  local log="${XDG_STATE_HOME:-$HOME/.local/state}/hm/prune.log"
+  mkdir -p "$(dirname "$log")"
+
+  # Prime the sudo timestamp while still attached to the TTY so the
+  # detached GC (sudo nix-collect-garbage on NixOS) won't block on a
+  # password prompt it can't service. The switch above already primed
+  # it; this refresh guards against the cache expiring mid-prune.
+  if is_nixos; then
+    sudo -v || true
+  fi
+
+  setsid "$0" __prune >"$log" 2>&1 </dev/null &
+  disown
+  echo "Pruning old generations in background (log: $log)."
+}
+
 ensure_sudo() {
   if [[ "${1:-}" == "true" ]]; then
     echo "Requesting sudo..."
@@ -581,7 +609,7 @@ case "${1:-}" in
     update_system
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     run_hm_subcmd switch "$@"
-    prune_generations
+    dispatch_prune
     ;;
   whoami)
     shift
@@ -610,6 +638,10 @@ case "${1:-}" in
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     shift
     run_hm_subcmd switch "$@"
+    dispatch_prune
+    ;;
+  __prune)
+    # Hidden: detached worker for dispatch_prune. Not in usage.
     prune_generations
     ;;
   boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
