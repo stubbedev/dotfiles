@@ -1,8 +1,13 @@
 _: {
   args =
-    { config, lib, ... }:
+    { config, lib, pkgs, ... }:
     {
       actionScript = ''
+        # Activations run with a stripped PATH; awk (gawk) and find/xargs
+        # (findutils) aren't on it. Without this the dedup awk pass below
+        # fails with "awk: command not found" and the bundle is left as-is.
+        export PATH="${lib.makeBinPath [ pkgs.gawk pkgs.findutils pkgs.coreutils ]}:$PATH"
+
         bundle="${config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
         bundle_dir="${builtins.dirOf config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
         tmp="$bundle.tmp"

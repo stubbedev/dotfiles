@@ -207,6 +207,16 @@ ensure_sudo() {
   fi
 }
 
+# On NixOS the activate verbs self-sudo deep inside nixos-rebuild, so the
+# password prompt only appears after inputs are updated and the build runs.
+# Prime the sudo timestamp upfront so `switch`/`upgrade` prompt immediately.
+prime_sudo_nixos() {
+  if is_nixos && has_cmd sudo; then
+    echo "Requesting sudo..."
+    sudo -v
+  fi
+}
+
 # --- flake.lock git automation -------------------------------------------
 # `hm update`/`upgrade` regenerate flake.lock; keep it committed and synced
 # with the remote without ever stopping on a merge conflict. flake.lock is
@@ -669,6 +679,7 @@ case "${1:-}" in
     ;;
   upgrade)
     shift
+    prime_sudo_nixos
     update_system
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     run_hm_subcmd switch "$@"
@@ -700,6 +711,7 @@ case "${1:-}" in
   switch)
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     shift
+    prime_sudo_nixos
     run_hm_subcmd switch "$@"
     dispatch_prune
     ;;

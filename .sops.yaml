@@ -8,4 +8,9 @@ creation_rules:
   - path_regex: secrets/[^/]+$
     key_groups:
       - age:
-          - age1ph82fy2jgjsmcsaufsrlzsql65g0ca954elacmqlsesz9ladwd0sgxsxj8  # stubbe
+          - age1ph82fy2jgjsmcsaufsrlzsql65g0ca954elacmqlsesz9ladwd0sgxsxj8  # stubbe (user ~/.ssh/id_ed25519)
+          # Host key (/etc/ssh/ssh_host_ed25519_key). NixOS sops-nix decrypts
+          # system secrets (e.g. github-token) with this at boot — see
+          # modules/nixos/sops.nix. Without it those activations fail with
+          # "0 successful groups required, got 0".
+          - age1grkukkq0j3sgj84suvxftywmlgltrncp577ekgua9yv3cfrrfvrq7rycsh  # stubbe-nixos (host)
