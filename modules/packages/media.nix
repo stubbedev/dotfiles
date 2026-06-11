@@ -83,6 +83,14 @@ _: {
         (homeLib.gfx ffmpeg-full)
         (homeLib.gfxExe "ffprobe" ffmpeg-full)
         (homeLib.gfxExe "ffplay" ffmpeg-full)
+
+        # Video player (GPU-accelerated output; default opener for video,
+        # see mime maps in modules/home/xdg/base.nix + modules/nixos/mime-defaults.nix)
+        (homeLib.gfx mpv)
+
+        # Image viewer (Wayland, GPU; default opener for still images,
+        # mime maps live alongside the mpv ones in the same two files)
+        (homeLib.gfx imv)
       ]
       # gpu-screen-recorder: on NixOS the system module owns it (it installs a
       # setcap wrapper for promptless KMS capture — see
