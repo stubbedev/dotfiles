@@ -130,6 +130,48 @@ run_generations() {
   fi
 }
 
+# Prune old profile generations after a successful switch, keeping the
+# current one plus a single previous (so rollback still works), then
+# collect the store paths no surviving generation references. nix-env's
+# "+N" selector keeps the N newest generations; "+2" => current + 1.
+# Best-effort: a prune hiccup must never make a successful switch look
+# failed, so each step is guarded with `|| true`. Applies to the
+# home-manager profile on every host and, on NixOS, the system profile.
+prune_generations() {
+  local keep="+2"
+  echo "Pruning old generations (keeping current + 1 previous)..."
+
+  if is_nixos; then
+    # sudo so the system-wide profile is pruned, not just the user's.
+    sudo nix-env -p /nix/var/nix/profiles/system --delete-generations "$keep" || true
+  fi
+
+  # home-manager profile, then the default nix-env/`nix profile`
+  # user environment ("profile"). The default profile bumps a
+  # generation on every package change and accumulates the most
+  # store-path bloat, so trim it to the same window. Standalone XDG
+  # location first, then the legacy per-user path older nix used.
+  local profile name
+  for name in home-manager profile; do
+    for profile in \
+      "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/$name" \
+      "/nix/var/nix/profiles/per-user/${USER:-$(id -un)}/$name"; do
+      if [ -e "$profile" ]; then
+        nix-env -p "$profile" --delete-generations "$keep" || true
+        break
+      fi
+    done
+  done
+
+  # Reap the now-dead store paths. sudo on NixOS so system-owned paths
+  # are collected too; the switch above already primed the sudo cache.
+  if is_nixos; then
+    sudo nix-collect-garbage || true
+  else
+    nix-collect-garbage || true
+  fi
+}
+
 ensure_sudo() {
   if [[ "${1:-}" == "true" ]]; then
     echo "Requesting sudo..."
@@ -190,7 +232,8 @@ Usage: hm <command> [args]
 
 Commands:
   update              Update system package managers and nix inputs
-  upgrade             Update system packages and apply switch
+  upgrade             Update system packages and apply switch (auto-prunes
+                        old generations, keeping current + 1 previous)
   whoami              Print "<hostname> <age-pubkey>" for this machine
   trust [name] <key>  Add an age recipient to .sops.yaml and re-wrap secrets/*
                         - hm trust <name> <pubkey>
@@ -205,7 +248,8 @@ Commands:
   iso devices         List removable/block devices
   iso burn <dev> --yes  Build the ISO and write it to a USB device
 
-  switch              Build and activate (default boot entry on NixOS)
+  switch              Build and activate (default boot entry on NixOS);
+                        auto-prunes old generations to current + 1 previous
   boot                Build and set as next-boot only (NixOS)
   test                Activate without making it the default (NixOS)
   build               Build without activating
@@ -537,6 +581,7 @@ case "${1:-}" in
     update_system
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     run_hm_subcmd switch "$@"
+    prune_generations
     ;;
   whoami)
     shift
@@ -561,7 +606,13 @@ case "${1:-}" in
   help|-h|--help)
     usage
     ;;
-  switch|boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
+  switch)
+    rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+    shift
+    run_hm_subcmd switch "$@"
+    prune_generations
+    ;;
+  boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     subcmd="$1"
     shift
