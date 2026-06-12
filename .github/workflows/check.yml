@@ -10,9 +10,9 @@ jobs:
     name: lint + eval
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v22
 
       # Scoped to lint + eval checks only. hyprland-config is deliberately
       # excluded: it builds Hyprland from source, which is far too slow for
