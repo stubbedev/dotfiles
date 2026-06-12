@@ -5,6 +5,8 @@
   perSystem =
     { pkgs, ... }:
     {
-      formatter = pkgs.nixfmt-rfc-style;
+      # nixfmt-tree wraps nixfmt in treefmt so `nix fmt` (no args) formats
+      # the whole tree; nixfmt-rfc-style is a deprecated alias these days.
+      formatter = pkgs.nixfmt-tree;
     };
 }

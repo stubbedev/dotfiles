@@ -22,6 +22,26 @@
           deadnix --fail --exclude ${self}/modules/activation/_helpers.nix -- ${self}
           touch "$out"
         '';
+
+        # Formatting drift fails the check; fix with `nix fmt`.
+        lint-fmt = pkgs.runCommand "lint-fmt" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
+          find ${self} -name '*.nix' -print0 | xargs -0 nixfmt --check
+          touch "$out"
+        '';
+
+        # shellcheck only understands sh/bash/dash/ksh — the zsh scripts
+        # in bin/ are skipped (SC1071 territory), bash ones are enforced
+        # at warning severity.
+        lint-shellcheck = pkgs.runCommand "lint-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
+          status=0
+          for f in ${self}/bin/*; do
+            if head -n1 "$f" | grep -q 'bash'; then
+              shellcheck -S warning "$f" || status=1
+            fi
+          done
+          [ "$status" -eq 0 ]
+          touch "$out"
+        '';
       };
     };
 }

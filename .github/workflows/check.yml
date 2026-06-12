@@ -1,0 +1,33 @@
+name: checks
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  checks:
+    name: lint + eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@v16
+
+      # Scoped to lint + eval checks only. hyprland-config is deliberately
+      # excluded: it builds Hyprland from source, which is far too slow for
+      # an uncached runner — run `nix flake check --impure` locally for the
+      # full set.
+      #
+      # --impure is required because modules/nixos/graphics.nix reads /proc
+      # for GPU detection and throws under pure eval. The runner has no
+      # NVIDIA driver, so detection resolves to the non-NVIDIA path.
+      - name: Build lint and eval checks
+        run: |
+          nix build --impure --no-link \
+            .#checks.x86_64-linux.lint-statix \
+            .#checks.x86_64-linux.lint-deadnix \
+            .#checks.x86_64-linux.lint-fmt \
+            .#checks.x86_64-linux.lint-shellcheck \
+            .#checks.x86_64-linux.eval-nixos-stubbe \
+            .#checks.x86_64-linux.eval-hm-stubbe
