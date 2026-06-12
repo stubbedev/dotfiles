@@ -1,6 +1,11 @@
 _: {
   flake.modules.nixos.mkcert =
-    { config, lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       hmFeatures = config.home-manager.users.${config.host.primaryUser}.features or { };
       userHome = config.users.users.${config.host.primaryUser}.home;

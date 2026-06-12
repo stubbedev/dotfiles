@@ -26,7 +26,6 @@ _: {
         '';
       };
 
-      home.sessionVariables.npm_config_store_dir =
-        "${config.home.homeDirectory}/.local/share/pnpm/store";
+      home.sessionVariables.npm_config_store_dir = "${config.home.homeDirectory}/.local/share/pnpm/store";
     };
 }

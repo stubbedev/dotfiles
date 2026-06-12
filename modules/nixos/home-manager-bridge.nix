@@ -13,10 +13,12 @@
       # useGlobalPkgs makes HM read those same overlaid pkgs, so HM modules
       # under home-manager.users.<name> see pkgs.nixgl, pkgs.cship, etc.
 
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
-      home-manager.extraSpecialArgs = {
-        inherit inputs self;
+      home-manager = {
+        useGlobalPkgs = true;
+        useUserPackages = true;
+        extraSpecialArgs = {
+          inherit inputs self;
+        };
       };
     };
 }

@@ -27,7 +27,7 @@
   };
 
   config.flake.homeConfigurations = lib.mapAttrs (
-    name: cfg:
+    _name: cfg:
     withSystem cfg.system (
       { pkgs, ... }:
       inputs.home-manager.lib.homeManagerConfiguration {

@@ -109,14 +109,12 @@ in
   # Wrap a specific binary `exeName` from `program` (not necessarily its
   # mainProgram). Output name matches exeName.
   gfxExe =
-    exeName: program:
-    if isNixOS then program else mkNixGLWrapper exeName (lib.getExe' program exeName);
+    exeName: program: if isNixOS then program else mkNixGLWrapper exeName (lib.getExe' program exeName);
 
   # Direct (no nixGL) wrapper that injects system driver search paths.
   # For DRM/KMS contexts where we need the host's EGL implementation.
   gfxDirectWithDrivers =
-    name: program:
-    if isNixOS then program else mkDirectWrapperWithDrivers name (lib.getExe program);
+    name: program: if isNixOS then program else mkDirectWrapperWithDrivers name (lib.getExe program);
 
   # Make a non-GL tool able to dlopen the GPU vendor libraries it probes
   # (e.g. btop loading libnvidia-ml.so for NVIDIA stats). Unlike the nixGL

@@ -2,12 +2,18 @@ _: {
   flake.modules.nixos.networking =
     { lib, pkgs, ... }:
     {
-      networking.networkmanager.enable = true;
-      networking.networkmanager.plugins = with pkgs; [ networkmanager-openconnect ];
-      networking.firewall.enable = true;
-      # Stealth: drop ICMP echo from non-LAN. Breaks ping diagnostics
-      # but stops trivial host enumeration.
-      networking.firewall.allowPing = false;
+      networking = {
+        networkmanager = {
+          enable = true;
+          plugins = with pkgs; [ networkmanager-openconnect ];
+        };
+        firewall = {
+          enable = true;
+          # Stealth: drop ICMP echo from non-LAN. Breaks ping diagnostics
+          # but stops trivial host enumeration.
+          allowPing = false;
+        };
+      };
 
       services.openssh = {
         enable = true;

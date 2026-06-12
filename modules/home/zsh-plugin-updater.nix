@@ -3,8 +3,6 @@ _: {
     {
       constants,
       pkgs,
-      lib,
-      config,
       ...
     }:
     let

@@ -66,12 +66,11 @@ _: {
       # path is clear when HM links. Only a real file is removed — an existing
       # HM symlink is left untouched, so this is a no-op on already-migrated
       # hosts and on macOS (no systemd user dir, the test just fails).
-      home.activation.migrateSrvDaemonUnit =
-        lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-          _srv_unit="${config.xdg.configHome}/systemd/user/srv-daemon.service"
-          if [ -e "$_srv_unit" ] && [ ! -L "$_srv_unit" ]; then
-            $DRY_RUN_CMD rm -f $VERBOSE_ARG "$_srv_unit"
-          fi
-        '';
+      home.activation.migrateSrvDaemonUnit = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+        _srv_unit="${config.xdg.configHome}/systemd/user/srv-daemon.service"
+        if [ -e "$_srv_unit" ] && [ ! -L "$_srv_unit" ]; then
+          $DRY_RUN_CMD rm -f $VERBOSE_ARG "$_srv_unit"
+        fi
+      '';
     };
 }

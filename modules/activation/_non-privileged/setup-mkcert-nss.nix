@@ -14,8 +14,7 @@ _: {
   # no sudo is needed; this lives in _non-privileged. TRUST_STORES=nss tells
   # mkcert to touch only NSS and skip the system store it would otherwise
   # try to sudo into (already handled by security.pki on NixOS).
-  enableIf =
-    { config, ... }: config.host.platform == "nixos" && (config.features.srv or false);
+  enableIf = { config, ... }: config.host.platform == "nixos" && (config.features.srv or false);
   args =
     { config, pkgs, ... }:
     let

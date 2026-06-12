@@ -1,7 +1,12 @@
 _: {
   enableIf = { config, ... }: config.features.desktop;
   args =
-    { config, pkgs, homeLib, ... }:
+    {
+      config,
+      pkgs,
+      homeLib,
+      ...
+    }:
     let
       # Must match modules/files/mail.nix's maildir / notmuch database path.
       maildir = "${config.home.homeDirectory}/.local/share/mail";

@@ -2,7 +2,6 @@ _: {
   flake.modules.homeManager.packagesHyprlandWayland =
     {
       pkgs,
-      homeLib,
       lib,
       config,
       ...

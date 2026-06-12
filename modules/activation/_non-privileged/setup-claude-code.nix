@@ -13,10 +13,13 @@
         firefoxPath = "${config.home.profileDirectory}/bin/firefox";
       };
       # Claude's .claude.json shape: { type, command, args, env? }
-      toClaude = _: server: {
-        type = "stdio";
-        inherit (server) command args;
-      } // lib.optionalAttrs (server ? env) { inherit (server) env; };
+      toClaude =
+        _: server:
+        {
+          type = "stdio";
+          inherit (server) command args;
+        }
+        // lib.optionalAttrs (server ? env) { inherit (server) env; };
       mcpServers = lib.mapAttrs toClaude servers;
     in
     {

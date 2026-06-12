@@ -4,7 +4,6 @@ _: {
       pkgs,
       homeLib,
       hyprland,
-      systemInfo,
       lib,
       config,
       ...
@@ -41,13 +40,15 @@ _: {
       # The watchdog monitors the wrapped hyprland process
       # --no-nixgl: disable built-in nixGL detection (we already handle it via hyprland-wrapped)
       # --path: point to our nixGL-wrapped Hyprland binary
-      start-hyprland-wrapped = pkgs.runCommand "start-hyprland" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
-        makeWrapper ${hyprlandPkg}/bin/start-hyprland $out/bin/start-hyprland \
-          --add-flags "--no-nixgl --path ${hyprland-wrapped}/bin/hyprland" \
-          --prefix PATH : "${pathPrefix}" \
-          --prefix PATH : "${hyprlandPathPrefix}" \
-          --prefix XDG_DATA_DIRS : "${dataDirsPrefix}"
-      '';
+      start-hyprland-wrapped =
+        pkgs.runCommand "start-hyprland" { nativeBuildInputs = [ pkgs.makeWrapper ]; }
+          ''
+            makeWrapper ${hyprlandPkg}/bin/start-hyprland $out/bin/start-hyprland \
+              --add-flags "--no-nixgl --path ${hyprland-wrapped}/bin/hyprland" \
+              --prefix PATH : "${pathPrefix}" \
+              --prefix PATH : "${hyprlandPathPrefix}" \
+              --prefix XDG_DATA_DIRS : "${dataDirsPrefix}"
+          '';
 
       # Create hyprctl wrapper with automatic instance signature detection
       # This fixes the issue where shells started before Hyprland restart have stale

@@ -14,23 +14,25 @@
         ;
     in
     {
-      boot.plymouth = {
-        enable = true;
-        package = pkgs.plymouth.override { systemd = config.boot.initrd.systemd.package; };
-        theme = "catppuccin-mocha";
-        themePackages = [ catppuccinMochaPlymouth ];
-      };
+      boot = {
+        plymouth = {
+          enable = true;
+          package = pkgs.plymouth.override { systemd = config.boot.initrd.systemd.package; };
+          theme = "catppuccin-mocha";
+          themePackages = [ catppuccinMochaPlymouth ];
+        };
 
-      # Quiet kernel + low console log level keep the splash readable
-      # instead of being shouted over by dmesg lines. udev / systemd
-      # status messages still hit the journal.
-      boot.kernelParams = [
-        "quiet"
-        "splash"
-        "rd.systemd.show_status=auto"
-        "rd.udev.log_level=3"
-      ];
-      boot.consoleLogLevel = lib.mkDefault 3;
-      boot.initrd.verbose = false;
+        # Quiet kernel + low console log level keep the splash readable
+        # instead of being shouted over by dmesg lines. udev / systemd
+        # status messages still hit the journal.
+        kernelParams = [
+          "quiet"
+          "splash"
+          "rd.systemd.show_status=auto"
+          "rd.udev.log_level=3"
+        ];
+        consoleLogLevel = lib.mkDefault 3;
+        initrd.verbose = false;
+      };
     };
 }

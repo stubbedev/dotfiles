@@ -32,9 +32,18 @@ _: {
         # where it didn't, and the canonical path for Fedora/Arch.
         ${homeLib.installHostPackage {
           detect = "avahi-daemon";
-          apt = [ "avahi-daemon" "libnss-mdns" ];
-          dnf = [ "avahi" "nss-mdns" ];
-          pacman = [ "avahi" "nss-mdns" ];
+          apt = [
+            "avahi-daemon"
+            "libnss-mdns"
+          ];
+          dnf = [
+            "avahi"
+            "nss-mdns"
+          ];
+          pacman = [
+            "avahi"
+            "nss-mdns"
+          ];
         }}
 
         # Ensure /etc/nsswitch.conf carries an mdns entry so `ssh foo.local`

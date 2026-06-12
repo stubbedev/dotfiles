@@ -33,7 +33,5 @@ in
   NewTabPageLocation = newtabUrl;
   HomepageLocation = newtabUrl;
   HomepageIsNewTabPage = false;
-  ExtensionInstallForcelist = map (id: "${id};${updateUrl}") (
-    builtins.attrNames extensions
-  );
+  ExtensionInstallForcelist = map (id: "${id};${updateUrl}") (builtins.attrNames extensions);
 }

@@ -1,10 +1,14 @@
-{ ... }:
-{
+_: {
   enableIf =
     { config, ... }:
     (config.features.media or false) && (config.features.desktop or false);
   args =
-    { pkgs, lib, homeLib, ... }:
+    {
+      pkgs,
+      lib,
+      homeLib,
+      ...
+    }:
     let
       kmsServer = "${pkgs.gpu-screen-recorder}/bin/gsr-kms-server";
       getcap = "${pkgs.libcap.out}/bin/getcap";

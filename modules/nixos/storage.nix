@@ -1,12 +1,11 @@
 _: {
-  flake.modules.nixos.storage =
-    { ... }:
-    {
+  flake.modules.nixos.storage = _: {
+    services = {
       # SMART monitoring: polls every disk on a timer, logs failing
       # attributes to the journal. No email destination configured —
       # `journalctl -u smartd` surfaces alerts. autodetect picks up
       # every /dev/sd*, /dev/nvme* without per-host config.
-      services.smartd = {
+      smartd = {
         enable = true;
         autodetect = true;
         notifications.x11.enable = true;
@@ -14,12 +13,13 @@ _: {
 
       # Auto-mount removable media (USB sticks, SD cards, MTP). waybar's
       # disk widget + file managers (vifm, nautilus) read its dbus API.
-      services.udisks2.enable = true;
+      udisks2.enable = true;
 
       # Virtual filesystem layer for GIO-based apps (PCManFM, nautilus, …).
       # Enables: trash support, MTP device mounting (Android phones/cameras),
       # SFTP/SMB network browsing, archive mounting. Without this, deleting
       # files in PCManFM is permanent (no trash) and network/phone mounts silently fail.
-      services.gvfs.enable = true;
+      gvfs.enable = true;
     };
+  };
 }

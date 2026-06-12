@@ -7,15 +7,21 @@
   ...
 }:
 let
-  requirePkgs =
-    name: if pkgs == null then throw "homeLib.${name}: pkgs is required" else pkgs;
+  requirePkgs = name: if pkgs == null then throw "homeLib.${name}: pkgs is required" else pkgs;
 in
 rec {
   # ============================================================
   # GFX wrappers (nixGL)
   # ============================================================
 
-  gfxLib = import ./lib/gfx.nix { inherit lib pkgs systemInfo isNixOS; };
+  gfxLib = import ./lib/gfx.nix {
+    inherit
+      lib
+      pkgs
+      systemInfo
+      isNixOS
+      ;
+  };
   inherit (gfxLib)
     gfx
     gfxName
@@ -42,7 +48,8 @@ rec {
       "${target}" = {
         source = self + "/src/${path}";
         force = true;
-      } // (removeAttrs extra [ "target" ]);
+      }
+      // (removeAttrs extra [ "target" ]);
     };
 
   # Bulk variant: map a list of paths with no extra args.
@@ -81,10 +88,9 @@ rec {
   # user's home directory / username and which are baked at eval time.
   substituteFile =
     { file, vars }:
-    builtins.replaceStrings
-      (map (k: "@${k}@") (lib.attrNames vars))
-      (lib.attrValues vars)
-      (builtins.readFile file);
+    builtins.replaceStrings (map (k: "@${k}@") (lib.attrNames vars)) (lib.attrValues vars) (
+      builtins.readFile file
+    );
 
   # ============================================================
   # System file installation (privileged activations)
@@ -321,10 +327,12 @@ rec {
   # Keying on `self + "/..."` would re-hash on every commit and retrigger
   # the sudo prompt in setup-power-profile-fix.nix; `builtins.path` hashes
   # only the helper file's contents instead.
-  powerProfileHelperPath = toString (builtins.path {
-    name = "power-profile-helper";
-    path = self + "/src/_shared/scripts/power.profile.helper.sh";
-  });
+  powerProfileHelperPath = toString (
+    builtins.path {
+      name = "power-profile-helper";
+      path = self + "/src/_shared/scripts/power.profile.helper.sh";
+    }
+  );
 
   # Canonical URL of the local new-tab / new-window page. `srv` serves it
   # as a static site at https://start.local (registered once with

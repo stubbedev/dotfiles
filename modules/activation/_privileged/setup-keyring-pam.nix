@@ -1,5 +1,6 @@
 _: {
-  enableIf = { config, ... }: config.features.hyprland || config.features.niri || config.features.theming;
+  enableIf =
+    { config, ... }: config.features.hyprland || config.features.niri || config.features.theming;
   args = _: {
     promptTitle = "GNOME Keyring PAM setup";
     promptBody = ''

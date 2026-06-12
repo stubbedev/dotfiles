@@ -29,10 +29,12 @@
       #   profileBin — ~/.nix-profile/bin (a fixed string), where sops +
       #     ssh-to-age live via modules/sops.nix's home.packages. Stable
       #     across nixpkgs bumps, unlike ${pkgs.sops}.
-      secretPath = toString (builtins.path {
-        name = "github-token";
-        path = self + "/secrets/github-token";
-      });
+      secretPath = toString (
+        builtins.path {
+          name = "github-token";
+          path = self + "/secrets/github-token";
+        }
+      );
       profileBin = "${config.home.profileDirectory}/bin";
     in
     {

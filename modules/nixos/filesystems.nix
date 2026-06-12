@@ -42,7 +42,7 @@ _: {
         fileSystems = [ "/" ];
       };
 
-      fileSystems = lib.mapAttrs (_: subvol: mkSubvolMount subvol) subvolumes // {
+      fileSystems = lib.mapAttrs (_: mkSubvolMount) subvolumes // {
         "/boot" = {
           device = "/dev/disk/by-label/STBBOOT";
           fsType = "vfat";

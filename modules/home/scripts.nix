@@ -96,15 +96,11 @@
         "nixos-iso"
       ];
       isUnconditional = name: builtins.elem name unconditionalNames;
-      unconditionalScripts =
-        lib.attrValues (lib.filterAttrs (n: _: isUnconditional n) scripts);
-      desktopScripts =
-        lib.attrValues (lib.filterAttrs (n: _: !(isUnconditional n)) scripts);
+      unconditionalScripts = lib.attrValues (lib.filterAttrs (n: _: isUnconditional n) scripts);
+      desktopScripts = lib.attrValues (lib.filterAttrs (n: _: !(isUnconditional n)) scripts);
     in
     {
       _module.args.scripts = scripts;
-      home.packages =
-        unconditionalScripts
-        ++ lib.optionals config.features.desktop desktopScripts;
+      home.packages = unconditionalScripts ++ lib.optionals config.features.desktop desktopScripts;
     };
 }

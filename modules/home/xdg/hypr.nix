@@ -102,35 +102,35 @@ _: {
                 hy3-plugin = hy3.packages.${pkgs.stdenv.hostPlatform.system}.hy3;
               in
               ''
-              -- Nix Generated
-              -- Cursor — single source of truth: constants.theme.cursor/cursorSize.
-              -- Mirrored by HM home.sessionVariables and (on NixOS) by
-              -- environment.sessionVariables, but those don't propagate into
-              -- Hyprland's process tree under non-NixOS session managers (SDDM
-              -- on Ubuntu doesn't source hm-session-vars.sh), so we set them
-              -- via Hyprland's own hl.env here too.
-              hl.env("XCURSOR_THEME", "${constants.theme.cursor}")
-              hl.env("XCURSOR_SIZE", "${toString constants.theme.cursorSize}")
-              ${lib.optionalString systemInfo.hasNvidia ''
-              -- Additional ENV VARS
-              hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
-              hl.env("LIBVA_DRIVER_NAME", "nvidia")
-              hl.env("MOZ_DISABLE_RDD_SANDBOX", "1")
-              hl.env("NVD_BACKEND", "direct")
-              ''}
-              -- Plugins
-              hl.plugin.load("${hy3-plugin}/lib/libhy3.so")
+                -- Nix Generated
+                -- Cursor — single source of truth: constants.theme.cursor/cursorSize.
+                -- Mirrored by HM home.sessionVariables and (on NixOS) by
+                -- environment.sessionVariables, but those don't propagate into
+                -- Hyprland's process tree under non-NixOS session managers (SDDM
+                -- on Ubuntu doesn't source hm-session-vars.sh), so we set them
+                -- via Hyprland's own hl.env here too.
+                hl.env("XCURSOR_THEME", "${constants.theme.cursor}")
+                hl.env("XCURSOR_SIZE", "${toString constants.theme.cursorSize}")
+                ${lib.optionalString systemInfo.hasNvidia ''
+                  -- Additional ENV VARS
+                  hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+                  hl.env("LIBVA_DRIVER_NAME", "nvidia")
+                  hl.env("MOZ_DISABLE_RDD_SANDBOX", "1")
+                  hl.env("NVD_BACKEND", "direct")
+                ''}
+                -- Plugins
+                hl.plugin.load("${hy3-plugin}/lib/libhy3.so")
 
-              -- Nix-derived values consumed by hyprland.lua via require("nix").
-              return {
-                paths = {
-                  scripts = "${hyprScripts}",
-                  shared = "${sharedScripts}",
-                },
-                colors = {
-                  ${luaColors}
-                },
-              }
+                -- Nix-derived values consumed by hyprland.lua via require("nix").
+                return {
+                  paths = {
+                    scripts = "${hyprScripts}",
+                    shared = "${sharedScripts}",
+                  },
+                  colors = {
+                    ${luaColors}
+                  },
+                }
               '';
           };
 

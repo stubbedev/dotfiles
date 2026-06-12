@@ -40,10 +40,19 @@ _: {
         # ---------------------------------------------------------------
         ${homeLib.installHostPackage {
           detect = "kwin_wayland";
-          apt = [ "sddm" "kwin-wayland" ];
-          dnf = [ "sddm" "kwin-wayland" ];
+          apt = [
+            "sddm"
+            "kwin-wayland"
+          ];
+          dnf = [
+            "sddm"
+            "kwin-wayland"
+          ];
           # Arch ships kwin_wayland inside the single kwin package.
-          pacman = [ "sddm" "kwin" ];
+          pacman = [
+            "sddm"
+            "kwin"
+          ];
         }}
 
         # ---------------------------------------------------------------

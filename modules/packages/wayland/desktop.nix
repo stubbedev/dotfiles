@@ -63,19 +63,22 @@ _: {
       # XDG_DATA_DIRS lookup chain. Source glyphs are black-on-transparent;
       # `-channel RGB -negate` inverts RGB only (alpha untouched) so they
       # render white against swaync's dark notification background.
-      mailNotificationIcons = pkgs.runCommand "mail-notification-icons" {
-        nativeBuildInputs = [ pkgs.imagemagick ];
-      } ''
-        out_dir="$out/share/icons/hicolor/128x128/apps"
-        mkdir -p "$out_dir"
+      mailNotificationIcons =
+        pkgs.runCommand "mail-notification-icons"
+          {
+            nativeBuildInputs = [ pkgs.imagemagick ];
+          }
+          ''
+            out_dir="$out/share/icons/hicolor/128x128/apps"
+            mkdir -p "$out_dir"
 
-        for name in gmail exchange; do
-          magick "${./icons}/mail-account-$name.png" \
-            -background none -resize 128x128 \
-            -channel RGB -negate +channel \
-            "$out_dir/mail-account-$name.png"
-        done
-      '';
+            for name in gmail exchange; do
+              magick "${./icons}/mail-account-$name.png" \
+                -background none -resize 128x128 \
+                -channel RGB -negate +channel \
+                "$out_dir/mail-account-$name.png"
+            done
+          '';
 
       # Switch the active compositor's user systemd target. Stops the other
       # known compositor session targets, then starts the named one. Both

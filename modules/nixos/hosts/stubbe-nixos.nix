@@ -19,15 +19,19 @@ in
 
         # Real bootloader: this is the only target host, EFI/systemd-boot
         # is what bin/stb-install-nixos provisions.
-        boot.loader.systemd-boot.enable = true;
-        boot.loader.efi.canTouchEfiVariables = true;
-        # Disable the boot menu's text editor — anyone with physical
-        # access could otherwise append `init=/bin/sh` and get a root
-        # shell without a password.
-        boot.loader.systemd-boot.editor = false;
-        # Match the system-profile prune in modules/nixos/nix-gc.nix:
-        # current + 1 previous in the boot menu, no stale entries.
-        boot.loader.systemd-boot.configurationLimit = 2;
+        boot.loader = {
+          systemd-boot = {
+            enable = true;
+            # Disable the boot menu's text editor — anyone with physical
+            # access could otherwise append `init=/bin/sh` and get a root
+            # shell without a password.
+            editor = false;
+            # Match the system-profile prune in modules/nixos/nix-gc.nix:
+            # current + 1 previous in the boot menu, no stale entries.
+            configurationLimit = 2;
+          };
+          efi.canTouchEfiVariables = true;
+        };
 
         # Mark this host as the post-install target so
         # modules/nixos/filesystems.nix supplies the real btrfs layout.

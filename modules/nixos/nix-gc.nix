@@ -1,7 +1,6 @@
-{ ... }:
-{
+_: {
   flake.modules.nixos.nixGc =
-    { config, pkgs, ... }:
+    { config, ... }:
     {
       # Garbage-collect the store on a weekly timer. We want the system
       # profile trimmed to "current + 1 previous" so a rebuild that boots
@@ -14,10 +13,22 @@
       # nothing to free. `--delete-older-than` is time-based and lets
       # generation count drift; `nix-env --delete-generations +2`
       # enforces a count regardless of switch frequency.
-      nix.gc = {
-        automatic = true;
-        dates = "weekly";
-        options = "";
+      nix = {
+        gc = {
+          automatic = true;
+          dates = "weekly";
+          options = "";
+        };
+
+        optimise = {
+          automatic = true;
+          dates = [ "weekly" ];
+        };
+
+        # Flake-only system: nix-channel CLI + the channel update timer
+        # are dead weight. Disable so a stale `nix-channel --update` cron
+        # can't drift the system away from the flake.lock pin.
+        channel.enable = false;
       };
 
       systemd.services.nix-gc.serviceConfig.ExecStartPre = [
@@ -32,15 +43,5 @@
           ${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2 || true
         '';
       };
-
-      nix.optimise = {
-        automatic = true;
-        dates = [ "weekly" ];
-      };
-
-      # Flake-only system: nix-channel CLI + the channel update timer
-      # are dead weight. Disable so a stale `nix-channel --update` cron
-      # can't drift the system away from the flake.lock pin.
-      nix.channel.enable = false;
     };
 }

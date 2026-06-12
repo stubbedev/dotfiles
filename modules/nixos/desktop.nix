@@ -6,7 +6,11 @@
       # constants.theme has no `config` dependency (only constants.paths does),
       # so the stub config below is safe. Single source of truth lives in
       # constants.nix; modules/home/session-variables.nix mirrors this for HM.
-      constants = import (self + "/constants.nix") { config = { home.homeDirectory = ""; }; };
+      constants = import (self + "/constants.nix") {
+        config = {
+          home.homeDirectory = "";
+        };
+      };
     in
     {
       # HM-side modules/theme/dconf.nix writes dconf keys (color-scheme,

@@ -1,7 +1,12 @@
 _: {
   enableIf = { config, ... }: config.features.docker;
   args =
-    { config, pkgs, homeLib, ... }:
+    {
+      config,
+      pkgs,
+      homeLib,
+      ...
+    }:
     homeLib.mkInstallPrompt {
       subject = "Docker";
       body = ''

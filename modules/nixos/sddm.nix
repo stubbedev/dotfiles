@@ -1,7 +1,8 @@
 _: {
-  flake.modules.nixos.greetd =
+  flake.modules.nixos.sddm =
     { pkgs, lib, ... }:
     {
+      # greetd comes in as a default elsewhere on the stack; SDDM is the DM.
       services.greetd.enable = lib.mkForce false;
 
       services.displayManager.sddm = {

@@ -15,9 +15,10 @@
     lib.mkIf (hmFeatures.browsers or false) {
       # Shared policy body (new-tab/homepage URL + force-installed
       # extensions) — see modules/packages/chrome/_policy.nix.
-      environment.etc."opt/chrome/policies/managed/stubbedev-newtab.json".text =
-        builtins.toJSON (import ../packages/chrome/_policy.nix {
+      environment.etc."opt/chrome/policies/managed/stubbedev-newtab.json".text = builtins.toJSON (
+        import ../packages/chrome/_policy.nix {
           newtabUrl = homeLib.browserNewtabUrl;
-        });
+        }
+      );
     };
 }

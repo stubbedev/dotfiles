@@ -17,10 +17,12 @@ _: {
       ];
       mkSecret =
         provider:
-        lib.nameValuePair "${provider}_mcp" (homeLib.mkBinarySecret {
-          name = "${provider}-mcp";
-          path = "${config.home.homeDirectory}/.${provider}-mcp.json";
-        });
+        lib.nameValuePair "${provider}_mcp" (
+          homeLib.mkBinarySecret {
+            name = "${provider}-mcp";
+            path = "${config.home.homeDirectory}/.${provider}-mcp.json";
+          }
+        );
     in
     {
       sops.secrets = lib.listToAttrs (map mkSecret providers);

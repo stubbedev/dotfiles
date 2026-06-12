@@ -44,7 +44,10 @@ let
     lib.filterAttrs (_: type: type == "regular" || type == "symlink") sshDirectoryEntries
   );
   rawSshFileNamesFiltered =
-    if hasAllowlist then lib.filter (n: lib.elem n sshKeyAllowlist) rawSshFileNames else rawSshFileNames;
+    if hasAllowlist then
+      lib.filter (n: lib.elem n sshKeyAllowlist) rawSshFileNames
+    else
+      rawSshFileNames;
   sshFileNames =
     if hasHome && !hasAllowlist && rawSshFileNamesFiltered != [ ] then
       lib.warn ''
@@ -89,12 +92,11 @@ let
       name = "nixos-installer/ssh/${file.name}";
       value = {
         text = file.content;
-        mode = file.mode;
+        inherit (file) mode;
       };
     }) sshKeyFiles
   );
   nixosMods = config.flake.modules.nixos;
-  hmMods = config.flake.modules.homeManager;
 in
 {
   configurations.nixos.installer-iso = {
@@ -102,7 +104,6 @@ in
     extraSpecialArgs = { inherit self; };
     module =
       {
-        config,
         lib,
         modulesPath,
         pkgs,
@@ -111,7 +112,8 @@ in
       {
         imports = [
           "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix"
-        ] ++ builtins.attrValues nixosMods;
+        ]
+        ++ builtins.attrValues nixosMods;
 
         isoImage = {
           makeEfiBootable = true;
@@ -119,73 +121,81 @@ in
           squashfsCompression = "zstd -Xcompression-level 15";
         };
 
-        boot.zfs.forceImportRoot = false;
+        boot = {
+          zfs.forceImportRoot = false;
 
-        # stb-install-nixos creates btrfs volumes and a vfat EFI partition.
-        # Explicit declaration ensures the kernel modules are present and
-        # fsck helpers are included even if cd-base doesn't pull them in.
-        boot.supportedFilesystems = lib.mkAfter [ "btrfs" "vfat" ];
+          # stb-install-nixos creates btrfs volumes and a vfat EFI partition.
+          # Explicit declaration ensures the kernel modules are present and
+          # fsck helpers are included even if cd-base doesn't pull them in.
+          supportedFilesystems = lib.mkAfter [
+            "btrfs"
+            "vfat"
+          ];
 
-        # Auto-load common wired NIC drivers. nixos-install fetches packages
-        # from cache.nixos.org — a missing driver means a stalled install.
-        # hardware.nix covers storage controllers; these cover the NIC side.
-        # (graphics.nix already force-loads `nvidia` unconditionally, which
-        # is what populates /proc/driver/nvidia/version on NVIDIA targets.)
-        boot.kernelModules = lib.mkAfter [
-          # --- Wired ethernet ---
-          "r8169"       # Realtek Gigabit PCIe (most consumer boards)
-          "r8168"       # Realtek Gigabit alt driver
-          "r8152"       # Realtek USB ethernet
-          "e1000"       # Intel Gigabit (older)
-          "e1000e"      # Intel Gigabit (NUCs, ThinkPads)
-          "igb"         # Intel Gigabit (server / newer)
-          "ixgbe"       # Intel 10G
-          "i40e"        # Intel 40G / X710
-          "tg3"         # Broadcom Gigabit
-          "bnx2x"       # Broadcom 10G
-          "sky2"        # Marvell Gigabit
-          "atl1c"       # Qualcomm/Atheros wired
-          "alx"         # Qualcomm/Atheros wired (newer)
-          "forcedeth"   # nForce onboard
-          # USB ethernet dongles
-          "ax88179_178a" # ASIX USB 3.0 ethernet (common dongles)
-          "cdc_ether"    # Generic CDC ethernet / USB tethering
-          "cdc_ncm"      # CDC NCM (4G modems, some hubs)
-          "r8153_ecm"    # Realtek USB 3.0 ethernet
-          "lan78xx"      # Microchip USB 3.0 ethernet
-          "smsc75xx"     # SMSC USB ethernet
-          "smsc95xx"     # SMSC USB ethernet (Raspberry Pi style)
+          # Auto-load common wired NIC drivers. nixos-install fetches packages
+          # from cache.nixos.org — a missing driver means a stalled install.
+          # hardware.nix covers storage controllers; these cover the NIC side.
+          # (graphics.nix already force-loads `nvidia` unconditionally, which
+          # is what populates /proc/driver/nvidia/version on NVIDIA targets.)
+          kernelModules = lib.mkAfter [
+            # --- Wired ethernet ---
+            "r8169" # Realtek Gigabit PCIe (most consumer boards)
+            "r8168" # Realtek Gigabit alt driver
+            "r8152" # Realtek USB ethernet
+            "e1000" # Intel Gigabit (older)
+            "e1000e" # Intel Gigabit (NUCs, ThinkPads)
+            "igb" # Intel Gigabit (server / newer)
+            "ixgbe" # Intel 10G
+            "i40e" # Intel 40G / X710
+            "tg3" # Broadcom Gigabit
+            "bnx2x" # Broadcom 10G
+            "sky2" # Marvell Gigabit
+            "atl1c" # Qualcomm/Atheros wired
+            "alx" # Qualcomm/Atheros wired (newer)
+            "forcedeth" # nForce onboard
+            # USB ethernet dongles
+            "ax88179_178a" # ASIX USB 3.0 ethernet (common dongles)
+            "cdc_ether" # Generic CDC ethernet / USB tethering
+            "cdc_ncm" # CDC NCM (4G modems, some hubs)
+            "r8153_ecm" # Realtek USB 3.0 ethernet
+            "lan78xx" # Microchip USB 3.0 ethernet
+            "smsc75xx" # SMSC USB ethernet
+            "smsc95xx" # SMSC USB ethernet (Raspberry Pi style)
 
-          # --- WiFi ---
-          "iwlwifi"     # Intel WiFi 4/5/6/6E/7 (dominant in laptops)
-          "iwldvm"      # Intel WiFi 4000 series firmware driver
-          "iwlmvm"      # Intel WiFi 5000+ series firmware driver
-          "ath9k"       # Qualcomm 802.11n PCIe
-          "ath9k_htc"   # Qualcomm 802.11n USB
-          "ath10k_pci"  # Qualcomm 802.11ac PCIe
-          "ath11k_pci"  # Qualcomm 802.11ax PCIe
-          "rtw88_pci"   # Realtek 802.11ac PCIe
-          "rtw88_8822be" "rtw88_8822ce" "rtw88_8821ce" # Realtek 802.11ac chips
-          "rtw89_pci"   # Realtek 802.11ax PCIe
-          "rtw89_8852be" "rtw89_8852ce" # Realtek 802.11ax chips
-          "mt7921e"     # MediaTek 802.11ax PCIe (AMD budget laptops)
-          "mt7915e"     # MediaTek 802.11ax PCIe (newer)
-          "mt7601u"     # MediaTek USB WiFi (cheap dongles)
-          "brcmfmac"    # Broadcom FullMAC (common in Macs, RPi, Chromebooks)
-          "brcmsmac"    # Broadcom SoftMAC
-          "b43"         # Broadcom 43xx (older)
+            # --- WiFi ---
+            "iwlwifi" # Intel WiFi 4/5/6/6E/7 (dominant in laptops)
+            "iwldvm" # Intel WiFi 4000 series firmware driver
+            "iwlmvm" # Intel WiFi 5000+ series firmware driver
+            "ath9k" # Qualcomm 802.11n PCIe
+            "ath9k_htc" # Qualcomm 802.11n USB
+            "ath10k_pci" # Qualcomm 802.11ac PCIe
+            "ath11k_pci" # Qualcomm 802.11ax PCIe
+            "rtw88_pci" # Realtek 802.11ac PCIe
+            "rtw88_8822be"
+            "rtw88_8822ce"
+            "rtw88_8821ce" # Realtek 802.11ac chips
+            "rtw89_pci" # Realtek 802.11ax PCIe
+            "rtw89_8852be"
+            "rtw89_8852ce" # Realtek 802.11ax chips
+            "mt7921e" # MediaTek 802.11ax PCIe (AMD budget laptops)
+            "mt7915e" # MediaTek 802.11ax PCIe (newer)
+            "mt7601u" # MediaTek USB WiFi (cheap dongles)
+            "brcmfmac" # Broadcom FullMAC (common in Macs, RPi, Chromebooks)
+            "brcmsmac" # Broadcom SoftMAC
+            "b43" # Broadcom 43xx (older)
 
-          # --- Bluetooth (useful if WiFi uses BT coexistence firmware) ---
-          "btusb"       # USB Bluetooth (covers most BT dongles + built-in)
-          "btintel"     # Intel Bluetooth
-          "btrtl"       # Realtek Bluetooth
-          "btmtk"       # MediaTek Bluetooth
+            # --- Bluetooth (useful if WiFi uses BT coexistence firmware) ---
+            "btusb" # USB Bluetooth (covers most BT dongles + built-in)
+            "btintel" # Intel Bluetooth
+            "btrtl" # Realtek Bluetooth
+            "btmtk" # MediaTek Bluetooth
 
-          # --- Input (belt-and-suspenders over hardware.nix) ---
-          "hid_generic" # Generic HID fallback
-          "i2c_hid"     # I2C HID (laptop touchpads/keyboards)
-          "i2c_hid_acpi"
-        ];
+            # --- Input (belt-and-suspenders over hardware.nix) ---
+            "hid_generic" # Generic HID fallback
+            "i2c_hid" # I2C HID (laptop touchpads/keyboards)
+            "i2c_hid_acpi"
+          ];
+        };
 
         # All firmware blobs including non-redistributable (Broadcom WiFi,
         # some Intel/Realtek). Needed for brcmfmac, some iwlwifi revisions,
@@ -193,39 +203,43 @@ in
         hardware.enableAllFirmware = true;
         nixpkgs.config.allowUnfree = true;
 
-        networking.hostName = lib.mkForce "stubbe-iso";
+        networking = {
+          hostName = lib.mkForce "stubbe-iso";
 
-        # Live ISO uses iwd + impala instead of NetworkManager. impala is a
-        # ratatui TUI for iwd; it's lighter than nmtui and gives an
-        # interactive WiFi picker on the install tty. NM is force-disabled
-        # because it claims wpa_supplicant and conflicts with iwd.
-        networking.networkmanager.enable = lib.mkForce false;
-        networking.wireless.iwd.enable = true;
+          # Live ISO uses iwd + impala instead of NetworkManager. impala is a
+          # ratatui TUI for iwd; it's lighter than nmtui and gives an
+          # interactive WiFi picker on the install tty. NM is force-disabled
+          # because it claims wpa_supplicant and conflicts with iwd.
+          networkmanager.enable = lib.mkForce false;
+          wireless.iwd.enable = true;
+        };
 
-        # The ISO's only job is to run stb-install-nixos. Skip greetd and
-        # autologin root on tty1 so the live boot lands directly at a root
-        # shell. The installed system still uses greetd from
-        # modules/nixos/greetd.nix; this override is scoped to the ISO.
-        services.greetd.enable = lib.mkForce false;
-        services.displayManager.sddm.enable = lib.mkForce false;
+        services = {
+          # The ISO's only job is to run stb-install-nixos. Skip the display
+          # manager and autologin root on tty1 so the live boot lands directly
+          # at a root shell. The installed system still uses SDDM from
+          # modules/nixos/sddm.nix; this override is scoped to the ISO.
+          greetd.enable = lib.mkForce false;
+          displayManager.sddm.enable = lib.mkForce false;
 
-        # The live ISO is a console-only installer; X stays off. The
-        # nvidia kernel module is pulled into the closure and force-loaded
-        # by graphics.nix unconditionally, so /proc/driver/nvidia/version
-        # populates on NVIDIA targets and stb-install-nixos --impure can
-        # auto-detect the GPU regardless of the build host.
-        services.xserver.enable = lib.mkForce false;
-        services.getty.autologinUser = lib.mkForce "root";
-        users.users.root.initialHashedPassword = lib.mkForce "";
+          # The live ISO is a console-only installer; X stays off. The
+          # nvidia kernel module is pulled into the closure and force-loaded
+          # by graphics.nix unconditionally, so /proc/driver/nvidia/version
+          # populates on NVIDIA targets and stb-install-nixos --impure can
+          # auto-detect the GPU regardless of the build host.
+          xserver.enable = lib.mkForce false;
+          getty.autologinUser = lib.mkForce "root";
 
-        services.openssh = {
-          enable = true;
-          settings = {
-            PasswordAuthentication = false;
-            KbdInteractiveAuthentication = false;
-            PermitRootLogin = "prohibit-password";
+          openssh = {
+            enable = true;
+            settings = {
+              PasswordAuthentication = false;
+              KbdInteractiveAuthentication = false;
+              PermitRootLogin = "prohibit-password";
+            };
           };
         };
+        users.users.root.initialHashedPassword = lib.mkForce "";
 
         users.users.root.openssh.authorizedKeys.keys = sshAuthorizedKeys;
 
@@ -282,9 +296,7 @@ in
           parted
           rsync
           inputs.disko.packages.${system}.default
-          (pkgs.writeShellScriptBin "stb-install-nixos" (
-            builtins.readFile (self + "/bin/stb-install-nixos")
-          ))
+          (pkgs.writeShellScriptBin "stb-install-nixos" (builtins.readFile (self + "/bin/stb-install-nixos")))
         ];
 
         system.stateVersion = "26.05";

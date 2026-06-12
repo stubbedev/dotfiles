@@ -10,7 +10,15 @@
     let
       constants = import (self + "/constants.nix") { inherit config; };
       systemInfo = import (self + "/lib/system-info.nix") { inherit pkgs; };
-      homeLib = import (self + "/lib.nix") { inherit lib pkgs systemInfo self; isNixOS = config.host.platform == "nixos"; };
+      homeLib = import (self + "/lib.nix") {
+        inherit
+          lib
+          pkgs
+          systemInfo
+          self
+          ;
+        isNixOS = config.host.platform == "nixos";
+      };
     in
     {
       _module.args = {
@@ -20,7 +28,13 @@
           homeLib
           self
           ;
-        inherit (inputs) hyprland hy3 fenix srv treeman;
+        inherit (inputs)
+          hyprland
+          hy3
+          fenix
+          srv
+          treeman
+          ;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
       };
     };

@@ -2,13 +2,12 @@ let
   # Fail fast when an activation module forgets to set actionScript (the
   # only required field). Without this assert the activation lands empty
   # and any error surfaces as a silent no-op at switch time.
-  requireActionScript = name: resolved:
+  requireActionScript =
+    name: resolved:
     if resolved ? actionScript then
       resolved
     else
-      throw "activation '${name}': missing 'actionScript' (got keys: ${
-        builtins.concatStringsSep ", " (builtins.attrNames resolved)
-      })";
+      throw "activation '${name}': missing 'actionScript' (got keys: ${builtins.concatStringsSep ", " (builtins.attrNames resolved)})";
 in
 {
   mkSetupModule =
@@ -20,6 +19,10 @@ in
     }:
     {
       flake.modules.homeManager.${name} =
+        # config/pkgs/homeLib look unused, but the module system only
+        # injects args that are NAMED in the pattern — `...`/@moduleArgs
+        # does not pull in undeclared ones. They must stay listed so
+        # `args moduleArgs` can destructure them downstream.
         {
           config,
           lib,
@@ -28,12 +31,15 @@ in
           ...
         }@moduleArgs:
         let
-          resolvedArgs = requireActionScript name
-            (if builtins.isFunction args then args moduleArgs else args);
+          resolvedArgs = requireActionScript name (
+            if builtins.isFunction args then args moduleArgs else args
+          );
           isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
         in
         lib.mkIf isEnabled {
-          home.activation.${name} = lib.hm.dag.entryAfter ([ "writeBoundary" ] ++ after) resolvedArgs.actionScript;
+          home.activation.${name} = lib.hm.dag.entryAfter (
+            [ "writeBoundary" ] ++ after
+          ) resolvedArgs.actionScript;
         };
     };
 
@@ -53,8 +59,9 @@ in
           ...
         }@moduleArgs:
         let
-          resolvedArgs = requireActionScript name
-            (if builtins.isFunction args then args moduleArgs else args);
+          resolvedArgs = requireActionScript name (
+            if builtins.isFunction args then args moduleArgs else args
+          );
           isEnabled = if builtins.isFunction enableIf then enableIf moduleArgs else enableIf;
           # sudoPromptScript already injects a `sudo()` shell function around
           # actionScript, so the script is free to call `sudo …` without

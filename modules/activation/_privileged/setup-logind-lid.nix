@@ -1,5 +1,4 @@
-_:
-{
+_: {
   args =
     { homeLib, ... }:
     homeLib.mkInstallPrompt {

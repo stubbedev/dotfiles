@@ -1,6 +1,11 @@
 _: {
   flake.modules.nixos.portal =
-    { config, pkgs, lib, ... }:
+    {
+      config,
+      pkgs,
+      lib,
+      ...
+    }:
     let
       hmFeatures = config.home-manager.users.${config.host.primaryUser}.features or { };
     in
@@ -14,12 +19,14 @@ _: {
         # `programs.niri.enable` and the Niri portal stack on niri-flake;
         # nixpkgs' niri pulls xdg-desktop-portal-gnome via xdg.portal.gtkUsePortal
         # automatically, so we only need to ensure GTK fallback is present.
-        extraPortals = with pkgs; [
-          xdg-desktop-portal-gtk
-        ]
-        ++ lib.optionals (hmFeatures.hyprland or false) [
-          xdg-desktop-portal-wlr
-        ];
+        extraPortals =
+          with pkgs;
+          [
+            xdg-desktop-portal-gtk
+          ]
+          ++ lib.optionals (hmFeatures.hyprland or false) [
+            xdg-desktop-portal-wlr
+          ];
         config.common.default = "*";
       };
     };

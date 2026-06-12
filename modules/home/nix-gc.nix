@@ -1,5 +1,4 @@
-{ ... }:
-{
+_: {
   # Home-manager's switch DOES NOT prune old generations — the
   # ~/.local/state/nix/profiles/{home-manager,profile,channels}-N-link
   # symlinks accumulate forever and pin every store path they reference,
