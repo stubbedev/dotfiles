@@ -42,6 +42,13 @@
       url = "github:stephenleo/cship";
       flake = false;
     };
+    # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
+    # No upstream flake; packaged in modules/overlays.nix as pkgs.wayle.
+    # Pinned to a release tag — pre-1.0 master churns the config schema.
+    wayle = {
+      url = "github:wayle-rs/wayle/v0.6.0";
+      flake = false;
+    };
     # PHP language server (Rust). Ships its own flake; we consume
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
     phpantom_lsp = {

@@ -55,6 +55,11 @@ _: {
           default = true;
           description = "Enable Niri-specific packages and configuration.";
         };
+        wayle = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Replace the waybar/swaync/hyprpaper/awww shell stack with the wayle desktop shell (bar + notifications + OSD + wallpaper). Opt-in while it stabilises; the legacy stack runs when this is false.";
+        };
         theming = lib.mkOption {
           type = lib.types.bool;
           default = true;

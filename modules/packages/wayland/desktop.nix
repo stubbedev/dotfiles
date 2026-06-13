@@ -9,6 +9,8 @@ _: {
     }:
     let
       enabled = config.features.hyprland || config.features.niri;
+      # waybar + swaync ship only while the wayle shell is off.
+      legacyShell = !config.features.wayle;
 
       # swaync wrapper that auto-detects the Wayland display socket.
       # Needed when swaync is launched before WAYLAND_DISPLAY is set
@@ -102,22 +104,26 @@ _: {
       '';
     in
     lib.mkIf enabled {
-      home.packages = with pkgs; [
-        (homeLib.gfx waybar)
-        swaync-wrapped
-        compositor-session
-        (homeLib.gfx rofi)
-        (homeLib.gfx bemenu)
-        wl-clipboard
-        wl-clip-persist
-        # `notify-send` and the libnotify shared library. swaync registers
-        # org.freedesktop.Notifications on the session bus, but anything
-        # that fires notifications via the libnotify CLI (mail-status
-        # hooks, ad-hoc scripts, third-party tools) silently no-ops if
-        # the binary isn't on PATH. Apps that talk D-Bus directly don't
-        # need this, but many small helpers do.
-        libnotify
-        mailNotificationIcons
-      ];
+      home.packages =
+        with pkgs;
+        # waybar + swaync only ship while the wayle shell is off.
+        lib.optionals legacyShell [
+          (homeLib.gfx waybar)
+          swaync-wrapped
+        ]
+        ++ [
+          compositor-session
+          (homeLib.gfx rofi)
+          wl-clipboard
+          wl-clip-persist
+          # `notify-send` and the libnotify shared library. swaync registers
+          # org.freedesktop.Notifications on the session bus, but anything
+          # that fires notifications via the libnotify CLI (mail-status
+          # hooks, ad-hoc scripts, third-party tools) silently no-ops if
+          # the binary isn't on PATH. Apps that talk D-Bus directly don't
+          # need this, but many small helpers do.
+          libnotify
+          mailNotificationIcons
+        ];
     };
 }

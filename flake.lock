@@ -1184,6 +1184,7 @@
         "sops-nix": "sops-nix",
         "srv": "srv",
         "treeman": "treeman",
+        "wayle": "wayle",
         "wrappers": "wrappers"
       }
     },
@@ -1372,6 +1373,23 @@
       "original": {
         "owner": "stubbedev",
         "repo": "treeman",
+        "type": "github"
+      }
+    },
+    "wayle": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780213410,
+        "narHash": "sha256-AOHehdowgxEV1b+CwrAhJsUqxQnARIGZPWMRcdH0h+U=",
+        "owner": "wayle-rs",
+        "repo": "wayle",
+        "rev": "61ce32978c5bff0ab08f0e96a282af7516fb6fd6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "wayle-rs",
+        "ref": "v0.6.0",
+        "repo": "wayle",
         "type": "github"
       }
     },

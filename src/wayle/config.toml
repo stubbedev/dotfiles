@@ -1,0 +1,121 @@
+# wayle desktop shell — replicates the previous waybar/swaync/hyprpaper look.
+# Catppuccin Mocha. Palette mirrors modules/home/xdg/hypr.nix:30-57 (manual
+# sync, same as the old src/waybar/style.css did). Full schema: wayle docs
+# under docs/config/ in the upstream source, or https://wayle.app/config/.
+
+[general]
+# waybar rendered everything in JetBrainsMono Nerd Font; match that for both
+# UI text and mono so the bar reads identically.
+font-sans = "JetBrainsMono Nerd Font"
+font-mono = "JetBrainsMono Nerd Font"
+
+[styling]
+# Static palette (no wallpaper-derived theming) so colors stay Catppuccin.
+theme-provider = "wayle"
+rounding = "sm"
+
+[styling.palette]
+# bg=base, surface=mantle (the waybar bar color), elevated=surface0 (pills).
+bg = "#1e1e2e"
+surface = "#181825"
+elevated = "#313244"
+fg = "#cdd6f4"
+fg-muted = "#a6adc8"
+primary = "#cba6f7"
+red = "#f38ba8"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+blue = "#89b4fa"
+
+[bar]
+location = "top"
+exclusive = true
+# Flat bar, matching waybar's square corners.
+rounding = "none"
+
+[[bar.layout]]
+monitor = "*"
+# waybar modules-left: workspaces (both compositors) + submap indicator.
+left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode"]
+# waybar modules-center: mail + treeman status.
+center = ["custom-mail", "custom-treeman"]
+# waybar modules-right: language, recorder, audio, bluetooth, backlight,
+# battery, clock, tray, vpn, power profile.
+right = [
+  "keyboard-input",
+  "custom-screenrec",
+  "volume",
+  "bluetooth",
+  "brightness",
+  "battery",
+  "clock",
+  "systray",
+  "custom-vpn",
+  "custom-powerprofile",
+  "notifications",
+]
+
+[clock]
+# waybar showed an ISO-ish date + 24h time.
+format = "%Y-%m-%d %H:%M"
+
+# --- Wallpaper (replaces hyprpaper + awww) ---------------------------------
+# awww engine renders per-monitor; there is no wildcard, so list connectors.
+# eDP-1 is the laptop panel (see src/niri/config.kdl). Add external monitors
+# (DP-*, HDMI-*) here as needed — same image, same fit as the old hyprpaper.
+[wallpaper]
+engine-enabled = true
+
+[[wallpaper.monitors]]
+name = "eDP-1"
+# Absolute path (@HOME@ substituted at build time): wayle has no tilde
+# expansion, so "~/..." would not resolve.
+wallpaper = "@HOME@/.stubbe/src/wallpapers/ballet.jpg"
+fit-mode = "fill"
+
+# --- OSD (new: waybar had no volume/brightness overlay) --------------------
+[osd]
+enabled = true
+
+# --- Custom modules --------------------------------------------------------
+# All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
+# custom module parses that natively, so they are reused unchanged. The
+# scripts are on PATH as bins (see modules/home/scripts.nix).
+
+[[modules.custom]]
+id = "mail"
+command = "mail-status"
+interval-ms = 5000
+left-click = "mail-open"
+
+[[modules.custom]]
+id = "treeman"
+command = "treeman-status"
+interval-ms = 3000
+left-click = "treeman worktree list"
+
+[[modules.custom]]
+id = "screenrec"
+command = "screen-record status"
+interval-ms = 1000
+left-click = "screen-record toggle"
+middle-click = "screen-record toggle --cam"
+hide-if-empty = true
+
+[[modules.custom]]
+id = "vpn"
+command = "vpn-konform-waybar status"
+interval-ms = 5000
+left-click = "vpn-konform-waybar toggle"
+hide-if-empty = true
+
+# No built-in power-profiles module; poll powerprofilesctl, cycle on click.
+[[modules.custom]]
+id = "powerprofile"
+command = "powerprofilesctl get"
+interval-ms = 5000
+icon-name = "ld-zap-symbolic"
+tooltip-format = "Power profile: {{ output }}"
+left-click = "power-profile-cycle"
+# Re-render immediately after the click instead of waiting for the next poll.
+on-action = "powerprofilesctl get"

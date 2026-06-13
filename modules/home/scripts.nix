@@ -60,6 +60,19 @@
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
         screen-record.source = "src/_shared/scripts/screen-record.sh";
         waybar-launch.source = "src/_shared/scripts/waybar.launch.sh";
+        # wayle shell: launch wrapper (Wayland socket detection). wayle's
+        # custom module parses waybar-style JSON natively (text/tooltip/class),
+        # so the mail/treeman status scripts are reused as-is — registered as
+        # bins here so the custom modules can call them by name on PATH.
+        wayle-launch = {
+          source = "src/_shared/scripts/wayle.launch.sh";
+          # getExe' (not getExe): the gfx symlinkJoin wrapper doesn't carry
+          # meta.mainProgram, so name the binary explicitly.
+          vars.WAYLE = lib.getExe' (homeLib.gfx pkgs.wayle) "wayle";
+        };
+        mail-status.source = "src/waybar/scripts/mail-status.sh";
+        treeman-status.source = "src/waybar/scripts/treeman-status.sh";
+        power-profile-cycle.source = "src/_shared/scripts/power.profile.cycle.sh";
         power-profile-fix = {
           source = "src/_shared/scripts/power.profile.fix.sh";
           # Must match modules/nixos/polkit.nix and the activation module —
@@ -95,12 +108,30 @@
         "hm"
         "nixos-iso"
       ];
+      # wayle shell scripts. Kept out of the default desktop set because
+      # wayle-launch embeds `lib.getExe pkgs.wayle` — installing it
+      # unconditionally would pull the wayle package into every build, even
+      # when features.wayle is off. The status scripts come along so they're
+      # on PATH for wayle's custom modules.
+      wayleNames = [
+        "wayle-launch"
+        "mail-status"
+        "treeman-status"
+        "power-profile-cycle"
+      ];
       isUnconditional = name: builtins.elem name unconditionalNames;
+      isWayle = name: builtins.elem name wayleNames;
       unconditionalScripts = lib.attrValues (lib.filterAttrs (n: _: isUnconditional n) scripts);
-      desktopScripts = lib.attrValues (lib.filterAttrs (n: _: !(isUnconditional n)) scripts);
+      desktopScripts = lib.attrValues (
+        lib.filterAttrs (n: _: !(isUnconditional n) && !(isWayle n)) scripts
+      );
+      wayleScripts = lib.attrValues (lib.filterAttrs (n: _: isWayle n) scripts);
     in
     {
       _module.args.scripts = scripts;
-      home.packages = unconditionalScripts ++ lib.optionals config.features.desktop desktopScripts;
+      home.packages =
+        unconditionalScripts
+        ++ lib.optionals config.features.desktop desktopScripts
+        ++ lib.optionals (config.features.desktop && config.features.wayle) wayleScripts;
     };
 }

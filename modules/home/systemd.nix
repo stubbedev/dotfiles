@@ -13,6 +13,15 @@ _: {
       niriEnabled = config.features.niri;
       anyCompositor = hyprlandEnabled || niriEnabled;
 
+      # wayle replaces waybar + swaync + hyprpaper in one shell. While the
+      # flag is off the legacy stack runs; flipping it on swaps atomically.
+      wayleEnabled = config.features.wayle;
+      legacyShell = !wayleEnabled;
+
+      # The bar that the await-* hooks bounce when a late-starting service
+      # (power-profiles-daemon, bluetooth) appears — whichever shell is live.
+      barService = if wayleEnabled then "wayle.service" else "waybar.service";
+
       # Targets the active compositor activates. Services that should run
       # under either compositor pull from this list for After/PartOf/WantedBy.
       compositorTargets =
@@ -23,9 +32,9 @@ _: {
         target: "${pkgs.systemd}/bin/systemctl --user is-active --quiet ${target}"
       ) compositorTargets;
 
-      restartWaybarIfCompositorActive = pkgs.writeShellScript "restart-waybar-if-compositor-active" ''
+      restartBarIfCompositorActive = pkgs.writeShellScript "restart-bar-if-compositor-active" ''
         if ${compositorActiveCondition}; then
-          exec ${pkgs.systemd}/bin/systemctl --user restart waybar.service
+          exec ${pkgs.systemd}/bin/systemctl --user restart ${barService}
         fi
       '';
 
@@ -49,8 +58,8 @@ _: {
         });
 
       systemd.user.services =
-        # Hyprland-only services: portal + wallpaper daemon.
-        (lib.optionalAttrs hyprlandEnabled {
+        # Hyprland-only service: portal.
+        lib.optionalAttrs hyprlandEnabled {
           xdg-desktop-portal-hyprland = {
             Unit = {
               Description = "Portal service (Hyprland implementation)";
@@ -65,6 +74,8 @@ _: {
             };
           };
 
+        }
+        // (lib.optionalAttrs (hyprlandEnabled && legacyShell) {
           hyprpaper = {
             Unit = {
               Description = "Hyprpaper wallpaper daemon";
@@ -80,8 +91,8 @@ _: {
             };
           };
         })
-        # Shared services: follow whichever compositor target is active.
-        // {
+        # Legacy shell (waybar + swaync) — runs only while features.wayle is off.
+        // (lib.optionalAttrs legacyShell {
           waybar = {
             Unit = {
               Description = "Waybar - Highly customizable Wayland bar";
@@ -125,7 +136,37 @@ _: {
               RestartSec = "2s";
             };
           };
-
+        })
+        # wayle shell — bar + notifications + OSD + wallpaper in one daemon.
+        // (lib.optionalAttrs wayleEnabled {
+          wayle = {
+            Unit = {
+              Description = "Wayle desktop shell (bar, notifications, OSD, wallpaper)";
+              Documentation = "https://github.com/wayle-rs/wayle";
+              After = compositorTargets ++ [ "power-profiles-daemon.service" ];
+              Wants = [ "power-profiles-daemon.service" ];
+              PartOf = compositorTargets;
+              # Same rationale as waybar: bump the unit hash when the config
+              # store path moves so sd-switch restarts wayle on config edits.
+              X-Restart-Triggers = [ (toString config.xdg.configFile."wayle/config.toml".source) ];
+            };
+            Install.WantedBy = compositorTargets;
+            Service = {
+              # Type=simple, not dbus: wayle is a full shell (like the bar),
+              # not solely a notification daemon. Its notification service
+              # (org.freedesktop.Notifications, replacing swaync) is claimed
+              # during shell startup. Type=dbus+BusName would make systemd
+              # block on that name and time out the whole unit if it is
+              # claimed late or notifications are disabled — simple avoids that.
+              Type = "simple";
+              ExecStart = "${scripts.wayle-launch}/bin/wayle-launch";
+              ExecStopPost = "-${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -9 wayle || true; sleep 0.5'";
+              Restart = "on-failure";
+              RestartSec = "3s";
+            };
+          };
+        })
+        // {
           # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
           # entry — so home-manager's bin-only linking can't surface it and
           # `systemctl --user start hyprpolkitagent` (called from
@@ -162,7 +203,7 @@ _: {
             Install.WantedBy = [ "default.target" ];
             Service = {
               Type = "oneshot";
-              ExecStart = "${restartWaybarIfCompositorActive}";
+              ExecStart = "${restartBarIfCompositorActive}";
               Restart = "no";
             };
           };
@@ -178,7 +219,7 @@ _: {
             Install.WantedBy = [ "default.target" ];
             Service = {
               Type = "oneshot";
-              ExecStart = "${restartWaybarIfCompositorActive}";
+              ExecStart = "${restartBarIfCompositorActive}";
               Restart = "no";
             };
           };

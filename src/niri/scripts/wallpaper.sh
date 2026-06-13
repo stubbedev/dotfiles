@@ -4,6 +4,12 @@
 # an explicit `awww img` is dispatched.
 set -euo pipefail
 
+# When the wayle shell is installed it renders the wallpaper itself (its
+# binary on PATH ⇔ features.wayle on), so awww must not also claim it.
+# config.kdl is a shared raw file across flag states, hence this runtime
+# guard rather than templating the spawn-at-startup line out.
+command -v wayle >/dev/null 2>&1 && exit 0
+
 WALLPAPER="$HOME/.stubbe/src/wallpapers/ballet.jpg"
 
 awww-daemon &
