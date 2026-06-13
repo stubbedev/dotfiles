@@ -12,21 +12,15 @@ _: {
       homeLib,
       lib,
       config,
-      self,
       ...
     }:
     lib.mkIf (config.features.wayle && (config.features.hyprland || config.features.niri)) {
       home.packages = [ (homeLib.gfx pkgs.wayle) ];
 
-      # Render config.toml with @HOME@ substituted (wayle does not expand ~ in
-      # the wallpaper path). Read-only store path, so the wayle-settings GUI
-      # can't write back — config is declarative here.
-      xdg.configFile."wayle/config.toml" = {
-        text = homeLib.substituteFile {
-          file = self + "/src/wayle/config.toml";
-          vars.HOME = config.home.homeDirectory;
-        };
-        force = true;
-      };
+      # Symlinks src/wayle → ~/.config/wayle. Read-only store path, so the
+      # wayle-settings GUI can't write back — config is declarative here.
+      # The wallpaper (home-dir path) is applied at startup by wayle-launch,
+      # not baked here, so no @HOME@ templating is needed.
+      xdg.configFile = homeLib.xdgSource "wayle" { };
     };
 }

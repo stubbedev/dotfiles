@@ -66,9 +66,13 @@
         # bins here so the custom modules can call them by name on PATH.
         wayle-launch = {
           source = "src/_shared/scripts/wayle.launch.sh";
-          # getExe' (not getExe): the gfx symlinkJoin wrapper doesn't carry
-          # meta.mainProgram, so name the binary explicitly.
-          vars.WAYLE = lib.getExe' (homeLib.gfx pkgs.wayle) "wayle";
+          vars = {
+            # getExe' (not getExe): the gfx symlinkJoin wrapper doesn't carry
+            # meta.mainProgram, so name the binary explicitly.
+            WAYLE = lib.getExe' (homeLib.gfx pkgs.wayle) "wayle";
+            # Wallpaper applied to all monitors at startup (see the script).
+            WALLPAPER = "${config.home.homeDirectory}/.stubbe/src/wallpapers/ballet.jpg";
+          };
         };
         mail-status.source = "src/waybar/scripts/mail-status.sh";
         treeman-status.source = "src/waybar/scripts/treeman-status.sh";

@@ -89,5 +89,20 @@ fi
 
 export GDK_BACKEND=wayland
 
+# Apply the same wallpaper to every monitor. `wayle wallpaper set` without
+# --monitor targets all of them, but needs the shell's IPC up first, so retry
+# in the background (≈10s budget) and don't block the shell launch. Startup-
+# only; the loop exits as soon as the set succeeds.
+(
+  n=0
+  while [ $n -lt 40 ]; do
+    if @WAYLE@ wallpaper set "@WALLPAPER@" --fit fill >/dev/null 2>&1; then
+      break
+    fi
+    n=$((n + 1))
+    sleep 0.25
+  done
+) &
+
 # Replace this shell with the desktop shell (no lingering wrapper process).
 exec @WAYLE@ shell

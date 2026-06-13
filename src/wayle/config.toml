@@ -60,18 +60,12 @@ right = [
 format = "%Y-%m-%d %H:%M"
 
 # --- Wallpaper (replaces hyprpaper + awww) ---------------------------------
-# awww engine renders per-monitor; there is no wildcard, so list connectors.
-# eDP-1 is the laptop panel (see src/niri/config.kdl). Add external monitors
-# (DP-*, HDMI-*) here as needed — same image, same fit as the old hyprpaper.
+# Same image on every monitor. config's [[wallpaper.monitors]] only does
+# per-connector overrides (no wildcard), so the all-monitor wallpaper is
+# applied at startup via `wayle wallpaper set <path>` (no --monitor = all
+# monitors) — see src/_shared/scripts/wayle.launch.sh.
 [wallpaper]
 engine-enabled = true
-
-[[wallpaper.monitors]]
-name = "eDP-1"
-# Absolute path (@HOME@ substituted at build time): wayle has no tilde
-# expansion, so "~/..." would not resolve.
-wallpaper = "@HOME@/.stubbe/src/wallpapers/ballet.jpg"
-fit-mode = "fill"
 
 # --- OSD (new: waybar had no volume/brightness overlay) --------------------
 [osd]
