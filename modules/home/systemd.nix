@@ -67,6 +67,27 @@ _: {
             };
           };
 
+          # Blue-light scheduler. hyprsunset has no native lat/long mode, so this
+          # owns the schedule: sunwait computes the real sunrise/sunset and it
+          # ramps the daemon's temperature over its IPC socket, writing the wayle
+          # widget's state on each change (and re-evaluating on SIGUSR1 from the
+          # toggle). Restart=always so the schedule survives a crash — a bare
+          # autostart exec (like hypridle) wouldn't. It self-waits for the
+          # hyprsunset socket, so no hard ordering against the lua autostart.
+          hyprsunset-sun = {
+            Unit = {
+              Description = "hyprsunset sunrise/sunset blue-light scheduler";
+              After = [ "hyprland-session.target" ];
+              PartOf = [ "hyprland-session.target" ];
+            };
+            Install.WantedBy = [ "hyprland-session.target" ];
+            Service = {
+              Type = "simple";
+              ExecStart = "${scripts.hyprsunset-sun}/bin/hyprsunset-sun";
+              Restart = "always";
+              RestartSec = "5s";
+            };
+          };
         }
         # wayle shell — bar + notifications + OSD + wallpaper in one daemon.
         // (lib.optionalAttrs wayleEnabled {

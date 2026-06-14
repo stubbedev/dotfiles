@@ -16,7 +16,6 @@ _: {
       # hyprpaper dropped — wayle renders the wallpaper (via awww).
       home.packages = with pkgs; [
         (homeLib.gfxExe "hyprland-guiutils" guiutils)
-        hyprshot
         hyprlang
         hyprkeys
         hyprtoolkit

@@ -109,5 +109,46 @@ case "${1:-}" in
       done
     ;;
 
+  # Submap indicator: the hl Lua submap (SUPER+R resize_mode) writes a tmpfs
+  # marker on enter and removes it on exit (see src/hypr/hyprland.lua), since
+  # it isn't a native Hyprland submap the bar could observe. Show the mode name
+  # while the marker exists, empty (hidden) otherwise.
+  submap-watch)
+    marker="$rt/wayle-submap"
+    emit_submap() {
+      if [ -f "$marker" ]; then printf '{"text":"%s"}\n' "$(cat "$marker" 2>/dev/null)"; else echo; fi
+    }
+    emit_submap
+    inotifywait -q -m -e create,delete,close_write,moved_to,moved_from --format '%f' "$rt" 2>/dev/null |
+      while IFS= read -r f; do
+        case "$f" in wayle-submap) emit_submap ;; esac
+      done
+    ;;
+
+  # hyprsunset state for the bar. hyprsunset.sun.sh owns the schedule and writes
+  # the widget JSON line to $state on every change (day/night/override + live
+  # temperature during a ramp); we just tail it — fully event-driven, the dir
+  # watch fires on the scheduler's atomic mv. icon-map keys on the `alt`
+  # (day=sun, night=moon, off=manual-override).
+  hyprsunset-watch)
+    state="$rt/hyprsunset.state"
+    emit() { if [ -f "$state" ]; then cat "$state"; else echo; fi; }
+    emit
+    inotifywait -q -m -e create,close_write,moved_to --format '%f' "$rt" 2>/dev/null |
+      while IFS= read -r f; do
+        case "$f" in hyprsunset.state) emit ;; esac
+      done
+    ;;
+
+  # Click handler: flip the manual-override marker (force filter off past sunset
+  # / hand back to auto) and poke the scheduler, which owns all the schedule
+  # logic and repaints $state. No temperatures or coords live here.
+  hyprsunset-toggle)
+    marker="$rt/hyprsunset.override"
+    if [ -f "$marker" ]; then rm -f "$marker"; else : >"$marker"; fi
+    pidfile="$rt/hyprsunset-sun.pid"
+    [ -f "$pidfile" ] && kill -USR1 "$(cat "$pidfile" 2>/dev/null)" 2>/dev/null
+    ;;
+
   *) exit 0 ;;
 esac

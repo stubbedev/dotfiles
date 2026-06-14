@@ -50,7 +50,7 @@ button-border-location = "none"
 
 [[bar.layout]]
 monitor = "*"
-left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode"]
+left = ["hyprland-workspaces", "niri-workspaces", "custom-submap"]
 # Clock centered as the focal point; everything else on the right.
 center = ["clock"]
 # Grouped left-to-right by purpose: activity → audio/hardware → connectivity →
@@ -66,7 +66,7 @@ right = [
   @BATTERY@
   "network",
   "bluetooth",
-  "hyprsunset",
+  "custom-hyprsunset",
   "idle-inhibit",
   "custom-pp-saver",
   "custom-pp-balanced",
@@ -82,12 +82,6 @@ right = [
 [modules.clock]
 # waybar showed an ISO-ish date + 24h time.
 format = "%Y-%m-%d %H:%M"
-
-# Submap indicator (SUPER+R "resize_mode"). auto-hide: hidden at rest (submap
-# resets to empty); icon-only (no label) while a submap is active.
-[modules.keybind-mode]
-auto-hide = true
-label-show = false
 
 # Short keyboard layout labels.
 [modules.keyboard-input.layout-alias-map]
@@ -130,6 +124,11 @@ transition-fps = 60
 [osd]
 enabled = true
 
+# Tray icons render smaller than the symbolic icons in the other widgets
+# (button-icon-size = 1.15). Bump icon-scale so SNI tray items match.
+[modules.systray]
+icon-scale = 1.3
+
 # Drop the "00" count label — the bell icon already conveys state
 # (bell / bell-dot when unread / bell-off for DND).
 [modules.notifications]
@@ -155,19 +154,34 @@ scroll-down = "wayle audio input-volume -5"
 middle-click = "wayle audio input-mute"
 
 # Weather: powers the clock's right-click dropdown (no bar module). Coords are
-# Copenhagen (from src/hypr/hyprsunset.conf); open-meteo needs no API key.
+# Copenhagen (kept in sync with hyprsunset.sun.sh); open-meteo needs no API key.
 [modules.weather]
 location = "55.6,12.5"
 units = "metric"
 
-# Blue-light filter toggle (drives the hyprsunset daemon); warm 4500K when on.
-[modules.hyprsunset]
-temperature = 4500
+# wayle's power module is a bare button with NO built-in menu (despite the
+# docs) — every click action defaults to "" (no-op), which is why a click did
+# nothing. Bind it to wleave, the GTK4 power menu installed + configured in
+# modules/packages/wayland/tools.nix.
+[modules.power]
+left-click = "wleave"
 
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
 # custom module parses that natively, so they are reused unchanged. The
 # scripts are on PATH as bins (see modules/home/scripts.nix).
+
+# Submap indicator (icon-only). The hl Lua resize_mode isn't a native Hyprland
+# submap, so hyprland.lua writes/removes a tmpfs marker on enter/exit and this
+# watches it — shows only while in a submap (e.g. SUPER+R), hidden otherwise.
+[[modules.custom]]
+id = "submap"
+mode = "watch"
+restart-policy = "on-exit"
+command = "wayle-widget submap-watch"
+icon-name = "ld-layers-symbolic"
+label-show = false
+hide-if-empty = true
 
 # Event-driven (watch): re-renders when the notmuch maildir changes — no poll.
 [[modules.custom]]
@@ -204,6 +218,24 @@ icon-name = "ld-disc-3-symbolic"
 label-show = false
 left-click = "screen-record toggle"
 middle-click = "screen-record toggle --cam"
+
+# Blue-light filter. hyprsunset has no native lat/long mode, so the
+# hyprsunset-sun service sets the daemon temperature on the real sunrise/sunset
+# schedule and writes this widget's state line on every change. Event-driven
+# (watch): re-renders on the scheduler's atomic state-file write — instant
+# flips, no poll. Icon-only (no label): icon-map keys on `alt` — sun-moon while
+# on the auto schedule, plain sun when manually disabled. left-click toggles the
+# override (disable / hand back to auto) and signals the scheduler.
+[[modules.custom]]
+id = "hyprsunset"
+mode = "watch"
+restart-policy = "on-exit"
+command = "wayle-widget hyprsunset-watch"
+label-show = false
+icon-name = "ld-sun-moon-symbolic"
+icon-map = { auto = "ld-sun-moon-symbolic", off = "ld-sun-symbolic" }
+class-format = "hyprsunset-{{ alt }}"
+left-click = "wayle-widget hyprsunset-toggle"
 
 # VPN: three icon-only, color-coded modules — exactly one shows at a time
 # (hide-if-empty). icon-color/button-bg-color are static per module, so the

@@ -1,0 +1,20 @@
+# hyprland-preview-share-picker config. Catppuccin Mocha, matching the wayle
+# shell. Picker integration + the resolved binary path live in
+# modules/packages/hyprland/portal.nix; this file is symlinked to
+# ~/.config/hyprland-preview-share-picker/config.yaml.
+#
+# Region selection shells out to slurp, which is itself mocha-themed via the
+# Nix wrapper in modules/packages/wayland/tools.nix — so the region overlay
+# matches without overriding `region.command` here.
+
+# style.css sits next to this file; relative paths resolve from the config dir.
+stylesheets:
+  - style.css
+
+# Open on the window grid (per-window sharing is the whole reason we replaced
+# the wlr/slurp output-only picker).
+default_page: windows
+
+window:
+  height: 520
+  width: 1040

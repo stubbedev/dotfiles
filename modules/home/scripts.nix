@@ -59,6 +59,11 @@
         mail-pager.source = "src/aerc/scripts/nvim-pager.sh";
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
         screen-record.source = "src/_shared/scripts/screen-record.sh";
+        # Drives hyprsunset's temperature on the real sunrise/sunset schedule
+        # (hyprsunset has no native lat/long mode). Runs as the
+        # hyprsunset-sun.service user unit (modules/home/systemd.nix).
+        hyprsunset-sun.source = "src/_shared/scripts/hyprsunset.sun.sh";
+        screenshot.source = "src/_shared/scripts/screenshot.sh";
         # wayle shell: launch wrapper (Wayland socket detection). wayle's
         # custom module parses waybar-style JSON natively (text/tooltip/class),
         # so the mail/treeman status scripts are reused as-is — registered as

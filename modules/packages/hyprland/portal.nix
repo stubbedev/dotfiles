@@ -9,26 +9,48 @@ _: {
       pkgs,
       lib,
       config,
+      homeLib,
+      hyprland-preview-share-picker,
       ...
     }:
+    let
+      inherit (pkgs.stdenv.hostPlatform) system;
+
+      # GTK4 + gtk4-layer-shell picker that replaces xdph's bundled Qt
+      # `hyprland-share-picker`. gfxExe (not gfx): the buildRustPackage
+      # output carries no meta.mainProgram, so name the binary explicitly;
+      # gfxExe also nixGL-wraps it on non-NixOS so GTK4/EGL find their drivers.
+      picker = homeLib.gfxExe "hyprland-preview-share-picker" (
+        hyprland-preview-share-picker.packages.${system}.default
+      );
+      pickerBin = "${picker}/bin/hyprland-preview-share-picker";
+    in
     lib.mkIf config.features.hyprland {
       home.packages = with pkgs; [
         hyprwire
         hyprland-protocols
         xdg-desktop-portal-hyprland
         xdg-desktop-portal-wlr
+        picker
       ];
 
-      # The portal is a dbus-activated systemd user service and does not
-      # inherit Hyprland's `hl.env` directives. src/hypr/hyprland.lua
-      # deliberately excludes QT_QPA_PLATFORMTHEME and QT_STYLE_OVERRIDE
-      # from dbus-update-activation-environment (breaks KDE Plasma login),
-      # so scope them to this unit only — hyprland-share-picker is a Qt
-      # child of xdph and reads them from its parent's env.
-      xdg.configFile."systemd/user/xdg-desktop-portal-hyprland.service.d/qt-theme.conf".text = ''
-        [Service]
-        Environment=QT_QPA_PLATFORMTHEME=qt5ct
-        Environment=QT_STYLE_OVERRIDE=kvantum
-      '';
+      # Theme + layout for the picker are symlinked from src/ (config.yaml
+      # points at the sibling style.css by relative path). xdph resolves the
+      # picker by the absolute path in xdph.conf — its systemd user service
+      # doesn't have the user profile bin on PATH, so a bare name wouldn't
+      # resolve. Region selection inside the picker still shells out to slurp
+      # (mocha-themed via modules/packages/wayland/tools.nix). Restart the
+      # portal after changes: systemctl --user restart xdg-desktop-portal-hyprland
+      xdg.configFile = homeLib.xdgSources [
+        "hyprland-preview-share-picker/config.yaml"
+        "hyprland-preview-share-picker/style.css"
+      ]
+      // {
+        "hypr/xdph.conf".text = ''
+          screencopy {
+            custom_picker_binary = ${pickerBin}
+          }
+        '';
+      };
     };
 }

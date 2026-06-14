@@ -1,0 +1,98 @@
+/* Catppuccin Mocha — mirrors the wayle shell palette + font
+ * (src/wayle/config.toml). Selectors are the picker's default CSS classes
+ * (see the `classes` section in the upstream config schema).
+ *
+ *   base      #1e1e2e   surface0  #313244   text      #cdd6f4
+ *   mantle    #181825   surface1  #45475a   subtext0  #a6adc8
+ *   surface2  #585b70   mauve     #cba6f7   lavender  #b4befe
+ */
+
+* {
+  all: unset;
+  font-family: "JetBrainsMono Nerd Font";
+  color: #cdd6f4;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.window {
+  border-radius: 8px;
+  background-color: #1e1e2e;
+  border: solid 2px #313244;
+  margin: 2px;
+}
+
+tabs {
+  padding: 0.5rem 1rem;
+}
+
+tabs > tab {
+  margin-right: 1rem;
+}
+
+.tab-label {
+  color: #a6adc8;
+  transition: all 0.2s ease;
+}
+
+tabs > tab:checked > .tab-label,
+tabs > tab:active > .tab-label {
+  text-decoration: underline currentColor;
+  color: #cdd6f4;
+}
+
+tabs > tab:focus > .tab-label {
+  color: #cdd6f4;
+}
+
+.page {
+  padding: 1rem;
+}
+
+.image-label {
+  font-size: 12px;
+  padding: 0.25rem;
+}
+
+flowboxchild > .card,
+button > .card {
+  transition: all 0.2s ease;
+  border: solid 2px #313244;
+  border-radius: 6px;
+  background-color: #313244;
+  padding: 5px;
+}
+
+flowboxchild:active > .card,
+flowboxchild:selected > .card,
+button:active > .card,
+button:selected > .card,
+button:focus > .card {
+  border: solid 2px #cba6f7;
+}
+
+.image {
+  border-radius: 6px;
+}
+
+.region-button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background-color: #cba6f7;
+  color: #1e1e2e;
+  transition: all 0.2s ease;
+}
+
+.region-button:not(:disabled):hover,
+.region-button:not(:disabled):focus {
+  background-color: #b4befe;
+}
+
+.region-button:disabled {
+  background-color: #585b70;
+  color: #313244;
+}
+
+.restore-button {
+  padding: 0.25rem 0.5rem;
+}

@@ -187,6 +187,10 @@ local function setup_autostart()
             "compositor-session hyprland",
             "hyprctl setcursor $XCURSOR_THEME $XCURSOR_SIZE",
             "hypridle",
+            -- Bare daemon opens the IPC socket; the hyprsunset-sun systemd user
+            -- service then sets its temperature on the real sunrise/sunset
+            -- schedule (hyprsunset has no native lat/long mode). The wayle
+            -- widget reads/overrides the same socket via that service.
             "hyprsunset",
             "wl-paste --watch cliphist store",
             "wl-clip-persist --clipboard regular",
@@ -269,8 +273,8 @@ local function setup_keybinds()
     hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd("rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun -location 0 -width 60"))
     hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "run" -modes combi -run-command "]] .. scripts .. [[/rofi.run.sh {cmd}" -location 0 -width 60]]))
     hl.bind(mod .. " + CTRL + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "window" -modes combi]]))
-    hl.bind("SHIFT + Print", hl.dsp.exec_cmd("pgrep -x grim >/dev/null || hyprshot -m active -m output --clipboard-only"))
-    hl.bind("Print", hl.dsp.exec_cmd("pgrep -x slurp >/dev/null || hyprshot -m region --clipboard-only"))
+    hl.bind("SHIFT + Print", hl.dsp.exec_cmd("screenshot output"))
+    hl.bind("Print", hl.dsp.exec_cmd("screenshot region"))
     hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("screen-record toggle"))
     hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send "Pasted selection"]]))
     hl.bind(mod .. " + C", hl.dsp.exec_cmd([[wl-copy "$(wl-paste -p)" && notify-send "Copied selection"]]))
@@ -319,13 +323,29 @@ local function setup_keybinds()
 
     -- Resize submap. NB: do not re-bind the enter combo (SUPER+R) inside the
     -- submap — in the Lua API that re-triggers on the same press and exits at once.
-    hl.bind(mod .. " + R", hl.dsp.submap("resize_mode"))
+    --
+    -- The hl Lua submap is NOT a native Hyprland submap (hyprctl submap stays
+    -- "default"), so the wayle bar can't observe it. Enter/exit therefore write
+    -- and remove a tmpfs marker ($XDG_RUNTIME_DIR/wayle-submap, cleared on
+    -- reboot) that the bar's custom "submap" module watches.
+    local submap_marker = '"$XDG_RUNTIME_DIR/wayle-submap"'
+    local function enter_submap(name)
+        return function()
+            hl.dispatch(hl.dsp.exec_cmd("printf %s " .. name .. " > " .. submap_marker))
+            hl.dispatch(hl.dsp.submap(name))
+        end
+    end
+    local function exit_submap()
+        hl.dispatch(hl.dsp.exec_cmd("rm -f " .. submap_marker))
+        hl.dispatch(hl.dsp.submap("reset"))
+    end
+    hl.bind(mod .. " + R", enter_submap("resize_mode"))
     hl.define_submap("resize_mode", function()
         for key, step in pairs({ right = { 10, 0 }, left = { -10, 0 }, up = { 0, -10 }, down = { 0, 10 } }) do
             hl.bind(key, resize_active(step[1], step[2]), { repeating = true })
         end
-        hl.bind("return", hl.dsp.submap("reset"))
-        hl.bind("escape", hl.dsp.submap("reset"))
+        hl.bind("return", exit_submap)
+        hl.bind("escape", exit_submap)
     end)
 
     -- Media + brightness keys: all run on the lock screen too ({ locked }).
@@ -368,11 +388,6 @@ local function float_centered(name, match, w, h, extra)
 end
 
 local function setup_window_rules()
-    float_centered("hyprland-share-picker", { class = "^hyprland-share-picker$" }, 500, 400)
-    float_centered("gtk-share-picker", { title = "^(Select what to share)$" }, 800, 600)
-    float_centered("pavucontrol", { class = "org\\.pulseaudio\\.pavucontrol" }, 800, 600)
-    float_centered("blueman-manager", { class = "\\.blueman-manager-wrapped" }, 800, 600)
-    float_centered("nm-connection-editor", { class = "nm-connection-editor" }, 800, 600)
     float_centered("vpn-prompt", { class = "vpn-prompt" }, 640, 240, { stay_focused = true })
 
     -- JetBrains IDEs: keep focus on popups/dialogs.
