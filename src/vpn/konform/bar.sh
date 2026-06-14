@@ -8,7 +8,7 @@ PASSWORD_FILE="$CONFIG_DIR/password"
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PID_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.pid"
 CONNECTING_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.connecting"
-LOG_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}-waybar.log"
+LOG_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}-bar.log"
 # Companion scripts share the nix-profile bin/ layout — resolve via PATH.
 CONNECT_SCRIPT="vpn-${PROVIDER_NAME}-connect"
 DISCONNECT_SCRIPT="vpn-${PROVIDER_NAME}-disconnect"
@@ -128,17 +128,9 @@ status() {
   printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$text" "$class" "$tooltip"
 }
 
-# Wakes up every waybar with `"signal": 8` set on its konform-vpn module —
-# waybar then re-execs `vpn-konform-waybar status` and re-reads the line.
-# Pattern matches comm (process name) rather than full cmdline:
-#   - "waybar"          — non-NixOS, plain binary
-#   - ".waybar-wrapped" — NixOS, where home-manager wraps the binary
-# It deliberately excludes "waybar-launch" (the bash wrapper) because the
-# wrapper inherits bash's default Term action for unhandled real-time
-# signals, which would kill it and tear down the whole service.
-refresh_waybar() {
-  pkill -SIGRTMIN+8 '^\.?waybar(-wrapped)?$' 2>/dev/null || true
-}
+# The wayle bar watches the marker files (and the tunnel interface) directly —
+# no bar-refresh signal is needed. State transitions are driven purely by
+# creating/removing the connecting/pid markers below.
 
 connect() {
   if ! load_config; then
@@ -156,9 +148,8 @@ connect() {
   local now
   now=$(date +%s)
 
-  # Pre-write the connecting marker so the immediate refresh below sees the
-  # "connecting" state — without this, waybar's signal-driven re-exec races
-  # the wrapper bash and may briefly render "disconnected". PID=1 (init) is
+  # Pre-write the connecting marker so the bar sees the "connecting" state
+  # immediately (its inotify watch fires on this create). PID=1 (init) is
   # always alive, so connecting_active() doesn't clean the marker up while
   # the wrapper is still spawning; the wrapper then overwrites with its own
   # PID for the timeout-kill path.
@@ -167,14 +158,14 @@ connect() {
   # Spawn the connect script in its own session so we can kill the whole group
   # on timeout. The wrapper overwrites the marker with its real PID, runs the
   # connect script, then waits for the tunnel iface to actually come up before
-  # exiting. The EXIT trap removes the marker AND signals waybar so the pill
-  # flips green the moment the connection settles.
+  # exiting. The EXIT trap removes the connecting marker once the link settles —
+  # the bar watches that marker (and the interface) to flip state.
   setsid bash -c '
     marker="$1"
     start="$2"
     script="$3"
     iface="$4"
-    trap "rm -f \"$marker\"; pkill -SIGRTMIN+8 \"^\.?waybar(-wrapped)?\$\" 2>/dev/null || true" EXIT
+    trap "rm -f \"$marker\"" EXIT
     printf "PID=%s\nSTART=%s\n" "$$" "$start" > "$marker"
     "$script" || exit $?
     for _ in $(seq 1 20); do
@@ -186,8 +177,6 @@ connect() {
     done
   ' _ "$CONNECTING_FILE" "$now" "$CONNECT_SCRIPT" "$IFACE_NAME" </dev/null >>"$LOG_FILE" 2>&1 &
   disown
-
-  refresh_waybar
 }
 
 disconnect() {
@@ -202,17 +191,10 @@ disconnect() {
     rm -f "$CONNECTING_FILE"
   fi
 
-  # Wrap the disconnect in a shell that signals waybar after pkill removes
-  # the pid file — that's the point at which is_running flips false and the
-  # pill should flip to grey. The leading refresh_waybar (below) covers the
-  # click-feedback case for the user who clicks while connecting.
-  setsid bash -c '
-    "$1"
-    pkill -SIGRTMIN+8 "^\.?waybar(-wrapped)?\$" 2>/dev/null || true
-  ' _ "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
+  # Run the disconnect script detached. It removes the pid file and tears down
+  # the tunnel; the bar reacts to the interface going down (ip monitor).
+  setsid bash -c '"$1"' _ "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
   disown
-
-  refresh_waybar
 }
 
 toggle() {

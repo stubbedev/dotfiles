@@ -219,7 +219,7 @@ icon-name = "ld-lock-symbolic"
 icon-color = "green"
 label-show = false
 hide-if-empty = true
-left-click = "vpn-konform-waybar toggle"
+left-click = "vpn-konform-bar toggle"
 
 [[modules.custom]]
 id = "vpn-connecting"
@@ -231,7 +231,7 @@ button-bg-color = "yellow"
 icon-color = "bg-base"
 label-show = false
 hide-if-empty = true
-left-click = "vpn-konform-waybar toggle"
+left-click = "vpn-konform-bar toggle"
 
 [[modules.custom]]
 id = "vpn-off"
@@ -242,7 +242,7 @@ icon-name = "ld-unplug-symbolic"
 icon-color = "fg-muted"
 label-show = false
 hide-if-empty = true
-left-click = "vpn-konform-waybar toggle"
+left-click = "vpn-konform-bar toggle"
 
 # No built-in power-profiles module. Three icon-only, color-coded modules —
 # exactly one shows at a time (hide-if-empty), since icon-color is static per

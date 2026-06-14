@@ -8,7 +8,8 @@ _: {
     }:
     let
       # Build the four scripts for one VPN provider as Nix bins under
-      # config.home.profileDirectory/bin/vpn-<provider>-{connect,disconnect,status,waybar}.
+      # config.home.profileDirectory/bin/vpn-<provider>-{connect,disconnect,status,bar}.
+      # `bar` is the status-bar widget tool (emits JSON / dispatches toggle).
       # The provider name is baked into each script via @PROVIDER_NAME@
       # substitution; runtime config (gateway, username, password) is
       # decrypted by sops-nix into ~/.config/vpn/<provider>/.
@@ -27,7 +28,7 @@ _: {
             "connect"
             "disconnect"
             "status"
-            "waybar"
+            "bar"
           ];
     in
     lib.mkIf config.features.vpn {
@@ -35,7 +36,7 @@ _: {
       # config (rotates rarely, `hm secret edit vpn-konform-config`)
       # and the password (rotates often, `hm secret set vpn-konform`).
       # Both decrypt under ~/.config/vpn/konform/, which the
-      # connect/waybar scripts source/read at runtime.
+      # connect/bar scripts source/read at runtime.
       sops.secrets.vpn-konform-config = homeLib.mkBinarySecret {
         name = "vpn-konform-config";
         path = "${config.home.homeDirectory}/.config/vpn/konform/config";

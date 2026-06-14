@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Toggle desktop recording with gpu-screen-recorder, driven from a waybar
+# Toggle desktop recording with gpu-screen-recorder, driven from the wayle bar
 # widget and compositor keybinds. Records the currently focused monitor.
 # Works on any GPU (AMD/Intel/NVIDIA): h264 maps to whatever hardware encoder
 # the card exposes (VAAPI / NVENC), and KMS capture is promptless wherever the
@@ -33,13 +33,9 @@ CAM_FRAMERATE="${SCREEN_RECORD_CAM_FPS:-30}"
 # Mean luma 0-255 below which the cam is considered dark (lens cap / off).
 CAM_DARK_THRESHOLD="${SCREEN_RECORD_CAM_DARK:-15}"
 
-# Wakes up every waybar with `"signal": 9` on its gpu-screen-recorder module.
-# Same comm-matching rationale as src/vpn/konform/waybar.sh: match the waybar
-# binary (plain or home-manager-wrapped), never the bash launcher wrapper,
-# whose default action for unhandled real-time signals is Term.
-refresh_waybar() {
-  pkill -SIGRTMIN+9 '^\.?waybar(-wrapped)?$' 2>/dev/null || true
-}
+# The wayle bar watches the gpu-screen-recorder pid markers directly (inotify),
+# so no bar-refresh signal is needed — creating/removing the pid file is what
+# drives the widget's state.
 
 notify() {
   command -v notify-send >/dev/null 2>&1 || return 0
@@ -214,7 +210,7 @@ start() {
     printf 'CAM_X=%s\nCAM_Y=%s\nCAM_W=%s\nCAM_H=%s\n' "$cam_x" "$cam_y" "$cam_w" "$cam_h"
   } > "$META_FILE"
 
-  # Launch detached in its own session so it survives the waybar/keybind
+  # Launch detached in its own session so it survives the bar/keybind
   # shell that triggered it. The inner bash records its own pid then execs
   # gpu-screen-recorder, so PID_FILE ends up holding the recorder's pid
   # (exec preserves it through the nixGL/makeWrapper chain on non-NixOS).
@@ -237,7 +233,6 @@ start() {
   if ! is_running; then
     rm -f "$META_FILE"
     notify -u critical "Recording failed to start" "$(tail -n 3 "$LOG_FILE" 2>/dev/null)"
-    refresh_waybar
     return 1
   fi
 
@@ -254,7 +249,6 @@ start() {
   fi
 
   notify "Recording started" "$target → $(basename "$output")${cam_output:+ (+cam)}"
-  refresh_waybar
 }
 
 mux_cam() {
@@ -271,7 +265,7 @@ mux_cam() {
 }
 
 stop() {
-  is_running || { rm -f "$META_FILE" "$CAM_PID_FILE"; refresh_waybar; return 0; }
+  is_running || { rm -f "$META_FILE" "$CAM_PID_FILE"; return 0; }
 
   local pid cam_pid
   pid=$(cat "$PID_FILE" 2>/dev/null || true)
@@ -317,7 +311,6 @@ stop() {
   else
     notify "Recording stopped" ""
   fi
-  refresh_waybar
 }
 
 toggle() {

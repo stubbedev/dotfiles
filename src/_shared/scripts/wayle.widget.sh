@@ -24,9 +24,9 @@ emit_line() {
 
 vpn_line() {
   case "$1" in
-    on) emit_line 'if .class == "connected" then {tooltip} else empty end' vpn-konform-waybar status ;;
-    connecting) emit_line 'if .class == "connecting" then {tooltip} else empty end' vpn-konform-waybar status ;;
-    off) emit_line 'if (.class == "connected" or .class == "connecting") then empty else {tooltip} end' vpn-konform-waybar status ;;
+    on) emit_line 'if .class == "connected" then {tooltip} else empty end' vpn-konform-bar status ;;
+    connecting) emit_line 'if .class == "connecting" then {tooltip} else empty end' vpn-konform-bar status ;;
+    off) emit_line 'if (.class == "connected" or .class == "connecting") then empty else {tooltip} end' vpn-konform-bar status ;;
     *) echo ;;
   esac
 }
