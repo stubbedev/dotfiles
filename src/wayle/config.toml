@@ -50,7 +50,7 @@ button-border-location = "none"
 
 [[bar.layout]]
 monitor = "*"
-left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode", "media"]
+left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode"]
 # Clock centered as the focal point; everything else on the right.
 center = ["clock"]
 # Grouped left-to-right by purpose: activity → audio/hardware → connectivity →
@@ -154,24 +154,15 @@ scroll-up = "wayle audio input-volume +5"
 scroll-down = "wayle audio input-volume -5"
 middle-click = "wayle audio input-mute"
 
-# Now-playing: left-click opens the media dropdown, scroll skips tracks,
-# middle-click play/pause. Truncate long titles so the bar stays put.
-[modules.media]
-label-max-length = 30
-scroll-up = "wayle media next"
-scroll-down = "wayle media previous"
-middle-click = "wayle media play-pause"
-
 # Weather: powers the clock's right-click dropdown (no bar module). Coords are
 # Copenhagen (from src/hypr/hyprsunset.conf); open-meteo needs no API key.
 [modules.weather]
 location = "55.6,12.5"
 units = "metric"
 
-# Blue-light filter toggle (drives the hyprsunset daemon). 3500K matches
-# temp_night in src/hypr/hyprsunset.conf.
+# Blue-light filter toggle (drives the hyprsunset daemon); warm 4500K when on.
 [modules.hyprsunset]
-temperature = 3500
+temperature = 4500
 
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
@@ -182,7 +173,7 @@ temperature = 3500
 [[modules.custom]]
 id = "mail"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget mail-watch"
 icon-name = "ld-mail-symbolic"
 left-click = "mail-open"
@@ -194,7 +185,7 @@ hide-if-empty = true
 [[modules.custom]]
 id = "treeman"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget treeman-watch"
 icon-name = "ld-folder-open-symbolic"
 left-click = "treeman worktree list"
@@ -205,7 +196,7 @@ hide-if-empty = true
 [[modules.custom]]
 id = "screenrec"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget screenrec-watch"
 icon-name = "ld-disc-3-symbolic"
 # Icon-only (always clickable to start a recording); idle/recording shown via
@@ -224,7 +215,7 @@ middle-click = "screen-record toggle --cam"
 [[modules.custom]]
 id = "vpn-on"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget vpn-watch on"
 icon-name = "ld-lock-symbolic"
 icon-color = "green"
@@ -235,7 +226,7 @@ left-click = "vpn-konform-bar toggle"
 [[modules.custom]]
 id = "vpn-connecting"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget vpn-watch connecting"
 icon-name = "ld-refresh-cw-symbolic"
 button-bg-color = "yellow"
@@ -247,7 +238,7 @@ left-click = "vpn-konform-bar toggle"
 [[modules.custom]]
 id = "vpn-off"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget vpn-watch off"
 icon-name = "ld-unplug-symbolic"
 icon-color = "fg-muted"
@@ -262,7 +253,7 @@ left-click = "vpn-konform-bar toggle"
 [[modules.custom]]
 id = "pp-saver"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget powerprofile-watch power-saver"
 label-show = false
 hide-if-empty = true
@@ -274,7 +265,7 @@ left-click = "power-profile-cycle"
 [[modules.custom]]
 id = "pp-balanced"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget powerprofile-watch balanced"
 label-show = false
 hide-if-empty = true
@@ -286,7 +277,7 @@ left-click = "power-profile-cycle"
 [[modules.custom]]
 id = "pp-performance"
 mode = "watch"
-restart-policy = "on-failure"
+restart-policy = "on-exit"
 command = "wayle-widget powerprofile-watch performance"
 label-show = false
 hide-if-empty = true
