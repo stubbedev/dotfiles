@@ -81,77 +81,79 @@ _: {
         }
       '';
 
-      wleaveLayout = pkgs.writeText "wleave-layout.json" (builtins.toJSON {
-        css = toString wleaveStyle;
-        # wleave is a fullscreen layer-shell window. Buttons ALWAYS fill the
-        # inter-margin box (layout.rs maximises button area; aspect-ratio only
-        # changes their shape, not their size), so the only size lever is the
-        # margins. Margins accept a percentage of the viewport per-axis
-        # (units.rs), so this is resolution-independent.
-        #
-        # Single row of small square tiles, centred:
-        #   - "1/1" → all buttons on one row
-        #   - top/bottom 46% → ~8% of screen height free → tiny buttons (this
-        #     is what makes them ~4x smaller; raise the % to shrink further)
-        #   - left/right 15% → ample width for the row, so it just centres
-        #   - aspect "1" → square tiles
-        "buttons-per-row" = "1/1";
-        margin = "15%";
-        "margin-top" = "46%";
-        "margin-bottom" = "46%";
-        "button-aspect-ratio" = "1";
-        "close-on-lost-focus" = true;
-        # Drop the "Wleave x.y. Missing or broken icons?" footer label.
-        "no-version-info" = true;
-        buttons = [
-          {
-            label = "lock";
-            action = "hyprlock";
-            text = "Lock";
-            keybind = "l";
-            icon = wleaveIcon "lock";
-          }
-          {
-            label = "logout";
-            action = [
-              {
-                "$DESKTOP_SESSION" = "niri";
-                shell = "niri msg action quit --skip-confirmation";
-              }
-              {
-                "$DESKTOP_SESSION" = "hyprland";
-                shell = "hyprctl dispatch exit";
-              }
-              # Works on any systemd-logind session regardless of compositor.
-              "loginctl terminate-user $USER"
-            ];
-            text = "Logout";
-            keybind = "e";
-            icon = wleaveIcon "logout";
-          }
-          {
-            label = "suspend";
-            action = "systemctl suspend";
-            text = "Suspend";
-            keybind = "u";
-            icon = wleaveIcon "suspend";
-          }
-          {
-            label = "reboot";
-            action = "systemctl reboot";
-            text = "Reboot";
-            keybind = "r";
-            icon = wleaveIcon "reboot";
-          }
-          {
-            label = "shutdown";
-            action = "systemctl poweroff";
-            text = "Shutdown";
-            keybind = "s";
-            icon = wleaveIcon "shutdown";
-          }
-        ];
-      });
+      wleaveLayout = pkgs.writeText "wleave-layout.json" (
+        builtins.toJSON {
+          css = toString wleaveStyle;
+          # wleave is a fullscreen layer-shell window. Buttons ALWAYS fill the
+          # inter-margin box (layout.rs maximises button area; aspect-ratio only
+          # changes their shape, not their size), so the only size lever is the
+          # margins. Margins accept a percentage of the viewport per-axis
+          # (units.rs), so this is resolution-independent.
+          #
+          # Single row of small square tiles, centred:
+          #   - "1/1" → all buttons on one row
+          #   - top/bottom 46% → ~8% of screen height free → tiny buttons (this
+          #     is what makes them ~4x smaller; raise the % to shrink further)
+          #   - left/right 15% → ample width for the row, so it just centres
+          #   - aspect "1" → square tiles
+          "buttons-per-row" = "1/1";
+          margin = "15%";
+          "margin-top" = "46%";
+          "margin-bottom" = "46%";
+          "button-aspect-ratio" = "1";
+          "close-on-lost-focus" = true;
+          # Drop the "Wleave x.y. Missing or broken icons?" footer label.
+          "no-version-info" = true;
+          buttons = [
+            {
+              label = "lock";
+              action = "hyprlock";
+              text = "Lock";
+              keybind = "l";
+              icon = wleaveIcon "lock";
+            }
+            {
+              label = "logout";
+              action = [
+                {
+                  "$DESKTOP_SESSION" = "niri";
+                  shell = "niri msg action quit --skip-confirmation";
+                }
+                {
+                  "$DESKTOP_SESSION" = "hyprland";
+                  shell = "hyprctl dispatch exit";
+                }
+                # Works on any systemd-logind session regardless of compositor.
+                "loginctl terminate-user $USER"
+              ];
+              text = "Logout";
+              keybind = "e";
+              icon = wleaveIcon "logout";
+            }
+            {
+              label = "suspend";
+              action = "systemctl suspend";
+              text = "Suspend";
+              keybind = "u";
+              icon = wleaveIcon "suspend";
+            }
+            {
+              label = "reboot";
+              action = "systemctl reboot";
+              text = "Reboot";
+              keybind = "r";
+              icon = wleaveIcon "reboot";
+            }
+            {
+              label = "shutdown";
+              action = "systemctl poweroff";
+              text = "Shutdown";
+              keybind = "s";
+              icon = wleaveIcon "shutdown";
+            }
+          ];
+        }
+      );
 
       # slurp has no config file — colours can only come from CLI flags. Bake
       # the Catppuccin Mocha palette into a wrapper so every caller (the
