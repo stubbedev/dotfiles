@@ -12,7 +12,8 @@ font-mono = "JetBrainsMono Nerd Font"
 [styling]
 # Static palette (no wallpaper-derived theming) so colors stay Catppuccin.
 theme-provider = "wayle"
-rounding = "sm"
+# No border radius anywhere (dropdowns/popovers/dialogs).
+rounding = "none"
 
 [styling.palette]
 # bg=base, surface=mantle (the waybar bar color), elevated=surface0 (pills).
@@ -30,34 +31,84 @@ blue = "#89b4fa"
 [bar]
 location = "top"
 exclusive = true
-# Flat bar, matching waybar's square corners.
+# Flat bar — no border radius anywhere (bar, buttons, button groups).
 rounding = "none"
+button-rounding = "none"
+button-group-rounding = "none"
+# "basic" = icon+label, minimal background (no colored pill per module).
+button-variant = "basic"
+# Compact: shrink bar elements + tighten spacing. No exact-height knob in
+# wayle 0.6 — height is emergent from scale + padding + icon/label size.
+scale = 0.75
+# Bigger label/icon content (equal sizes so they align vertically), padding
+# kept modest to balance height vs vertical centering.
+button-label-size = 1.15
+button-icon-size = 1.15
+padding = 0.15
+module-gap = 0.35
+button-border-location = "none"
 
 [[bar.layout]]
 monitor = "*"
-# waybar modules-left: workspaces (both compositors) + submap indicator.
 left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode"]
-# waybar modules-center: mail + treeman status.
-center = ["custom-mail", "custom-treeman"]
-# waybar modules-right: language, recorder, audio, bluetooth, backlight,
-# battery, clock, tray, vpn, power profile.
+# Clock centered as the focal point; everything else on the right.
+center = ["clock"]
+# Grouped left-to-right by purpose: activity → hardware → connectivity →
+# input/power → tray → notifications.
 right = [
+  "custom-mail",
+  "custom-treeman",
   "keyboard-input",
   "custom-screenrec",
   "volume",
-  "bluetooth",
   "brightness",
-  "battery",
-  "clock",
+  @BATTERY@
+  "network",
+  "bluetooth",
+  "custom-pp-saver",
+  "custom-pp-balanced",
+  "custom-pp-performance",
   "systray",
-  "custom-vpn",
-  "custom-powerprofile",
+  "custom-vpn-on",
+  "custom-vpn-connecting",
+  "custom-vpn-off",
   "notifications",
 ]
 
-[clock]
+[modules.clock]
 # waybar showed an ISO-ish date + 24h time.
 format = "%Y-%m-%d %H:%M"
+
+# Submap indicator (SUPER+R "resize_mode"). auto-hide: hidden at rest (submap
+# resets to empty); icon-only (no label) while a submap is active.
+[modules.keybind-mode]
+auto-hide = true
+label-show = false
+
+# Short keyboard layout labels.
+[modules.keyboard-input.layout-alias-map]
+"English (US)" = "EN"
+"Danish" = "DA"
+"Spanish" = "ES"
+"Spanish (Spain)" = "ES"
+
+# Numbers, with the old waybar per-workspace colors via the map (color applies
+# to the label). Hyprland workspace IDs are stable 1-10 so the map lands; niri
+# IDs are dynamic so its module just shows plain numbers.
+[modules.hyprland-workspaces]
+display-mode = "label"
+
+[modules.hyprland-workspaces.workspace-map]
+1 = { icon = "tbf-circle-symbolic", color = "#89b4fa" }
+2 = { icon = "tbf-circle-symbolic", color = "#f0c6c6" }
+3 = { icon = "tbf-circle-symbolic", color = "#ddb6f2" }
+4 = { icon = "tbf-circle-symbolic", color = "#f5bde6" }
+5 = { icon = "tbf-circle-symbolic", color = "#f28d8c" }
+6 = { icon = "tbf-circle-symbolic", color = "#e8a2a1" }
+7 = { icon = "tbf-circle-symbolic", color = "#f8bd96" }
+8 = { icon = "tbf-circle-symbolic", color = "#fae3b0" }
+9 = { icon = "tbf-circle-symbolic", color = "#a6d189" }
+10 = { icon = "tbf-circle-symbolic", color = "#81c8be" }
 
 # --- Wallpaper (replaces hyprpaper + awww) ---------------------------------
 # Same image on every monitor. config's [[wallpaper.monitors]] only does
@@ -66,50 +117,144 @@ format = "%Y-%m-%d %H:%M"
 # monitors) — see src/_shared/scripts/wayle.launch.sh.
 [wallpaper]
 engine-enabled = true
+# Animate wallpaper changes (and the startup set) with a bezier fade.
+transition-type = "fade"
+transition-duration = 1.0
+transition-fps = 60
 
 # --- OSD (new: waybar had no volume/brightness overlay) --------------------
 [osd]
 enabled = true
+
+# Drop the "00" count label — the bell icon already conveys state
+# (bell / bell-dot when unread / bell-off for DND).
+[modules.notifications]
+label-show = false
+
+# Icon-only (the icon differs connected/disconnected); keeps the native
+# dropdown. No "Disconnected" text — label-show is all-or-nothing, so a
+# connected device name can't be shown without also showing it disconnected.
+[modules.bluetooth]
+label-show = false
 
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
 # custom module parses that natively, so they are reused unchanged. The
 # scripts are on PATH as bins (see modules/home/scripts.nix).
 
+# Event-driven (watch): re-renders when the notmuch maildir changes — no poll.
 [[modules.custom]]
 id = "mail"
-command = "mail-status"
-interval-ms = 5000
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget mail-watch"
+icon-name = "ld-mail-symbolic"
 left-click = "mail-open"
+# Drops the widget at zero unread (wrapper emits an empty line) — no orphan
+# icon or empty label slot; appears with a count only when mail arrives.
+hide-if-empty = true
 
+# Event-driven (watch): re-renders on each treeman daemon lifecycle event.
 [[modules.custom]]
 id = "treeman"
-command = "treeman-status"
-interval-ms = 3000
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget treeman-watch"
+icon-name = "ld-folder-open-symbolic"
 left-click = "treeman worktree list"
+# treeman emits nothing when idle → collapse the slot entirely.
+hide-if-empty = true
 
+# Event-driven (watch): re-renders when the recorder pid markers change.
 [[modules.custom]]
 id = "screenrec"
-command = "screen-record status"
-interval-ms = 1000
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget screenrec-watch"
+icon-name = "ld-disc-3-symbolic"
+# Icon-only (always clickable to start a recording); idle/recording shown via
+# color + tooltip, so no empty label slot.
+label-show = false
 left-click = "screen-record toggle"
 middle-click = "screen-record toggle --cam"
-hide-if-empty = true
 
+# VPN: three icon-only, color-coded modules — exactly one shows at a time
+# (hide-if-empty). icon-color/button-bg-color are static per module, so the
+# 3-state look (the old waybar: grey disconnected, yellow-bg connecting,
+# green connected) needs the split. on-action re-renders instantly on toggle.
+# Event-driven (watch mode): each watcher re-emits when the openconnect marker
+# files change — no polling. restart-policy revives the watch if inotifywait
+# dies. on-action gives instant click feedback.
 [[modules.custom]]
-id = "vpn"
-command = "vpn-konform-waybar status"
-interval-ms = 5000
+id = "vpn-on"
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget vpn-watch on"
+icon-name = "ld-lock-symbolic"
+icon-color = "green"
+label-show = false
+hide-if-empty = true
 left-click = "vpn-konform-waybar toggle"
-hide-if-empty = true
 
-# No built-in power-profiles module; poll powerprofilesctl, cycle on click.
 [[modules.custom]]
-id = "powerprofile"
-command = "powerprofilesctl get"
-interval-ms = 5000
-icon-name = "ld-zap-symbolic"
-tooltip-format = "Power profile: {{ output }}"
+id = "vpn-connecting"
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget vpn-watch connecting"
+icon-name = "ld-refresh-cw-symbolic"
+button-bg-color = "yellow"
+icon-color = "bg-base"
+label-show = false
+hide-if-empty = true
+left-click = "vpn-konform-waybar toggle"
+
+[[modules.custom]]
+id = "vpn-off"
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget vpn-watch off"
+icon-name = "ld-unplug-symbolic"
+icon-color = "fg-muted"
+label-show = false
+hide-if-empty = true
+left-click = "vpn-konform-waybar toggle"
+
+# No built-in power-profiles module. Three icon-only, color-coded modules —
+# exactly one shows at a time (hide-if-empty), since icon-color is static per
+# module. Event-driven (watch) on the daemon's D-Bus ActiveProfile signal;
+# click any to cycle. power-saver=green, balanced=blue, performance=red.
+[[modules.custom]]
+id = "pp-saver"
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget powerprofile-watch power-saver"
+label-show = false
+hide-if-empty = true
+icon-name = "ld-leaf-symbolic"
+icon-color = "green"
+tooltip-format = "Power profile: power-saver"
 left-click = "power-profile-cycle"
-# Re-render immediately after the click instead of waiting for the next poll.
-on-action = "powerprofilesctl get"
+
+[[modules.custom]]
+id = "pp-balanced"
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget powerprofile-watch balanced"
+label-show = false
+hide-if-empty = true
+icon-name = "ld-scale-symbolic"
+icon-color = "blue"
+tooltip-format = "Power profile: balanced"
+left-click = "power-profile-cycle"
+
+[[modules.custom]]
+id = "pp-performance"
+mode = "watch"
+restart-policy = "on-failure"
+command = "wayle-widget powerprofile-watch performance"
+label-show = false
+hide-if-empty = true
+icon-name = "ld-rocket-symbolic"
+icon-color = "red"
+tooltip-format = "Power profile: performance"
+left-click = "power-profile-cycle"

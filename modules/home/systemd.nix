@@ -148,7 +148,7 @@ _: {
               PartOf = compositorTargets;
               # Same rationale as waybar: bump the unit hash when the config
               # store path moves so sd-switch restarts wayle on config edits.
-              X-Restart-Triggers = [ (toString config.xdg.configFile."wayle".source) ];
+              X-Restart-Triggers = [ (toString config.xdg.configFile."wayle/config.toml".source) ];
             };
             Install.WantedBy = compositorTargets;
             Service = {

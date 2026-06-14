@@ -77,6 +77,9 @@
         mail-status.source = "src/waybar/scripts/mail-status.sh";
         treeman-status.source = "src/waybar/scripts/treeman-status.sh";
         power-profile-cycle.source = "src/_shared/scripts/power.profile.cycle.sh";
+        # Reshapes the status scripts' JSON for wayle custom modules: drops the
+        # nerd-font glyph (wayle shows icon-name instead), keeps a clean value.
+        wayle-widget.source = "src/_shared/scripts/wayle.widget.sh";
         power-profile-fix = {
           source = "src/_shared/scripts/power.profile.fix.sh";
           # Must match modules/nixos/polkit.nix and the activation module —
@@ -122,6 +125,7 @@
         "mail-status"
         "treeman-status"
         "power-profile-cycle"
+        "wayle-widget"
       ];
       isUnconditional = name: builtins.elem name unconditionalNames;
       isWayle = name: builtins.elem name wayleNames;

@@ -190,8 +190,11 @@ local function setup_autostart()
             "hyprsunset",
             "wl-paste --watch cliphist store",
             "wl-clip-persist --clipboard regular",
-            "blueman-applet",
-            "nm-applet --indicator",
+            -- Tray applets only when wayle isn't running — wayle has native
+            -- network + bluetooth modules, so its presence (binary on PATH)
+            -- makes these redundant tray icons.
+            "command -v wayle >/dev/null 2>&1 || blueman-applet",
+            "command -v wayle >/dev/null 2>&1 || nm-applet --indicator",
             scripts .. "/hy3.tiling.sh",
             scripts .. "/monitor.toggle.sh daemon",
         }) do

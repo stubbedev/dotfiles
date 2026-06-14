@@ -57,4 +57,11 @@
     command = "treeman";
     args = [ "mcp" ];
   };
+  # ZenNotes vault tools. `zen` ships with the zennotes package
+  # (modules/packages/system.nix); `zen mcp` is its stdio server. Vault is
+  # resolved from ~/.config/ZenNotes (shared with the GUI) + $ZENNOTES_VAULT.
+  zennotes-mcp = {
+    command = "zen";
+    args = [ "mcp" ];
+  };
 }
