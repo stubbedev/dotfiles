@@ -45,9 +45,9 @@ The structure is as follows:
 │   ├── tmux-pick-*        # interactive tmux picker (fzf+tmux)
 │   └── fzf-pick-*         # headless fzf pickers (return a string)
 ├── src/
-│   ├── _shared/scripts/   # cross-app scripts (waybar.launch.sh, monitor.brightness.sh, ...)
+│   ├── _shared/scripts/   # cross-app scripts (wayle.launch.sh, wayle.widget.sh, monitor.brightness.sh, ...)
 │   ├── aerc/  alacritty/  btop/
-│   ├── hypr/  niri/  waybar/
+│   ├── hypr/  niri/  wayle/
 │   ├── ...
 │   └── zsh/
 └── README.md

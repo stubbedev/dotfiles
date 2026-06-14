@@ -1,7 +1,6 @@
-# wayle desktop shell — replicates the previous waybar/swaync/hyprpaper look.
-# Catppuccin Mocha. Palette mirrors modules/home/xdg/hypr.nix:30-57 (manual
-# sync, same as the old src/waybar/style.css did). Full schema: wayle docs
-# under docs/config/ in the upstream source, or https://wayle.app/config/.
+# wayle desktop shell config. Catppuccin Mocha; palette mirrors
+# modules/home/xdg/hypr.nix:30-57 (manual sync). Full schema: wayle docs under
+# docs/config/ in the upstream source, or https://wayle.app/config/.
 
 [general]
 # waybar rendered everything in JetBrainsMono Nerd Font; match that for both
@@ -67,6 +66,7 @@ right = [
   @BATTERY@
   "network",
   "bluetooth",
+  "hyprsunset",
   "idle-inhibit",
   "custom-pp-saver",
   "custom-pp-balanced",
@@ -161,6 +161,17 @@ label-max-length = 30
 scroll-up = "wayle media next"
 scroll-down = "wayle media previous"
 middle-click = "wayle media play-pause"
+
+# Weather: powers the clock's right-click dropdown (no bar module). Coords are
+# Copenhagen (from src/hypr/hyprsunset.conf); open-meteo needs no API key.
+[modules.weather]
+location = "55.6,12.5"
+units = "metric"
+
+# Blue-light filter toggle (drives the hyprsunset daemon). 3500K matches
+# temp_night in src/hypr/hyprsunset.conf.
+[modules.hyprsunset]
+temperature = 3500
 
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
