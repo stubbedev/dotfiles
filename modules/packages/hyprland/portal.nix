@@ -20,9 +20,9 @@ _: {
       # `hyprland-share-picker`. gfxExe (not gfx): the buildRustPackage
       # output carries no meta.mainProgram, so name the binary explicitly;
       # gfxExe also nixGL-wraps it on non-NixOS so GTK4/EGL find their drivers.
-      picker = homeLib.gfxExe "hyprland-preview-share-picker" (
-        hyprland-preview-share-picker.packages.${system}.default
-      );
+      picker =
+        homeLib.gfxExe "hyprland-preview-share-picker"
+          hyprland-preview-share-picker.packages.${system}.default;
       pickerBin = "${picker}/bin/hyprland-preview-share-picker";
     in
     lib.mkIf config.features.hyprland {
@@ -41,16 +41,17 @@ _: {
       # resolve. Region selection inside the picker still shells out to slurp
       # (mocha-themed via modules/packages/wayland/tools.nix). Restart the
       # portal after changes: systemctl --user restart xdg-desktop-portal-hyprland
-      xdg.configFile = homeLib.xdgSources [
-        "hyprland-preview-share-picker/config.yaml"
-        "hyprland-preview-share-picker/style.css"
-      ]
-      // {
-        "hypr/xdph.conf".text = ''
-          screencopy {
-            custom_picker_binary = ${pickerBin}
-          }
-        '';
-      };
+      xdg.configFile =
+        homeLib.xdgSources [
+          "hyprland-preview-share-picker/config.yaml"
+          "hyprland-preview-share-picker/style.css"
+        ]
+        // {
+          "hypr/xdph.conf".text = ''
+            screencopy {
+              custom_picker_binary = ${pickerBin}
+            }
+          '';
+        };
     };
 }
