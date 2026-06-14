@@ -586,11 +586,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781465311,
-        "narHash": "sha256-cgM+fJsaXiNo/Kxqtj3hGC0Ex1aFcqY6d9ZjGYxaOEQ=",
+        "lastModified": 1781468590,
+        "narHash": "sha256-QI4tkSLCqDZdQba5hdvSzoStRQO2cDjO4Gb0zMumFjs=",
         "ref": "refs/heads/master",
-        "rev": "150623eaf288a62715a1543a3ead35f4546fce00",
-        "revCount": 55,
+        "rev": "ffef383f9dff2a7bfa15896c4658900d19e2d4b6",
+        "revCount": 57,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/hyprland-preview-share-picker"
