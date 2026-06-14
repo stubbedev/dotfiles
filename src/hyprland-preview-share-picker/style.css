@@ -35,14 +35,15 @@ tabs > tab {
   transition: all 0.2s ease;
 }
 
+/* Active tab in the wayle accent (mauve), not GTK's default blue. */
 tabs > tab:checked > .tab-label,
 tabs > tab:active > .tab-label {
   text-decoration: underline currentColor;
-  color: #cdd6f4;
+  color: #cba6f7;
 }
 
 tabs > tab:focus > .tab-label {
-  color: #cdd6f4;
+  color: #cba6f7;
 }
 
 .page {
@@ -75,11 +76,17 @@ button:focus > .card {
   border-radius: 6px;
 }
 
+/* Region selection button — mauve pill, dark label. The inner GtkLabel needs
+ * its own colour or it inherits the light `*` text colour and washes out. */
+.region-button,
+.region-button label {
+  color: #1e1e2e;
+}
+
 .region-button {
   padding: 0.5rem 1rem;
   border-radius: 6px;
   background-color: #cba6f7;
-  color: #1e1e2e;
   transition: all 0.2s ease;
 }
 
@@ -88,11 +95,30 @@ button:focus > .card {
   background-color: #b4befe;
 }
 
-.region-button:disabled {
+.region-button:disabled,
+.region-button:disabled label {
   background-color: #585b70;
   color: #313244;
 }
 
+/* Restore-token checkbox. `all: unset` strips the native indicator, so redraw
+ * it: a bordered box that fills mauve when checked. */
 .restore-button {
-  padding: 0.25rem 0.5rem;
+  padding: 0.5rem;
+}
+
+.restore-button check {
+  min-width: 16px;
+  min-height: 16px;
+  margin-right: 8px;
+  border: solid 2px #585b70;
+  border-radius: 4px;
+  background-color: #313244;
+  transition: all 0.2s ease;
+}
+
+.restore-button:checked check,
+.restore-button check:checked {
+  background-color: #cba6f7;
+  border-color: #cba6f7;
 }
