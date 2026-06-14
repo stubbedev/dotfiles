@@ -51,21 +51,23 @@ button-border-location = "none"
 
 [[bar.layout]]
 monitor = "*"
-left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode"]
+left = ["hyprland-workspaces", "niri-workspaces", "keybind-mode", "media"]
 # Clock centered as the focal point; everything else on the right.
 center = ["clock"]
-# Grouped left-to-right by purpose: activity → hardware → connectivity →
-# input/power → tray → notifications.
+# Grouped left-to-right by purpose: activity → audio/hardware → connectivity →
+# system → tray → vpn → notifications → power.
 right = [
   "custom-mail",
   "custom-treeman",
   "keyboard-input",
   "custom-screenrec",
   "volume",
+  "microphone",
   "brightness",
   @BATTERY@
   "network",
   "bluetooth",
+  "idle-inhibit",
   "custom-pp-saver",
   "custom-pp-balanced",
   "custom-pp-performance",
@@ -74,6 +76,7 @@ right = [
   "custom-vpn-connecting",
   "custom-vpn-off",
   "notifications",
+  "power",
 ]
 
 [modules.clock]
@@ -137,6 +140,27 @@ label-show = false
 # connected device name can't be shown without also showing it disconnected.
 [modules.bluetooth]
 label-show = false
+
+# Scroll to adjust volume, middle-click to mute (left-click still opens the
+# audio dropdown).
+[modules.volume]
+scroll-up = "wayle audio output-volume +5"
+scroll-down = "wayle audio output-volume -5"
+middle-click = "wayle audio output-mute"
+
+# Mic: scroll to adjust input level, middle-click to mute.
+[modules.microphone]
+scroll-up = "wayle audio input-volume +5"
+scroll-down = "wayle audio input-volume -5"
+middle-click = "wayle audio input-mute"
+
+# Now-playing: left-click opens the media dropdown, scroll skips tracks,
+# middle-click play/pause. Truncate long titles so the bar stays put.
+[modules.media]
+label-max-length = 30
+scroll-up = "wayle media next"
+scroll-down = "wayle media previous"
+middle-click = "wayle media play-pause"
 
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
