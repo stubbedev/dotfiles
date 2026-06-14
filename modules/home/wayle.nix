@@ -61,20 +61,18 @@ _: {
         _wsrc="${pkgs.wayle.src}/resources/icons/hicolor/scalable/actions"
         _wdst="${config.xdg.dataHome}/wayle/icons"
         run mkdir -p "$_wdst/hicolor/scalable/actions"
-        run install -m644 ${
-          pkgs.writeText "wayle-icons-index.theme" ''
-            [Icon Theme]
-            Name=Wayle Icons
-            Comment=Icons installed by Wayle
-            Directories=hicolor/scalable/actions
+        run install -m644 ${pkgs.writeText "wayle-icons-index.theme" ''
+          [Icon Theme]
+          Name=Wayle Icons
+          Comment=Icons installed by Wayle
+          Directories=hicolor/scalable/actions
 
-            [hicolor/scalable/actions]
-            Size=48
-            MinSize=16
-            MaxSize=512
-            Type=Scalable
-          ''
-        } "$_wdst/index.theme"
+          [hicolor/scalable/actions]
+          Size=48
+          MinSize=16
+          MaxSize=512
+          Type=Scalable
+        ''} "$_wdst/index.theme"
         # --no-preserve=mode: store SVGs are read-only; copied files must stay
         # writable so the next activation can overwrite them.
         run cp -f --no-preserve=mode "$_wsrc"/*.svg "$_wdst/hicolor/scalable/actions/"

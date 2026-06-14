@@ -57,8 +57,8 @@ _: {
         };
         wayle = lib.mkOption {
           type = lib.types.bool;
-          default = false;
-          description = "Replace the waybar/swaync/hyprpaper/awww shell stack with the wayle desktop shell (bar + notifications + OSD + wallpaper). Opt-in while it stabilises; the legacy stack runs when this is false.";
+          default = true;
+          description = "Enable the wayle desktop shell (bar + notifications + OSD + wallpaper). The default and only shell; disabling leaves no bar.";
         };
         theming = lib.mkOption {
           type = lib.types.bool;

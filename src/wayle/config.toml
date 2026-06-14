@@ -12,8 +12,9 @@ font-mono = "JetBrainsMono Nerd Font"
 [styling]
 # Static palette (no wallpaper-derived theming) so colors stay Catppuccin.
 theme-provider = "wayle"
-# No border radius anywhere (dropdowns/popovers/dialogs).
-rounding = "none"
+# Rounded dropdowns/popovers/OSD/dialogs (the bar itself stays flat — see
+# [bar].rounding/button-rounding = "none").
+rounding = "sm"
 
 [styling.palette]
 # bg=base, surface=mantle (the waybar bar color), elevated=surface0 (pills).

@@ -1,7 +1,6 @@
 _: {
   linuxOnlyHomeModules.systemd =
     {
-      constants,
       pkgs,
       lib,
       config,
@@ -13,14 +12,8 @@ _: {
       niriEnabled = config.features.niri;
       anyCompositor = hyprlandEnabled || niriEnabled;
 
-      # wayle replaces waybar + swaync + hyprpaper in one shell. While the
-      # flag is off the legacy stack runs; flipping it on swaps atomically.
+      # wayle is the desktop shell (bar + notifications + OSD + wallpaper).
       wayleEnabled = config.features.wayle;
-      legacyShell = !wayleEnabled;
-
-      # The bar that the await-* hooks bounce when a late-starting service
-      # (power-profiles-daemon, bluetooth) appears — whichever shell is live.
-      barService = if wayleEnabled then "wayle.service" else "waybar.service";
 
       # Targets the active compositor activates. Services that should run
       # under either compositor pull from this list for After/PartOf/WantedBy.
@@ -34,7 +27,7 @@ _: {
 
       restartBarIfCompositorActive = pkgs.writeShellScript "restart-bar-if-compositor-active" ''
         if ${compositorActiveCondition}; then
-          exec ${pkgs.systemd}/bin/systemctl --user restart ${barService}
+          exec ${pkgs.systemd}/bin/systemctl --user restart wayle.service
         fi
       '';
 
@@ -75,68 +68,6 @@ _: {
           };
 
         }
-        // (lib.optionalAttrs (hyprlandEnabled && legacyShell) {
-          hyprpaper = {
-            Unit = {
-              Description = "Hyprpaper wallpaper daemon";
-              After = [ "hyprland-session.target" ];
-              PartOf = [ "hyprland-session.target" ];
-            };
-            Install.WantedBy = [ "hyprland-session.target" ];
-            Service = {
-              Type = "simple";
-              ExecStart = "${constants.paths.nixBin}/hyprpaper";
-              Restart = "on-failure";
-              RestartSec = "2s";
-            };
-          };
-        })
-        # Legacy shell (waybar + swaync) — runs only while features.wayle is off.
-        // (lib.optionalAttrs legacyShell {
-          waybar = {
-            Unit = {
-              Description = "Waybar - Highly customizable Wayland bar";
-              Documentation = "https://github.com/Alexays/Waybar/wiki";
-              After =
-                compositorTargets
-                ++ [ "power-profiles-daemon.service" ]
-                ++ (lib.optional hyprlandEnabled "xdg-desktop-portal-hyprland.service");
-              Wants = [ "power-profiles-daemon.service" ];
-              PartOf = compositorTargets;
-              # Make sd-switch restart waybar when its config changes too,
-              # not only when the unit definition itself changes. The store
-              # path under config.xdg.configFile.waybar.source moves whenever
-              # anything under src/waybar/ is touched — embedding it here
-              # bumps the unit hash and triggers a single restart that
-              # subsumes what the old onChange hook did.
-              X-Restart-Triggers = [ (toString config.xdg.configFile."waybar".source) ];
-            };
-            Install.WantedBy = compositorTargets;
-            Service = {
-              Type = "simple";
-              ExecStart = "${scripts.waybar-launch}/bin/waybar-launch";
-              ExecStopPost = "-${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -9 waybar || true; sleep 0.5'";
-              Restart = "on-failure";
-              RestartSec = "3s";
-            };
-          };
-
-          swaync = {
-            Unit = {
-              Description = "SwayNotificationCenter";
-              After = compositorTargets;
-              PartOf = compositorTargets;
-            };
-            Install.WantedBy = compositorTargets;
-            Service = {
-              Type = "dbus";
-              BusName = "org.freedesktop.Notifications";
-              ExecStart = "${constants.paths.nixBin}/swaync";
-              Restart = "on-failure";
-              RestartSec = "2s";
-            };
-          };
-        })
         # wayle shell — bar + notifications + OSD + wallpaper in one daemon.
         // (lib.optionalAttrs wayleEnabled {
           wayle = {
@@ -191,7 +122,7 @@ _: {
           };
 
           # Independent of compositor target — these run under default.target
-          # and only exist to bounce waybar when their dependent service starts.
+          # and only exist to bounce the wayle bar when their dependent service starts.
           await-powerprofile = {
             Unit = {
               Description = "Restart Waybar when power-profiles-daemon starts";

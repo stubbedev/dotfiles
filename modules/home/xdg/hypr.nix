@@ -88,7 +88,6 @@ _: {
           # Ecosystem daemons still use hyprlang (no Lua support).
           "hypr/hypridle.conf"
           "hypr/hyprlock.conf"
-          "hypr/hyprpaper.conf"
           "hypr/hyprsunset.conf"
           "hypr/scripts"
         ]

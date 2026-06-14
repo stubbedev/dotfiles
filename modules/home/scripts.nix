@@ -59,7 +59,6 @@
         mail-pager.source = "src/aerc/scripts/nvim-pager.sh";
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
         screen-record.source = "src/_shared/scripts/screen-record.sh";
-        waybar-launch.source = "src/_shared/scripts/waybar.launch.sh";
         # wayle shell: launch wrapper (Wayland socket detection). wayle's
         # custom module parses waybar-style JSON natively (text/tooltip/class),
         # so the mail/treeman status scripts are reused as-is — registered as
@@ -74,8 +73,8 @@
             WALLPAPER = "${config.home.homeDirectory}/.stubbe/src/wallpapers/ballet.jpg";
           };
         };
-        mail-status.source = "src/waybar/scripts/mail-status.sh";
-        treeman-status.source = "src/waybar/scripts/treeman-status.sh";
+        mail-status.source = "src/_shared/scripts/mail-status.sh";
+        treeman-status.source = "src/_shared/scripts/treeman-status.sh";
         power-profile-cycle.source = "src/_shared/scripts/power.profile.cycle.sh";
         # Reshapes the status scripts' JSON for wayle custom modules: drops the
         # nerd-font glyph (wayle shows icon-name instead), keeps a clean value.

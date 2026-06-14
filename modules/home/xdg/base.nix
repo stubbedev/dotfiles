@@ -17,8 +17,6 @@ _: {
           "btop/themes/catppuccin_latte.theme"
           "btop/themes/catppuccin_macchiato.theme"
           "btop/themes/catppuccin_mocha.theme"
-          "swaync"
-          "waybar"
         ];
 
         desktopEntries = {

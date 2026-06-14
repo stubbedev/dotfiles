@@ -131,13 +131,10 @@ spawn-at-startup "sh" "-c" "systemctl --user unset-environment DISPLAY HYPRLAND_
 spawn-at-startup "sh" "-c" "ln -sfn \"$NIRI_SOCKET\" \"$XDG_RUNTIME_DIR/niri-current.sock\""
 
 spawn-at-startup "hypridle" "--config" "/home/stubbe/.config/niri/hypridle.conf"
-spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.sh"  // uses awww (renamed from swww)
 spawn-at-startup "wl-clip-persist" "--clipboard" "regular"
 spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
-// Tray applets only when wayle isn't running — wayle's native network +
-// bluetooth modules replace them (skip if the wayle binary is on PATH).
-spawn-at-startup "sh" "-c" "command -v wayle >/dev/null 2>&1 || exec nm-applet --indicator"
-spawn-at-startup "sh" "-c" "command -v wayle >/dev/null 2>&1 || exec blueman-applet"
+// Wallpaper + tray (network/bluetooth) are handled by wayle natively — no
+// awww wallpaper.sh, nm-applet or blueman-applet spawns needed.
 // hyprpolkitagent runs as a user systemd unit pulled in by niri-session.target
 // (see modules/home/systemd.nix) — no spawn-at-startup needed, and the binary
 // lives in libexec/ so it isn't on PATH anyway.

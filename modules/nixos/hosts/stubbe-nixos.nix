@@ -45,9 +45,6 @@ in
           # Gate off privileged activation scripts — the corresponding
           # NixOS modules under modules/nixos/ own those files now.
           host.platform = "nixos";
-
-          # Trial the wayle desktop shell in place of waybar/swaync/hyprpaper.
-          features.wayle = true;
         };
       };
   };
