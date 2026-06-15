@@ -153,6 +153,14 @@ scroll-up = "wayle audio input-volume +5"
 scroll-down = "wayle audio input-volume -5"
 middle-click = "wayle audio input-mute"
 
+# Brightness: scroll to adjust backlight (left-click still opens the dropdown).
+# wayle has no brightness CLI (unlike audio), so scroll shells out to
+# brightnessctl (declared in modules/home/wayle.nix). -n keeps a 1-unit floor so
+# scrolling down never blacks the screen out completely.
+[modules.brightness]
+scroll-up = "brightnessctl set 5%+"
+scroll-down = "brightnessctl set 5%- -n"
+
 # Weather: powers the clock's right-click dropdown (no bar module). Coords are
 # Copenhagen (kept in sync with hyprsunset.sun.sh); open-meteo needs no API key.
 [modules.weather]
@@ -196,12 +204,16 @@ left-click = "mail-open"
 hide-if-empty = true
 
 # Event-driven (watch): re-renders on each treeman daemon lifecycle event.
+# icon-show = false: treeman's text is a compact per-bucket "{glyph} {count}"
+# line (status.formats.icon in ~/.config/treeman/config.yaml), so the bucket
+# glyphs carry the icon. Dropping icon-name alone still reserves a blank icon
+# slot — icon-show = false removes it entirely.
 [[modules.custom]]
 id = "treeman"
 mode = "watch"
 restart-policy = "on-exit"
 command = "wayle-widget treeman-watch"
-icon-name = "ld-folder-open-symbolic"
+icon-show = false
 left-click = "treeman worktree list"
 # treeman emits nothing when idle → collapse the slot entirely.
 hide-if-empty = true

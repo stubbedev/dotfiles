@@ -39,6 +39,7 @@
       lib,
       config,
       treeman,
+      self,
       ...
     }:
     let
@@ -51,6 +52,14 @@
         treemanPkg
         treemandPkg
       ];
+
+      # Global config (single file, not the whole dir — treeman only reads it;
+      # state + DB live elsewhere). force overrides the pre-existing hand-edited
+      # file on first switch.
+      xdg.configFile."treeman/config.yaml" = {
+        source = self + "/src/treeman/config.yaml";
+        force = true;
+      };
 
       systemd.user.services.treemand = {
         Unit = {

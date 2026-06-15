@@ -37,6 +37,9 @@ _: {
         # inotifywait — event-driven VPN widget (wayle-widget vpn-watch) waits
         # on the openconnect marker files instead of polling.
         pkgs.inotify-tools
+        # brightnessctl — wayle has no brightness CLI, so the brightness
+        # module's scroll actions (src/wayle/config.toml) shell out to it.
+        pkgs.brightnessctl
       ];
 
       # Render config.toml (single file, NOT the whole ~/.config/wayle dir:

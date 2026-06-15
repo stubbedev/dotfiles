@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/stubbedev/treeman/master/schemas/treeman.global.schema.json
+#
+# treeman global config. Deployed by modules/packages/treeman.nix as a
+# single-file symlink to ~/.config/treeman/config.yaml (treeman only reads
+# this file; per-repo state + DB live elsewhere, so symlinking is safe).
+
+notifications:
+  enabled: true
+  events:
+    - stable
+    - up
+    - down
+    - failed
+
+snapshots:
+  cap_per_repo: 50
+
+auto_fetch:
+  enabled: true
+  interval_minutes: 30
+
+# Bar status line. `treeman status --format waybar` builds its `text` from the
+# `icon` format, so overriding status.formats.icon makes the wayle bar widget
+# minimal: one compact "{glyph} {count}" pair per bucket (stable/up/down/failed),
+# no word labels. The wayle treeman module passes this through unchanged and
+# draws no icon of its own — see src/wayle/config.toml + wayle.widget.sh.
+status:
+  formats:
+    icon: "{icon_stable} {stable}  {icon_up} {up}  {icon_down} {down}  {icon_failed} {failed}"

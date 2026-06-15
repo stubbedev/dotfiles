@@ -32,7 +32,12 @@ vpn_line() {
 }
 
 mail_line() { emit_line 'if (.text | test("[0-9]")) then (.text |= gsub("[^0-9]";"")) else empty end' mail-status; }
-treeman_line() { emit_line '.text |= (gsub("^[^[:alnum:]]+";"") | gsub("[^[:alnum:]]+$";""))' treeman-status; }
+# Pass treeman's text through unchanged: its waybar text is a compact
+# per-bucket "{glyph} {count}" line (configured via status.formats.icon in
+# ~/.config/treeman/config.yaml), so the bucket glyphs ARE the content. The
+# treeman custom module drops its own icon-name (config.toml) to avoid a
+# duplicate leading icon.
+treeman_line() { emit_line '.' treeman-status; }
 screenrec_line() { emit_line '.text = (if .alt == "recording" then "rec" else "" end)' screen-record status; }
 
 rt="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
