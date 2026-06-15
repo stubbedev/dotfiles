@@ -67,7 +67,6 @@ right = [
   "network",
   "bluetooth",
   "custom-hyprsunset",
-  "idle-inhibit",
   "custom-pp-saver",
   "custom-pp-balanced",
   "custom-pp-performance",

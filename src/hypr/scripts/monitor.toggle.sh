@@ -35,6 +35,33 @@ apply_reload() {
   hyprctl reload >/dev/null 2>&1 || true
 }
 
+# Re-apply the wallpaper to every monitor after a hotplug. wayle's
+# `wallpaper set` (without --monitor) only paints the outputs live at the
+# moment it runs, so a monitor connected later — notably an external display
+# brought up by a dock — comes up blank. apply_reload re-binds the Hyprland
+# outputs but does not touch wayle's wallpaper layer, so we re-issue the set
+# here. The new output may not be registered in wayle the instant hyprctl
+# reload returns, so retry briefly in the background (~3s) without blocking.
+#
+# WALLPAPER must match modules/home/scripts.nix (wayle-launch's WALLPAPER
+# var) — that path is the source of truth; this is the dotfiles symlink
+# location it resolves to.
+WALLPAPER="$HOME/.stubbe/src/wallpapers/ballet.jpg"
+
+apply_wallpaper() {
+  command -v wayle >/dev/null 2>&1 || return 0
+  (
+    n=0
+    while [ $n -lt 12 ]; do
+      if wayle wallpaper set "$WALLPAPER" --fit fill >/dev/null 2>&1; then
+        break
+      fi
+      n=$((n + 1))
+      sleep 0.25
+    done
+  ) &
+}
+
 # Disable the built-in panel when the lid is closed. The open case is
 # handled implicitly by apply_reload above, which re-applies the eDP rule
 # from monitors.conf and brings the panel back to its configured state.
@@ -63,6 +90,7 @@ apply_lid() {
 react() {
   apply_reload
   apply_lid
+  apply_wallpaper
 }
 
 # Restart WirePlumber so it re-evaluates ALSA card availability after a
