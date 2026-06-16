@@ -140,6 +140,10 @@ spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 // lives in libexec/ so it isn't on PATH anyway.
 spawn-at-startup "/home/stubbe/.config/niri/scripts/refocus-on-close.sh"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/focus-on-urgent.sh"
+// Re-apply the wallpaper on DRM hotplug — wayle only paints the outputs live
+// at set time, so a monitor brought up later by a dock comes up blank.
+// Parity with the wallpaper branch of hypr/scripts/monitor.toggle.sh.
+spawn-at-startup "/home/stubbe/.config/niri/scripts/wallpaper.hotplug.sh"
 
 // Generic rules first; app-specific rules below can still override them.
 window-rule {

@@ -43,10 +43,11 @@ apply_reload() {
 # here. The new output may not be registered in wayle the instant hyprctl
 # reload returns, so retry briefly in the background (~3s) without blocking.
 #
-# WALLPAPER must match modules/home/scripts.nix (wayle-launch's WALLPAPER
-# var) — that path is the source of truth; this is the dotfiles symlink
-# location it resolves to.
-WALLPAPER="$HOME/.stubbe/src/wallpapers/ballet.jpg"
+# WALLPAPER comes from the session env (modules/home/session-variables.nix,
+# sourced from constants.paths.wallpaper — the single source of truth shared
+# with wayle-launch). Fall back to the literal path for a bare shell that
+# never imported the session vars.
+WALLPAPER="${WALLPAPER:-$HOME/.stubbe/src/wallpapers/ballet.jpg}"
 
 apply_wallpaper() {
   command -v wayle >/dev/null 2>&1 || return 0

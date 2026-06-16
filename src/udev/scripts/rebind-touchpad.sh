@@ -13,9 +13,6 @@
 # Both are pulled in by SYSTEMD_WANTS from the udev DRM-hotplug rule.
 set -u
 
-# Let the dock power transition settle before touching the driver.
-sleep 2
-
 drv=/sys/bus/i2c/drivers/i2c_hid_acpi
 dev=i2c-SNSL0028:00
 
@@ -23,5 +20,34 @@ dev=i2c-SNSL0028:00
 # the service may be invoked directly).
 [ -e "$drv/$dev" ] || exit 0
 
-echo "$dev" > "$drv/unbind" || true
-echo "$dev" > "$drv/bind" || true
+# True once the rebound device exposes multitouch. On probe the i2c-hid
+# driver sends a SET_REPORT to switch the device into touchpad (MT) mode;
+# that i2c transfer can fail silently while the dock power rail is still
+# unsettled, leaving the device in single-touch mode — the cursor moves but
+# two-finger scroll is dead. ABS_MT_POSITION_X (code 53) in the input node's
+# abs capability bitmask is the signal that MT mode actually took. The mask
+# prints as space-separated 64-bit words, most-significant first; codes < 64
+# (all the MT codes) live in the last (least-significant) word.
+mt_back() {
+  local f abs
+  for f in "$drv/$dev"/*/input/input*/capabilities/abs; do
+    [ -r "$f" ] || continue
+    abs=$(awk '{print $NF}' "$f")
+    [ -n "$abs" ] || continue
+    if (( 0x$abs & (1 << 53) )); then return 0; fi
+  done
+  return 1
+}
+
+# Rebind, then verify MT came back; retry with a growing settle if it didn't.
+# A single unbind/bind with a fixed sleep loses the race when the probe lands
+# before the bus settles. Worst case ~14s of sleeps, all in this background
+# oneshot — never blocks the udev worker.
+for settle in 2 3 4 5; do
+  sleep "$settle"
+  echo "$dev" > "$drv/unbind" 2>/dev/null || true
+  echo "$dev" > "$drv/bind"   2>/dev/null || true
+  sleep 1
+  mt_back && exit 0
+done
+exit 0

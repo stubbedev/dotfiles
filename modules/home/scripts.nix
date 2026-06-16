@@ -75,7 +75,9 @@
             # meta.mainProgram, so name the binary explicitly.
             WAYLE = lib.getExe' (homeLib.gfx pkgs.wayle) "wayle";
             # Wallpaper applied to all monitors at startup (see the script).
-            WALLPAPER = "${config.home.homeDirectory}/.stubbe/src/wallpapers/ballet.jpg";
+            # Source of truth: constants.paths.wallpaper (also exported as the
+            # WALLPAPER session var for the hotplug listeners).
+            WALLPAPER = constants.paths.wallpaper;
           };
         };
         mail-status.source = "src/_shared/scripts/mail-status.sh";
