@@ -123,11 +123,11 @@
         "rust-analyzer-src": "rust-analyzer-src"
       },
       "locked": {
-        "lastModified": 1781430890,
-        "narHash": "sha256-Dict8ZPqm3fei8iFXh75sPBNPqCdn7a8GJytgLajbGw=",
+        "lastModified": 1781527054,
+        "narHash": "sha256-1fX9ev2Fh5QoKQ41G9dYutjo5j/jywu6tZse5Eb1Ck4=",
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "1b9586dd32bb28519cf6eea855e2df5b4d5eca15",
+        "rev": "8c2e51dffefc040a21975da7abf6f252c8c9b783",
         "type": "github"
       },
       "original": {
@@ -330,11 +330,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781497404,
-        "narHash": "sha256-9GAF8sSsnkyCVCWkomXR0T+zdSxyUlfPt6neQidimdg=",
+        "lastModified": 1781557312,
+        "narHash": "sha256-QOIRYSUFSq7L5mY3dZymaVhcnne3tPgoR9riB0WocjA=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "1285cd3d6882a9847f2d56ed5541b3350c8a6162",
+        "rev": "c03e4752899e55705dfa63979abd885c582a5c48",
         "type": "github"
       },
       "original": {
@@ -586,11 +586,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781468710,
-        "narHash": "sha256-8LY2zCIsoKfCfTLjEkawvqELNCUMOlahh1Su1fpemgk=",
+        "lastModified": 1781504859,
+        "narHash": "sha256-DCXq/yMaoigXN8RqVKMV0KRV5qvXKXEczEp7xvrkHa8=",
         "ref": "refs/heads/master",
-        "rev": "05b51ec894cbcd0e9f4b5562b18308e2c828f188",
-        "revCount": 58,
+        "rev": "a9e54a84605ff43487ab1c0e58508c0407813712",
+        "revCount": 59,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/hyprland-preview-share-picker"
@@ -1102,11 +1102,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1780747962,
-        "narHash": "sha256-IX7G1dlKrOqPOImfbo7ADDfV5yU1+j+MRChI3TL4tAA=",
+        "lastModified": 1781359544,
+        "narHash": "sha256-iUuzKQcyXvopYDDzFpMK5eQKP3WIJExYny2kJtbgUcE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "cbb5cf358f50aa6acc9efd6113b7bcfbc352cd73",
+        "rev": "9f11f828c213641c2369a9f1fa31fe31557e3156",
         "type": "github"
       },
       "original": {
@@ -1214,11 +1214,11 @@
     "rust-analyzer-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1781382341,
-        "narHash": "sha256-1AuqkRHiBSuU8AjzPW4gFgwyPhFaMZhYJVtMormLvb8=",
+        "lastModified": 1781453968,
+        "narHash": "sha256-+V3nK4pCngbmgyVGXY6Kkrlevp4ocPkJJLf2aqwkDNA=",
         "owner": "rust-lang",
         "repo": "rust-analyzer",
-        "rev": "5017a50153285a2d9bfa286e6fa96723e997d5b6",
+        "rev": "cc272809a173c2c11d0e479d639c811c1eacf049",
         "type": "github"
       },
       "original": {
@@ -1275,11 +1275,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1780904485,
-        "narHash": "sha256-TdYwakDtRV0hxfi0/kNs7Y1xvljBzFwy5vupyKW166U=",
+        "lastModified": 1781510265,
+        "narHash": "sha256-/hcFLq9VogNKDBufaywFpNb2ue6UFrJnQRcvHfJBn04=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "b90f8345c3a5824fb834a7b24570c31c2c6ccfa1",
+        "rev": "8272577fc19055f1f834f64582664f0033de0b20",
         "type": "github"
       },
       "original": {
@@ -1386,11 +1386,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781269021,
-        "narHash": "sha256-/RFIU2CBU0Pu1sQ23QlljhSl0xyyKc9ERBhuJaS5KaA=",
+        "lastModified": 1781511307,
+        "narHash": "sha256-dwntYp87Ulndq14aN97iR9x2lewRPQv+J9iLlcV9n8s=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "8fc5ae5afb5557dbe404865f3346cca44acfaea5",
+        "rev": "dbd3c39e2aa4652664fb971e6b34d5ddc8700090",
         "type": "github"
       },
       "original": {
@@ -1402,16 +1402,16 @@
     "wayle": {
       "flake": false,
       "locked": {
-        "lastModified": 1780213410,
-        "narHash": "sha256-AOHehdowgxEV1b+CwrAhJsUqxQnARIGZPWMRcdH0h+U=",
-        "owner": "wayle-rs",
+        "lastModified": 1781590027,
+        "narHash": "sha256-loCV9xQ7LMXZTKBBAHTa0ojGGXXRmeqTo/bN4h3jJHo=",
+        "owner": "stubbedev",
         "repo": "wayle",
-        "rev": "61ce32978c5bff0ab08f0e96a282af7516fb6fd6",
+        "rev": "8c341b152089b784c34f9a8bcceb2dffebcd66d5",
         "type": "github"
       },
       "original": {
-        "owner": "wayle-rs",
-        "ref": "v0.6.0",
+        "owner": "stubbedev",
+        "ref": "master",
         "repo": "wayle",
         "type": "github"
       }
