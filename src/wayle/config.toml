@@ -49,6 +49,10 @@ scale = 0.75
 button-icon-size = "20px"
 button-label-size = "14px"
 button-label-padding = "4px"
+# Gap between a widget's icon and its label (margin on the label). Pinned in px
+# like the rest — the lone scale default rendered as no visible gap here. Auto-
+# suppressed when a widget has no label (icon-only widgets stay tight).
+button-gap = "8px"
 padding = "0px"
 padding-ends = "0px"
 module-gap = 0.35
