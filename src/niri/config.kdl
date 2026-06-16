@@ -140,6 +140,9 @@ spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
 // lives in libexec/ so it isn't on PATH anyway.
 spawn-at-startup "/home/stubbe/.config/niri/scripts/refocus-on-close.sh"
 spawn-at-startup "/home/stubbe/.config/niri/scripts/focus-on-urgent.sh"
+// Toast the active keyboard layout on each grp:toggle switch (xkb toggles
+// internally — no keybind to hook; listen to the niri event stream instead).
+spawn-at-startup "wayle-widget" "kb-toast" "niri"
 // Re-apply the wallpaper on DRM hotplug — wayle only paints the outputs live
 // at set time, so a monitor brought up later by a dock comes up blank.
 // Parity with the wallpaper branch of hypr/scripts/monitor.toggle.sh.

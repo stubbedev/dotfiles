@@ -22,13 +22,12 @@ emit_line() {
   printf '%s\n' "$(printf '%s' "$out" | jq -c "$filt" 2>/dev/null)"
 }
 
+# Single tri-state line: map vpn-konform-bar's `class` to an `alt` key that
+# drives the vpn module's icon-map + color-map (on / connecting / off), tooltip
+# preserved. Replaces the old three-module hide-if-empty split — one module now
+# swaps icon + color by state. ("error" → off, matching the old behaviour.)
 vpn_line() {
-  case "$1" in
-    on) emit_line 'if .class == "connected" then {tooltip} else empty end' vpn-konform-bar status ;;
-    connecting) emit_line 'if .class == "connecting" then {tooltip} else empty end' vpn-konform-bar status ;;
-    off) emit_line 'if (.class == "connected" or .class == "connecting") then empty else {tooltip} end' vpn-konform-bar status ;;
-    *) echo ;;
-  esac
+  emit_line '{alt: (if .class == "connected" then "on" elif .class == "connecting" then "connecting" else "off" end), tooltip}' vpn-konform-bar status
 }
 
 mail_line() { emit_line 'if (.text | test("[0-9]")) then (.text |= gsub("[^0-9]";"")) else empty end' mail-status; }
@@ -85,27 +84,26 @@ case "${1:-}" in
   #     can leave the pid file behind), but the kernel always reports the link
   #     going down, so this catches the disconnect the file-watch missed.
   vpn-watch)
-    vpn_line "$2"
+    vpn_line
     {
       inotifywait -q -m -e create,delete,close_write,moved_to,moved_from --format '%f' "$rt" 2>/dev/null &
       ip monitor link 2>/dev/null &
       wait
     } | while IFS= read -r line; do
       case "$line" in
-        openconnect-*.pid | openconnect-*.connecting | *oc-konform*) vpn_line "$2" ;;
+        openconnect-*.pid | openconnect-*.connecting | *oc-konform*) vpn_line ;;
       esac
     done
     ;;
 
-  # Power profile as three icon-only, color-coded modules ($2 = the profile
-  # this module owns): emits non-empty only when that profile is active, so
-  # exactly one shows. Re-emits on the daemon's D-Bus ActiveProfile signal.
+  # Power profile as one module: emit the active profile as `alt`, which drives
+  # the module's icon-map + color-map (power-saver / balanced / performance).
+  # Re-emits on the daemon's D-Bus ActiveProfile signal.
   powerprofile-watch)
-    want="$2"
     pp() {
       local cur
       cur="$(powerprofilesctl get 2>/dev/null)"
-      if [ "$cur" = "$want" ]; then printf '{"alt":"%s"}\n' "$cur"; else echo; fi
+      [ -n "$cur" ] && printf '{"alt":"%s"}\n' "$cur" || echo
     }
     pp
     dbus-monitor --system "type='signal',path=/net/hadess/PowerProfiles,interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'" 2>/dev/null |
@@ -153,6 +151,44 @@ case "${1:-}" in
     if [ -f "$marker" ]; then rm -f "$marker"; else : >"$marker"; fi
     pidfile="$rt/hyprsunset-sun.pid"
     [ -f "$pidfile" ] && kill -USR1 "$(cat "$pidfile" 2>/dev/null)" 2>/dev/null
+    ;;
+
+  # Keyboard-layout toast. xkb `grp:toggle` switches the layout internally
+  # (no compositor keybind to hook), so listen to each compositor's event
+  # stream and fire a transient OSD toast on every switch — the bar's
+  # keyboard-input module already shows the persistent state. $2 = niri|hypr.
+  kb-toast)
+    case "${2:-}" in
+      niri)
+        # event-stream emits KeyboardLayoutsChanged (the layout names) once,
+        # then KeyboardLayoutSwitched {idx} on each toggle — index into names.
+        names="[]"
+        niri msg --json event-stream 2>/dev/null | while IFS= read -r ev; do
+          case "$ev" in
+            *KeyboardLayoutsChanged*)
+              names="$(printf '%s' "$ev" | jq -c '.KeyboardLayoutsChanged.keyboard_layouts.names' 2>/dev/null)" ;;
+            *KeyboardLayoutSwitched*)
+              idx="$(printf '%s' "$ev" | jq -r '.KeyboardLayoutSwitched.idx' 2>/dev/null)"
+              name="$(printf '%s' "$names" | jq -r ".[$idx] // empty" 2>/dev/null)"
+              [ -n "$name" ] && wayle toast "$name" --icon ld-keyboard-symbolic --duration 1000 ;;
+          esac
+        done
+        ;;
+      hypr)
+        sock="$rt/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket2.sock"
+        [ -S "$sock" ] || exit 0
+        # activelayout>>KEYBOARD,LAYOUT_NAME. Hyprland fires one event per
+        # keyboard at connect/startup; skip the first 3s so login is quiet.
+        start="$(date +%s)"
+        socat -U - "UNIX-CONNECT:$sock" 2>/dev/null | while IFS= read -r line; do
+          case "$line" in
+            activelayout\>\>*)
+              [ "$(($(date +%s) - start))" -lt 3 ] && continue
+              wayle toast "${line##*,}" --icon ld-keyboard-symbolic --duration 1000 ;;
+          esac
+        done
+        ;;
+    esac
     ;;
 
   *) exit 0 ;;

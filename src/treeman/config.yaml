@@ -8,8 +8,6 @@ notifications:
   enabled: true
   events:
     - stable
-    - up
-    - down
     - failed
 
 snapshots:

@@ -37,14 +37,20 @@ button-rounding = "none"
 button-group-rounding = "none"
 # "basic" = icon+label, minimal background (no colored pill per module).
 button-variant = "basic"
-# Compact: shrink bar elements + tighten spacing. No exact-height knob in
-# wayle 0.6 — height is emergent from scale + padding + icon/label size.
+# Bar flush to the screen edge (padding = padding-ends = 0, no gap bar↔screen),
+# but widgets keep their INTERNAL padding — button-label-padding is the margin
+# around each button's icon+label, NOT the bar-edge gap. px sizes are ABSOLUTE
+# (bypass `scale`; see the Size type in the wayle docs). With bar padding 0 the
+# bar height is the tallest button = button-icon-size + 2*button-label-padding =
+# 20 + 2*4 = 28. So: 28px bar, widgets flush to the screen edges, 4px breathing
+# room inside each widget. `scale` stays 0.75 for HORIZONTAL inter-widget
+# spacing only (module-gap, button-gap) — it no longer affects height.
 scale = 0.75
-# Bigger label/icon content (equal sizes so they align vertically), padding
-# kept modest to balance height vs vertical centering.
-button-label-size = 1.15
-button-icon-size = 1.15
-padding = 0.15
+button-icon-size = "20px"
+button-label-size = "14px"
+button-label-padding = "4px"
+padding = "0px"
+padding-ends = "0px"
 module-gap = 0.35
 button-border-location = "none"
 
@@ -67,13 +73,9 @@ right = [
   "network",
   "bluetooth",
   "custom-hyprsunset",
-  "custom-pp-saver",
-  "custom-pp-balanced",
-  "custom-pp-performance",
+  "custom-powerprofile",
   "systray",
-  "custom-vpn-on",
-  "custom-vpn-connecting",
-  "custom-vpn-off",
+  "custom-vpn",
   "notifications",
   "power",
 ]
@@ -89,23 +91,31 @@ format = "%Y-%m-%d %H:%M"
 "Spanish" = "ES"
 "Spanish (Spain)" = "ES"
 
-# Numbers, with the old waybar per-workspace colors via the map (color applies
-# to the label). Hyprland workspace IDs are stable 1-10 so the map lands; niri
-# IDs are dynamic so its module just shows plain numbers.
+# Show workspace NUMBERS (display-mode = "label"). The workspace-map below sets
+# only `color` per workspace — NOT `icon`: a map `icon` is "shown regardless"
+# and would replace the number (that was the missing-numbers bug). `color` is
+# the active-workspace background (active-indicator defaults to "background");
+# the number itself is colored by the module's active/occupied/empty-color.
+# Hyprland IDs are stable 1-10 so the map lands; niri IDs are dynamic (plain
+# numbers, no map). label-size pinned in px to match the bar buttons.
 [modules.hyprland-workspaces]
 display-mode = "label"
+label-size = "14px"
+
+[modules.niri-workspaces]
+label-size = "14px"
 
 [modules.hyprland-workspaces.workspace-map]
-1 = { icon = "tbf-circle-symbolic", color = "#89b4fa" }
-2 = { icon = "tbf-circle-symbolic", color = "#f0c6c6" }
-3 = { icon = "tbf-circle-symbolic", color = "#ddb6f2" }
-4 = { icon = "tbf-circle-symbolic", color = "#f5bde6" }
-5 = { icon = "tbf-circle-symbolic", color = "#f28d8c" }
-6 = { icon = "tbf-circle-symbolic", color = "#e8a2a1" }
-7 = { icon = "tbf-circle-symbolic", color = "#f8bd96" }
-8 = { icon = "tbf-circle-symbolic", color = "#fae3b0" }
-9 = { icon = "tbf-circle-symbolic", color = "#a6d189" }
-10 = { icon = "tbf-circle-symbolic", color = "#81c8be" }
+1 = { color = "#89b4fa" }
+2 = { color = "#f0c6c6" }
+3 = { color = "#ddb6f2" }
+4 = { color = "#f5bde6" }
+5 = { color = "#f28d8c" }
+6 = { color = "#e8a2a1" }
+7 = { color = "#f8bd96" }
+8 = { color = "#fae3b0" }
+9 = { color = "#a6d189" }
+10 = { color = "#81c8be" }
 
 # --- Wallpaper (replaces hyprpaper + awww) ---------------------------------
 # Same image on every monitor. config's [[wallpaper.monitors]] only does
@@ -122,11 +132,15 @@ transition-fps = 60
 # --- OSD (new: waybar had no volume/brightness overlay) --------------------
 [osd]
 enabled = true
+# Center the toast/toggle content (the keyboard-layout toast). Fork knob added
+# in wayle-config osd schema; sliders keep their own label+value layout.
+text-align = "center"
 
-# Tray icons render smaller than the symbolic icons in the other widgets
-# (button-icon-size = 1.15). Bump icon-scale so SNI tray items match.
+# Match the other modules' 20px icon content (centered in the 28px bar like the
+# buttons' padded content). Pinned in px (was a 1.3 scale bump); internal-padding
+# is horizontal-only on a top bar, so the tray contributes only its icon height.
 [modules.systray]
-icon-scale = 1.3
+icon-scale = "20px"
 
 # Drop the "00" count label — the bell icon already conveys state
 # (bell / bell-dot when unread / bell-off for DND).
@@ -248,83 +262,36 @@ icon-map = { auto = "ld-sun-moon-symbolic", off = "ld-sun-symbolic" }
 class-format = "hyprsunset-{{ alt }}"
 left-click = "wayle-widget hyprsunset-toggle"
 
-# VPN: three icon-only, color-coded modules — exactly one shows at a time
-# (hide-if-empty). icon-color/button-bg-color are static per module, so the
-# 3-state look (the old waybar: grey disconnected, yellow-bg connecting,
-# green connected) needs the split. on-action re-renders instantly on toggle.
-# Event-driven (watch mode): each watcher re-emits when the openconnect marker
-# files change — no polling. restart-policy revives the watch if inotifywait
-# dies. on-action gives instant click feedback.
+# VPN: one tri-state icon-only module. The watcher emits `alt` = on/connecting/
+# off; icon-map + color-map swap the icon AND its colors per state, replacing
+# the old three hide-if-empty modules (icon-color was static per module before
+# state colors existed). Old waybar look preserved: green lock connected,
+# yellow-bg refresh connecting, grey unplug disconnected. Event-driven (watch):
+# re-emits when the openconnect marker files / tunnel link change — no polling.
 [[modules.custom]]
-id = "vpn-on"
+id = "vpn"
 mode = "watch"
 restart-policy = "on-exit"
-command = "wayle-widget vpn-watch on"
-icon-name = "ld-lock-symbolic"
-icon-color = "green"
+command = "wayle-widget vpn-watch"
 label-show = false
-hide-if-empty = true
 left-click = "vpn-konform-bar toggle"
-
-[[modules.custom]]
-id = "vpn-connecting"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget vpn-watch connecting"
-icon-name = "ld-refresh-cw-symbolic"
-button-bg-color = "yellow"
-icon-color = "bg-base"
-label-show = false
-hide-if-empty = true
-left-click = "vpn-konform-bar toggle"
-
-[[modules.custom]]
-id = "vpn-off"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget vpn-watch off"
 icon-name = "ld-unplug-symbolic"
-icon-color = "fg-muted"
-label-show = false
-hide-if-empty = true
-left-click = "vpn-konform-bar toggle"
+icon-map = { on = "ld-lock-symbolic", connecting = "ld-refresh-cw-symbolic", off = "ld-unplug-symbolic" }
+color-map = { on = { icon-color = "green" }, connecting = { button-bg-color = "yellow", icon-color = "bg-base" }, off = { icon-color = "fg-muted" } }
 
-# No built-in power-profiles module. Three icon-only, color-coded modules —
-# exactly one shows at a time (hide-if-empty), since icon-color is static per
-# module. Event-driven (watch) on the daemon's D-Bus ActiveProfile signal;
-# click any to cycle. power-saver=green, balanced=blue, performance=red.
+# No built-in power-profiles module. One module: the watcher emits the active
+# profile as `alt`; icon-map + color-map swap icon + color per state (replacing
+# the old three hide-if-empty modules). Event-driven (watch) on the daemon's
+# D-Bus ActiveProfile signal; click cycles. saver=green, balanced=blue,
+# performance=red.
 [[modules.custom]]
-id = "pp-saver"
+id = "powerprofile"
 mode = "watch"
 restart-policy = "on-exit"
-command = "wayle-widget powerprofile-watch power-saver"
+command = "wayle-widget powerprofile-watch"
 label-show = false
-hide-if-empty = true
-icon-name = "ld-leaf-symbolic"
-icon-color = "green"
-tooltip-format = "Power profile: power-saver"
 left-click = "power-profile-cycle"
-
-[[modules.custom]]
-id = "pp-balanced"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget powerprofile-watch balanced"
-label-show = false
-hide-if-empty = true
 icon-name = "ld-scale-symbolic"
-icon-color = "blue"
-tooltip-format = "Power profile: balanced"
-left-click = "power-profile-cycle"
-
-[[modules.custom]]
-id = "pp-performance"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget powerprofile-watch performance"
-label-show = false
-hide-if-empty = true
-icon-name = "ld-rocket-symbolic"
-icon-color = "red"
-tooltip-format = "Power profile: performance"
-left-click = "power-profile-cycle"
+icon-map = { power-saver = "ld-leaf-symbolic", balanced = "ld-scale-symbolic", performance = "ld-rocket-symbolic" }
+color-map = { power-saver = { icon-color = "green" }, balanced = { icon-color = "blue" }, performance = { icon-color = "red" } }
+tooltip-format = "Power profile: {{ alt }}"

@@ -198,6 +198,9 @@ local function setup_autostart()
             -- modules replace those tray icons.
             scripts .. "/hy3.tiling.sh",
             scripts .. "/monitor.toggle.sh daemon",
+            -- Toast the active keyboard layout on each grp:toggle switch (xkb
+            -- toggles internally — no keybind to hook; listen to socket2).
+            "wayle-widget kb-toast hypr",
         }) do
             hl.exec_cmd(cmd)
         end
