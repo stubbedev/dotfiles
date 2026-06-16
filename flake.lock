@@ -1400,13 +1400,17 @@
       }
     },
     "wayle": {
-      "flake": false,
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
       "locked": {
-        "lastModified": 1781615304,
-        "narHash": "sha256-SKes+S7JfWtLDIrseMDP55UsEQX0BpTnW9zdBpm0mcY=",
+        "lastModified": 1781642896,
+        "narHash": "sha256-YINm9oHWH2Bfw/VY4t5cz17Y9F4ZlT9ekog4dgJGaI8=",
         "owner": "stubbedev",
         "repo": "wayle",
-        "rev": "3b06178f6aab4fe7102b12e52f48b74cfb9aadf9",
+        "rev": "d292f9fd306eba50242b8c9881d670a4ab9dcc2d",
         "type": "github"
       },
       "original": {

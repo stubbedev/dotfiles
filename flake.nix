@@ -49,10 +49,10 @@
       flake = false;
     };
     # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
-    # No upstream flake; packaged in modules/overlays.nix as pkgs.wayle.
+    # Ships its own flake; we consume overlays.default (modules/overlays.nix).
     wayle = {
       url = "github:stubbedev/wayle/master";
-      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     # PHP language server (Rust). Ships its own flake; we consume
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
