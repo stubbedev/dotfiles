@@ -1402,11 +1402,11 @@
     "wayle": {
       "flake": false,
       "locked": {
-        "lastModified": 1781600412,
-        "narHash": "sha256-c5MAGBZhYVEueHxtv8oiVMRnpmBRvHpaq1Yod24Adz8=",
+        "lastModified": 1781604013,
+        "narHash": "sha256-qncXaYifk0VoXWDXa2fl3Rz3e4+phQEynuUOj2QczgI=",
         "owner": "stubbedev",
         "repo": "wayle",
-        "rev": "28a2497fdb1285f47811027383d6e6397dbbd5c7",
+        "rev": "80b6ef6a0cdff3420c4e9692697b2619adebdd4f",
         "type": "github"
       },
       "original": {
