@@ -216,7 +216,6 @@ left-click = "wleave"
 # otherwise render "--" while idle. Flip label-show = true for an elapsed timer
 # while recording.
 [modules.recorder]
-icon-idle = "ld-disc-3-symbolic"
 icon-color = "fg-muted"
 label-show = false
 
