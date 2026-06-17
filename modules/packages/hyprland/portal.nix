@@ -10,20 +10,16 @@ _: {
       lib,
       config,
       homeLib,
-      hyprland-preview-share-picker,
       ...
     }:
     let
-      inherit (pkgs.stdenv.hostPlatform) system;
-
-      # GTK4 + gtk4-layer-shell picker that replaces xdph's bundled Qt
-      # `hyprland-share-picker`. gfxExe (not gfx): the buildRustPackage
-      # output carries no meta.mainProgram, so name the binary explicitly;
-      # gfxExe also nixGL-wraps it on non-NixOS so GTK4/EGL find their drivers.
-      picker =
-        homeLib.gfxExe "hyprland-preview-share-picker"
-          hyprland-preview-share-picker.packages.${system}.default;
-      pickerBin = "${picker}/bin/hyprland-preview-share-picker";
+      # Screencast picker is wayle's built-in `share-picker` subcommand
+      # (replaces the standalone hyprland-preview-share-picker). gfxExe wraps
+      # the wayle binary with nixGL on non-NixOS so its GTK4/EGL find drivers;
+      # passthrough on NixOS. Its icons resolve from wayle's share/ dir, already
+      # on XDG_DATA_DIRS via the wrapped wayle package (modules/home/wayle.nix).
+      picker = homeLib.gfxExe "wayle" pkgs.wayle;
+      pickerBin = "${picker}/bin/wayle share-picker";
     in
     lib.mkIf config.features.hyprland {
       home.packages = with pkgs; [
@@ -31,27 +27,19 @@ _: {
         hyprland-protocols
         xdg-desktop-portal-hyprland
         xdg-desktop-portal-wlr
-        picker
       ];
 
-      # Theme + layout for the picker are symlinked from src/ (config.yaml
-      # points at the sibling style.css by relative path). xdph resolves the
-      # picker by the absolute path in xdph.conf — its systemd user service
-      # doesn't have the user profile bin on PATH, so a bare name wouldn't
-      # resolve. Region selection inside the picker still shells out to slurp
-      # (mocha-themed via modules/packages/wayland/tools.nix). Restart the
-      # portal after changes: systemctl --user restart xdg-desktop-portal-hyprland
-      xdg.configFile =
-        homeLib.xdgSources [
-          "hyprland-preview-share-picker/config.yaml"
-          "hyprland-preview-share-picker/style.css"
-        ]
-        // {
-          "hypr/xdph.conf".text = ''
-            screencopy {
-              custom_picker_binary = ${pickerBin}
-            }
-          '';
-        };
+      # xdph resolves the picker by the absolute path in xdph.conf — its systemd
+      # user service doesn't have the user profile bin on PATH, so a bare name
+      # wouldn't resolve. xdph execs the value via /bin/sh -c, so the
+      # `share-picker` argument is fine. Region selection inside the picker
+      # still shells out to slurp (mocha-themed via
+      # modules/packages/wayland/tools.nix). Restart the portal after changes:
+      # systemctl --user restart xdg-desktop-portal-hyprland
+      xdg.configFile."hypr/xdph.conf".text = ''
+        screencopy {
+          custom_picker_binary = ${pickerBin}
+        }
+      '';
     };
 }

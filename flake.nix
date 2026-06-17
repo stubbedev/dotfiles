@@ -20,12 +20,6 @@
       url = "github:hyprwm/hyprland-guiutils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # GTK4 screencast picker replacing xdph's bundled Qt hyprland-share-picker.
-    # submodules=1: the build needs the hyprland-protocols git submodule.
-    hyprland-preview-share-picker = {
-      url = "git+https://github.com/stubbedev/hyprland-preview-share-picker?submodules=1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     hy3 = {
       # hl0.55.0 targets hyprland 0.55.1; compatible with our v0.55.4.
       # Follows our hyprland input so it builds against the same headers.

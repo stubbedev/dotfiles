@@ -594,28 +594,6 @@
         "type": "github"
       }
     },
-    "hyprland-preview-share-picker": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1781504859,
-        "narHash": "sha256-DCXq/yMaoigXN8RqVKMV0KRV5qvXKXEczEp7xvrkHa8=",
-        "ref": "refs/heads/master",
-        "rev": "a9e54a84605ff43487ab1c0e58508c0407813712",
-        "revCount": 59,
-        "submodules": true,
-        "type": "git",
-        "url": "https://github.com/stubbedev/hyprland-preview-share-picker"
-      },
-      "original": {
-        "submodules": true,
-        "type": "git",
-        "url": "https://github.com/stubbedev/hyprland-preview-share-picker"
-      }
-    },
     "hyprland-protocols": {
       "inputs": {
         "nixpkgs": [
@@ -1212,7 +1190,6 @@
         "hy3": "hy3",
         "hyprland": "hyprland",
         "hyprland-guiutils": "hyprland-guiutils_2",
-        "hyprland-preview-share-picker": "hyprland-preview-share-picker",
         "impermanence": "impermanence",
         "import-tree": "import-tree",
         "lanzaboote": "lanzaboote",

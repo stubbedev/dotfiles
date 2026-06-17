@@ -36,7 +36,6 @@
           treeman
           ;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
-        "hyprland-preview-share-picker" = inputs."hyprland-preview-share-picker";
       };
     };
 }
