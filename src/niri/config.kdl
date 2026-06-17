@@ -215,8 +215,8 @@ binds {
     Shift+Print { screenshot-screen; }
     Mod+Print { screenshot-window; }
 
-    // SCREEN RECORDING (gpu-screen-recorder, focused monitor + audio)
-    Mod+Shift+R { spawn "screen-record" "toggle"; }
+    // SCREEN RECORDING (wayle's native GStreamer recorder; bar widget mirrors state)
+    Mod+Shift+R { spawn "wayle" "recorder" "toggle"; }
 
     // CLIPBOARD
     Mod+V { spawn "bash" "-c" "cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send 'Pasted selection'"; }

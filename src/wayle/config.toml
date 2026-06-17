@@ -69,7 +69,7 @@ right = [
   "custom-mail",
   "custom-treeman",
   "keyboard-input",
-  "custom-screenrec",
+  "recorder",
   "volume",
   "microphone",
   "brightness",
@@ -202,6 +202,24 @@ units = "metric"
 [modules.power]
 left-click = "wleave"
 
+# Native GStreamer recorder (replaces the old custom-screenrec module +
+# gpu-screen-recorder stack). left-click toggles capture (`wayle recorder
+# toggle`), right-click opens the options dropdown (codec/fps/webcam/audio).
+# SUPER+SHIFT+R also toggles it (hyprland.lua / niri config.kdl).
+#
+# Bar fit: button-variant = "basic" renders a transparent background, so the
+# module's red icon-bg/button-bg defaults never paint. The recording state is
+# shown by the icon swap (disc idle → circle-dot recording → circle-pause).
+# Colors are static per the schema (not state-driven), so the icon is kept a
+# neutral fg-muted instead of the loud always-red default. label-show = false
+# to match the icon-only right cluster — the "{{ elapsed }}" label would
+# otherwise render "--" while idle. Flip label-show = true for an elapsed timer
+# while recording.
+[modules.recorder]
+icon-idle = "ld-disc-3-symbolic"
+icon-color = "fg-muted"
+label-show = false
+
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
 # custom module parses that natively, so they are reused unchanged. The
@@ -245,19 +263,6 @@ icon-show = false
 left-click = "treeman worktree list"
 # treeman emits nothing when idle → collapse the slot entirely.
 hide-if-empty = true
-
-# Event-driven (watch): re-renders when the recorder pid markers change.
-[[modules.custom]]
-id = "screenrec"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget screenrec-watch"
-icon-name = "ld-disc-3-symbolic"
-# Icon-only (always clickable to start a recording); idle/recording shown via
-# color + tooltip, so no empty label slot.
-label-show = false
-left-click = "screen-record toggle"
-middle-click = "screen-record toggle --cam"
 
 # Blue-light filter. hyprsunset has no native lat/long mode, so the
 # hyprsunset-sun service sets the daemon temperature on the real sunrise/sunset

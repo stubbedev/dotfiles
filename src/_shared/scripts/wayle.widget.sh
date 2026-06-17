@@ -7,7 +7,6 @@
 # then re-emit on each real state change — no polling. Sources:
 #   mail        inotify on the notmuch maildir (new/cur)
 #   treeman     `treeman logs tail --follow` event stream
-#   screenrec   inotify on the gpu-screen-recorder pid markers
 #   vpn-watch   inotify on the openconnect pid/connecting markers
 #   powerprofile  power-profiles-daemon D-Bus ActiveProfile signal
 set -uo pipefail
@@ -37,7 +36,6 @@ mail_line() { emit_line 'if (.text | test("[0-9]")) then (.text |= gsub("[^0-9]"
 # treeman custom module drops its own icon-name (config.toml) to avoid a
 # duplicate leading icon.
 treeman_line() { emit_line '.' treeman-status; }
-screenrec_line() { emit_line '.text = (if .alt == "recording" then "rec" else "" end)' screen-record status; }
 
 rt="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
@@ -63,17 +61,6 @@ case "${1:-}" in
     treeman_line
     treeman logs tail --follow --all --json --since 1s 2>/dev/null |
       while IFS= read -r _; do treeman_line; done
-    ;;
-
-  # gpu-screen-recorder pid markers appear/vanish on start/stop. inotifywait
-  # --include matches the watched DIR, not the filename, so emit the filename
-  # with --format and filter it here.
-  screenrec-watch)
-    screenrec_line
-    inotifywait -q -m -e create,delete,close_write,moved_to,moved_from --format '%f' "$rt" 2>/dev/null |
-      while IFS= read -r f; do
-        case "$f" in gpu-screen-recorder*.pid) screenrec_line ;; esac
-      done
     ;;
 
   # VPN state changes from two sources, both event-driven:

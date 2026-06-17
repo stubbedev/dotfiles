@@ -156,9 +156,9 @@ _: {
       );
 
       # slurp has no config file — colours can only come from CLI flags. Bake
-      # the Catppuccin Mocha palette into a wrapper so every caller (the
-      # screenshot bind, screen-record's webcam overlay) gets the same overlay
-      # without repeating flags. base @ 80% bg, mauve border, transparent fill.
+      # the Catppuccin Mocha palette into a wrapper so the screenshot region
+      # picker gets a themed overlay without repeating flags. base @ 80% bg,
+      # mauve border, transparent fill.
       slurpThemed = pkgs.symlinkJoin {
         name = "slurp-mocha";
         paths = [ pkgs.slurp ];

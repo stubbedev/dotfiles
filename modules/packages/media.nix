@@ -93,15 +93,6 @@ _: {
           # Image viewer (Wayland, GPU; default opener for still images,
           # mime maps live alongside the mpv ones in the same two files)
           (homeLib.gfx imv)
-        ]
-        # gpu-screen-recorder: on NixOS the system module owns it (it installs a
-        # setcap wrapper for promptless KMS capture — see
-        # modules/nixos/gpu-screen-recorder.nix), so only ship the nixGL-wrapped
-        # binary here on non-NixOS hosts to avoid shadowing the wrapped one.
-        ++ lib.optionals (config.host.platform != "nixos") [
-          (homeLib.gfx pkgs.gpu-screen-recorder)
-        ]
-        ++ [
 
           # Terminal image viewers (some use GPU)
           chafa
