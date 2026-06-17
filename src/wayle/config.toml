@@ -45,17 +45,17 @@ button-variant = "basic"
 # 20 + 2*4 = 28. So: 28px bar, widgets flush to the screen edges, 4px breathing
 # room inside each widget. `scale` stays 0.75 for HORIZONTAL inter-widget
 # spacing only (module-gap, button-gap) — it no longer affects height.
-scale = 0.75
+scale = 1.00
 button-icon-size = "20px"
 button-label-size = "14px"
 button-label-padding = "4px"
 # Gap between a widget's icon and its label (margin on the label). Pinned in px
 # like the rest — the lone scale default rendered as no visible gap here. Auto-
 # suppressed when a widget has no label (icon-only widgets stay tight).
-button-gap = "8px"
+button-gap = "4px"
 padding = "0px"
 padding-ends = "0px"
-module-gap = 0.35
+module-gap = "4px"
 button-border-location = "none"
 
 [[bar.layout]]
