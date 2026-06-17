@@ -31,6 +31,9 @@ in
         ${lib.optionalString config.features.treeman ''
           ${treemanBin} completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_treeman 2>/dev/null
         ''}
+        ${lib.optionalString config.features.wayle ''
+          ${pkgs.wayle}/bin/wayle completions zsh > ${stubbeDir}/src/zsh/fpaths.d/_wayle 2>/dev/null
+        ''}
         ${lib.optionalString config.features.k8s ''
           ${pkgs.kubectl}/bin/kubectl completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_kubectl 2>/dev/null
           ${pkgs.minikube}/bin/minikube completion zsh > ${stubbeDir}/src/zsh/fpaths.d/_minikube 2>/dev/null
