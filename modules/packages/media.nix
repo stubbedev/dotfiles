@@ -66,47 +66,45 @@ _: {
       };
     in
     lib.mkIf config.features.media {
-      home.packages =
-        with pkgs;
-        [
-          # Image processing (CLI tools, no wrapping needed)
-          imagemagick
-          libembroidery
-          pngquant
-          exiftool
-          c2patool
-          dcraw
-          libraw
-          librsvg
-          ghostscript-latest
-          mupdf
+      home.packages = with pkgs; [
+        # Image processing (CLI tools, no wrapping needed)
+        imagemagick
+        libembroidery
+        pngquant
+        exiftool
+        c2patool
+        dcraw
+        libraw
+        librsvg
+        ghostscript-latest
+        mupdf
 
-          # Video/media (ffmpeg uses GPU acceleration)
-          (homeLib.gfx ffmpeg-full)
-          (homeLib.gfxExe "ffprobe" ffmpeg-full)
-          (homeLib.gfxExe "ffplay" ffmpeg-full)
+        # Video/media (ffmpeg uses GPU acceleration)
+        (homeLib.gfx ffmpeg-full)
+        (homeLib.gfxExe "ffprobe" ffmpeg-full)
+        (homeLib.gfxExe "ffplay" ffmpeg-full)
 
-          # Video player (GPU-accelerated output; default opener for video,
-          # see mime maps in modules/home/xdg/base.nix + modules/nixos/mime-defaults.nix)
-          (homeLib.gfx mpv)
+        # Video player (GPU-accelerated output; default opener for video,
+        # see mime maps in modules/home/xdg/base.nix + modules/nixos/mime-defaults.nix)
+        (homeLib.gfx mpv)
 
-          # Image viewer (Wayland, GPU; default opener for still images,
-          # mime maps live alongside the mpv ones in the same two files)
-          (homeLib.gfx imv)
+        # Image viewer (Wayland, GPU; default opener for still images,
+        # mime maps live alongside the mpv ones in the same two files)
+        (homeLib.gfx imv)
 
-          # Terminal image viewers (some use GPU)
-          chafa
-          imgcat
-          (homeLib.gfx viu)
-          (homeLib.gfxExe "ueberzugpp" ueberzugpp)
+        # Terminal image viewers (some use GPU)
+        chafa
+        imgcat
+        (homeLib.gfx viu)
+        (homeLib.gfxExe "ueberzugpp" ueberzugpp)
 
-          # Audio control (wrapped to avoid nixGL conflicts)
-          # GTK4 apps try to initialize GL even if they don't render anything with it
-          # This causes crashes when LD_LIBRARY_PATH contains nixGL NVIDIA drivers
-          pavucontrol-wrapped
+        # Audio control (wrapped to avoid nixGL conflicts)
+        # GTK4 apps try to initialize GL even if they don't render anything with it
+        # This causes crashes when LD_LIBRARY_PATH contains nixGL NVIDIA drivers
+        pavucontrol-wrapped
 
-          # Office suite (GUI app)
-          (homeLib.gfx libreoffice-fresh)
-        ];
+        # Office suite (GUI app)
+        (homeLib.gfx libreoffice-fresh)
+      ];
     };
 }
