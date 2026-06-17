@@ -13,8 +13,12 @@ let
 in
 {
   flake.modules.nixos.nixSettings =
-    { config, ... }:
+    { config, pkgs, ... }:
     {
+      # attic CLI for the system/root side (daemon-level cache push/pull).
+      # Mirrored on the HM side in modules/packages/nix-tools.nix.
+      environment.systemPackages = [ pkgs.attic-client ];
+
       nix = {
         settings = {
           experimental-features = [

@@ -13,6 +13,7 @@ _: {
         pass
         age
         cachix
+        attic-client
         nixd
         nixdoc
         nil
