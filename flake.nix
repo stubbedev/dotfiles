@@ -45,7 +45,10 @@
     # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
     # Ships its own flake; we consume overlays.default (modules/overlays.nix).
     wayle = {
-      url = "github:stubbedev/wayle/master";
+      # ?submodules=1: wayle-cava vendors cava's C sources as a git submodule
+      # (crates/wayle-cava/cava); the github fetcher skips submodules by default,
+      # which leaves cava/src/*.c missing and breaks the build.
+      url = "git+https://github.com/stubbedev/wayle.git?ref=master&submodules=1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # PHP language server (Rust). Ships its own flake; we consume

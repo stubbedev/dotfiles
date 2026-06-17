@@ -1400,17 +1400,19 @@
       },
       "locked": {
         "lastModified": 1781709837,
-        "narHash": "sha256-yS04tL3umIHDVmqKp+RCd6zSyMC0avaEJ2y02Nn3pVY=",
-        "owner": "stubbedev",
-        "repo": "wayle",
+        "narHash": "sha256-IbqC4rarQ/XaPG4X7TUW6vt0qcwrALGRx3xlQ7eh72k=",
+        "ref": "master",
         "rev": "03b11ec201b77f46ac375115537bbb993987aaa6",
-        "type": "github"
+        "revCount": 612,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/stubbedev/wayle.git"
       },
       "original": {
-        "owner": "stubbedev",
         "ref": "master",
-        "repo": "wayle",
-        "type": "github"
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/stubbedev/wayle.git"
       }
     },
     "wrappers": {
