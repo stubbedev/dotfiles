@@ -1422,11 +1422,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781684849,
-        "narHash": "sha256-SNwJwL0Lu5kvpHVqU1yYi9XuEWS3KSiv4XYaRR+mTj8=",
+        "lastModified": 1781688966,
+        "narHash": "sha256-66cOHFanHq86WBT6oAS0gP0QZNjy7FZG5k96Mu/Rz30=",
         "owner": "stubbedev",
         "repo": "wayle",
-        "rev": "83a851a0863593f283b1b0ade1f7d5d89889d7dc",
+        "rev": "539b3da58bb2058a0162a4de3ed4104d9f287695",
         "type": "github"
       },
       "original": {
