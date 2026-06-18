@@ -236,19 +236,33 @@ icon-name = "ld-layers-symbolic"
 label-show = false
 hide-if-empty = true
 
-# Built-in mail module (replaces the old custom-mail wrapper): runs
-# `notmuch count <query>` and re-queries on each maildir change via an inotify
-# watch — event-driven, no poll. Query mirrors mail-status.sh's per-account
-# sum: unread in either account's INBOX (kontainer + gmail; see
-# modules/files/mail.nix). NB: the built-in is count-only — this drops the
-# per-account new-mail desktop notifications and per-account tooltip that
-# mail-status.sh emitted.
+# Built-in mail module — fully replaces mail-status.sh. notmuch count +
+# inotify maildir watch (event-driven, no poll). `accounts` gives the
+# per-account unread breakdown (kontainer + gmail; see modules/files/mail.nix)
+# in the native dropdown with brand icons; the bar count is their sum (top-level
+# `query` is then ignored). Native `notify` fires a notify-send on each rise in
+# the total — generic count body, no sender/subject (mail-status.sh's richer
+# per-message notification was dropped for an all-native setup).
 [modules.mail]
-query = "tag:unread and (folder:kontainer/INBOX or folder:gmail/INBOX)"
 icon-name = "ld-mail-symbolic"
-left-click = "mail-open"
 # Collapse the slot at zero unread — appears with a count only when mail arrives.
 hide-when-zero = true
+notify = true
+notify-summary = "New mail"
+notify-body = "{{ new }} new ({{ count }} unread)"
+# left-click opens the native per-account dropdown; client-launch on middle.
+left-click = "dropdown:mail"
+middle-click = "mail-open"
+
+[[modules.mail.accounts]]
+name = "Kontainer"
+query = "folder:kontainer/INBOX and tag:unread"
+provider = "outlook"
+
+[[modules.mail.accounts]]
+name = "Gmail"
+query = "folder:gmail/INBOX and tag:unread"
+provider = "gmail"
 
 # Event-driven (watch): re-renders on each treeman daemon lifecycle event.
 # icon-show = false: treeman's text is a compact per-bucket "{glyph} {count}"

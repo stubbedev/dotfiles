@@ -2,10 +2,10 @@ _: {
   flake.modules.nixos.powerProfiles = _: {
     # Provides the system D-Bus service at /net/hadess/PowerProfiles.
     # Required by:
-    #   - the wayle power-profile widgets (wayle-widget powerprofile-watch:
-    #     `powerprofilesctl get` + dbus-monitor on the ActiveProfile signal)
-    #   - src/_shared/scripts/power.profile.{cycle,fix}.sh
-    # Without this enabled, the PPD widget reads "unknown" and the
+    #   - wayle's built-in power-profiles module (reads ActiveProfile over this
+    #     D-Bus interface; left-click ":cycle" sets the profile)
+    #   - src/_shared/scripts/power.profile.fix.sh
+    # Without this enabled, the module reads "unknown" and the
     # power-profile fix script's reactive loop never fires.
     #
     # The companion polkit rule for letting the primary user write CPU

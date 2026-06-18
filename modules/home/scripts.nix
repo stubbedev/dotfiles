@@ -79,9 +79,7 @@
             WALLPAPER = constants.paths.wallpaper;
           };
         };
-        mail-status.source = "src/_shared/scripts/mail-status.sh";
         treeman-status.source = "src/_shared/scripts/treeman-status.sh";
-        power-profile-cycle.source = "src/_shared/scripts/power.profile.cycle.sh";
         # Reshapes the status scripts' JSON for wayle custom modules: drops the
         # nerd-font glyph (wayle shows icon-name instead), keeps a clean value.
         wayle-widget.source = "src/_shared/scripts/wayle.widget.sh";
@@ -127,9 +125,7 @@
       # on PATH for wayle's custom modules.
       wayleNames = [
         "wayle-launch"
-        "mail-status"
         "treeman-status"
-        "power-profile-cycle"
         "wayle-widget"
       ];
       isUnconditional = name: builtins.elem name unconditionalNames;

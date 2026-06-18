@@ -5,10 +5,10 @@
 #
 # Every mode is event-driven (wayle `mode = "watch"`): emit the current line,
 # then re-emit on each real state change — no polling. Sources:
-#   mail        inotify on the notmuch maildir (new/cur)
 #   treeman     `treeman logs tail --follow` event stream
 #   vpn-watch   inotify on the openconnect pid/connecting markers
-#   powerprofile  power-profiles-daemon D-Bus ActiveProfile signal
+#   submap      tmpfs marker written by the hl Lua resize submap
+#   hyprsunset  state file written by the hyprsunset-sun scheduler
 set -uo pipefail
 
 # Emit one reshaped line for a poll-style status cmd: JSON when it has output,
@@ -29,7 +29,6 @@ vpn_line() {
   emit_line '{alt: (if .class == "connected" then "on" elif .class == "connecting" then "connecting" else "off" end), tooltip}' vpn-konform-bar status
 }
 
-mail_line() { emit_line 'if (.text | test("[0-9]")) then (.text |= gsub("[^0-9]";"")) else empty end' mail-status; }
 # Pass treeman's text through unchanged: its waybar text is a compact
 # per-bucket "{glyph} {count}" line (configured via status.formats.icon in
 # ~/.config/treeman/config.yaml), so the bucket glyphs ARE the content. The
@@ -40,19 +39,6 @@ treeman_line() { emit_line '.' treeman-status; }
 rt="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 case "${1:-}" in
-  # New mail / read state changes land in the maildir's new/ and cur/ dirs.
-  # Single-shot inotify + a short settle coalesces an mbsync burst into one
-  # notmuch query instead of one per delivered file.
-  mail-watch)
-    maildir="$(notmuch config get database.path 2>/dev/null || true)"
-    mail_line
-    [ -n "$maildir" ] || exit 0
-    while inotifywait -q -r -e create,moved_to,moved_from,delete --include '/(new|cur)/' "$maildir" >/dev/null 2>&1; do
-      sleep 0.5
-      mail_line
-    done
-    ;;
-
   # treeman daemon streams lifecycle events; re-render status on each.
   # --all: global (status aggregates every repo; without it `logs tail`
   # auto-filters to the cwd, which for a bar widget is wrong/empty).
@@ -81,22 +67,6 @@ case "${1:-}" in
         openconnect-*.pid | openconnect-*.connecting | *oc-konform*) vpn_line ;;
       esac
     done
-    ;;
-
-  # Power profile as one module: emit the active profile as `alt`, which drives
-  # the module's icon-map + color-map (power-saver / balanced / performance).
-  # Re-emits on the daemon's D-Bus ActiveProfile signal.
-  powerprofile-watch)
-    pp() {
-      local cur
-      cur="$(powerprofilesctl get 2>/dev/null)"
-      [ -n "$cur" ] && printf '{"alt":"%s"}\n' "$cur" || echo
-    }
-    pp
-    dbus-monitor --system "type='signal',path=/net/hadess/PowerProfiles,interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'" 2>/dev/null |
-      while IFS= read -r line; do
-        case "$line" in *ActiveProfile*) pp ;; esac
-      done
     ;;
 
   # Submap indicator: the hl Lua submap (SUPER+R resize_mode) writes a tmpfs
