@@ -19,7 +19,26 @@ _: {
       # passthrough on NixOS. Its icons resolve from wayle's share/ dir, already
       # on XDG_DATA_DIRS via the wrapped wayle package (modules/home/wayle.nix).
       picker = homeLib.gfxExe "wayle" pkgs.wayle;
-      pickerBin = "${picker}/bin/wayle share-picker";
+
+      # xdph execs custom_picker_binary with execvp() — NO shell, no word
+      # splitting (see CProcess in hyprutils: execvp(binary, args)). So a
+      # "wayle share-picker" string is treated as one filename-with-a-space and
+      # fails; the subcommand has to be baked into a no-arg binary. This wrapper
+      # forwards xdph's only optional arg (--allow-token) through to the
+      # subcommand. Region selection inside the picker still shells out to slurp
+      # (mocha-themed via modules/packages/wayland/tools.nix).
+      sharePicker = pkgs.writeShellScriptBin "wayle-share-picker" ''
+        exec ${picker}/bin/wayle share-picker "$@"
+      '';
+
+      # Reference the wrapper by its STABLE profile path, not its /nix/store
+      # path. profileDirectory is /home/stubbe/.nix-profile on standalone HM and
+      # /etc/profiles/per-user/stubbe on NixOS — both constant across rebuilds
+      # (only the symlink target moves). xdph caches this string at startup and
+      # spawns the picker fresh per screenshare, so the cached path stays valid
+      # across wayle bumps with no portal restart. xdph's user service has no
+      # profile bin on PATH, hence the absolute path rather than a bare name.
+      pickerBin = "${config.home.profileDirectory}/bin/wayle-share-picker";
     in
     lib.mkIf config.features.hyprland {
       home.packages = with pkgs; [
@@ -27,17 +46,9 @@ _: {
         hyprland-protocols
         xdg-desktop-portal-hyprland
         xdg-desktop-portal-wlr
+        sharePicker
       ];
 
-      # xdph resolves the picker by the absolute path in xdph.conf — its systemd
-      # user service doesn't have the user profile bin on PATH, so a bare name
-      # wouldn't resolve. xdph execs the value via /bin/sh -c, so the
-      # `share-picker` argument is fine. Region selection inside the picker
-      # still shells out to slurp (mocha-themed via
-      # modules/packages/wayland/tools.nix). xdph caches this path at startup,
-      # so the portal must restart when it moves — modules/home/systemd.nix
-      # wires this file's store path into the xdph unit's X-Restart-Triggers so
-      # sd-switch bounces the portal automatically on a wayle rebuild.
       xdg.configFile."hypr/xdph.conf".text = ''
         screencopy {
           custom_picker_binary = ${pickerBin}

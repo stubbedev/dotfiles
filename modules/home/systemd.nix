@@ -60,12 +60,12 @@ _: {
               After = [ "hyprland-session.target" ];
               # xdph reads xdph.conf once at startup and caches the screencast
               # custom_picker_binary path (modules/packages/hyprland/portal.nix).
-              # That path is wayle's store path, so it moves on every wayle
-              # rebuild — but the unit definition is otherwise unchanged, so
-              # sd-switch would leave the old xdph running with a stale (often
-              # GC'd) picker path, breaking the screencast picker until a manual
-              # restart. Bump the unit hash when xdph.conf moves so sd-switch
-              # restarts the portal, same trick as wayle.service below.
+              # That path is now a stable profile path, so it no longer moves on
+              # a wayle bump — but should we ever edit the conf itself, the unit
+              # definition is otherwise unchanged and sd-switch would leave the
+              # old xdph running with stale config. Bump the unit hash when
+              # xdph.conf's content changes so sd-switch restarts the portal,
+              # same trick as wayle.service below.
               X-Restart-Triggers = [
                 (toString config.xdg.configFile."hypr/xdph.conf".source)
               ];
