@@ -34,8 +34,10 @@ _: {
       # wouldn't resolve. xdph execs the value via /bin/sh -c, so the
       # `share-picker` argument is fine. Region selection inside the picker
       # still shells out to slurp (mocha-themed via
-      # modules/packages/wayland/tools.nix). Restart the portal after changes:
-      # systemctl --user restart xdg-desktop-portal-hyprland
+      # modules/packages/wayland/tools.nix). xdph caches this path at startup,
+      # so the portal must restart when it moves — modules/home/systemd.nix
+      # wires this file's store path into the xdph unit's X-Restart-Triggers so
+      # sd-switch bounces the portal automatically on a wayle rebuild.
       xdg.configFile."hypr/xdph.conf".text = ''
         screencopy {
           custom_picker_binary = ${pickerBin}
