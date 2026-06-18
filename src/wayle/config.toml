@@ -66,7 +66,7 @@ center = ["clock"]
 # Grouped left-to-right by purpose: activity → audio/hardware → connectivity →
 # system → tray → vpn → notifications → power.
 right = [
-  "custom-mail",
+  "mail",
   "custom-treeman",
   "keyboard-input",
   "recorder",
@@ -77,7 +77,7 @@ right = [
   "network",
   "bluetooth",
   "custom-hyprsunset",
-  "custom-powerprofile",
+  "power-profiles",
   "systray",
   "custom-vpn",
   "notifications",
@@ -236,17 +236,19 @@ icon-name = "ld-layers-symbolic"
 label-show = false
 hide-if-empty = true
 
-# Event-driven (watch): re-renders when the notmuch maildir changes — no poll.
-[[modules.custom]]
-id = "mail"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget mail-watch"
+# Built-in mail module (replaces the old custom-mail wrapper): runs
+# `notmuch count <query>` and re-queries on each maildir change via an inotify
+# watch — event-driven, no poll. Query mirrors mail-status.sh's per-account
+# sum: unread in either account's INBOX (kontainer + gmail; see
+# modules/files/mail.nix). NB: the built-in is count-only — this drops the
+# per-account new-mail desktop notifications and per-account tooltip that
+# mail-status.sh emitted.
+[modules.mail]
+query = "tag:unread and (folder:kontainer/INBOX or folder:gmail/INBOX)"
 icon-name = "ld-mail-symbolic"
 left-click = "mail-open"
-# Drops the widget at zero unread (wrapper emits an empty line) — no orphan
-# icon or empty label slot; appears with a count only when mail arrives.
-hide-if-empty = true
+# Collapse the slot at zero unread — appears with a count only when mail arrives.
+hide-when-zero = true
 
 # Event-driven (watch): re-renders on each treeman daemon lifecycle event.
 # icon-show = false: treeman's text is a compact per-bucket "{glyph} {count}"
@@ -298,19 +300,18 @@ icon-name = "ld-unplug-symbolic"
 icon-map = { on = "ld-lock-symbolic", connecting = "ld-refresh-cw-symbolic", off = "ld-unplug-symbolic" }
 color-map = { on = { icon-color = "green" }, connecting = { button-bg-color = "yellow", icon-color = "bg-base" }, off = { icon-color = "fg-muted" } }
 
-# No built-in power-profiles module. One module: the watcher emits the active
-# profile as `alt`; icon-map + color-map swap icon + color per state (replacing
-# the old three hide-if-empty modules). Event-driven (watch) on the daemon's
-# D-Bus ActiveProfile signal; click cycles. saver=green, balanced=blue,
-# performance=red.
-[[modules.custom]]
-id = "powerprofile"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget powerprofile-watch"
+# Built-in power-profiles module (replaces the old custom-powerprofile watcher
+# + power-profile-cycle script): same power-profiles-daemon D-Bus backend,
+# per-profile icon + color, cycles through profiles on left-click natively.
+# Re-renders on the daemon's ActiveProfile signal. saver=green, balanced=blue,
+# performance=red. Icon-only (label-show = false) to match the right cluster.
+[modules.power-profiles]
 label-show = false
-left-click = "power-profile-cycle"
-icon-name = "ld-scale-symbolic"
-icon-map = { power-saver = "ld-leaf-symbolic", balanced = "ld-scale-symbolic", performance = "ld-rocket-symbolic" }
-color-map = { power-saver = { icon-color = "green" }, balanced = { icon-color = "blue" }, performance = { icon-color = "red" } }
-tooltip-format = "Power profile: {{ alt }}"
+# Native cycle action (default left-click is no-op); replaces power-profile-cycle.
+left-click = ":cycle"
+icon-power-saver = "ld-leaf-symbolic"
+icon-balanced = "ld-scale-symbolic"
+icon-performance = "ld-rocket-symbolic"
+color-power-saver = "green"
+color-balanced = "blue"
+color-performance = "red"
