@@ -138,11 +138,11 @@
         "rust-analyzer-src": "rust-analyzer-src"
       },
       "locked": {
-        "lastModified": 1781779700,
-        "narHash": "sha256-dHrFmslUl2HQ9KXUXbgMyRushoqqLgHZV/5QtnwiH6A=",
+        "lastModified": 1781866565,
+        "narHash": "sha256-tgV76S2cJBrP6PscV+w76E+fWnhBIwAaKB4nhUyK86U=",
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "ad30e585c7a2917325943c2b19511f5a249eff53",
+        "rev": "c01c3907cd877918d03a816a57b419848b442467",
         "type": "github"
       },
       "original": {
@@ -1399,11 +1399,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1781811939,
-        "narHash": "sha256-3i5KVdxTq4ASSTWr9b6rc3/spiFQRqOO78BHM2LTWNU=",
+        "lastModified": 1781868766,
+        "narHash": "sha256-YmjXp9Kb1VxfLYisbjh24Xx6EWblRUXtJXzhWJf8910=",
         "ref": "master",
-        "rev": "9e20de41ee195e08f5cb305bf7ce1db0ed1a67d1",
-        "revCount": 657,
+        "rev": "f1bf2b83e78897800891c22d20009b1ea945f3c8",
+        "revCount": 666,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
