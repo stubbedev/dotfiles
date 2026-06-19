@@ -240,16 +240,17 @@ hide-if-empty = true
 # inotify maildir watch (event-driven, no poll). `accounts` gives the
 # per-account unread breakdown (kontainer + gmail; see modules/files/mail.nix)
 # in the native dropdown with brand icons; the bar count is their sum (top-level
-# `query` is then ignored). Native `notify` fires a notify-send on each rise in
-# the total — generic count body, no sender/subject (mail-status.sh's richer
-# per-message notification was dropped for an all-native setup).
+# `query` is then ignored). Native `notify` fires one notify-send per newly
+# arrived message (wayle pulls sender + subject from notmuch). Placeholders for
+# notify-summary / notify-body: {{ sender }}, {{ subject }}, {{ count }} (total
+# unread), {{ new }} (newly arrived this batch).
 [modules.mail]
 icon-name = "ld-mail-symbolic"
 # Collapse the slot at zero unread — appears with a count only when mail arrives.
 hide-when-zero = true
 notify = true
-notify-summary = "New mail"
-notify-body = "{{ new }} new ({{ count }} unread)"
+notify-summary = "{{ sender }}"
+notify-body = "{{ subject }}"
 # left-click opens the native per-account dropdown; client-launch on middle.
 left-click = "dropdown:mail"
 middle-click = "mail-open"
