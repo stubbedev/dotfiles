@@ -11,5 +11,12 @@ _: {
     # privilege escalation surface. The primary user is in `wheel`
     # (modules/nixos/users.nix), so day-to-day sudo is unaffected.
     security.sudo.execWheelOnly = true;
+
+    # Show '*' for each typed password character. Off by default
+    # (sudo gives no echo at all). Note: reveals password length to
+    # shoulder-surfers.
+    security.sudo.extraConfig = ''
+      Defaults pwfeedback
+    '';
   };
 }

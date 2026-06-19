@@ -10,7 +10,7 @@ _: {
     }:
     let
       alacrittyReal = homeLib.gfxName "alacritty-real" pkgs.alacritty;
-      alacrittyWrapped = pkgs.writeShellScriptBin "alacritty" ''
+      alacrittyScript = pkgs.writeShellScriptBin "alacritty" ''
         real="${alacrittyReal}/bin/alacritty-real"
 
         case "''${1:-}" in
@@ -36,6 +36,25 @@ _: {
 
         exec "$real" "$@"
       '';
+      # symlinkJoin the daemon-wrapper bin (first-wins → shadows upstream
+      # bin/alacritty) with upstream alacritty for Alacritty.desktop + icons.
+      # writeShellScriptBin alone emits only bin/, so without this the desktop
+      # entry is absent on both targets and alacritty never shows in rofi. The
+      # .desktop's Exec=alacritty resolves to the wrapper on PATH.
+      alacrittyWrapped = pkgs.symlinkJoin {
+        name = "alacritty-${pkgs.alacritty.version}";
+        paths = [
+          alacrittyScript
+          pkgs.alacritty
+        ];
+        meta = pkgs.alacritty.meta // {
+          mainProgram = "alacritty";
+          # symlinkJoin yields a single `out` (terminfo merged in); inheriting
+          # alacritty's multi-output outputsToInstall would make buildEnv fail
+          # on the missing output. Same fix as lib.nix mkWrappedPackage.
+          outputsToInstall = [ "out" ];
+        };
+      };
 
       # ZenNotes: keyboard-first local Markdown notes (Electron). Not in
       # nixpkgs. Per request this tracks the LATEST upstream release instead
