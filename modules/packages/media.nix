@@ -8,17 +8,21 @@ _: {
       ...
     }:
     let
-      # Wrapper for pavucontrol that avoids nixGL NVIDIA driver conflicts
-      # GTK4 tries to initialize GL which causes crashes when mixing nixGL and system NVIDIA drivers
-      pavucontrol-wrapped = pkgs.writeShellScriptBin "pavucontrol" ''
-        # Unset nixGL environment variables to prevent driver conflicts
-        unset LD_LIBRARY_PATH
-        unset __GLX_VENDOR_LIBRARY_NAME
-        unset __EGL_VENDOR_LIBRARY_FILENAMES
-        unset LIBGL_DRIVERS_PATH
-
-        exec ${pkgs.pavucontrol}/bin/pavucontrol "$@"
-      '';
+      # pavucontrol must run against SYSTEM GL, not nixGL: its GTK4 stack crashes
+      # when GL init mixes nixGL and the system NVIDIA driver. So gfx = false (no
+      # nixGL wrap) + unset the inherited nixGL env vars. mkWrappedPackage (not a
+      # bare writeShellScriptBin) so pavucontrol.desktop + icons land on
+      # XDG_DATA_DIRS — a bin-only script drops them and the app vanishes from rofi.
+      pavucontrol-wrapped = homeLib.mkWrappedPackage {
+        pkg = pkgs.pavucontrol;
+        gfx = false;
+        unset = [
+          "LD_LIBRARY_PATH"
+          "__GLX_VENDOR_LIBRARY_NAME"
+          "__EGL_VENDOR_LIBRARY_FILENAMES"
+          "LIBGL_DRIVERS_PATH"
+        ];
+      };
 
       # Bump ghostscript to 10.07.0 just for the user-facing `gs` CLI.
       # Done at the use site (not via overlay) so reverse deps like libreoffice

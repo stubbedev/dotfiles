@@ -9,9 +9,22 @@ _: {
       ...
     }:
     let
-      alacrittyReal = homeLib.gfxName "alacritty-real" pkgs.alacritty;
-      alacrittyScript = pkgs.writeShellScriptBin "alacritty" ''
-        real="${alacrittyReal}/bin/alacritty-real"
+      # nixGL-wrapped alacritty (name preserved). The systemd user service
+      # `alacritty-daemon` (modules/home/systemd.nix) runs `--daemon` from this
+      # same derivation; the thin client below attaches new windows to it over
+      # the shared IPC socket. Keep homeLib.alacrittySocket in sync with the
+      # unit's --socket path.
+      alacrittyGfx = homeLib.gfx pkgs.alacritty;
+
+      # `alacritty` on PATH: attach a window to the running daemon so every
+      # terminal shares one process. Single-instance lifecycle is owned by the
+      # systemd unit, so this is a thin client — no spawn/poll race. Falls back
+      # to a standalone window if the daemon socket isn't up yet (e.g. an early
+      # login before the unit reaches its target). Control/query subcommands
+      # pass straight through.
+      alacrittyClient = pkgs.writeShellScriptBin "alacritty" ''
+        real="${alacrittyGfx}/bin/alacritty"
+        socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
 
         case "''${1:-}" in
           --daemon|msg|--help|-h|--version|-V)
@@ -19,32 +32,20 @@ _: {
             ;;
         esac
 
-        if "$real" msg create-window "$@" >/dev/null 2>&1; then
+        if "$real" msg --socket "$socket" create-window "$@" >/dev/null 2>&1; then
           exit 0
         fi
-
-        "$real" --daemon >/dev/null 2>&1 &
-
-        attempts=0
-        while [ "$attempts" -lt 25 ]; do
-          attempts=$((attempts + 1))
-          if "$real" msg create-window "$@" >/dev/null 2>&1; then
-            exit 0
-          fi
-          sleep 0.04
-        done
-
         exec "$real" "$@"
       '';
-      # symlinkJoin the daemon-wrapper bin (first-wins → shadows upstream
-      # bin/alacritty) with upstream alacritty for Alacritty.desktop + icons.
-      # writeShellScriptBin alone emits only bin/, so without this the desktop
-      # entry is absent on both targets and alacritty never shows in rofi. The
-      # .desktop's Exec=alacritty resolves to the wrapper on PATH.
+      # symlinkJoin the client (first-wins → shadows upstream bin/alacritty)
+      # with upstream alacritty for Alacritty.desktop + icons. writeShellScriptBin
+      # alone emits only bin/, so without this the desktop entry is absent on both
+      # targets and alacritty never shows in rofi. The .desktop's Exec=alacritty
+      # resolves to the client on PATH.
       alacrittyWrapped = pkgs.symlinkJoin {
         name = "alacritty-${pkgs.alacritty.version}";
         paths = [
-          alacrittyScript
+          alacrittyClient
           pkgs.alacritty
         ];
         meta = pkgs.alacritty.meta // {

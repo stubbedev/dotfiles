@@ -5,6 +5,7 @@ _: {
       lib,
       config,
       scripts,
+      homeLib,
       ...
     }:
     let
@@ -148,6 +149,28 @@ _: {
             Service = {
               Type = "simple";
               ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
+              Restart = "on-failure";
+              RestartSec = "2s";
+            };
+          };
+
+          # Single-instance alacritty: one daemon process all terminals attach
+          # to via `alacritty msg create-window` (the `alacritty` client wrapper
+          # in modules/packages/system.nix). Starts only after the compositor
+          # target — so the imported Wayland env is present when windows are
+          # created — which also removes the spawn/poll race the old standalone
+          # wrapper needed. --socket pins a deterministic path the client mirrors
+          # (%t = $XDG_RUNTIME_DIR).
+          alacritty-daemon = {
+            Unit = {
+              Description = "Alacritty daemon (shared single-instance process)";
+              After = compositorTargets;
+              PartOf = compositorTargets;
+            };
+            Install.WantedBy = compositorTargets;
+            Service = {
+              Type = "simple";
+              ExecStart = "${homeLib.gfx pkgs.alacritty}/bin/alacritty --socket %t/alacritty.sock --daemon";
               Restart = "on-failure";
               RestartSec = "2s";
             };
