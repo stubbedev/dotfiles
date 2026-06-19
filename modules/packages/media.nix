@@ -33,6 +33,20 @@ _: {
         };
       });
 
+      # Pin ImageMagick to the exact release prod runs (remi `ImageMagick7` on
+      # EL9, currently 7.1.2-25). Clip-path and alpha handling is version
+      # sensitive, so matching the patch release is required to reproduce and
+      # verify the KON-12723 download-template blanking locally.
+      imagemagick-prod = pkgs.imagemagick.overrideAttrs (_old: rec {
+        version = "7.1.2-25";
+        src = pkgs.fetchFromGitHub {
+          owner = "ImageMagick";
+          repo = "ImageMagick";
+          rev = version;
+          hash = "sha256-7z1oIKXZcumsESLrFRvU6z0M8JVsogG7yDWwF62jPwo=";
+        };
+      });
+
       # libembroidery ships the `sew` CLI for converting/inspecting machine
       # embroidery files. Not in nixpkgs; built from upstream main since
       # there are no tagged releases yet (v1.0 still pre-release).
@@ -68,7 +82,7 @@ _: {
     lib.mkIf config.features.media {
       home.packages = with pkgs; [
         # Image processing (CLI tools, no wrapping needed)
-        imagemagick
+        imagemagick-prod
         libembroidery
         pngquant
         exiftool
