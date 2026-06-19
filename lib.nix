@@ -595,6 +595,11 @@ rec {
       paths = wrappedExes ++ extraPaths ++ lib.optional includeUpstream pkg;
       meta = (pkg.meta or { }) // {
         mainProgram = if mainProgram == null then mainExe else mainProgram;
+        # symlinkJoin produces a single `out` that already merges every joined
+        # path (bin, share/man, …). Inheriting pkg's multi-output
+        # outputsToInstall (e.g. mpv's [ "out" "man" ]) would make buildEnv try
+        # to install a `man` output this derivation doesn't have → eval error.
+        outputsToInstall = [ "out" ];
       };
     };
 

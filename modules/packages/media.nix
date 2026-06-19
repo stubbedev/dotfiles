@@ -99,12 +99,19 @@ _: {
         (homeLib.gfxExe "ffplay" ffmpeg-full)
 
         # Video player (GPU-accelerated output; default opener for video,
-        # see mime maps in modules/home/xdg/base.nix + modules/nixos/mime-defaults.nix)
-        (homeLib.gfx mpv)
+        # see mime maps in modules/home/xdg/base.nix + modules/nixos/mime-defaults.nix).
+        # mkWrappedPackage (not bare gfx): bare gfx on non-NixOS emits only the
+        # nixGL bin/mpv, dropping share/applications/mpv.desktop — so file
+        # managers (pcmanfm/GIO) can't resolve the video/* default the mime maps
+        # point at. mkWrappedPackage symlinkJoins the upstream pkg, putting the
+        # .desktop + icons back on XDG_DATA_DIRS.
+        (homeLib.mkWrappedPackage { pkg = mpv; })
 
         # Image viewer (Wayland, GPU; default opener for still images,
-        # mime maps live alongside the mpv ones in the same two files)
-        (homeLib.gfx imv)
+        # mime maps live alongside the mpv ones in the same two files).
+        # mkWrappedPackage for the same reason as mpv: keep imv.desktop on
+        # XDG_DATA_DIRS so the image/* defaults resolve in file managers.
+        (homeLib.mkWrappedPackage { pkg = imv; })
 
         # Terminal image viewers (some use GPU)
         chafa
@@ -118,7 +125,9 @@ _: {
         pavucontrol-wrapped
 
         # Office suite (GUI app)
-        (homeLib.gfx libreoffice-fresh)
+        # mkWrappedPackage (not bare gfx): keeps the writer/calc/impress/… .desktop
+        # files + icons on XDG_DATA_DIRS so they show in rofi on non-NixOS.
+        (homeLib.mkWrappedPackage { pkg = libreoffice-fresh; })
       ];
     };
 }

@@ -23,7 +23,10 @@ _: {
         stylua
 
         # Editor (nvim provided via the wrapper module).
-        (homeLib.gfx neovide)
+        # mkWrappedPackage (not bare gfx): keeps neovide.desktop + icons on
+        # XDG_DATA_DIRS so it shows in rofi on non-NixOS (bare gfx emits only
+        # the nixGL bin). See modules/packages/media.nix for the full rationale.
+        (homeLib.mkWrappedPackage { pkg = neovide; })
 
         # Go tools (CLI)
         gopass
@@ -46,7 +49,9 @@ _: {
         freerdp
 
         # IDE toolbox (GUI app)
-        (homeLib.gfx jetbrains-toolbox)
+        # mkWrappedPackage (not bare gfx): keeps jetbrains-toolbox.desktop on
+        # XDG_DATA_DIRS so it shows in rofi on non-NixOS.
+        (homeLib.mkWrappedPackage { pkg = jetbrains-toolbox; })
         openconnect
 
         # Native/Rust build perf — fast linker + rustc wrapper.
