@@ -103,8 +103,11 @@ _: {
           # notmuch's synchronize_flags then renames the maildir file to
           # add the `S` flag — which mbsync propagates back to IMAP on
           # the next run. Nothing else marks messages as read.
+          # `new` is a transient tag applied to every message indexed by
+          # `notmuch new`; mail-sync notifies for the inbox ones then strips
+          # it, so each new message produces exactly one desktop notification.
           [new]
-          tags=unread;inbox;
+          tags=unread;inbox;new;
           ignore=
 
           [search]
@@ -132,6 +135,8 @@ _: {
             pkgs.isync
             pkgs.notmuch
             pkgs.util-linux # flock
+            pkgs.libnotify # notify-send
+            pkgs.jq # parse notmuch search JSON
           ];
           text = ''
             # Sync every channel by default; pass channel name(s) to limit.
@@ -180,6 +185,29 @@ _: {
             notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer' || true
             notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'     || true
             notmuch tag -inbox -- 'tag:inbox and not folder:kontainer/INBOX and not folder:gmail/INBOX' || true
+
+            # Desktop notifications for newly-arrived inbox mail. The transient
+            # `new` tag (from notmuch's [new] tags=) marks everything indexed
+            # this run; notify for the inbox ones with sender + subject, then
+            # strip it so each message notifies exactly once. A bulk initial
+            # sync collapses to a single summary instead of a flood. notify-send
+            # talks to wayle over the session bus; guarded with || true so a
+            # missing bus (e.g. headless run) never fails the sync.
+            new_count=$(notmuch count 'tag:new and tag:inbox')
+            if [ "$new_count" -gt 0 ]; then
+              if [ "$new_count" -le 10 ]; then
+                notmuch search --format=json --output=summary --sort=newest-first 'tag:new and tag:inbox' \
+                  | jq -r '.[] | [.authors, .subject] | @tsv' \
+                  | while IFS=$'\t' read -r from subject; do
+                      notify-send -a mail -i mail-message-new-symbolic \
+                        "''${from:-Unknown sender}" "''${subject:-(no subject)}" || true
+                    done
+              else
+                notify-send -a mail -i mail-message-new-symbolic \
+                  "New mail" "$new_count new messages" || true
+              fi
+            fi
+            notmuch tag -new -- tag:new || true
 
             if [ ''${#failed[@]} -gt 0 ]; then
               echo "mail-sync: failed channels: ''${failed[*]}" >&2
