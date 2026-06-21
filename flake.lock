@@ -1399,11 +1399,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782071478,
-        "narHash": "sha256-2ooPRUQHIrLJnw5gHAdR++g7UEBx+xQs4agrInOJytY=",
+        "lastModified": 1782072706,
+        "narHash": "sha256-+JZrpdMEz5GAV8GfpX6bPVF6UafL7Ncr8RJg1uDKO6s=",
         "ref": "master",
-        "rev": "da1167b11f378279010858b24c89b7c8439bdf34",
-        "revCount": 748,
+        "rev": "1b7813d0376ccdc9fead58a448ceafc2cea85fbc",
+        "revCount": 749,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
