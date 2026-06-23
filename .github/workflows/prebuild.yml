@@ -1,0 +1,97 @@
+name: prebuild
+
+# Nightly prebuild of THIS flake's toplevel closures, pushed to the
+# `default` cache on nix.stubbe.dev. This is what lets a laptop `hm switch`
+# substitute the heavy first-party builds (phpantom_lsp, hyprland, wayle,
+# rust nightly, …) instead of compiling them locally.
+#
+# Workflow model (see bin/hm): CI owns the flake.lock bumps. It runs
+# `nix flake update`, builds the closures, pushes them, then commits the
+# updated lock back to master. A machine then runs `hm switch` (NOT
+# `hm upgrade` — no need to bump the lock locally); sync_flake_repo pulls
+# this commit and everything substitutes from the cache.
+#
+# SECURITY — never push secrets. The only flake output that bakes
+# unencrypted private keys into the store is the installer ISO
+# (modules/installer/iso.nix, impure ~/.ssh read). This job builds ONLY
+# the two named toplevel attrs below — never `installer-iso`, never a
+# `.#` wildcard — so no private key can ever transit the cache. The
+# normal toplevels carry only ENCRYPTED sops ciphertext, which is already
+# public in this (public) repo.
+
+on:
+  schedule:
+    # 04:00 UTC daily. Catches input drift (nixpkgs-unstable, fenix nightly).
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+# Push the regenerated flake.lock back to master.
+permissions:
+  contents: write
+
+# One prebuild at a time: a scheduled run and a manual dispatch must not
+# race on the flake.lock commit.
+concurrency:
+  group: prebuild
+  cancel-in-progress: false
+
+jobs:
+  prebuild:
+    name: build + push toplevels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@v22
+        with:
+          # Trust + pull from the same caches the flake declares
+          # (lib/nix-cache.nix), so the runner substitutes already-built
+          # paths — including the `default` cache from prior runs — and
+          # only compiles the deltas. fenix's rust toolchain comes from
+          # nix-community; cache.nixos.org is on by default.
+          extra-conf: |
+            extra-substituters = https://nix.stubbe.dev/default https://nix.stubbe.dev/wayle https://nix.stubbe.dev/treeman https://nix.stubbe.dev/srv https://nix-community.cachix.org
+            extra-trusted-public-keys = default:9P4FePqHV1rGv5NDBun0GN26y83pcaaMr/NHZrxKaac= wayle:XD2O2h1Mmka+VegRi2JY7ywNbG9al+TUAZp6CObizFU= treeman:wK3AZux2l7fX+L4Lo9OLh7zzQAC/OJDUQanldOgNhO4= srv:zIqJz/1IhxGYhVu5uihWmWHyTSv6GPzCAk/6NCgrAMo= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+
+      - name: Update flake inputs
+        run: nix flake update
+
+      - name: Build toplevels
+        id: build
+        # --impure: graphics.nix reads /proc for GPU detection (same as the
+        #   eval checks); the runner has no NVIDIA driver so it resolves the
+        #   non-NVIDIA path. HOME has no ~/.ssh keys here, so even an
+        #   accidental impure read would be empty — but the ISO attr is
+        #   never referenced regardless.
+        # ONLY these two attrs. Do not add installer-iso (bakes private keys).
+        run: |
+          set -euo pipefail
+          out=$(nix build --impure --no-link --print-out-paths \
+            '.#homeConfigurations.stubbe.activationPackage' \
+            '.#nixosConfigurations.stubbe-nixos.config.system.build.toplevel')
+          echo "Built:"
+          echo "$out"
+          # Newline -> space for the push arg list.
+          echo "paths=$(echo $out | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Push closures to the default cache
+        env:
+          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+        run: |
+          set -euo pipefail
+          nix run nixpkgs#attic-client -- login stubbe https://nix.stubbe.dev "$ATTIC_TOKEN"
+          # attic push uploads each path's full closure by default.
+          nix run nixpkgs#attic-client -- push default ${{ steps.build.outputs.paths }}
+
+      - name: Commit updated flake.lock
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- flake.lock; then
+            echo "flake.lock unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock
+          git commit -m "chore: update flake.lock (prebuild)"
+          git push
