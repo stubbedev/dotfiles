@@ -184,12 +184,12 @@ _: {
         # Idle daemon (ext-idle-notify-v1)
         hypridle
 
-        # Color temperature (wlr-gamma-control-v1). hyprsunset has no native
-        # lat/long mode, so hyprsunset-sun drives its temperature on the real
-        # sunrise/sunset schedule: sunwait computes the times offline, socat
-        # talks to the daemon's IPC socket (also used by the wayle widget).
+        # Blue-light filter daemon. wayle's native hyprsunset module owns it —
+        # it spawns `hyprsunset -t/-g` at night on its own solar schedule and
+        # kills it by day — so it only needs to be on PATH for the wayle service.
         hyprsunset
-        sunwait
+        # IPC glue for several scripts that talk to compositor/daemon sockets
+        # (hy3 tiling, jetbrains popup resize, wayle widget helpers).
         socat
 
         # Color picker (screencopy protocol)

@@ -51,58 +51,14 @@ _: {
           niri-session.Unit.Description = "niri session";
         });
 
+      # Blue-light scheduling is now wayle's native hyprsunset module (it owns
+      # the daemon + solar schedule), and the xdg-desktop-portal backend is wayle
+      # too (modules/nixos/wayle.nix on NixOS, modules/home/wayle-portal.nix on
+      # standalone HM) — so the old hyprland-only portal + hyprsunset-sun services
+      # are both gone.
       systemd.user.services =
-        # Hyprland-only service: portal.
-        lib.optionalAttrs hyprlandEnabled {
-          xdg-desktop-portal-hyprland = {
-            Unit = {
-              Description = "Portal service (Hyprland implementation)";
-              PartOf = [ "hyprland-session.target" ];
-              After = [ "hyprland-session.target" ];
-              # xdph reads xdph.conf once at startup and caches the screencast
-              # custom_picker_binary path (modules/packages/hyprland/portal.nix).
-              # That path is now a stable profile path, so it no longer moves on
-              # a wayle bump — but should we ever edit the conf itself, the unit
-              # definition is otherwise unchanged and sd-switch would leave the
-              # old xdph running with stale config. Bump the unit hash when
-              # xdph.conf's content changes so sd-switch restarts the portal,
-              # same trick as wayle.service below.
-              X-Restart-Triggers = [
-                (toString config.xdg.configFile."hypr/xdph.conf".source)
-              ];
-            };
-            Service = {
-              Type = "dbus";
-              BusName = "org.freedesktop.impl.portal.desktop.hyprland";
-              ExecStart = "${pkgs.xdg-desktop-portal-hyprland}/libexec/xdg-desktop-portal-hyprland";
-              Restart = "on-failure";
-            };
-          };
-
-          # Blue-light scheduler. hyprsunset has no native lat/long mode, so this
-          # owns the schedule: sunwait computes the real sunrise/sunset and it
-          # ramps the daemon's temperature over its IPC socket, writing the wayle
-          # widget's state on each change (and re-evaluating on SIGUSR1 from the
-          # toggle). Restart=always so the schedule survives a crash — a bare
-          # autostart exec (like hypridle) wouldn't. It self-waits for the
-          # hyprsunset socket, so no hard ordering against the lua autostart.
-          hyprsunset-sun = {
-            Unit = {
-              Description = "hyprsunset sunrise/sunset blue-light scheduler";
-              After = [ "hyprland-session.target" ];
-              PartOf = [ "hyprland-session.target" ];
-            };
-            Install.WantedBy = [ "hyprland-session.target" ];
-            Service = {
-              Type = "simple";
-              ExecStart = "${scripts.hyprsunset-sun}/bin/hyprsunset-sun";
-              Restart = "always";
-              RestartSec = "5s";
-            };
-          };
-        }
         # wayle shell — bar + notifications + OSD + wallpaper in one daemon.
-        // (lib.optionalAttrs wayleEnabled {
+        (lib.optionalAttrs wayleEnabled {
           wayle = {
             Unit = {
               Description = "Wayle desktop shell (bar, notifications, OSD, wallpaper)";

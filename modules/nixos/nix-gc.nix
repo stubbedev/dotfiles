@@ -35,6 +35,21 @@ _: {
         "${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2"
       ];
 
+      # The gc/optimise timers are weekly + Persistent, so a run missed while
+      # the machine was off fires at the NEXT boot — `nix-gc` alone takes ~3.5min
+      # of saturated disk IO, which starves SDDM + the Hyprland compositor and
+      # leaves the desktop (bar/wallpaper) blank for ~90s after login. Pin both
+      # to idle IO/CPU scheduling so they yield to anything interactive: login
+      # stays fast and the maintenance still completes in the background.
+      systemd.services.nix-gc.serviceConfig = {
+        IOSchedulingClass = "idle";
+        CPUSchedulingPolicy = "idle";
+      };
+      systemd.services.nix-optimise.serviceConfig = {
+        IOSchedulingClass = "idle";
+        CPUSchedulingPolicy = "idle";
+      };
+
       # Also prune on every `nixos-rebuild switch` so generations don't
       # accumulate between weekly GC runs — same pattern as the
       # home-manager activation hook in modules/home/nix-gc.nix.

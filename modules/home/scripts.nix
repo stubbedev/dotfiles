@@ -58,10 +58,6 @@
         mail-unsubscribe.source = "src/aerc/scripts/unsubscribe";
         mail-pager.source = "src/aerc/scripts/nvim-pager.sh";
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
-        # Drives hyprsunset's temperature on the real sunrise/sunset schedule
-        # (hyprsunset has no native lat/long mode). Runs as the
-        # hyprsunset-sun.service user unit (modules/home/systemd.nix).
-        hyprsunset-sun.source = "src/_shared/scripts/hyprsunset.sun.sh";
         screenshot.source = "src/_shared/scripts/screenshot.sh";
         # wayle shell: launch wrapper (Wayland socket detection). wayle's
         # custom module parses waybar-style JSON natively (text/tooltip/class),

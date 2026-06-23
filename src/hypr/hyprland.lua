@@ -187,11 +187,10 @@ local function setup_autostart()
             "compositor-session hyprland",
             "hyprctl setcursor $XCURSOR_THEME $XCURSOR_SIZE",
             "hypridle",
-            -- Bare daemon opens the IPC socket; the hyprsunset-sun systemd user
-            -- service then sets its temperature on the real sunrise/sunset
-            -- schedule (hyprsunset has no native lat/long mode). The wayle
-            -- widget reads/overrides the same socket via that service.
-            "hyprsunset",
+            -- No hyprsunset autostart: wayle's native hyprsunset module owns the
+            -- daemon now (spawns `hyprsunset -t/-g` at night on its own solar
+            -- schedule, kills it by day). A bare always-on daemon here would
+            -- clash with that lifecycle.
             "wl-paste --watch cliphist store",
             "wl-clip-persist --clipboard regular",
             -- No nm-applet/blueman-applet: wayle's native network + bluetooth

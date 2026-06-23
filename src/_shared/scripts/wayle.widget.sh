@@ -8,7 +8,6 @@
 #   treeman     `treeman logs tail --follow` event stream
 #   vpn-watch   inotify on the openconnect pid/connecting markers
 #   submap      tmpfs marker written by the hl Lua resize submap
-#   hyprsunset  state file written by the hyprsunset-sun scheduler
 set -uo pipefail
 
 # Emit one reshaped line for a poll-style status cmd: JSON when it has output,
@@ -83,31 +82,6 @@ case "${1:-}" in
       while IFS= read -r f; do
         case "$f" in wayle-submap) emit_submap ;; esac
       done
-    ;;
-
-  # hyprsunset state for the bar. hyprsunset.sun.sh owns the schedule and writes
-  # the widget JSON line to $state on every change (day/night/override + live
-  # temperature during a ramp); we just tail it — fully event-driven, the dir
-  # watch fires on the scheduler's atomic mv. icon-map keys on the `alt`
-  # (day=sun, night=moon, off=manual-override).
-  hyprsunset-watch)
-    state="$rt/hyprsunset.state"
-    emit() { if [ -f "$state" ]; then cat "$state"; else echo; fi; }
-    emit
-    inotifywait -q -m -e create,close_write,moved_to --format '%f' "$rt" 2>/dev/null |
-      while IFS= read -r f; do
-        case "$f" in hyprsunset.state) emit ;; esac
-      done
-    ;;
-
-  # Click handler: flip the manual-override marker (force filter off past sunset
-  # / hand back to auto) and poke the scheduler, which owns all the schedule
-  # logic and repaints $state. No temperatures or coords live here.
-  hyprsunset-toggle)
-    marker="$rt/hyprsunset.override"
-    if [ -f "$marker" ]; then rm -f "$marker"; else : >"$marker"; fi
-    pidfile="$rt/hyprsunset-sun.pid"
-    [ -f "$pidfile" ] && kill -USR1 "$(cat "$pidfile" 2>/dev/null)" 2>/dev/null
     ;;
 
   # Keyboard-layout toast. xkb `grp:toggle` switches the layout internally

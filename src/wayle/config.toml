@@ -76,7 +76,7 @@ right = [
   @BATTERY@
   "network",
   "bluetooth",
-  "custom-hyprsunset",
+  "hyprsunset",
   "power-profiles",
   "systray",
   "custom-vpn",
@@ -190,7 +190,7 @@ scroll-up = "brightnessctl set 5%+"
 scroll-down = "brightnessctl set 5%- -n"
 
 # Weather: powers the clock's right-click dropdown (no bar module). Coords are
-# Copenhagen (kept in sync with hyprsunset.sun.sh); open-meteo needs no API key.
+# Copenhagen (kept in sync with [modules.hyprsunset]); open-meteo needs no API key.
 [modules.weather]
 location = "55.6,12.5"
 units = "metric"
@@ -280,23 +280,21 @@ left-click = "treeman worktree list"
 # treeman emits nothing when idle → collapse the slot entirely.
 hide-if-empty = true
 
-# Blue-light filter. hyprsunset has no native lat/long mode, so the
-# hyprsunset-sun service sets the daemon temperature on the real sunrise/sunset
-# schedule and writes this widget's state line on every change. Event-driven
-# (watch): re-renders on the scheduler's atomic state-file write — instant
-# flips, no poll. Icon-only (no label): icon-map keys on `alt` — sun-moon while
-# on the auto schedule, plain sun when manually disabled. left-click toggles the
-# override (disable / hand back to auto) and signals the scheduler.
-[[modules.custom]]
-id = "hyprsunset"
-mode = "watch"
-restart-policy = "on-exit"
-command = "wayle-widget hyprsunset-watch"
+# Blue-light filter — wayle's native module (Hyprland only). It owns the
+# hyprsunset daemon (spawns `hyprsunset -t/-g` at night, kills it by day) and
+# computes the sunrise/sunset schedule itself from the coords below (GeoClue
+# overrides when available). A click sets a manual override that lasts until the
+# next solar boundary, then the schedule resumes. Icon-only: moon while the
+# filter is on (night), sun when off (day / overridden). Replaces the old
+# hyprsunset-sun systemd service + sunwait script.
+[modules.hyprsunset]
+temperature = 4500
+auto-schedule = true
+latitude = 55.6
+longitude = 12.5
 label-show = false
-icon-name = "ld-sun-moon-symbolic"
-icon-map = { auto = "ld-sun-moon-symbolic", off = "ld-sun-symbolic" }
-class-format = "hyprsunset-{{ alt }}"
-left-click = "wayle-widget hyprsunset-toggle"
+icon-on = "ld-moon-symbolic"
+icon-off = "ld-sun-symbolic"
 
 # VPN: one tri-state icon-only module. The watcher emits `alt` = on/connecting/
 # off; icon-map + color-map swap the icon AND its colors per state, replacing
