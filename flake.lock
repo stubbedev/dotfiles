@@ -66,6 +66,26 @@
         "type": "github"
       }
     },
+    "atlassian-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782330026,
+        "narHash": "sha256-yn3woqSOl8lK2elSa8jqh6v2valMmfREm3DXJHhu24U=",
+        "owner": "stubbedev",
+        "repo": "atlassian-mcp",
+        "rev": "fae14a46e7c15159ea969fdc40158a573ceb4ff1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "atlassian-mcp",
+        "type": "github"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1731098351,
@@ -138,11 +158,11 @@
         "rust-analyzer-src": "rust-analyzer-src"
       },
       "locked": {
-        "lastModified": 1782208688,
-        "narHash": "sha256-oEax2Unvaq0wD8tZs+Kk3zzeUduOegVYW8R9nM5S3Os=",
+        "lastModified": 1782294578,
+        "narHash": "sha256-ctIw0dB+vAkpKnNhwbdXWm0jtzWHOKl+75OsrIcpQK8=",
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "5d0542f6ba83f9366095b0e9966b0377c4c1cb31",
+        "rev": "bd1a9586894a7702d9fbd0da7f6e3f09d6510c36",
         "type": "github"
       },
       "original": {
@@ -279,6 +299,24 @@
     "flake-utils_4": {
       "inputs": {
         "systems": "systems_6"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_5": {
+      "inputs": {
+        "systems": "systems_7"
       },
       "locked": {
         "lastModified": 1731533236,
@@ -937,6 +975,27 @@
         "type": "github"
       }
     },
+    "jenkins-mcp": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782330034,
+        "narHash": "sha256-QMtAbSr71+ynWH5fqs8YSfeyS3Hze1MsDjjhRzNud98=",
+        "owner": "stubbedev",
+        "repo": "jenkins-mcp",
+        "rev": "956090550157eb38bc8263cbb843eddfc52d7647",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "jenkins-mcp",
+        "type": "github"
+      }
+    },
     "lanzaboote": {
       "inputs": {
         "crane": "crane",
@@ -965,7 +1024,7 @@
     },
     "nixgl": {
       "inputs": {
-        "flake-utils": "flake-utils",
+        "flake-utils": "flake-utils_2",
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
@@ -1111,7 +1170,7 @@
     },
     "phpantom_lsp": {
       "inputs": {
-        "flake-utils": "flake-utils_2",
+        "flake-utils": "flake-utils_3",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -1182,6 +1241,7 @@
     },
     "root": {
       "inputs": {
+        "atlassian-mcp": "atlassian-mcp",
         "cship": "cship",
         "disko": "disko",
         "fenix": "fenix",
@@ -1192,10 +1252,12 @@
         "hyprland-guiutils": "hyprland-guiutils_2",
         "impermanence": "impermanence",
         "import-tree": "import-tree",
+        "jenkins-mcp": "jenkins-mcp",
         "lanzaboote": "lanzaboote",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_5",
         "phpantom_lsp": "phpantom_lsp",
+        "sentry-mcp": "sentry-mcp",
         "sops-nix": "sops-nix",
         "srv": "srv",
         "treeman": "treeman",
@@ -1241,6 +1303,26 @@
         "type": "github"
       }
     },
+    "sentry-mcp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782330011,
+        "narHash": "sha256-wGvehUSO84JA3nHT6yubvFLE2UEX7GT3VVlzbTpc5Nc=",
+        "owner": "stubbedev",
+        "repo": "sentry-mcp",
+        "rev": "08d621db39ff0fba9839cfb13647b69a6a5e6734",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "sentry-mcp",
+        "type": "github"
+      }
+    },
     "sops-nix": {
       "inputs": {
         "nixpkgs": [
@@ -1263,7 +1345,7 @@
     },
     "srv": {
       "inputs": {
-        "flake-utils": "flake-utils_3",
+        "flake-utils": "flake-utils_4",
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
@@ -1370,19 +1452,34 @@
         "type": "github"
       }
     },
+    "systems_7": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
     "treeman": {
       "inputs": {
-        "flake-utils": "flake-utils_4",
+        "flake-utils": "flake-utils_5",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1782210989,
-        "narHash": "sha256-dfz1yPMJqe4FX4PldyThKqknF+4BrZDa6/U8xgFic6w=",
+        "lastModified": 1782316185,
+        "narHash": "sha256-Ccsa15N6WYjJfub8xvBobEPdn77TECicvciLQ6F7vak=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "50f2f081874cd7a9dace2e2fe4a048910b833c9b",
+        "rev": "22cd7717ddd48f23d8b288d499aa4800790404b0",
         "type": "github"
       },
       "original": {
@@ -1399,11 +1496,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782246569,
-        "narHash": "sha256-DG7XSLoG8HO3G5chXYS/PIEUaM+vMY7QtTUALnMQVds=",
+        "lastModified": 1782330124,
+        "narHash": "sha256-anMtXnmy5K1tkVbczrKHM7Mxon5mTKoI7cTRWH8vrsM=",
         "ref": "master",
-        "rev": "8b992acb8e76016b52063975b8cebafeee37df47",
-        "revCount": 772,
+        "rev": "34c95c341fdaf6fbb771faf5af37cf0595218635",
+        "revCount": 779,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
