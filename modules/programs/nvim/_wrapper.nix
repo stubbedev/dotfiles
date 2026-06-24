@@ -33,6 +33,7 @@
       dot-language-server
 
       # Web / JS / TS
+      vtsls # LazyVim's default TS LSP (vim.g.lazyvim_ts_lsp = "vtsls")
       typescript-language-server
       oxlint
       oxfmt
