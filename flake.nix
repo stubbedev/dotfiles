@@ -38,6 +38,22 @@
       url = "github:stubbedev/treeman";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Go-rewritten work MCP servers, consumed as flake packages (buildGoModule)
+    # so they spawn as offline store-path binaries instead of `npx …@latest`.
+    # Wired into lib/mcp-servers.nix via setup-claude-code.nix. atlassian-mcp is
+    # not here yet — still the pinned npx wrapper until its Go rewrite lands.
+    jenkins-mcp = {
+      url = "github:stubbedev/jenkins-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    sentry-mcp = {
+      url = "github:stubbedev/sentry-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    atlassian-mcp = {
+      url = "github:stubbedev/atlassian-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     cship = {
       url = "github:stephenleo/cship";
       flake = false;

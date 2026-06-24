@@ -1,26 +1,47 @@
-{ self, ... }:
+{ self, inputs, ... }:
 {
   enableIf = { config, ... }: config.features.claudeCode;
   args =
     {
       config,
       lib,
+      pkgs,
       homeLib,
       ...
     }:
     let
+      system = pkgs.stdenv.hostPlatform.system;
       servers = import (self + "/lib/mcp-servers.nix") {
-        firefoxPath = "${config.home.profileDirectory}/bin/firefox";
+        inherit pkgs;
+        homeDir = config.home.homeDirectory;
+        # Go-built work servers from flake inputs → offline store-path spawn.
+        jenkinsMcp = "${inputs."jenkins-mcp".packages.${system}.default}/bin/jenkins-mcp";
+        sentryMcp = "${inputs."sentry-mcp".packages.${system}.default}/bin/sentry-mcp";
+        atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
       };
-      # Claude's .claude.json shape: { type, command, args, env? }
-      toClaude =
+
+      # http client entries → the shared HTTP services (modules/home/
+      # mcp-services.nix). No per-window subprocess: every window reuses the one
+      # warm process and is scoped to its repo via per-session MCP roots.
+      httpServers = lib.mapAttrs (_: s: {
+        type = "http";
+        url = "http://${s.host}:${toString s.port}${s.path}";
+      }) servers.httpServices;
+
+      # Claude's stdio shape: { type, command, args, env? }
+      toStdio =
         _: server:
         {
           type = "stdio";
           inherit (server) command args;
         }
         // lib.optionalAttrs (server ? env) { inherit (server) env; };
-      mcpServers = lib.mapAttrs toClaude servers;
+
+      # global bucket → ordinary per-window stdio entries, loaded everywhere.
+      stdioServers = lib.mapAttrs toStdio servers.global;
+
+      # Top-level mcpServers in every window = http services + global stdio.
+      globalMcpServers = httpServers // stdioServers;
     in
     {
       actionScript = ''
@@ -80,7 +101,7 @@
           key = "mcpServers";
           # Authoritative: the managed set fully owns .mcpServers, so servers
           # dropped from lib/mcp-servers.nix disappear instead of lingering.
-          value = mcpServers;
+          value = globalMcpServers;
         }}
       '';
     };

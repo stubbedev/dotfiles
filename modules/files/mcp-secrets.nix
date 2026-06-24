@@ -1,7 +1,9 @@
 _: {
-  # secrets/<provider>-mcp is the raw JSON config the
-  # @stubbedev/<provider>-mcp server reads at startup. Edit any of them
-  # with: hm secret edit <provider>-mcp
+  # secrets/<provider>-mcp is the raw JSON config the <provider>-mcp server reads
+  # at startup (URLs + tokens). Edit any of them with:
+  #   hm secret edit <provider>-mcp
+  # Decrypted to ~/.config/<provider>-mcp/config.json, which the HTTP services in
+  # modules/home/mcp-proxy.nix pass via --config.
   flake.modules.homeManager.filesMcpSecrets =
     {
       config,
@@ -20,7 +22,7 @@ _: {
         lib.nameValuePair "${provider}_mcp" (
           homeLib.mkBinarySecret {
             name = "${provider}-mcp";
-            path = "${config.home.homeDirectory}/.${provider}-mcp.json";
+            path = "${config.home.homeDirectory}/.config/${provider}-mcp/config.json";
           }
         );
     in
