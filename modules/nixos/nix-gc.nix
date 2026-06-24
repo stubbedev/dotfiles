@@ -31,10 +31,6 @@ _: {
         channel.enable = false;
       };
 
-      systemd.services.nix-gc.serviceConfig.ExecStartPre = [
-        "${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2"
-      ];
-
       # The gc/optimise timers are weekly + Persistent, so a run missed while
       # the machine was off fires at the NEXT boot — `nix-gc` alone takes ~3.5min
       # of saturated disk IO, which starves SDDM + the Hyprland compositor and
@@ -42,6 +38,9 @@ _: {
       # to idle IO/CPU scheduling so they yield to anything interactive: login
       # stays fast and the maintenance still completes in the background.
       systemd.services.nix-gc.serviceConfig = {
+        ExecStartPre = [
+          "${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +2"
+        ];
         IOSchedulingClass = "idle";
         CPUSchedulingPolicy = "idle";
       };
