@@ -18,6 +18,13 @@
         jenkinsMcp = "${inputs."jenkins-mcp".packages.${system}.default}/bin/jenkins-mcp";
         sentryMcp = "${inputs."sentry-mcp".packages.${system}.default}/bin/sentry-mcp";
         atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
+        srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
+        treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
+        # Gate client entries on the same feature flags mcp-services.nix uses to
+        # gate the services, so we never advertise a server that isn't running.
+        enableSrv = config.features.srv;
+        enableTreeman = config.features.treeman;
+        enableChrome = config.features.browsers;
       };
 
       # http client entries → the shared HTTP services (modules/home/
@@ -27,6 +34,14 @@
         type = "http";
         url = "http://${s.host}:${toString s.port}${s.path}";
       }) servers.httpServices;
+
+      # http client entries → the socket-activated mcp-proxy frontends (same
+      # module). Connecting here is what spawns the single shared backend on
+      # demand; every window points at the one port.
+      proxiedServers = lib.mapAttrs (_: p: {
+        type = "http";
+        url = "http://${p.host}:${toString p.port}${p.path}";
+      }) servers.proxied;
 
       # Claude's stdio shape: { type, command, args, env? }
       toStdio =
@@ -40,8 +55,9 @@
       # global bucket → ordinary per-window stdio entries, loaded everywhere.
       stdioServers = lib.mapAttrs toStdio servers.global;
 
-      # Top-level mcpServers in every window = http services + global stdio.
-      globalMcpServers = httpServers // stdioServers;
+      # Top-level mcpServers in every window = http services + on-demand proxied
+      # + global stdio.
+      globalMcpServers = httpServers // proxiedServers // stdioServers;
     in
     {
       actionScript = ''
