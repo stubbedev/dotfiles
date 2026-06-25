@@ -154,20 +154,6 @@ _: {
           ];
         }
       );
-
-      # slurp has no config file — colours can only come from CLI flags. Bake
-      # the Catppuccin Mocha palette into a wrapper so the screenshot region
-      # picker gets a themed overlay without repeating flags. base @ 80% bg,
-      # mauve border, transparent fill.
-      slurpThemed = pkgs.symlinkJoin {
-        name = "slurp-mocha";
-        paths = [ pkgs.slurp ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/slurp \
-            --add-flags "-b 1e1e2ecc -c cba6f7ff -s 00000000 -w 2"
-        '';
-      };
     in
     lib.mkIf enabled {
       # wleave reads $XDG_CONFIG_HOME/wleave/layout.json; style.css falls back
@@ -200,10 +186,6 @@ _: {
 
         # Polkit authentication agent (standard D-Bus polkit)
         hyprpolkitagent
-
-        # Screenshot and region selection
-        (homeLib.gfx grim)
-        (homeLib.gfxExe "slurp" slurpThemed)
 
         # Wayland debug/inspection tools
         wlprop

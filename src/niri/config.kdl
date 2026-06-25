@@ -3,8 +3,6 @@
 
 prefer-no-csd
 
-screenshot-path "~/Pictures/Screenshots/niri-%Y-%m-%d_%H-%M-%S.png"
-
 input {
     // Match Hyprland's focus-follows-mouse behavior.
     focus-follows-mouse
@@ -210,10 +208,10 @@ binds {
     Mod+Ctrl+Space { spawn "rofi" "-show" "combi" "-combi-modes" "window" "-modes" "combi"; }
     Mod+M { spawn "mail-open"; }
 
-    // SCREENSHOTS (niri built-in)
-    Print { screenshot; }
-    Shift+Print { screenshot-screen; }
-    Mod+Print { screenshot-window; }
+    // SCREENSHOTS (wayle's native capture; saves PNG + copies clipboard + notifies)
+    Print { spawn "wayle" "screenshot" "region"; }
+    Shift+Print { spawn "wayle" "screenshot" "output"; }
+    Mod+Print { spawn "wayle" "screenshot" "window"; }
 
     // SCREEN RECORDING (wayle's native GStreamer recorder; bar widget mirrors state)
     Mod+Shift+R { spawn "wayle" "recorder" "toggle"; }
