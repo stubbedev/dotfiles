@@ -184,13 +184,19 @@ let
 
   # Single shared stdio servers fronted by mcp-proxy and socket-activated.
   #   port        public loopback port the .socket listens on; Claude's http
-  #               client connects to http://host:port/mcp.
+  #               client connects to http://host:port<path>.
   #   backendPort private port mcp-proxy binds; the socket-proxyd frontend
   #               forwards to it. Must differ from `port`.
+  #   path        the streamable-HTTP route TBXark mcp-proxy serves this server
+  #               at: `/<serverKey>/mcp`, where serverKey is the attr name below
+  #               (it keys the generated mcp-proxy config in mcp-services.nix).
+  #               Keep this in sync with the attr name.
   #   idleSec     socket-proxyd --exit-idle-time; after the last client
   #               connection drops, the frontend exits and the backend (being
   #               StopWhenUnneeded) is torn down, killing the browser.
-  #   command/args the stdio server mcp-proxy wraps (one shared instance).
+  #   command/args the stdio server mcp-proxy wraps (one shared instance); they
+  #               become the `command`/`args` of this server's entry in the
+  #               generated mcp-proxy config.json.
   # Gated on enableChrome (features.browsers): --auto-connect drives a real
   # Chrome, useless on a host with no browser installed.
   proxied = lib.optionalAttrs enableChrome {
@@ -198,7 +204,7 @@ let
       host = "127.0.0.1";
       port = 39105;
       backendPort = 39106;
-      path = "/mcp";
+      path = "/chrome-devtools/mcp";
       idleSec = 300;
       command = "npx";
       args = [

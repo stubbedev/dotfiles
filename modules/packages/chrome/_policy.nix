@@ -33,5 +33,13 @@ in
   NewTabPageLocation = newtabUrl;
   HomepageLocation = newtabUrl;
   HomepageIsNewTabPage = false;
+
+  # Memory Saver: discard inactive background tabs to reclaim renderer RAM
+  # (each open tab/site holds a live renderer process). HighEfficiencyMode
+  # is the on/off toggle; MemorySaverModeSavings tunes aggressiveness
+  # (0 longer wait, 1 balanced, 2 max savings / discards sooner).
+  HighEfficiencyModeEnabled = true;
+  MemorySaverModeSavings = 2;
+
   ExtensionInstallForcelist = map (id: "${id};${updateUrl}") (builtins.attrNames extensions);
 }

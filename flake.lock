@@ -1022,6 +1022,23 @@
         "type": "github"
       }
     },
+    "mcp-proxy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767491834,
+        "narHash": "sha256-CXPiJDMqS5hM4vmaNS1scCJX22GYqVmvoudk4DjdjCA=",
+        "owner": "TBXark",
+        "repo": "mcp-proxy",
+        "rev": "793528718e96b7bdc00ea02221cd8668eab282ee",
+        "type": "github"
+      },
+      "original": {
+        "owner": "TBXark",
+        "ref": "v0.43.2",
+        "repo": "mcp-proxy",
+        "type": "github"
+      }
+    },
     "nixgl": {
       "inputs": {
         "flake-utils": "flake-utils_2",
@@ -1254,6 +1271,7 @@
         "import-tree": "import-tree",
         "jenkins-mcp": "jenkins-mcp",
         "lanzaboote": "lanzaboote",
+        "mcp-proxy": "mcp-proxy",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_5",
         "phpantom_lsp": "phpantom_lsp",

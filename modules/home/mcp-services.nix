@@ -87,6 +87,12 @@
         # backend's ExecStartPost blocks until mcp-proxy is actually listening on
         # backendPort. Since ExecStartPost is part of the start job, `After`
         # waits for it — so socket-proxyd never forwards to a not-yet-bound port.
+        #
+        # mcp-proxy here is TBXark/mcp-proxy (Go, via modules/overlays.nix). It is
+        # config-file driven, not CLI-args driven: it takes `-config <file>` whose
+        # mcpProxy.addr is the bind address and whose mcpServers map defines the
+        # wrapped stdio child. It serves each server at `/<serverKey>/mcp`
+        # (streamable-HTTP), which is why the client `path` is `/<name>/mcp`.
         mcpProxy = "${pkgs.mcp-proxy}/bin/mcp-proxy";
         socketProxyd = "${pkgs.systemd}/lib/systemd/systemd-socket-proxyd";
         # mcp-proxy spawns `npx`, which needs node on PATH; the npx-fetched
@@ -114,6 +120,24 @@
           }
         ) servers.proxied;
 
+        # TBXark mcp-proxy config per backend: bind addr + the single wrapped
+        # stdio server, keyed by the entry name so it is served at /<name>/mcp.
+        # type must be set explicitly — mcp-proxy defaults to SSE otherwise.
+        mkProxyConfig =
+          name: p:
+          pkgs.writeText "mcp-${name}-proxy.json" (
+            builtins.toJSON {
+              mcpProxy = {
+                addr = "${p.host}:${toString p.backendPort}";
+                type = "streamable-http";
+                options.logEnabled = true;
+              };
+              mcpServers.${name} = {
+                inherit (p) command args;
+              };
+            }
+          );
+
         proxiedBackends = lib.mapAttrs' (
           name: p:
           lib.nameValuePair "mcp-${name}-backend" {
@@ -122,7 +146,8 @@
               Type = "simple";
               StopWhenUnneeded = true;
               Environment = [ backendPath ];
-              ExecStart = "${mcpProxy} --host ${p.host} --port ${toString p.backendPort} -- ${p.command} ${lib.escapeShellArgs p.args}";
+              # -expand-env=false: config holds literal values, no $VAR expansion.
+              ExecStart = "${mcpProxy} -config ${mkProxyConfig name p} -expand-env=false";
               # Gate readiness on the port actually accepting connections so the
               # socket-activated frontend doesn't race a cold `npx` start.
               ExecStartPost = "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 300); do (exec 3<>/dev/tcp/${p.host}/${toString p.backendPort}) 2>/dev/null && exit 0; sleep 0.3; done; exit 1'";
