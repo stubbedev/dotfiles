@@ -27,8 +27,8 @@ let
   #   modules/home/mcp-services.nix
   #     - `httpServices` → one systemd user service per entry (the server serves
   #       HTTP itself; `env`/`args` configure it), started at login.
-  #     - `proxied`      → a .socket + socket-proxyd frontend + mcp-proxy backend
-  #       per entry (stdio→streamable-HTTP bridge), started on demand.
+  #     - `proxied`      → a .socket + a socket-activated proxy-mcp service per
+  #       entry (stdio→streamable-HTTP bridge), started on demand.
   #   modules/activation/_non-privileged/setup-claude-code.nix
   #     - `httpServices` + `proxied` → global type:"http" client entries.
   #     - `global`       → top-level stdio entries.
@@ -36,8 +36,6 @@ let
   # The split follows two axes — how a server learns the caller's repo, and how
   # its process is best shared:
   #
-  # (zennotes used to be bridged here via a Go proxy; it was dropped from the
-  # default set — `zen` is still installed, just not wired as an MCP server.)
   #
   #   httpServices  long-lived shared HTTP servers, one process each, started at
   #                 login. Every Claude window is just an HTTP client, so opening
@@ -60,20 +58,20 @@ let
   #                     mcp-services.nix). They moved here from `global` once
   #                     their `mcp --http` mode landed.
   #
-  #   proxied       a single shared stdio server fronted by mcp-proxy
+  #   proxied       a single shared stdio server fronted by proxy-mcp
   #                 (stdio→streamable-HTTP) and started ON DEMAND via systemd
   #                 socket activation. chrome-devtools lives here: we want
   #                 exactly ONE browser, so every Claude window is an HTTP client
-  #                 of one mcp-proxy backend that owns one `npx chrome-devtools`
-  #                 stdio child (mcp-proxy spawns its upstream once and shares it
-  #                 across all client sessions). The accepted tradeoff vs. the
-  #                 old per-window model: windows share one browser session
-  #                 rather than each driving their own. modules/home/
+  #                 of one proxy-mcp that owns one `npx chrome-devtools` stdio
+  #                 child (mode "shared": proxy-mcp multiplexes every window onto
+  #                 one upstream session, so one browser). The accepted tradeoff
+  #                 vs. the old per-window model: windows share one browser
+  #                 session rather than each driving their own. modules/home/
   #                 mcp-services.nix turns each entry into a .socket + a
-  #                 socket-proxyd frontend + the mcp-proxy backend, so nothing
-  #                 (no node process, no browser) runs until a window first
-  #                 connects, and it all stops `idleSec` after the last window
-  #                 closes.
+  #                 socket-activated proxy-mcp service (it adopts the socket fd
+  #                 and idle-exits), so nothing (no node process, no browser)
+  #                 runs until a window first connects, and it all stops `idleSec`
+  #                 after the last request.
   #
   #   global        per-window stdio, loaded everywhere. Currently empty: srv and
   #                 treeman moved to httpServices once they grew roots-aware
@@ -182,28 +180,26 @@ let
     };
   };
 
-  # Single shared stdio servers fronted by mcp-proxy and socket-activated.
+  # Single shared stdio servers fronted by proxy-mcp and socket-activated.
   #   port        public loopback port the .socket listens on; Claude's http
-  #               client connects to http://host:port<path>.
-  #   backendPort private port mcp-proxy binds; the socket-proxyd frontend
-  #               forwards to it. Must differ from `port`.
-  #   path        the streamable-HTTP route TBXark mcp-proxy serves this server
-  #               at: `/<serverKey>/mcp`, where serverKey is the attr name below
-  #               (it keys the generated mcp-proxy config in mcp-services.nix).
+  #               client connects to http://host:port<path>. proxy-mcp adopts
+  #               this socket's fd directly (no private backend port needed).
+  #   path        the streamable-HTTP route proxy-mcp serves this server at:
+  #               `/<serverKey>/mcp`, where serverKey is the attr name below (it
+  #               keys the generated proxy-mcp config in mcp-services.nix).
   #               Keep this in sync with the attr name.
-  #   idleSec     socket-proxyd --exit-idle-time; after the last client
-  #               connection drops, the frontend exits and the backend (being
-  #               StopWhenUnneeded) is torn down, killing the browser.
-  #   command/args the stdio server mcp-proxy wraps (one shared instance); they
-  #               become the `command`/`args` of this server's entry in the
-  #               generated mcp-proxy config.json.
+  #   idleSec     proxy-mcp --idle-timeout; after that long with no requests the
+  #               proxy exits (killing node + the browser); the socket re-arms
+  #               and the next connection restarts it.
+  #   command/args the stdio server proxy-mcp wraps (one shared instance, mode
+  #               "shared"); they become the `command`/`args` of this server's
+  #               entry in the generated proxy-mcp config.json.
   # Gated on enableChrome (features.browsers): --auto-connect drives a real
   # Chrome, useless on a host with no browser installed.
   proxied = lib.optionalAttrs enableChrome {
     chrome-devtools = {
       host = "127.0.0.1";
       port = 39105;
-      backendPort = 39106;
       path = "/chrome-devtools/mcp";
       idleSec = 300;
       command = "npx";

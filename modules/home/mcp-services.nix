@@ -16,7 +16,7 @@
   #
   # The `proxied` set (chrome-devtools) is the deliberate inverse: we WANT one
   # shared upstream so there is exactly one browser. It is bridged through
-  # mcp-proxy (stdio→streamable-HTTP) and socket-activated, so nothing runs until
+  # proxy-mcp (stdio→streamable-HTTP) and socket-activated, so nothing runs until
   # a window connects and it stops once they all close. See the unit-building
   # block below.
   flake.modules.homeManager.mcpServices =
@@ -65,37 +65,29 @@
         };
 
         # On-demand singleton stdio servers (lib/mcp-servers.nix `proxied`). Each
-        # entry becomes three units so exactly one instance ever runs, started
-        # only when a Claude window first connects and torn down `idleSec` after
-        # the last one disconnects:
+        # entry becomes just TWO units — proxy-mcp now does socket activation and
+        # idle-exit itself, so the old systemd-socket-proxyd frontend + private
+        # backend port are gone:
         #
-        #   mcp-<name>.socket          loopback ListenStream on the public port;
-        #                              activates the frontend on first connect.
-        #   mcp-<name>.service         systemd-socket-proxyd forwarding the
-        #                              activated socket to the backend's private
-        #                              port. --exit-idle-time makes it exit once
-        #                              all proxied connections close and stay
-        #                              closed for idleSec.
-        #   mcp-<name>-backend.service mcp-proxy serving streamable-HTTP, wrapping
-        #                              the one shared `command` stdio child.
-        #                              StopWhenUnneeded ties its life to the
-        #                              frontend: when the frontend idle-exits and
-        #                              nothing else requires the backend, systemd
-        #                              stops it, killing node + the browser.
+        #   mcp-<name>.socket   loopback ListenStream on the public port; on the
+        #                       first connection systemd starts the matching
+        #                       service, handing it the listening fd.
+        #   mcp-<name>.service  proxy-mcp. It adopts the activation socket
+        #                       ($LISTEN_FDS) instead of binding, serves the one
+        #                       shared stdio child (mode "shared" → exactly one
+        #                       browser across all windows), and exits itself
+        #                       after `idleSec` of no requests (--idle-timeout).
+        #                       The socket stays armed, so the next connection
+        #                       re-activates it; node + the browser die on exit.
         #
-        # Ordering/race: the frontend Requires+After the backend, and the
-        # backend's ExecStartPost blocks until mcp-proxy is actually listening on
-        # backendPort. Since ExecStartPost is part of the start job, `After`
-        # waits for it — so socket-proxyd never forwards to a not-yet-bound port.
-        #
-        # mcp-proxy here is TBXark/mcp-proxy (Go, via modules/overlays.nix). It is
-        # config-file driven, not CLI-args driven: it takes `-config <file>` whose
-        # mcpProxy.addr is the bind address and whose mcpServers map defines the
-        # wrapped stdio child. It serves each server at `/<serverKey>/mcp`
-        # (streamable-HTTP), which is why the client `path` is `/<name>/mcp`.
-        mcpProxy = "${pkgs.mcp-proxy}/bin/mcp-proxy";
-        socketProxyd = "${pkgs.systemd}/lib/systemd/systemd-socket-proxyd";
-        # mcp-proxy spawns `npx`, which needs node on PATH; the npx-fetched
+        # Type=notify: proxy-mcp signals READY=1 only after the upstream stdio
+        # child connects and its route is registered, and it holds off Accept on
+        # the activation socket until then — so the connection that triggered
+        # activation waits in the socket backlog through the cold `npx` start
+        # rather than racing route registration. It serves each server at
+        # `/<serverKey>/mcp`, which is why the client `path` is `/<name>/mcp`.
+        mcpProxy = "${inputs.proxy-mcp.packages.${system}.proxy-mcp}/bin/proxy-mcp";
+        # proxy-mcp spawns `npx`, which needs node on PATH; the npx-fetched
         # chrome-devtools child inherits it.
         backendPath = "PATH=${pkgs.nodejs}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
@@ -108,50 +100,47 @@
           }
         ) servers.proxied;
 
-        proxiedFrontends = lib.mapAttrs' (
-          name: p:
-          lib.nameValuePair "mcp-${name}" {
-            Unit = {
-              Description = "${name} MCP proxy frontend (socket-proxyd)";
-              Requires = [ "mcp-${name}-backend.service" ];
-              After = [ "mcp-${name}-backend.service" ];
-            };
-            Service.ExecStart = "${socketProxyd} --exit-idle-time=${toString p.idleSec}s ${p.host}:${toString p.backendPort}";
-          }
-        ) servers.proxied;
-
-        # TBXark mcp-proxy config per backend: bind addr + the single wrapped
-        # stdio server, keyed by the entry name so it is served at /<name>/mcp.
-        # type must be set explicitly — mcp-proxy defaults to SSE otherwise.
+        # proxy-mcp config per entry: the proxy server + the single wrapped stdio
+        # child, keyed by the entry name so it is served at /<name>/mcp. mode
+        # "shared" multiplexes every Claude window onto one upstream session →
+        # one stdio child (one browser). type must be set explicitly — proxy-mcp
+        # defaults to SSE otherwise. addr is ignored under socket activation (the
+        # adopted fd wins) but kept valid for config validation.
         mkProxyConfig =
           name: p:
           pkgs.writeText "mcp-${name}-proxy.json" (
             builtins.toJSON {
               mcpProxy = {
-                addr = "${p.host}:${toString p.backendPort}";
+                baseURL = "http://${p.host}:${toString p.port}";
+                addr = "${p.host}:${toString p.port}";
+                name = "${name}-proxy";
+                version = "1.0.0";
                 type = "streamable-http";
                 options.logEnabled = true;
               };
               mcpServers.${name} = {
                 inherit (p) command args;
+                options.mode = "shared";
               };
             }
           );
 
-        proxiedBackends = lib.mapAttrs' (
+        proxiedServices = lib.mapAttrs' (
           name: p:
-          lib.nameValuePair "mcp-${name}-backend" {
-            Unit.Description = "${name} MCP proxy backend (mcp-proxy → ${p.command})";
+          lib.nameValuePair "mcp-${name}" {
+            Unit.Description = "${name} MCP proxy (proxy-mcp → ${p.command}, socket-activated)";
+            # No [Install]: started on demand by mcp-${name}.socket.
             Service = {
-              Type = "simple";
-              StopWhenUnneeded = true;
+              Type = "notify";
               Environment = [ backendPath ];
-              # -expand-env=false: config holds literal values, no $VAR expansion.
-              ExecStart = "${mcpProxy} -config ${mkProxyConfig name p} -expand-env=false";
-              # Gate readiness on the port actually accepting connections so the
-              # socket-activated frontend doesn't race a cold `npx` start.
-              ExecStartPost = "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 300); do (exec 3<>/dev/tcp/${p.host}/${toString p.backendPort}) 2>/dev/null && exit 0; sleep 0.3; done; exit 1'";
+              # --idle-timeout: exit after idleSec of no proxied requests; the
+              # socket re-activates on the next connection. --expand-env=false:
+              # config holds literal values, no $VAR expansion.
+              ExecStart = "${mcpProxy} --config ${mkProxyConfig name p} --expand-env=false --idle-timeout=${toString p.idleSec}s";
+              # Cold `npx` fetch of the upstream can be slow on first run; allow
+              # readiness up to 120s before systemd fails the start job.
               TimeoutStartSec = 120;
+              # Idle-exit is a clean exit (0); only restart on actual failure.
               Restart = "on-failure";
               RestartSec = 2;
             };
@@ -159,20 +148,19 @@
         ) servers.proxied;
       in
       {
-        systemd.user.services =
-          lib.mapAttrs mkService servers.httpServices // proxiedFrontends // proxiedBackends;
+        systemd.user.services = lib.mapAttrs mkService servers.httpServices // proxiedServices;
         systemd.user.sockets = proxiedSockets;
 
         # Restart on every `hm switch` so a changed server set / store path is
         # picked up even when sd-switch sees an identical unit (mirrors the
         # treemand pattern in modules/packages/treeman.nix). try-restart only
-        # touches units already running, so socket-activated backends that are
+        # touches units already running, so socket-activated proxies that are
         # idle stay down until the next connection.
         home.activation.restartMcpServices = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
           if command -v systemctl >/dev/null 2>&1; then
             systemctl --user try-restart ${
               lib.concatMapStringsSep " " (n: "${n}.service") (
-                lib.attrNames servers.httpServices ++ map (n: "mcp-${n}-backend") (lib.attrNames servers.proxied)
+                lib.attrNames servers.httpServices ++ map (n: "mcp-${n}") (lib.attrNames servers.proxied)
               )
             } 2>/dev/null || true
           fi

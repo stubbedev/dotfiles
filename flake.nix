@@ -58,14 +58,16 @@
       url = "github:stephenleo/cship";
       flake = false;
     };
-    # TBXark/mcp-proxy: Go-built stdio→streamable-HTTP bridge. Replaces the
-    # Python sparfenyuk `pkgs.mcp-proxy` (overridden via modules/overlays.nix)
-    # so the chrome-devtools `proxied` backend in lib/mcp-servers.nix runs a
-    # compiled binary instead of a Python interpreter. flake = false: built by
-    # buildGoModule in the overlay (the repo ships no flake).
-    mcp-proxy = {
-      url = "github:TBXark/mcp-proxy/v0.43.2";
-      flake = false;
+    # proxy-mcp (stubbedev): aggregating MCP proxy with a real readiness gate.
+    # Backs the chrome-devtools `proxied` entry in lib/mcp-servers.nix,
+    # replacing TBXark/mcp-proxy. Ships its own flake, so it is consumed as a
+    # package directly (no buildGoModule overlay). Its Type=notify
+    # sd_notify(READY=1) gate fires only after the wrapped upstream's MCP route
+    # is registered, so mcp-services.nix drops the hand-rolled ExecStartPost
+    # TCP-probe and gates the backend on real readiness.
+    proxy-mcp = {
+      url = "github:stubbedev/proxy-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
     # Ships its own flake; we consume overlays.default (modules/overlays.nix).

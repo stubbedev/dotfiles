@@ -48,21 +48,6 @@ let
       };
     };
 
-  # TBXark/mcp-proxy (Go) overrides nixpkgs' Python `mcp-proxy`. Same role —
-  # stdio→streamable-HTTP bridge — but a compiled binary, no interpreter. The
-  # consumer (modules/home/mcp-services.nix) keeps referencing `pkgs.mcp-proxy`;
-  # only the implementation behind it changes. vendorHash tracks go.sum at the
-  # pinned tag (bump both together on input update).
-  mcpProxyOverlay = final: _prev: {
-    mcp-proxy = final.buildGoModule {
-      pname = "mcp-proxy";
-      version = "0.43.2";
-      src = inputs.mcp-proxy;
-      vendorHash = "sha256-9CdEfR0HU4JA+t5SJUNyaRkc92ZQaiWRTWKN/2P3VQY=";
-      doCheck = false;
-    };
-  };
-
   # phpantom_lsp ships its own flake; surface packages.default as
   # pkgs.phpantom_lsp so both NixOS (nix-settings.nix) and home-manager
   # (home-manager/pkgs.nix) see it through the shared overlay set.
@@ -75,7 +60,6 @@ in
   flake.overlays = {
     nixgl = nixglOverlay;
     cship = cshipOverlay;
-    mcp-proxy = mcpProxyOverlay;
     # wayle ships its own flake; reuse its overlay (builds the whole workspace —
     # wayle + wayle-settings — and installs the desktop file + icons).
     wayle = inputs.wayle.overlays.default;

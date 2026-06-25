@@ -35,7 +35,7 @@
         url = "http://${s.host}:${toString s.port}${s.path}";
       }) servers.httpServices;
 
-      # http client entries → the socket-activated mcp-proxy frontends (same
+      # http client entries → the socket-activated proxy-mcp frontends (same
       # module). Connecting here is what spawns the single shared backend on
       # demand; every window points at the one port.
       proxiedServers = lib.mapAttrs (_: p: {
@@ -92,11 +92,20 @@
                 source = "github";
                 repo = "JuliusBrussee/caveman";
               };
+              # Ponytail: minimal-code-gen discipline (YAGNI decision ladder,
+              # fewer LOC). Orthogonal to caveman — caveman compresses prose,
+              # ponytail constrains the code written. Self-registers its
+              # lifecycle hooks via the plugin manifest; needs node on PATH.
+              ponytail.source = {
+                source = "github";
+                repo = "DietrichGebert/ponytail";
+              };
             };
             enabledPlugins = {
               "phpantom-lsp@phpantom" = true;
               "php-lsp@claude-plugins-official" = false;
               "caveman@caveman" = true;
+              "ponytail@ponytail" = true;
             };
           };
         }}
@@ -108,6 +117,15 @@
           # caveman starts "full" on every session regardless of the plugin's
           # built-in default drifting in a future update.
           target = "${config.home.homeDirectory}/.config/caveman/config.json";
+          patch.defaultMode = "full";
+        }}
+
+        ${homeLib.mergeJsonPatch {
+          name = "ponytail-config";
+          # Ponytail resolves ~/.config/ponytail/config.json (or
+          # $PONYTAIL_DEFAULT_MODE). Pin defaultMode so every session starts at
+          # a known intensity regardless of the plugin's built-in default.
+          target = "${config.home.homeDirectory}/.config/ponytail/config.json";
           patch.defaultMode = "full";
         }}
 

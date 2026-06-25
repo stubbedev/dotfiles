@@ -23,9 +23,10 @@
       subject = "touchpad dock-unplug rebind rule";
       body = ''
         On a Thunderbolt dock undock the i2c-hid touchpad stops emitting
-        events until its driver is rebound. This installs a udev rule that
-        rebinds it automatically on the DRM hotplug, plus the helper script
-        and systemd service it triggers.
+        events until its driver is rebound. This installs udev rules that
+        rebind it automatically — on the DRM hotplug, and (for undocks with
+        no external monitor) on the dock's thunderbolt device removal — plus
+        the helper script and systemd service they trigger.
       '';
       actionScript = ''
         sudo install -d -m 0755 /etc/udev/rules.d /etc/udev/scripts
@@ -33,6 +34,18 @@
         ${homeLib.installSystemFile {
           target = "/etc/udev/rules.d/90-touchpad-rebind.rules";
           content = builtins.readFile (self + "/src/udev/rules.d/90-touchpad-rebind.rules");
+        }}
+
+        # Monitor-independent undock fallback (mirror of the thunderbolt-remove
+        # rule in modules/nixos/udev.nix, with the FHS systemctl path). The DRM
+        # rule above only fires on a display connector change, so undocking with
+        # no external monitor never rebinds. SYSTEMD_WANTS is ignored on
+        # "remove", so start the oneshot via RUN.
+        ${homeLib.installSystemFile {
+          target = "/etc/udev/rules.d/91-touchpad-rebind-thunderbolt.rules";
+          content = ''
+            ACTION=="remove", SUBSYSTEM=="thunderbolt", ENV{DEVTYPE}=="thunderbolt_device", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", RUN+="/usr/bin/systemctl --no-block start touchpad-rebind.service"
+          '';
         }}
 
         ${homeLib.installSystemFile {
