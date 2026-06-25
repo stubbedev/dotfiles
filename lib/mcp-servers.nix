@@ -153,7 +153,9 @@ let
       host = "127.0.0.1";
       port = 39107;
       path = "/mcp";
-      env = { XDG_CONFIG_HOME = "${homeDir}/.config"; };
+      env = {
+        XDG_CONFIG_HOME = "${homeDir}/.config";
+      };
       args = [
         "mcp"
         "--http=127.0.0.1:39107"
@@ -170,7 +172,9 @@ let
       # `--http=<addr>` both enables HTTP and sets the bind addr; path defaults
       # to /mcp. (The TREEMAN_MCP_HTTP_ADDR env is NOT honored — verified — so
       # the addr must be passed on the flag.)
-      env = { XDG_CONFIG_HOME = "${homeDir}/.config"; };
+      env = {
+        XDG_CONFIG_HOME = "${homeDir}/.config";
+      };
       args = [
         "mcp"
         "--http=127.0.0.1:39108"
