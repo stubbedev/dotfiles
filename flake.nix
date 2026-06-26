@@ -54,6 +54,12 @@
       url = "github:stubbedev/atlassian-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Local Laravel dev MCP (Go). Native HTTP + MCP-roots aware, so it joins the
+    # shared `httpServices` set (lib/mcp-servers.nix), not the stdio proxy.
+    laravel-dev-mcp = {
+      url = "github:stubbedev/laravel-dev-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Readonly DB MCP servers (Go). Scoped to the kontainer repo + worktrees
     # only (see modules/home/kontainer-db-mcp.nix), not the global MCP set.
     mysql-mcp = {
