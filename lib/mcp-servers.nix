@@ -63,7 +63,7 @@ let
   #                     mcp-services.nix). They moved here from `global` once
   #                     their `mcp --http` mode landed.
   #
-  #   proxied       a single shared stdio server fronted by proxy-mcp
+  #   proxied       shared stdio servers fronted by ONE proxy-mcp
   #                 (stdio→streamable-HTTP) and started ON DEMAND via systemd
   #                 socket activation. chrome-devtools lives here: we want
   #                 exactly ONE browser, so every Claude window is an HTTP client
@@ -72,11 +72,16 @@ let
   #                 one upstream session, so one browser). The accepted tradeoff
   #                 vs. the old per-window model: windows share one browser
   #                 session rather than each driving their own. modules/home/
-  #                 mcp-services.nix turns each entry into a .socket + a
-  #                 socket-activated proxy-mcp service (it adopts the socket fd
-  #                 and idle-exits), so nothing (no node process, no browser)
-  #                 runs until a window first connects, and it all stops `idleSec`
-  #                 after the last request.
+  #                 mcp-services.nix turns the WHOLE set into a single .socket +
+  #                 a single socket-activated proxy-mcp service serving each entry
+  #                 at /<name>/mcp on one shared port. proxy-mcp connects each
+  #                 backend lazily on the first request to its route and retires
+  #                 it `idleSec` after that route falls quiet (per-upstream
+  #                 options.idleTimeout) — so the heavy browser can drop while a
+  #                 DB stays warm, and vice versa — all inside one process. The
+  #                 process itself idle-exits once every route is quiet, re-arming
+  #                 the socket. A panic in one backend is contained, never
+  #                 crashing its siblings.
   #
   #   global        per-window stdio, loaded everywhere. Currently empty: srv and
   #                 treeman moved to httpServices once they grew roots-aware
@@ -185,41 +190,47 @@ let
     };
   };
 
-  # Single shared stdio servers fronted by proxy-mcp and socket-activated.
-  #   port        public loopback port the .socket listens on; Claude's http
-  #               client connects to http://host:port<path>. proxy-mcp adopts
-  #               this socket's fd directly (no private backend port needed).
+  # Shared stdio servers fronted by ONE socket-activated proxy-mcp. Every entry
+  # is served by the same proxy process on the same `proxiedPort`, distinguished
+  # by `path` (/<name>/mcp); mcp-services.nix aggregates them into one config.
+  #   host/port   the single shared loopback addr the one .socket listens on and
+  #               every Claude http client connects to. proxy-mcp adopts the
+  #               socket fd directly (no private backend port). All entries share
+  #               it; only `path` differs per server.
   #   path        the streamable-HTTP route proxy-mcp serves this server at:
   #               `/<serverKey>/mcp`, where serverKey is the attr name below (it
-  #               keys the generated proxy-mcp config in mcp-services.nix).
-  #               Keep this in sync with the attr name.
-  #   idleSec     proxy-mcp --idle-timeout; after that long with no requests the
-  #               proxy exits (killing node + the browser); the socket re-arms
-  #               and the next connection restarts it.
+  #               keys the entry in the generated proxy-mcp config). Keep in sync
+  #               with the attr name.
+  #   idleSec     this server's per-upstream options.idleTimeout: proxy-mcp
+  #               connects the backend lazily on the first request to its route
+  #               and tears it down after that long with no requests TO THIS
+  #               ROUTE, independently of the other backends. The whole proxy
+  #               process also exits once every route is quiet (re-arming the
+  #               socket); the next connection restarts the process and the one
+  #               backend hit.
   #   command/args the stdio server proxy-mcp wraps (one shared instance, mode
-  #               "shared"); they become the `command`/`args` of this server's
-  #               entry in the generated proxy-mcp config.json.
+  #               "shared"); they become this entry's `command`/`args` in the
+  #               generated proxy-mcp config.json.
   # chrome-devtools gated on enableChrome (features.browsers): --auto-connect
   # drives a real Chrome, useless on a host with no browser installed.
   #
-  # mysql/mongodb (readonly DB servers) join the SAME pattern, ungated: exactly
-  # one process each, socket-activated, idle-exiting after idleSec. proxied (not
-  # httpServices) is the right home precisely because of idle-exit — a source
-  # with an `ssh` block holds an SSH tunnel open for the life of the process, so
-  # a login-time httpService would keep the staging tunnel up 24/7; here the
-  # tunnel (and the process) die idleSec after the last query and re-establish
-  # on the next. mode "shared" multiplexes every window onto one upstream
-  # session, which is fine: each tool call is an independent query, no
-  # per-session state to collapse. mysql `--read-only` force-readonlies every
-  # source on top of the per-source flag; mongodb-mcp enforces readonly per
-  # source. Configs decrypt from sops (modules/files/mcp-secrets.nix) to
-  # ~/.config/<name>-mcp/config.json. Ports continue the 391xx block (39105
-  # chrome, 39107/08 srv/treeman → 39109/10 here).
+  # mysql/mongodb (readonly DB servers) join the SAME proxy, ungated. proxied
+  # (not httpServices) is the right home precisely because of idle-exit — a
+  # source with an `ssh` block holds an SSH tunnel open for the life of the
+  # backend, so a login-time httpService would keep the staging tunnel up 24/7;
+  # here the tunnel (and the backend) die idleSec after the last query and
+  # re-establish on the next, while leaving the browser backend alone. mode
+  # "shared" multiplexes every window onto one upstream session, which is fine:
+  # each tool call is an independent query, no per-session state to collapse.
+  # mysql `--read-only` force-readonlies every source on top of the per-source
+  # flag; mongodb-mcp enforces readonly per source. Configs decrypt from sops
+  # (modules/files/mcp-secrets.nix) to ~/.config/<name>-mcp/config.json.
+  proxiedPort = 39105;
   proxied =
     lib.optionalAttrs enableChrome {
       chrome-devtools = {
         host = "127.0.0.1";
-        port = 39105;
+        port = proxiedPort;
         path = "/chrome-devtools/mcp";
         idleSec = 300;
         command = "npx";
@@ -234,7 +245,7 @@ let
     // {
       mysql = {
         host = "127.0.0.1";
-        port = 39109;
+        port = proxiedPort;
         path = "/mysql/mcp";
         idleSec = 300;
         command = mysqlMcp;
@@ -247,7 +258,7 @@ let
       };
       mongodb = {
         host = "127.0.0.1";
-        port = 39110;
+        port = proxiedPort;
         path = "/mongodb/mcp";
         idleSec = 300;
         command = mongodbMcp;
