@@ -1,5 +1,5 @@
 # CLI mail and TUI helpers
-_: {
+{ inputs, ... }: {
   flake.modules.homeManager.packagesCliMail =
     {
       self,
@@ -26,28 +26,14 @@ _: {
         # layout tables (heuristic preserves real data tables), strips
         # MSO/Word noise, then renders Markdown via htmd. Single static
         # binary — replaces the prior python+bs4+html-to-markdown pipeline.
-        (rustPlatform.buildRustPackage (
-          let
-            # Pin the source to a content-addressed store path so the
-            # derivation hash doesn't depend on the wider flake's outPath
-            # (which churns whenever activation writes back into the tree
-            # — zsh `.zwc` recompiles, generated completions, etc. — since
-            # `path:` flakes ignore .gitignore). The filter also drops a
-            # local cargo `target/` from the hash.
-            src = builtins.path {
-              path = self + "/src/aerc/scripts/aerc-html-filter";
-              name = "aerc-html-filter-src";
-              filter = path: _type: builtins.baseNameOf path != "target";
-            };
-          in
-          {
-            pname = "aerc-html-filter";
-            version = "0.1.0";
-            inherit src;
-            cargoLock.lockFile = src + "/Cargo.lock";
-            doCheck = false;
-          }
-        ))
+        # Source: github:stubbedev/html-to-md (flake = false, pinned in flake.lock)
+        (rustPlatform.buildRustPackage {
+          pname = "html-to-md";
+          version = "0.1.0";
+          src = inputs.html-to-md;
+          cargoLock.lockFile = inputs.html-to-md + "/Cargo.lock";
+          doCheck = false;
+        })
       ];
     };
 }

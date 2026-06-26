@@ -70,6 +70,10 @@
       url = "github:stubbedev/mongodb-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    html-to-md = {
+      url = "github:stubbedev/html-to-md";
+      flake = false;
+    };
     cship = {
       url = "github:stephenleo/cship";
       flake = false;

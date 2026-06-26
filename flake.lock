@@ -490,6 +490,22 @@
         "type": "github"
       }
     },
+    "html-to-md": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782506747,
+        "narHash": "sha256-fk85vGlyBL1BpncbFKyknXhwzdaUuuhKgFqNqRMVrrM=",
+        "owner": "stubbedev",
+        "repo": "html-to-md",
+        "rev": "d6436e2be9c9b42f0e1fa4c51905940d8c41d0a5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "html-to-md",
+        "type": "github"
+      }
+    },
     "hy3": {
       "inputs": {
         "hyprland": [
@@ -1403,6 +1419,7 @@
         "fenix": "fenix",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
+        "html-to-md": "html-to-md",
         "hy3": "hy3",
         "hyprland": "hyprland",
         "hyprland-guiutils": "hyprland-guiutils_2",
