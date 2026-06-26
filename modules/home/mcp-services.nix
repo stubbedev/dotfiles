@@ -37,6 +37,11 @@
           atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
           srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
           treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
+          # Readonly DB servers now live in `proxied` (socket-activated, shared,
+          # idle-exit), which this module forces — so their binaries must be
+          # passed here too, not just in setup-claude-code.nix.
+          mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
+          mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
           enableSrv = config.features.srv;
           enableTreeman = config.features.treeman;
           enableChrome = config.features.browsers;

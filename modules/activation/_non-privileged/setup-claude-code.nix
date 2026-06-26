@@ -20,6 +20,9 @@
         atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
         srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
         treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
+        # Readonly DB servers → global stdio entries (Go bins from flake inputs).
+        mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
+        mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
         # Gate client entries on the same feature flags mcp-services.nix uses to
         # gate the services, so we never advertise a server that isn't running.
         enableSrv = config.features.srv;

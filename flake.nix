@@ -54,6 +54,16 @@
       url = "github:stubbedev/atlassian-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Readonly DB MCP servers (Go). Scoped to the kontainer repo + worktrees
+    # only (see modules/home/kontainer-db-mcp.nix), not the global MCP set.
+    mysql-mcp = {
+      url = "github:stubbedev/mysql-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    mongodb-mcp = {
+      url = "github:stubbedev/mongodb-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     cship = {
       url = "github:stephenleo/cship";
       flake = false;

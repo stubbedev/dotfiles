@@ -11,6 +11,11 @@
   atlassianMcp ? throw "lib/mcp-servers.nix: atlassianMcp store path required",
   srvMcp ? throw "lib/mcp-servers.nix: srvMcp store path required",
   treemanMcp ? throw "lib/mcp-servers.nix: treemanMcp store path required",
+  # Readonly DB servers, loaded as global stdio (see `global` below). Lazy
+  # throws: only setup-claude-code.nix forces `global`, so mcp-services.nix
+  # (which only touches httpServices/proxied) need not pass these.
+  mysqlMcp ? throw "lib/mcp-servers.nix: mysqlMcp store path required",
+  mongodbMcp ? throw "lib/mcp-servers.nix: mongodbMcp store path required",
   # Per-feature gates (mirror modules/features.nix). A server is wired only when
   # its backing tool/daemon is actually installed — otherwise we'd start a
   # systemd unit and advertise a client entry for a binary whose state/daemon is
@@ -194,27 +199,69 @@ let
   #   command/args the stdio server proxy-mcp wraps (one shared instance, mode
   #               "shared"); they become the `command`/`args` of this server's
   #               entry in the generated proxy-mcp config.json.
-  # Gated on enableChrome (features.browsers): --auto-connect drives a real
-  # Chrome, useless on a host with no browser installed.
-  proxied = lib.optionalAttrs enableChrome {
-    chrome-devtools = {
-      host = "127.0.0.1";
-      port = 39105;
-      path = "/chrome-devtools/mcp";
-      idleSec = 300;
-      command = "npx";
-      args = [
-        "-y"
-        "chrome-devtools-mcp@1.4.0"
-        "--no-usage-statistics"
-        "--auto-connect"
-      ];
+  # chrome-devtools gated on enableChrome (features.browsers): --auto-connect
+  # drives a real Chrome, useless on a host with no browser installed.
+  #
+  # mysql/mongodb (readonly DB servers) join the SAME pattern, ungated: exactly
+  # one process each, socket-activated, idle-exiting after idleSec. proxied (not
+  # httpServices) is the right home precisely because of idle-exit — a source
+  # with an `ssh` block holds an SSH tunnel open for the life of the process, so
+  # a login-time httpService would keep the staging tunnel up 24/7; here the
+  # tunnel (and the process) die idleSec after the last query and re-establish
+  # on the next. mode "shared" multiplexes every window onto one upstream
+  # session, which is fine: each tool call is an independent query, no
+  # per-session state to collapse. mysql `--read-only` force-readonlies every
+  # source on top of the per-source flag; mongodb-mcp enforces readonly per
+  # source. Configs decrypt from sops (modules/files/mcp-secrets.nix) to
+  # ~/.config/<name>-mcp/config.json. Ports continue the 391xx block (39105
+  # chrome, 39107/08 srv/treeman → 39109/10 here).
+  proxied =
+    lib.optionalAttrs enableChrome {
+      chrome-devtools = {
+        host = "127.0.0.1";
+        port = 39105;
+        path = "/chrome-devtools/mcp";
+        idleSec = 300;
+        command = "npx";
+        args = [
+          "-y"
+          "chrome-devtools-mcp@1.4.0"
+          "--no-usage-statistics"
+          "--auto-connect"
+        ];
+      };
+    }
+    // {
+      mysql = {
+        host = "127.0.0.1";
+        port = 39109;
+        path = "/mysql/mcp";
+        idleSec = 300;
+        command = mysqlMcp;
+        args = [
+          "serve"
+          "--read-only"
+          "--config"
+          "${homeDir}/.config/mysql-mcp/config.json"
+        ];
+      };
+      mongodb = {
+        host = "127.0.0.1";
+        port = 39110;
+        path = "/mongodb/mcp";
+        idleSec = 300;
+        command = mongodbMcp;
+        args = [
+          "--config"
+          "${homeDir}/.config/mongodb-mcp/config.json"
+        ];
+      };
     };
-  };
 
-  # Per-window stdio servers. Empty since srv/treeman became shared HTTP
-  # daemons; kept as an explicit category so a future stdio-only server has an
-  # obvious home (and setup-claude-code.nix still maps it).
+  # Per-window stdio servers, loaded everywhere. Empty since srv/treeman became
+  # shared HTTP daemons and the DB servers moved to `proxied`; kept as an
+  # explicit category so a future stdio-only server has an obvious home (and
+  # setup-claude-code.nix still maps it).
   global = { };
 in
 {
