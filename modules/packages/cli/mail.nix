@@ -7,7 +7,9 @@
       config,
       ...
     }:
-    lib.mkIf config.features.desktop {
+    lib.mkIf config.features.desktop (
+      let system = pkgs.stdenv.hostPlatform.system;
+      in {
       home.packages = with pkgs; [
         msmtp
         w3m
@@ -21,18 +23,12 @@
         # back. See modules/files/mail.nix for the wiring.
         isync
         notmuch
+        glow
         # aerc text/html filter: parses with html5ever (kuchikiki), flattens
         # layout tables (heuristic preserves real data tables), strips
         # MSO/Word noise, then renders Markdown via htmd. Single static
-        # binary — replaces the prior python+bs4+html-to-markdown pipeline.
-        # Source: github:stubbedev/html-to-md (flake = false, pinned in flake.lock)
-        (rustPlatform.buildRustPackage {
-          pname = "html-to-md";
-          version = "0.1.0";
-          src = inputs.html-to-md;
-          cargoLock.lockFile = inputs.html-to-md + "/Cargo.lock";
-          doCheck = false;
-        })
+        # binary — source: github:stubbedev/html-to-md.
+        inputs.html-to-md.packages.${system}.default
       ];
-    };
+    });
 }

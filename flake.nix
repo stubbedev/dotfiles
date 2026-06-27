@@ -72,7 +72,11 @@
     };
     html-to-md = {
       url = "github:stubbedev/html-to-md";
-      flake = false;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-mcp = {
+      url = "github:stubbedev/nix-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     cship = {
       url = "github:stephenleo/cship";

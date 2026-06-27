@@ -15,6 +15,7 @@
   # Readonly DB servers, loaded as global stdio (see `global` below). Lazy
   # throws: only setup-claude-code.nix forces `global`, so mcp-services.nix
   # (which only touches httpServices/proxied) need not pass these.
+  nixMcp ? throw "lib/mcp-servers.nix: nixMcp store path required",
   mysqlMcp ? throw "lib/mcp-servers.nix: mysqlMcp store path required",
   mongodbMcp ? throw "lib/mcp-servers.nix: mongodbMcp store path required",
   # Per-feature gates (mirror modules/features.nix). A server is wired only when
@@ -119,20 +120,14 @@ let
     };
 
   httpServices = {
-    # mcp-nixos (FastMCP) in its own HTTP mode; cwd-irrelevant. Configured by
-    # MCP_NIXOS_* env rather than flags.
+    # stubbedev/nix-mcp (Go) in HTTP mode; cwd-irrelevant. Uses --http flag.
     nix-mcp = {
-      exe = "${pkgs.mcp-nixos}/bin/mcp-nixos";
+      exe = nixMcp;
       host = "127.0.0.1";
       port = 39101;
       path = "/mcp";
-      env = {
-        MCP_NIXOS_TRANSPORT = "http";
-        MCP_NIXOS_HOST = "127.0.0.1";
-        MCP_NIXOS_PORT = "39101";
-        MCP_NIXOS_PATH = "/mcp";
-      };
-      args = [ ];
+      env = { };
+      args = [ "--http=127.0.0.1:39101" "--http-path=/mcp" ];
     };
     atlassian-mcp = mkWork {
       exe = atlassianMcp;

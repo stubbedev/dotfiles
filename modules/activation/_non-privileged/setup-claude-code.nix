@@ -22,6 +22,7 @@
         srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
         treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
         # Readonly DB servers → global stdio entries (Go bins from flake inputs).
+        nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
         mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
         mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
         # Gate client entries on the same feature flags mcp-services.nix uses to

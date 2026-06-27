@@ -44,6 +44,7 @@
           # Readonly DB servers now live in `proxied` (socket-activated, shared,
           # idle-exit), which this module forces — so their binaries must be
           # passed here too, not just in setup-claude-code.nix.
+          nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
           mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
           mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
           enableSrv = config.features.srv;
