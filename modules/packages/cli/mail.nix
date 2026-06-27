@@ -2,7 +2,6 @@
 { inputs, ... }: {
   flake.modules.homeManager.packagesCliMail =
     {
-      self,
       pkgs,
       lib,
       config,
