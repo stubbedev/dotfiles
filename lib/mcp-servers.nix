@@ -127,7 +127,10 @@ let
       port = 39101;
       path = "/mcp";
       env = { };
-      args = [ "--http=127.0.0.1:39101" "--http-path=/mcp" ];
+      args = [
+        "--http=127.0.0.1:39101"
+        "--http-path=/mcp"
+      ];
     };
     atlassian-mcp = mkWork {
       exe = atlassianMcp;
