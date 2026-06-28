@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Aerc viewer pager: render the (already-filtered) message body as markdown
+# via glow, then close the aerc viewer on exit so the user lands back on the
+# message list without a second keypress.
+dir="$(dirname "$(realpath "$0")")"
+glow --pager --style "${dir}/glow-catppuccin-mocha.json" -
+aerc :close
