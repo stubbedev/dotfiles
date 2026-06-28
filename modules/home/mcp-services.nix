@@ -175,18 +175,25 @@
         systemd.user.services = lib.mapAttrs mkService servers.httpServices // proxiedServices;
         systemd.user.sockets = proxiedSockets;
 
-        # Restart on every `hm switch` so a changed server set / store path is
+        # Re-sync on every `hm switch` so a changed server set / store path is
         # picked up even when sd-switch sees an identical unit (mirrors the
-        # treemand pattern in modules/packages/treeman.nix). try-restart only
-        # touches units already running, so socket-activated proxies that are
-        # idle stay down until the next connection.
+        # treemand pattern in modules/packages/treeman.nix).
+        #
+        # httpServices are always-on (WantedBy=default.target): use `restart`,
+        # which also STARTS a stopped unit. `try-restart` is wrong here — it is a
+        # no-op on a stopped unit, so when sd-switch stops a changed unit to swap
+        # store paths and leaves it down, try-restart can't bring it back and the
+        # server stays dead until the next login. mcp-proxy is the opposite: it's
+        # socket-activated with no [Install], so use `try-restart` to refresh it
+        # only if already running and let an idle proxy stay down.
         home.activation.restartMcpServices = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
           if command -v systemctl >/dev/null 2>&1; then
-            systemctl --user try-restart ${
-              lib.concatMapStringsSep " " (n: "${n}.service") (
-                lib.attrNames servers.httpServices ++ lib.optional (servers.proxied != { }) "mcp-proxy"
-              )
+            systemctl --user restart ${
+              lib.concatMapStringsSep " " (n: "${n}.service") (lib.attrNames servers.httpServices)
             } 2>/dev/null || true
+            ${lib.optionalString (servers.proxied != { }) ''
+              systemctl --user try-restart mcp-proxy.service 2>/dev/null || true
+            ''}
           fi
         '';
       }
