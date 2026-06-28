@@ -1460,11 +1460,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782474391,
-        "narHash": "sha256-s2sZxiiWVRhXj3XGzG7Ny6nZEIoTKKRP+v5aLGMqBdU=",
+        "lastModified": 1782677324,
+        "narHash": "sha256-LuBT8unZCvXGDbWQZy2g88mPjyyqLpxdAdNbLFqsFqU=",
         "owner": "stubbedev",
         "repo": "proxy-mcp",
-        "rev": "4d0c536a9ee0fe5555403be62eb3199dd1e71778",
+        "rev": "8c50793d14934c37544338d802bba1186c9ebb4c",
         "type": "github"
       },
       "original": {
