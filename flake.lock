@@ -491,11 +491,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782522538,
-        "narHash": "sha256-CvOaUvJ+mXlxU3m2cPWKcOAhtKETsPUYhq+Xa5ewBp4=",
+        "lastModified": 1782657028,
+        "narHash": "sha256-PHTCpYZCMzJYS3phhywqRAZphKVr2zjvlGYa+H20ZZ4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "8d8a6cc50ddc60748791a14ee1163c865ec57635",
+        "rev": "4ad9aaae70c9aaab504127f926c0fa9cfbc2b365",
         "type": "github"
       },
       "original": {
@@ -1805,11 +1805,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782644245,
-        "narHash": "sha256-ktBa0OMIdKkNX31k6MV+qyQeJBzfoZxT7oQEaiDV4BU=",
+        "lastModified": 1782663617,
+        "narHash": "sha256-Te8M86ceqVBAPMfyPsmSHBwWZfMpLIga7lX6fwCMy3c=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "22a7a5de6565f39771ae00031797543607fab1f9",
+        "rev": "98e0af35b02d6ec0117b1f5b420f0ff7d6823630",
         "type": "github"
       },
       "original": {
@@ -1826,11 +1826,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782647458,
-        "narHash": "sha256-Q611Hn981BHfZ2TeB8CD/wcsz242PMd3JIPosE3M7b4=",
+        "lastModified": 1782675105,
+        "narHash": "sha256-ls1yLwTBwl+jOTLFgmYTA3koAXuP3dD1EpVHchAkMbs=",
         "ref": "master",
-        "rev": "49c5905a4259030cf14e74de110a6a80eda603d9",
-        "revCount": 787,
+        "rev": "69841547cfc33ea70320a00b2781fb2ae256471b",
+        "revCount": 791,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
