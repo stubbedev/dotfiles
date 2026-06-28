@@ -70,7 +70,7 @@
             Type = "simple";
             Environment = [ pathEnv ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") s.env;
             ExecStart = "${s.exe} ${lib.escapeShellArgs s.args}";
-            Restart = "on-failure";
+            Restart = "always";
             RestartSec = 2;
           };
         };
