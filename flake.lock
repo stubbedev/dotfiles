@@ -1805,11 +1805,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782504815,
-        "narHash": "sha256-BveLXQ233k54fmWeM/MjyVCU9tCJldhGpX8jjEGb4fU=",
+        "lastModified": 1782644245,
+        "narHash": "sha256-ktBa0OMIdKkNX31k6MV+qyQeJBzfoZxT7oQEaiDV4BU=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "be04a61e7e199b5d015ca1840be8a815ae2a4608",
+        "rev": "22a7a5de6565f39771ae00031797543607fab1f9",
         "type": "github"
       },
       "original": {
@@ -1826,11 +1826,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782330124,
-        "narHash": "sha256-anMtXnmy5K1tkVbczrKHM7Mxon5mTKoI7cTRWH8vrsM=",
+        "lastModified": 1782647458,
+        "narHash": "sha256-Q611Hn981BHfZ2TeB8CD/wcsz242PMd3JIPosE3M7b4=",
         "ref": "master",
-        "rev": "34c95c341fdaf6fbb771faf5af37cf0595218635",
-        "revCount": 779,
+        "rev": "49c5905a4259030cf14e74de110a6a80eda603d9",
+        "revCount": 787,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
