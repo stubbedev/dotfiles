@@ -27,9 +27,16 @@ vim.wo.spell = false
 -- Read-only mail viewer: no line numbers, no statusline, and bounce out
 -- of any insert-flavoured mode. Visual / visual-block stay usable for
 -- selecting text to yank.
-vim.wo.number = false
-vim.wo.relativenumber = false
-vim.wo.signcolumn = "no"
+-- Applied via a function + defer_fn because LazyVim's FileType markdown
+-- autocmds fire after -S and reset these options.
+local function hide_gutter()
+  vim.wo.number = false
+  vim.wo.relativenumber = false
+  vim.wo.signcolumn = "no"
+end
+hide_gutter()
+vim.defer_fn(hide_gutter, 50)
+vim.defer_fn(hide_gutter, 500)
 
 -- Hide lualine + tabline. The user's init.lua re-runs lualine.setup()
 -- via a scheduled callback on BufAdd (to refresh the bufferline tabline),
