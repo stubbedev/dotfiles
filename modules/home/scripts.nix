@@ -56,7 +56,7 @@
           vars.TERM = constants.paths.term;
         };
         mail-unsubscribe.source = "src/aerc/scripts/unsubscribe";
-        mail-pager.source = "src/aerc/scripts/nvim-pager.sh";
+        mail-pager.source = "src/aerc/scripts/mail-pager";
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
         # wayle shell: launch wrapper (Wayland socket detection). wayle's
         # custom module parses waybar-style JSON natively (text/tooltip/class),
