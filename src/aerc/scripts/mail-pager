@@ -2,5 +2,7 @@
 # Aerc viewer pager: render the (already-filtered) message body as markdown
 # via glow, then close the aerc viewer on exit so the user lands back on the
 # message list without a second keypress.
-glow --pager --style "${XDG_CONFIG_HOME:-$HOME/.config}/glow/catppuccin-mocha.json" -
+# Force less (alt-screen) over the global PAGER=more: more writes to the normal
+# buffer, so aerc's embedded terminal parks the viewport at the bottom on open.
+PAGER='less -R' glow --pager --style "${XDG_CONFIG_HOME:-$HOME/.config}/glow/catppuccin-mocha.json" -
 aerc :close
