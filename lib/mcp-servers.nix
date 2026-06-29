@@ -9,7 +9,6 @@
   jenkinsMcp ? throw "lib/mcp-servers.nix: jenkinsMcp store path required",
   sentryMcp ? throw "lib/mcp-servers.nix: sentryMcp store path required",
   atlassianMcp ? throw "lib/mcp-servers.nix: atlassianMcp store path required",
-  laravelMcp ? throw "lib/mcp-servers.nix: laravelMcp store path required",
   srvMcp ? throw "lib/mcp-servers.nix: srvMcp store path required",
   treemanMcp ? throw "lib/mcp-servers.nix: treemanMcp store path required",
   # Readonly DB servers, loaded as global stdio (see `global` below). Lazy
@@ -26,7 +25,6 @@
   enableSrv ? true,
   enableTreeman ? true,
   enableChrome ? true,
-  enablePhp ? true,
 }:
 let
   inherit (pkgs) lib;
@@ -187,23 +185,6 @@ let
         "mcp"
         "--http=127.0.0.1:39108"
       ];
-    };
-  }
-  # laravel-dev-mcp: native HTTP, MCP-roots aware (X-Mcp-Root header / roots
-  # round-trip), so one shared process serves every worktree — same reason the
-  # work servers are native http and NOT bridged through proxy-mcp (which would
-  # collapse all windows onto one upstream session and lose per-session roots).
-  # Gated on features.php: it shells out to `php artisan` (php comes in on the
-  # home profile PATH that mcp-services.nix sets). No --config/secrets — it
-  # reads the target app's own .env/config/composer.lock/logs from the root.
-  // lib.optionalAttrs enablePhp {
-    laravel-dev-mcp = {
-      exe = laravelMcp;
-      host = "127.0.0.1";
-      port = 39109;
-      path = "/mcp";
-      env = { };
-      args = [ "--http=127.0.0.1:39109" ];
     };
   };
 

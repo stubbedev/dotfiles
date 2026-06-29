@@ -18,7 +18,6 @@
         jenkinsMcp = "${inputs."jenkins-mcp".packages.${system}.default}/bin/jenkins-mcp";
         sentryMcp = "${inputs."sentry-mcp".packages.${system}.default}/bin/sentry-mcp";
         atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
-        laravelMcp = "${inputs."laravel-dev-mcp".packages.${system}.default}/bin/laravel-dev-mcp";
         srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
         treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
         # Readonly DB servers → global stdio entries (Go bins from flake inputs).
@@ -30,7 +29,6 @@
         enableSrv = config.features.srv;
         enableTreeman = config.features.treeman;
         enableChrome = config.features.browsers;
-        enablePhp = config.features.php;
       };
 
       # http client entries → the shared HTTP services (modules/home/
