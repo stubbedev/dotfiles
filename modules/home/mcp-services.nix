@@ -14,7 +14,7 @@
   # a stdio→HTTP proxy (which would collapse all windows onto one upstream
   # session and lose roots).
   #
-  # The `proxied` set (chrome-devtools + the readonly DB servers) is the
+  # The `proxied` set (playwriter + the readonly DB servers) is the
   # deliberate inverse: we WANT one shared upstream per backend so there is
   # exactly one browser / one DB connection. The WHOLE set is bridged through a
   # single proxy-mcp (stdio→streamable-HTTP), socket-activated on one shared
@@ -100,7 +100,7 @@
         # in the backlog rather than racing route registration.
         mcpProxy = "${inputs.proxy-mcp.packages.${system}.proxy-mcp}/bin/proxy-mcp";
         # proxy-mcp spawns `npx`, which needs node on PATH; the npx-fetched
-        # chrome-devtools child inherits it.
+        # playwriter child inherits it.
         backendPath = "PATH=${pkgs.nodejs}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
         # One shared loopback addr for the whole proxied set (every entry carries

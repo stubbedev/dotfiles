@@ -77,7 +77,7 @@
       flake = false;
     };
     # proxy-mcp (stubbedev): aggregating MCP proxy with a real readiness gate.
-    # Backs the chrome-devtools `proxied` entry in lib/mcp-servers.nix,
+    # Backs the playwriter `proxied` entry in lib/mcp-servers.nix,
     # replacing TBXark/mcp-proxy. Ships its own flake, so it is consumed as a
     # package directly (no buildGoModule overlay). Its Type=notify
     # sd_notify(READY=1) gate fires only after the wrapped upstream's MCP route
