@@ -1040,6 +1040,12 @@ if are_binary git fzf treeman; then
 
     local linked_worktrees=""
     local _path _branch
+    # Source the candidate list from treeman so a worktree drops off the
+    # picker the instant its teardown starts — `treeman wt delete` runs async
+    # (daemon), and raw `git worktree list` keeps showing it until the final
+    # git-remove lands, well after the DB-drop + hooks. `--tsv` is the same
+    # path\tbranch shape as _list_worktrees, so the loop body is unchanged;
+    # fall back to git for non-treeman / unregistered repos.
     while IFS=$'\t' read -r _path _branch; do
       [[ "$_path" == "$repo_root" ]] && continue
       local _marker=""
@@ -1047,7 +1053,7 @@ if are_binary git fzf treeman; then
       _worktree_has_unpushed "$_path" && _marker+="!"
       [[ -n "$_marker" ]] && _marker=" $_marker"
       linked_worktrees+="$_branch$_marker  →  $_path"$'\n'
-    done < <(_list_worktrees)
+    done < <(treeman wt list --tsv --repo "$repo_root" 2>/dev/null || _list_worktrees)
 
     if [[ -z "$linked_worktrees" ]]; then
       echo "No linked worktrees found."
