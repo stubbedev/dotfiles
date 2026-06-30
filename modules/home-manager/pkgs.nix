@@ -10,6 +10,7 @@ let
         allowUnfree = true;
         permittedInsecurePackages = [
           "dcraw-9.28.0"
+          "pnpm-10.34.0"
         ];
       };
       overlays = builtins.attrValues config.flake.overlays;
