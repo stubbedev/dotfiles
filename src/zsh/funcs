@@ -185,6 +185,28 @@ function _trim_ws {
   print -r -- "$v"
 }
 
+# Slugify arbitrary text into a git-ref-safe handle so a ticket key can be
+# pasted with spaces (e.g. "KON 1234 fix the login"). A leading ticket key
+# (letters + digits, any separator) is upper-cased and dashed to KON-1234 so
+# gcm's `[A-Z]+-[0-9]+` commit-prefix keeps matching; the digit run must end on
+# a separator/EOL so "add2fa" isn't misread as a key. The remainder is
+# lowercased, non-alnum runs collapse to one dash, edges trimmed.
+#   "KON 1234 Fix the login" → "KON-1234-fix-the-login"
+function _handleize {
+  setopt localoptions extendedglob
+  local v="$1" key=""
+  v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
+  if [[ $v = (#b)([A-Za-z]##)[-_\ ]#([0-9]##)([-_\ ]##*|) ]]; then
+    key="${(U)match[1]}-${match[2]}"
+    v="$match[3]"
+  fi
+  v="${(L)v}"
+  v="${v//[^a-z0-9]##/-}"
+  v="${v##-##}"; v="${v%%-##}"
+  if [[ -n $key && -n $v ]]; then print -r -- "$key-$v"
+  else print -r -- "${key:-$v}"; fi
+}
+
 # Fork-free branch listing: sets $reply to sorted-unique branch array.
 # Uses %(refname) to avoid parsing git's marker/color output entirely.
 function _list_git_branches {
@@ -354,11 +376,12 @@ function _branch_wizard {
       _base=$(_default_branch) || return 1
     fi
 
+    # Handleize name + suffix so ticket keys can be pasted with spaces.
+    _name=$(_handleize "$_name")
     local _suffix=$(fzf --height=~1 --no-info --print-query \
       --prompt="(Enter: select suffix)> " </dev/null)
+    _suffix=$(_handleize "$_suffix")
     if [[ -n "$_suffix" ]]; then
-      _suffix=${_suffix:l}
-      _suffix=${_suffix// /-}
       _final="$_prefix/$_name-$_suffix"
     else
       _final="$_prefix/$_name"
