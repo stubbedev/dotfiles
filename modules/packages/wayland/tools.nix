@@ -13,7 +13,7 @@ _: {
       # Custom wleave layout: backs wayle's `power` widget (left-click =
       # "wleave"). The bundled default locks with gtklock/swaylock (neither
       # installed here) and has no hyprland logout branch, so override:
-      #   - lock   → hyprlock (the locker we actually ship)
+      #   - lock   → `wayle-lock` (wayle's native ext-session-lock locker)
       #   - logout → compositor-specific, with a universal loginctl fallback
       # Icons are reused from the wleave package's own share dir.
       wleaveIcon = name: "${pkgs.wleave}/share/wleave/icons/${name}.svg";
@@ -107,7 +107,7 @@ _: {
           buttons = [
             {
               label = "lock";
-              action = "hyprlock";
+              action = "wayle-lock";
               text = "Lock";
               keybind = "l";
               icon = wleaveIcon "lock";
@@ -164,8 +164,8 @@ _: {
         # Graphical power menu (GTK4 layer-shell) backing wayle's power widget.
         (homeLib.gfx wleave)
 
-        # Screen locker (ext-session-lock-v1)
-        (homeLib.gfx hyprlock)
+        # Screen lock is wayle's native ext-session-lock locker (`wayle lock`);
+        # no separate locker package.
 
         # Idle daemon (ext-idle-notify-v1)
         hypridle

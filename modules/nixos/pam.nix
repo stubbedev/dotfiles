@@ -1,17 +1,11 @@
 _: {
   flake.modules.nixos.pam =
-    { config, lib, ... }:
-    let
-      hmFeatures = config.home-manager.users.${config.host.primaryUser}.features or { };
-      anyCompositor = (hmFeatures.hyprland or false) || (hmFeatures.niri or false);
-    in
+    { lib, ... }:
     {
       security.pam.services = {
-        # Hyprlock authenticates passwords against PAM. NixOS's default PAM
-        # service set doesn't include hyprlock, so declare it explicitly
-        # whenever a wayland compositor we ship hyprlock under is enabled
-        # (we use hyprlock as the lockscreen on both Hyprland and Niri).
-        hyprlock = lib.mkIf anyCompositor { };
+        # The session lock's PAM service (/etc/pam.d/wayle) is provisioned by the
+        # wayle nixos module (programs.wayle.lock.enable, modules/nixos/wayle.nix),
+        # since wayle locks natively via ext-session-lock-v1 on both compositors.
 
         # Enable GNOME keyring autounlock on both the login and SDDM PAM stacks.
         # SDDM uses its own PAM service ("sddm"), not "login", so both need the

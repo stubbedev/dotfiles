@@ -24,9 +24,8 @@ _: {
       sharedScripts = "${constants.paths.dotfiles}/src/_shared/scripts";
 
       # Single source of truth for the Catppuccin Mocha palette (hex, no #).
-      # Generates both the hyprlang theme.conf (sourced by hyprlock) and the
-      # Lua colors returned from nix.lua (used by hyprland.lua), so the palette
-      # is defined exactly once.
+      # Generates the Lua colors returned from nix.lua (used by hyprland.lua),
+      # so the palette is defined exactly once.
       palette = {
         rosewater = "f5e0dc";
         flamingo = "f2cdcd";
@@ -55,14 +54,6 @@ _: {
         mantle = "181825";
         crust = "11111b";
       };
-      # hyprlang: `$name = rgb(hex)` plus `$nameAlpha = hex` for each color.
-      # Build the literal `$` via concatenation — `$${name}` is read by Nix as
-      # an escaped literal `${name}`, not interpolation.
-      themeConf = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (
-          name: hex: "$" + name + " = rgb(" + hex + ")\n" + "$" + name + "Alpha = " + hex
-        ) palette
-      );
       # Lua: `name = "rgb(hex)"` table entries.
       luaColors = lib.concatStringsSep "\n    " (
         lib.mapAttrsToList (name: hex: ''${name} = "rgb(${hex})",'') palette
@@ -87,7 +78,6 @@ _: {
           "hypr/hyprland.lua"
           # Ecosystem daemons still use hyprlang (no Lua support).
           "hypr/hypridle.conf"
-          "hypr/hyprlock.conf"
           "hypr/scripts"
         ]
         // {
@@ -131,11 +121,6 @@ _: {
                 }
               '';
           };
-
-          # Catppuccin Mocha palette as hyprlang $vars, generated from the
-          # single `palette` source above. Sourced by hyprlock.conf and
-          # hyprlock.launch.sh (still hyprlang — no Lua config support).
-          "hypr/theme.conf".text = themeConf + "\n";
 
           # hyprtoolkit theme (hyprpolkitagent + other hyprtoolkit GUIs),
           # generated from the Mocha palette to match the rest of the desktop.

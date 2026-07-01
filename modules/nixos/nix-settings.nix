@@ -34,6 +34,14 @@ in
           # hy3, etc.) and rebuild from source.
           inherit (cache) substituters trusted-public-keys;
 
+          # Don't let a "path absent" verdict linger. nix queries substituters
+          # for a build's output path *before* building it; on our self-hosted
+          # attic cache that path is a 404 until we push it seconds later. The
+          # default 3600s negative-TTL then hides the freshly-pushed path for an
+          # hour, so `build -> attic push -> use as substituter` looks broken.
+          # 0 = always re-check (cheap on a fast link, and the cache is close).
+          narinfo-cache-negative-ttl = 0;
+
           # Hardlink-dedupe identical files in the store on every add, instead
           # of waiting for the weekly `nix.optimise` run. Cheap per-build cost,
           # smoother store growth between GC cycles.

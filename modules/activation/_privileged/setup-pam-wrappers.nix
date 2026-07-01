@@ -1,5 +1,5 @@
 _: {
-  enableIf = { config, ... }: config.features.hyprland;
+  enableIf = { config, ... }: config.features.hyprland || config.features.niri;
   args =
     { lib, homeLib, ... }:
     let
@@ -24,10 +24,10 @@ _: {
       };
     in
     {
-      promptTitle = "⚠️  Nix PAM wrapper setup required for hyprlock authentication";
+      promptTitle = "⚠️  Nix PAM wrapper setup required for wayle lock authentication";
       promptBody = ''
         This will install a systemd service to enable password authentication
-        for hyprlock. The service will persist across reboots.
+        for wayle's session lock. The service will persist across reboots.
       '';
       promptQuestion = "Install nix-pam-wrappers.service?";
       actionScript = ''

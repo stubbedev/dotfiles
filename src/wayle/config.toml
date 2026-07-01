@@ -28,6 +28,20 @@ yellow = "#f9e2af"
 green = "#a6e3a1"
 blue = "#89b4fa"
 
+# --- Session lock (replaces hyprlock) --------------------------------------
+# Wayle locks natively via ext-session-lock-v1, in response to `wayle lock`,
+# the logind Lock signal (loginctl lock-session), or the shell IPC. enabled
+# defaults true, so the only thing that must be set is pam-service: the config
+# default `system-auth` doesn't exist on NixOS. We provision /etc/pam.d/wayle
+# (NixOS: programs.wayle.lock in modules/nixos/wayle.nix; non-NixOS: the
+# setup-wayle-lock-pam activation script) and point the unlock at it.
+[lock]
+pam-service = "wayle"
+# Solid Catppuccin base, matching the old hyprlock background.
+background-mode = "color"
+background-color = "#1e1e2e"
+date-format = "%A, %d %B %Y"
+
 [bar]
 location = "top"
 exclusive = true

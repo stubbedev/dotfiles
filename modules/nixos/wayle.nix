@@ -41,6 +41,10 @@
           # Register wayle + the xdg-desktop-portal-wayle service, enable
           # xdg.portal, and route common.default to wayle (mkDefault upstream).
           portal.enable = true;
+          # Provision /etc/pam.d/wayle so the native ext-session-lock unlock can
+          # authenticate (NixOS has no system-auth). Config sets
+          # lock.pam-service = "wayle" (src/wayle/config.toml) to match.
+          lock.enable = true;
         };
 
         # Route every interface to wayle under BOTH compositors. nixpkgs'
