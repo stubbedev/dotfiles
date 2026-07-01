@@ -7,7 +7,13 @@
     # Drops `kernel = null` override removed from nixpkgs nvidia-x11/generic.nix
     # and fixes version regex for NVIDIA Open Kernel Module 595.71.05+
     # Switch back to github:nix-community/nixGL once #221 is merged
-    nixgl.url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
+    nixgl = {
+      url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
+      # We import nixgl via a path with `pkgs = final` (modules/overlays.nix),
+      # so nixgl's flake outputs (and its own nixpkgs) are never used — follow
+      # ours to drop a redundant nixpkgs from the lock.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 
@@ -94,7 +100,12 @@
       # (crates/wayle-cava/cava); the github fetcher skips submodules by default,
       # which leaves cava/src/*.c missing and breaks the build.
       url = "git+https://github.com/stubbedev/wayle.git?ref=master&submodules=1";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Don't follow nixpkgs — wayle's binary cache (nix.stubbe.dev/wayle) is
+      # built by CI against wayle's *own* flake.lock nixpkgs. Following ours
+      # rebases every derivation onto a different nixpkgs, so no store-path hash
+      # matches the cache and everything rebuilds from source. Same reason as
+      # fenix above. Cost: a second nixpkgs in the closure — worth it for a
+      # working cache.
     };
     # PHP language server (Rust). Ships its own flake; we consume
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
@@ -122,7 +133,12 @@
     # Declarative bind-mounts + tmpfs root for stateless systems.
     # Activated only when host.impermanent = true; see
     # modules/nixos/impermanence.nix.
-    impermanence.url = "github:nix-community/impermanence";
+    impermanence = {
+      url = "github:nix-community/impermanence";
+      # Pure NixOS module, no build artifacts — follow ours to drop a
+      # redundant nixpkgs from the lock.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
     # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
     # modules/activation/_non-privileged/setup-nvim.nix; lazy.nvim handles

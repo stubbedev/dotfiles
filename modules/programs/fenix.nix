@@ -12,7 +12,7 @@ _: {
     in
     lib.mkIf config.features.rust {
       home.packages = [
-        fenix.packages.${system}.latest.toolchain
+        fenix.packages.${system}.stable.toolchain
       ];
     };
 }
