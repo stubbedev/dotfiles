@@ -15,9 +15,9 @@
         newtabHtml = homeLib.substituteFile {
           file = self + "/src/browser/newtab.html";
           vars = {
-            BG = "#1e1e2e";
-            FG = "#cdd6f4";
-            MUTED = "#9399b2";
+            BG = "#${homeLib.catppuccinMocha.base}";
+            FG = "#${homeLib.catppuccinMocha.text}";
+            MUTED = "#${homeLib.catppuccinMocha.overlay2}";
           };
         };
         # Static-site root that `srv` serves; a stable real directory (not

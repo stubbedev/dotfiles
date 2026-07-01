@@ -7,7 +7,13 @@
     # Drops `kernel = null` override removed from nixpkgs nvidia-x11/generic.nix
     # and fixes version regex for NVIDIA Open Kernel Module 595.71.05+
     # Switch back to github:nix-community/nixGL once #221 is merged
-    nixgl.url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
+    nixgl = {
+      url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
+      # We import nixgl via a path with `pkgs = final` (modules/overlays.nix),
+      # so nixgl's flake outputs (and its own nixpkgs) are never used — follow
+      # ours to drop a redundant nixpkgs from the lock.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 
@@ -127,7 +133,12 @@
     # Declarative bind-mounts + tmpfs root for stateless systems.
     # Activated only when host.impermanent = true; see
     # modules/nixos/impermanence.nix.
-    impermanence.url = "github:nix-community/impermanence";
+    impermanence = {
+      url = "github:nix-community/impermanence";
+      # Pure NixOS module, no build artifacts — follow ours to drop a
+      # redundant nixpkgs from the lock.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
     # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
     # modules/activation/_non-privileged/setup-nvim.nix; lazy.nvim handles
