@@ -3,20 +3,21 @@
   # Long-lived MCP servers run as shared systemd user services: each serves
   # streamable HTTP on a loopback port, started once at login. Opening N Claude
   # windows then costs no extra processes — every window is just an HTTP client
-  # (setup-claude-code.nix wires the matching `type = "http"` entries), and the
-  # heavy ones (nix-mcp's NixOS option index) load once for the whole session.
+  # (setup-claude-code.nix wires the matching `type = "http"` entries), so each
+  # loads once for the whole session.
   #
   # The login-time httpServices are safe to share as ONE process because none
-  # depends on the service's working directory: nix-mcp is stateless, and
-  # atlassian/jenkins/sentry resolve the caller's repo from the per-session MCP
-  # *roots* each Claude window reports over its own HTTP session. That
+  # depends on the service's working directory: atlassian/jenkins/sentry/srv/
+  # treeman resolve the caller's repo from the per-session MCP *roots* each
+  # Claude window reports over its own HTTP session. That
   # per-session isolation is why they are native HTTP rather than bridged through
   # a stdio→HTTP proxy (which would collapse all windows onto one upstream
   # session and lose roots).
   #
-  # The `proxied` set (playwriter + the readonly DB servers) is the
-  # deliberate inverse: we WANT one shared upstream per backend so there is
-  # exactly one browser / one DB connection. The WHOLE set is bridged through a
+  # The `proxied` set (playwriter + the readonly DB servers, plus nix-mcp which
+  # is stateless and just folds its port onto the shared one) is the deliberate
+  # inverse for playwriter/DBs: we WANT one shared upstream per backend so there
+  # is exactly one browser / one DB connection. The WHOLE set is bridged through a
   # single proxy-mcp (stdio→streamable-HTTP), socket-activated on one shared
   # port, serving each backend at /<name>/mcp. proxy-mcp connects each backend
   # lazily (first request to its route) and retires it on its own idle clock, so

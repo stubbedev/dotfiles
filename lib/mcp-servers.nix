@@ -45,11 +45,9 @@ let
   #
   #   httpServices  long-lived shared HTTP servers, one process each, started at
   #                 login. Every Claude window is just an HTTP client, so opening
-  #                 N windows costs no extra process. Two kinds live here and
-  #                 both are safe to share because they are NOT tied to the
-  #                 process cwd:
-  #                   • nix-mcp — stateless; cwd-irrelevant.
-  #                   • atlassian/jenkins/sentry/srv/treeman — cwd-sensitive in
+  #                 N windows costs no extra process. All are safe to share as
+  #                 one process because they are NOT tied to the process cwd:
+  #                 atlassian/jenkins/sentry/srv/treeman are cwd-sensitive in
   #                     spirit, but they resolve the caller's repo/worktree from
   #                     the per-session MCP *roots* (the launch dir each Claude
   #                     window reports over its own HTTP session) or an
@@ -119,18 +117,6 @@ let
     };
 
   httpServices = {
-    # stubbedev/nix-mcp (Go) in HTTP mode; cwd-irrelevant. Uses --http flag.
-    nix-mcp = {
-      exe = nixMcp;
-      host = "127.0.0.1";
-      port = 39101;
-      path = "/mcp";
-      env = { };
-      args = [
-        "--http=127.0.0.1:39101"
-        "--http-path=/mcp"
-      ];
-    };
     atlassian-mcp = mkWork {
       exe = atlassianMcp;
       port = 39102;
@@ -245,6 +231,22 @@ let
       };
     }
     // {
+      # nix-mcp: stateless (queries live APIs), cwd-irrelevant → safe behind the
+      # shared proxy. Moved off its own native-HTTP port (was 39101) to fold onto
+      # the shared proxiedPort. Stdio mode = no --http flag; "shared" multiplexing
+      # is harmless since it holds no per-session state. Route is /<attr>/mcp, so
+      # the attr name stays `nix-mcp` (keeps mcp__nix-mcp__* tool names) → path
+      # /nix-mcp/mcp.
+      # ponytail: idleSec matches the DB servers; bump it if the NixOS option
+      # index cold-reload after idle proves annoying.
+      nix-mcp = {
+        host = "127.0.0.1";
+        port = proxiedPort;
+        path = "/nix-mcp/mcp";
+        idleSec = 300;
+        command = nixMcp;
+        args = [ ];
+      };
       mysql = {
         host = "127.0.0.1";
         port = proxiedPort;
