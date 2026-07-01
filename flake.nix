@@ -94,7 +94,12 @@
       # (crates/wayle-cava/cava); the github fetcher skips submodules by default,
       # which leaves cava/src/*.c missing and breaks the build.
       url = "git+https://github.com/stubbedev/wayle.git?ref=master&submodules=1";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Don't follow nixpkgs — wayle's binary cache (nix.stubbe.dev/wayle) is
+      # built by CI against wayle's *own* flake.lock nixpkgs. Following ours
+      # rebases every derivation onto a different nixpkgs, so no store-path hash
+      # matches the cache and everything rebuilds from source. Same reason as
+      # fenix above. Cost: a second nixpkgs in the closure — worth it for a
+      # working cache.
     };
     # PHP language server (Rust). Ships its own flake; we consume
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).

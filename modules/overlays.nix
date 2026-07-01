@@ -60,9 +60,14 @@ in
   flake.overlays = {
     nixgl = nixglOverlay;
     cship = cshipOverlay;
-    # wayle ships its own flake; reuse its overlay (builds the whole workspace —
-    # wayle + wayle-settings — and installs the desktop file + icons).
-    wayle = inputs.wayle.overlays.default;
+    # wayle ships its own flake. Use its prebuilt package (from the
+    # nix.stubbe.dev/wayle binary cache) rather than overlays.default:
+    # that overlay rebuilds via `prev.callPackage` against OUR nixpkgs, whose
+    # store-path hashes never match the CI-built cache (built against wayle's
+    # own nixpkgs), so everything rebuilds from source. packages.default is the
+    # same whole-workspace derivation (wayle + wayle-settings + desktop/icons).
+    # Requires wayle.inputs.nixpkgs NOT following ours (see flake.nix).
+    wayle = _final: prev: { wayle = inputs.wayle.packages.${prev.system}.default; };
     phpantom_lsp = phpantomLspOverlay;
   };
 }
