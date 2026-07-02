@@ -15,6 +15,12 @@ return {
     opts.formatters_by_ft.nix = { "statix", "deadnix", "nixfmt" }
 
     opts.formatters = opts.formatters or {}
+    -- Resolve the project's ./vendor/bin/pint (searched upward from the file),
+    -- falling back to a global `pint` if one is ever on PATH. Each project
+    -- formats with its own pint binary + pint.json.
+    opts.formatters.pint = {
+      command = require("conform.util").find_executable({ "vendor/bin/pint" }, "pint"),
+    }
     opts.formatters.caddy = { command = "caddy", args = { "fmt", "-" }, stdin = true }
     opts.formatters.statix = {
       command = "statix",

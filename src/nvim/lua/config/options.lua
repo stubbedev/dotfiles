@@ -6,6 +6,11 @@ vim.g.maplocalleader = vim.g.mapleader
 vim.g.autoformat = false
 vim.opt.mouse = ""
 
+-- Load project-local .nvim.lua/.nvimrc/.exrc from nvim's launch dir for
+-- per-project config (post-save hooks, etc.). Neovim prompts to :trust each
+-- file before it runs, so only trust repos you control.
+vim.o.exrc = true
+
 -- LazyVim root dir detection
 -- Each entry can be:
 -- * the name of a detector function like `lsp` or `cwd`

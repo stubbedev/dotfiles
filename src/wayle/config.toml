@@ -149,14 +149,14 @@ transition-fps = 60
 
 # Transient-surface animations. Global `transition` is the fallback (OSD +
 # toasts fade); the per-surface [animations.notifications] table overrides only
-# notification cards to slide in/out from the right edge (matching top-right
-# popups). Per-surface fork feature: unset surface fields fall back to global.
+# notification cards to bounce in and fade out. Per-surface fork feature: unset
+# surface fields fall back to global.
 [animations]
 transition = "fade"
 
 [animations.notifications]
-enter = "slide-right"
-exit = "slide-right"
+enter = "bounce"
+exit = "fade"
 
 # --- OSD (new: waybar had no volume/brightness overlay) --------------------
 [osd]
