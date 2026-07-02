@@ -10,10 +10,13 @@ _: {
     lib.mkIf config.features.development {
       home.packages = with pkgs; [
         # JavaScript/TypeScript runtimes (CLI tools)
-        nodejs
+        # nodejs_22 not bare nodejs: kontainer pins engines.node 22.x and
+        # yarn 1 hard-fails install on mismatch; yarn must run under the
+        # same node, so override its runtime too.
+        nodejs_22
         bun
         pnpm
-        yarn
+        (yarn.override { nodejs = nodejs_22; })
         deno
 
         # JS/TS formatters and linters (replaces former `bun add --global …`)
