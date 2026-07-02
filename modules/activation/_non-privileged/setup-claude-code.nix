@@ -76,6 +76,11 @@
             };
             includeCoAuthoredBy = false;
             tui = "fullscreen";
+            # Claude Code ≥2.1.187 captures terminal mouse events, which stops
+            # alacritty's native URL hints (hover underline + pointer, click to
+            # open) from ever firing. Disable capture; wheel scroll inside the
+            # TUI falls back to alternate-scroll arrow keys.
+            env.CLAUDE_CODE_DISABLE_MOUSE = "1";
             editorMode = "vi";
             model = "claude-opus-4-8[1m]";
             # Use the PHPantom language server for .php instead of the
