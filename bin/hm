@@ -30,57 +30,94 @@ nixos_attr() {
   echo "${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
 }
 
+# --- nh delegation -------------------------------------------------------
+# nh (nix-community/nh) wraps nixos-rebuild / home-manager with a version
+# diff (nvd) and nix-output-monitor progress. It ships unconditionally
+# alongside this script (modules/home/scripts.nix), so the build/activate
+# verbs always route through it; the verbs nh doesn't cover (dry-*,
+# build-vm*, news, instantiate) stay on the raw path below. nh self-elevates
+# on NixOS, so these calls carry no sudo prefix.
+run_nh() {
+  local subcmd="$1"; shift
+  local sub=home ref="$hm_flake_ref"
+  if is_nixos; then
+    sub=os
+    # nh derives the host attr from `hostname` just like nixos_attr's
+    # default; only pin it explicitly when HM_NIXOS_CONFIG overrides.
+    [ -n "${HM_NIXOS_CONFIG:-}" ] && ref="$ref#$HM_NIXOS_CONFIG"
+  fi
+  nh "$sub" "$subcmd" "$ref" -- --impure "$@"
+}
+
+# On NixOS, HM activation output is swallowed by journald (the
+# home-manager-<user>.service oneshot logs under SyslogIdentifier
+# hm-activate-<user>), so the rebuild shows nothing for it. For verbs that
+# fire activations, snapshot a cutoff and replay the new journal lines after
+# the wrapped command returns. Wraps the nh call; no-op off NixOS.
+run_with_hm_journal() {
+  local subcmd="$1"; shift
+  local hm_tag="" since=""
+  case "$subcmd" in
+    switch|test)
+      if has_cmd journalctl; then
+        hm_tag="hm-activate-${USER:-$(id -un)}"
+        since=$(date '+%Y-%m-%d %H:%M:%S')
+      fi
+      ;;
+  esac
+  local rc=0
+  "$@" || rc=$?
+  if [[ -n "$hm_tag" ]]; then
+    local hm_lines
+    hm_lines=$(journalctl -t "$hm_tag" --since "$since" --no-pager --output=cat 2>/dev/null || true)
+    if [[ -n "$hm_lines" ]]; then
+      echo
+      echo "--- home-manager activation ($hm_tag) ---"
+      printf '%s\n' "$hm_lines"
+    fi
+  fi
+  return $rc
+}
+
 run_hm_subcmd() {
   local subcmd="$1"; shift
+
+  # Fast path: verbs nh renders with a version diff. boot/test are
+  # NixOS-only. Remaining verbs (dry-*, build-vm*, news, instantiate,
+  # passthrough) fall through to the raw path below.
+  case "$subcmd" in
+    switch|boot|test|build|repl)
+      if ! is_nixos; then
+        case "$subcmd" in
+          boot|test)
+            echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
+            return 1
+            ;;
+        esac
+      fi
+      run_with_hm_journal "$subcmd" run_nh "$subcmd" "$@"
+      return
+      ;;
+  esac
+
   if is_nixos; then
+    # Only the verbs nh doesn't cover reach here. None activate the
+    # system (switch/boot/test are handled by the nh fast path), so
+    # there's no privileged write and no HM activation to replay —
+    # except dry-activate, which runs the activation script in dry mode.
     local prefix=()
     case "$subcmd" in
-      # Verbs that mutate /run, /nix/var/nix/profiles/system,
-      # /boot etc. nixos-rebuild itself can self-sudo with --sudo
-      # in newer versions, but explicit sudo here keeps behaviour
-      # uniform across nixpkgs revisions.
-      switch|boot|test|dry-activate)
+      dry-activate)
         prefix=(sudo)
         ;;
-      # Pure build / introspection verbs — no privileged writes.
-      build|dry-build|build-vm|build-vm-with-bootloader|repl)
+      dry-build|build-vm|build-vm-with-bootloader)
         ;;
       *)
         echo "hm $subcmd: unavailable on NixOS. Supported subcommands: switch, boot, test, build, dry-build, dry-activate, build-vm, build-vm-with-bootloader, repl, rollback, gc, generations." >&2
         return 1
         ;;
     esac
-
-    # On NixOS, HM activations run inside the home-manager-<user>.service
-    # oneshot unit. Their stdout is swallowed by journald
-    # (SyslogIdentifier=hm-activate-<user>), so `nixos-rebuild` shows
-    # nothing for them. For verbs that actually fire activations,
-    # snapshot a cutoff timestamp and replay the new journal lines
-    # afterwards so "Activating <step>" lines surface back here.
-    local hm_tag="" since=""
-    case "$subcmd" in
-      switch|test)
-        if has_cmd journalctl; then
-          hm_tag="hm-activate-${USER:-$(id -un)}"
-          since=$(date '+%Y-%m-%d %H:%M:%S')
-        fi
-        ;;
-    esac
-
-    local rc=0
-    "${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@" || rc=$?
-
-    if [[ -n "$hm_tag" ]]; then
-      local hm_lines
-      hm_lines=$(journalctl -t "$hm_tag" --since "$since" --no-pager --output=cat 2>/dev/null || true)
-      if [[ -n "$hm_lines" ]]; then
-        echo
-        echo "--- home-manager activation ($hm_tag) ---"
-        printf '%s\n' "$hm_lines"
-      fi
-    fi
-
-    return $rc
+    "${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@"
   else
     case "$subcmd" in
       # nixos-rebuild-only verbs — no home-manager equivalent.
@@ -97,7 +134,7 @@ run_hm_subcmd() {
 
 run_rollback() {
   if is_nixos; then
-    sudo nixos-rebuild switch --rollback "$@"
+    nh os rollback "$@"
   else
     echo "hm rollback: not implemented for standalone home-manager. Use 'home-manager generations' to list, then run '<gen>/activate' from the desired generation." >&2
     return 2
@@ -105,81 +142,72 @@ run_rollback() {
 }
 
 run_gc() {
-  # Default to -d so the most common intent (drop old generations
-  # and free their store paths) doesn't need an extra arg.
-  local gc_args=("$@")
-  if [ "${#gc_args[@]}" -eq 0 ]; then
-    gc_args=("-d")
+  # No args: hand off to `nh clean` (all profiles + gcroots + store gc,
+  # with a summary). With explicit args the caller is speaking
+  # nix-collect-garbage's flag language (-d, --delete-older-than …), which
+  # nh clean doesn't share, so pass them to nix-collect-garbage verbatim.
+  if [ "$#" -eq 0 ]; then
+    if is_nixos; then
+      nh clean all
+    else
+      nh clean user
+    fi
+    return
   fi
+
   if is_nixos; then
     # sudo so the system profile is also collected, not just the
     # invoking user's. nix-collect-garbage scopes by who runs it.
-    sudo nix-collect-garbage "${gc_args[@]}"
+    sudo nix-collect-garbage "$@"
   else
-    nix-collect-garbage "${gc_args[@]}"
+    nix-collect-garbage "$@"
   fi
 }
 
 run_generations() {
   if is_nixos; then
-    # NixOS system profile — nixos-rebuild list-generations is
-    # the supported listing API and includes Current/Specialisation.
-    nixos-rebuild list-generations "$@"
+    # nh os info lists the system profile generations as a table.
+    nh os info "$@"
   else
     home-manager generations "$@"
   fi
 }
 
-# Prune old profile generations after a successful switch, keeping the
-# current one plus a single previous (so rollback still works), then
-# collect the store paths no surviving generation references. nix-env's
-# "+N" selector keeps the N newest generations; "+2" => current + 1.
-# Best-effort: a prune hiccup must never make a successful switch look
-# failed, so each step is guarded with `|| true`. Applies to the
-# home-manager profile on every host and, on NixOS, the system profile.
+# Unprivileged prune after a successful switch: user-owned profiles
+# (home-manager, the default nix profile, channels) plus a global store GC,
+# keeping current + 1 previous (--keep 2, so rollback still works). The GC
+# sweep runs through the nix-daemon, so it needs no root — safe to detach
+# even on NixOS. The root-owned system profile is trimmed separately by
+# prune_system_profile. Best-effort: a prune hiccup must never make a
+# successful switch look failed, hence `|| true`.
 prune_generations() {
-  local keep="+2"
   echo "Pruning old generations (keeping current + 1 previous)..."
-
-  if is_nixos; then
-    # sudo so the system-wide profile is pruned, not just the user's.
-    sudo nix-env -p /nix/var/nix/profiles/system --delete-generations "$keep" || true
-  fi
-
-  # home-manager profile, then the default nix-env/`nix profile`
-  # user environment ("profile"). The default profile bumps a
-  # generation on every package change and accumulates the most
-  # store-path bloat, so trim it to the same window. Standalone XDG
-  # location first, then the legacy per-user path older nix used.
-  local profile name
-  for name in home-manager profile; do
-    for profile in \
-      "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/$name" \
-      "/nix/var/nix/profiles/per-user/${USER:-$(id -un)}/$name"; do
-      if [ -e "$profile" ]; then
-        nix-env -p "$profile" --delete-generations "$keep" || true
-        break
-      fi
-    done
-  done
-
-  # Reap the now-dead store paths. sudo on NixOS so system-owned paths
-  # are collected too; the switch above already primed the sudo cache.
-  if is_nixos; then
-    sudo nix-collect-garbage || true
-  else
-    nix-collect-garbage || true
-  fi
+  nh clean user --keep 2 || true
 }
 
-# Run prune_generations detached so a `switch`/`upgrade` hands the prompt
-# back immediately instead of blocking on generation deletion + GC (the
-# slow tail). The child is re-exec'd via the hidden `__prune` subcommand
-# (prune_generations is a shell function a fresh `setsid bash` can't see),
-# setsid off the controlling TTY and disowned so it outlives this shell.
-# Output goes to a log. Set HM_PRUNE_BG=false to keep it foreground.
+# NixOS system profile lives under root-owned /nix/var/nix/profiles/system,
+# so trimming its generations needs root. It's fast (just unlinking old
+# generations; --no-gc leaves the slow store sweep to the backgrounded
+# prune_generations), so run it in the foreground while this TTY — and the
+# sudo ticket the switch primed — can still service the prompt. A detached
+# child has no controlling TTY and sudo's tty_tickets would reject its
+# cached ticket, which is why this can't just ride along in the background.
+# No-op off NixOS.
+prune_system_profile() {
+  is_nixos || return 0
+  echo "Trimming system profile generations..."
+  sudo nh clean profile /nix/var/nix/profiles/system --keep 2 --no-gc || true
+}
+
+# Run the bulk prune detached so a `switch`/`upgrade` hands the prompt back
+# immediately instead of blocking on the slow store GC. The child is
+# re-exec'd via the hidden `__prune` subcommand (prune_generations is a
+# shell function a fresh `setsid bash` can't see), setsid off the
+# controlling TTY and disowned so it outlives this shell. Output goes to a
+# log. Set HM_PRUNE_BG=false to keep it foreground.
 dispatch_prune() {
   if [[ "${HM_PRUNE_BG:-true}" != "true" ]]; then
+    prune_system_profile
     prune_generations
     return
   fi
@@ -187,13 +215,11 @@ dispatch_prune() {
   local log="${XDG_STATE_HOME:-$HOME/.local/state}/hm/prune.log"
   mkdir -p "$(dirname "$log")"
 
-  # Prime the sudo timestamp while still attached to the TTY so the
-  # detached GC (sudo nix-collect-garbage on NixOS) won't block on a
-  # password prompt it can't service. The switch above already primed
-  # it; this refresh guards against the cache expiring mid-prune.
-  if is_nixos; then
-    sudo -v || true
-  fi
+  # Privileged system-profile trim up front, while the TTY and the switch's
+  # primed sudo ticket are still available (the detached child below can't
+  # service a sudo prompt). Fast; only the store GC is slow, and that runs
+  # unprivileged via the daemon in the background child.
+  prune_system_profile
 
   setsid "$0" __prune >"$log" 2>&1 </dev/null &
   disown
@@ -291,9 +317,12 @@ update_system() {
 
   if has_cmd apt; then
     echo "Updating apt packages"
-    sudo apt update
-    sudo apt upgrade -y
-    sudo apt autoremove -y
+    # -qq: errors only — drops the Hit lines, Ubuntu Pro/ESM nag, phasing
+    # notice, and the per-command Summary blocks. apt-get (not apt) is the
+    # stable scripting interface. noninteractive skips needrestart prompts.
+    sudo apt-get -qq update
+    sudo DEBIAN_FRONTEND=noninteractive apt-get -qq -y upgrade
+    sudo apt-get -qq -y autoremove
   fi
 
   if has_cmd dnf; then
@@ -318,12 +347,15 @@ update_system() {
       ensure_flakelock_driver
       sync_flake_repo
     fi
-    nix flake update --flake "$hm_flake_ref"
+    # --quiet drops the per-input "copying path …" spam; warnings/errors
+    # still surface. The nh switch afterwards shows the actual version diff.
+    nix flake update --flake "$hm_flake_ref" --quiet
     commit_flake_lock
   fi
 
   if has_cmd nix-channel; then
-    nix-channel --update
+    # Vestigial on a flakes host; silence the "unpacking N channels…" line.
+    nix-channel --update >/dev/null 2>&1 || true
   fi
 }
 
@@ -361,10 +393,15 @@ Commands:
   repl                Open a nix repl scoped to the configuration (NixOS)
   rollback            Roll back to the previous generation
   generations         List system/home-manager generations
-  gc [args]           nix-collect-garbage (defaults to -d)
+  gc [args]           No args: nh clean (all profiles + gcroots + store gc).
+                        With args: nix-collect-garbage <args>.
   news                Read home-manager release notes (non-NixOS)
   instantiate         home-manager instantiate (non-NixOS)
   help                Show this help message
+
+switch/boot/test/build/repl, gc, generations, and rollback route through
+`nh` (version diff + progress output). The remaining verbs (dry-build,
+dry-activate, build-vm*, news, instantiate) use raw nixos-rebuild/home-manager.
 
 On NixOS the build/activate verbs delegate to `[sudo ]nixos-rebuild
 <cmd> --flake <flake>#<host> --impure`. The host attr defaults to

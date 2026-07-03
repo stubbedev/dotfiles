@@ -9,7 +9,8 @@ _: {
     lib.mkIf config.features.development {
       home.packages = with pkgs; [
         nix-zsh-completions
-        nh
+        # nh ships unconditionally via modules/home/scripts.nix (hm depends
+        # on it); no need to list it again behind the development gate.
         pass
         age
         cachix

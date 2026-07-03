@@ -135,6 +135,10 @@
       _module.args.scripts = scripts;
       home.packages =
         unconditionalScripts
+        # `hm` shells out to nh (nix-community/nh) for build/activate/gc.
+        # Ship it wherever hm ships so hm can assume it unconditionally —
+        # hm is installed on every host, so nh must be too.
+        ++ [ pkgs.nh ]
         ++ lib.optionals config.features.desktop desktopScripts
         ++ lib.optionals (config.features.desktop && config.features.wayle) wayleScripts;
     };
