@@ -35,6 +35,11 @@ _: {
             # the per-worktree scan in gwt/gwtd slow. Auto-maintained by git;
             # safe on local filesystems with reliable mtime (ext4/btrfs).
             core.untrackedCache = true;
+            # Large-repo index bundle: index v4 (smaller, faster to read) +
+            # index.skipHash (skip the trailing SHA on index writes). Also
+            # implies core.untrackedCache — kept explicit above so the reason
+            # is documented and survives if the feature bundle changes.
+            feature.manyFiles = true;
             init.defaultBranch = "master";
             push.autoSetupRemote = true;
             pull.rebase = false;
