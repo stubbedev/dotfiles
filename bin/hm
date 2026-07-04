@@ -49,36 +49,6 @@ run_nh() {
   nh "$sub" "$subcmd" "$ref" -- --impure "$@"
 }
 
-# On NixOS, HM activation output is swallowed by journald (the
-# home-manager-<user>.service oneshot logs under SyslogIdentifier
-# hm-activate-<user>), so the rebuild shows nothing for it. For verbs that
-# fire activations, snapshot a cutoff and replay the new journal lines after
-# the wrapped command returns. Wraps the nh call; no-op off NixOS.
-run_with_hm_journal() {
-  local subcmd="$1"; shift
-  local hm_tag="" since=""
-  case "$subcmd" in
-    switch|test)
-      if has_cmd journalctl; then
-        hm_tag="hm-activate-${USER:-$(id -un)}"
-        since=$(date '+%Y-%m-%d %H:%M:%S')
-      fi
-      ;;
-  esac
-  local rc=0
-  "$@" || rc=$?
-  if [[ -n "$hm_tag" ]]; then
-    local hm_lines
-    hm_lines=$(journalctl -t "$hm_tag" --since "$since" --no-pager --output=cat 2>/dev/null || true)
-    if [[ -n "$hm_lines" ]]; then
-      echo
-      echo "--- home-manager activation ($hm_tag) ---"
-      printf '%s\n' "$hm_lines"
-    fi
-  fi
-  return $rc
-}
-
 run_hm_subcmd() {
   local subcmd="$1"; shift
 
@@ -95,7 +65,7 @@ run_hm_subcmd() {
             ;;
         esac
       fi
-      run_with_hm_journal "$subcmd" run_nh "$subcmd" "$@"
+      run_nh "$subcmd" "$@"
       return
       ;;
   esac

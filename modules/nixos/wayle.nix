@@ -45,6 +45,54 @@
           # authenticate (NixOS has no system-auth). Config sets
           # lock.pam-service = "wayle" (src/wayle/config.toml) to match.
           lock.enable = true;
+
+          # Login screen: greetd + a cage-hosted wayle-greeter (replaces SDDM).
+          # session.dirs defaults to the aggregate NixOS wayland-sessions dir, so
+          # the picker lists every installed compositor — Hyprland AND niri here,
+          # both register session files via programs.hyprland/programs.niri. The
+          # greeter runs as the greetd user with no $HOME, so its theme comes
+          # from /etc/wayle/config.toml, written from `settings` below. Only the
+          # keys the greeter honours (font, styling palette, lock background +
+          # clock) are set — the full shell config in src/wayle/config.toml is
+          # the primary user's and unreadable here, so this is a themed subset
+          # kept in sync with it (Catppuccin Mocha).
+          greeter = {
+            enable = true;
+            # Force the greeter stack (cage/wlroots + GTK) onto its software
+            # path. `auto` lets cage try GLES2 on nvidia, which crashes instead
+            # of falling back — the greeter exits without creating a session and
+            # greetd crash-loops to start-limit-hit (nothing ever renders). The
+            # login screen needs no acceleration, so software is a safe, reliable
+            # render path. The user session (Hyprland/niri) still uses the GPU.
+            renderer = "software";
+            settings = {
+              general = {
+                font-sans = "JetBrainsMono Nerd Font";
+                font-mono = "JetBrainsMono Nerd Font";
+              };
+              styling = {
+                theme-provider = "wayle";
+                rounding = "sm";
+                palette = {
+                  bg = "#1e1e2e";
+                  surface = "#181825";
+                  elevated = "#313244";
+                  fg = "#cdd6f4";
+                  fg-muted = "#a6adc8";
+                  primary = "#cba6f7";
+                  red = "#f38ba8";
+                  yellow = "#f9e2af";
+                  green = "#a6e3a1";
+                  blue = "#89b4fa";
+                };
+              };
+              lock = {
+                background-mode = "color";
+                background-color = "#1e1e2e";
+                date-format = "%A, %d %B %Y";
+              };
+            };
+          };
         };
 
         # Route every interface to wayle under BOTH compositors. nixpkgs'

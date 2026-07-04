@@ -7,11 +7,12 @@ _: {
         # wayle nixos module (programs.wayle.lock.enable, modules/nixos/wayle.nix),
         # since wayle locks natively via ext-session-lock-v1 on both compositors.
 
-        # Enable GNOME keyring autounlock on both the login and SDDM PAM stacks.
-        # SDDM uses its own PAM service ("sddm"), not "login", so both need the
-        # hook or the keyring stays locked after graphical login.
+        # Enable GNOME keyring autounlock on both the tty-login and greetd PAM
+        # stacks. greetd (the wayle greeter's display manager) authenticates the
+        # graphical login under its own PAM service ("greetd"), not "login", so
+        # both need the hook or the keyring stays locked after graphical login.
         login.enableGnomeKeyring = lib.mkDefault true;
-        sddm.enableGnomeKeyring = true;
+        greetd.enableGnomeKeyring = true;
       };
     };
 }
