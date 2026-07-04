@@ -1739,11 +1739,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783173398,
-        "narHash": "sha256-ojdKZyz9rKgrpgEwnIDzeA8h00WE3AmBDkyvU3IkeG8=",
+        "lastModified": 1783175231,
+        "narHash": "sha256-lxszE0z6hs+5FKgH308xUCHKXO9pO3V4KsJXVeEekbY=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "2f857cc4336caadf4c4c63fc4169902ca0883985",
+        "rev": "aad16dc9e7581543c4bd15a0ccf05ad20e16551a",
         "type": "github"
       },
       "original": {
