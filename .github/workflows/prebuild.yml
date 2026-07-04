@@ -80,8 +80,19 @@ jobs:
         run: |
           set -euo pipefail
           nix run nixpkgs#attic-client -- login stubbe https://nix.stubbe.dev "$ATTIC_TOKEN"
-          # attic push uploads each path's full closure by default.
-          nix run nixpkgs#attic-client -- push default ${{ steps.build.outputs.paths }}
+          # attic push uploads each path's full closure by default. The server
+          # occasionally throws transient 500s mid-push; push is idempotent
+          # (already-uploaded paths are skipped) so just retry a few times.
+          # ponytail: 3 tries w/ backoff; make it a real queue if 500s persist.
+          for attempt in 1 2 3; do
+            if nix run nixpkgs#attic-client -- push default ${{ steps.build.outputs.paths }}; then
+              exit 0
+            fi
+            echo "attic push failed (attempt $attempt); retrying in $((attempt * 15))s…"
+            sleep $((attempt * 15))
+          done
+          echo "attic push still failing after 3 attempts" >&2
+          exit 1
 
       - name: Commit updated flake.lock
         run: |
