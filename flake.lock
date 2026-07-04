@@ -73,11 +73,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782760375,
-        "narHash": "sha256-7rOCJlw1Vr4CUvN+mdwrHE/JuwJ4Wd20N/G9mGS+Xsw=",
+        "lastModified": 1783151926,
+        "narHash": "sha256-VkuLQbA7Mm+nSGdvd42F31M/hcnh4wijmKVmHMPpPmE=",
         "owner": "stubbedev",
         "repo": "atlassian-mcp",
-        "rev": "849a6010408de44935493f594c1c8369be814e60",
+        "rev": "8e8fac110b762ee05a60def6e3848e120de0d94c",
         "type": "github"
       },
       "original": {
@@ -1739,11 +1739,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783109962,
-        "narHash": "sha256-b4HwHFfd542shn6RvpLs2L1HIyeiEVhq7PrNwXKkuDA=",
+        "lastModified": 1783168322,
+        "narHash": "sha256-cN3EEa7A3THVHjHxx1HsYX4fA7aujvl4xKbItTaApqg=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "a90f04cd447f7721b69020504201ae85692e8325",
+        "rev": "305f04c32f025d67045a295eae77e1f9bbe129d5",
         "type": "github"
       },
       "original": {
