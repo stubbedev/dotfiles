@@ -143,58 +143,12 @@ run_generations() {
   fi
 }
 
-# Unprivileged prune after a successful switch: user-owned profiles
-# (home-manager, the default nix profile, channels) plus a global store GC,
-# keeping current + 1 previous (--keep 2, so rollback still works). The GC
-# sweep runs through the nix-daemon, so it needs no root — safe to detach
-# even on NixOS. The root-owned system profile is trimmed separately by
-# prune_system_profile. Best-effort: a prune hiccup must never make a
-# successful switch look failed, hence `|| true`.
-prune_generations() {
-  echo "Pruning old generations (keeping current + 1 previous)..."
-  nh clean user --keep 2 || true
-}
-
-# NixOS system profile lives under root-owned /nix/var/nix/profiles/system,
-# so trimming its generations needs root. It's fast (just unlinking old
-# generations; --no-gc leaves the slow store sweep to the backgrounded
-# prune_generations), so run it in the foreground while this TTY — and the
-# sudo ticket the switch primed — can still service the prompt. A detached
-# child has no controlling TTY and sudo's tty_tickets would reject its
-# cached ticket, which is why this can't just ride along in the background.
-# No-op off NixOS.
-prune_system_profile() {
-  is_nixos || return 0
-  echo "Trimming system profile generations..."
-  sudo nh clean profile /nix/var/nix/profiles/system --keep 2 --no-gc || true
-}
-
-# Run the bulk prune detached so a `switch`/`upgrade` hands the prompt back
-# immediately instead of blocking on the slow store GC. The child is
-# re-exec'd via the hidden `__prune` subcommand (prune_generations is a
-# shell function a fresh `setsid bash` can't see), setsid off the
-# controlling TTY and disowned so it outlives this shell. Output goes to a
-# log. Set HM_PRUNE_BG=false to keep it foreground.
-dispatch_prune() {
-  if [[ "${HM_PRUNE_BG:-true}" != "true" ]]; then
-    prune_system_profile
-    prune_generations
-    return
-  fi
-
-  local log="${XDG_STATE_HOME:-$HOME/.local/state}/hm/prune.log"
-  mkdir -p "$(dirname "$log")"
-
-  # Privileged system-profile trim up front, while the TTY and the switch's
-  # primed sudo ticket are still available (the detached child below can't
-  # service a sudo prompt). Fast; only the store GC is slow, and that runs
-  # unprivileged via the daemon in the background child.
-  prune_system_profile
-
-  setsid "$0" __prune >"$log" 2>&1 </dev/null &
-  disown
-  echo "Pruning old generations in background (log: $log)."
-}
+# Generation trimming on every switch is handled by activation hooks, not
+# here: modules/nixos/nix-gc.nix (system.activationScripts.pruneSystemGenerations)
+# and modules/home/nix-gc.nix (home.activation.pruneNixGenerations) both trim
+# profiles to "current + 1 previous" as part of the switch. Store GC runs on
+# the weekly nix.gc / nix-collect-garbage timers. So `hm switch`/`upgrade`
+# need do nothing extra — for an immediate store sweep, run `hm gc`.
 
 ensure_sudo() {
   if [[ "${1:-}" == "true" ]]; then
@@ -690,7 +644,6 @@ case "${1:-}" in
     update_system
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     run_hm_subcmd switch "$@"
-    dispatch_prune
     ;;
   whoami)
     shift
@@ -720,11 +673,6 @@ case "${1:-}" in
     shift
     prime_sudo_nixos
     run_hm_subcmd switch "$@"
-    dispatch_prune
-    ;;
-  __prune)
-    # Hidden: detached worker for dispatch_prune. Not in usage.
-    prune_generations
     ;;
   boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
