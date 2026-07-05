@@ -55,6 +55,13 @@
       # modules/packages/theming.nix so they land in the user profile.
       environment.systemPackages = [
         pkgs.catppuccin-kvantum
+        # Cursor theme, system-wide (not just home-manager) so it lands in
+        # /run/current-system/sw/share/icons — where the greetd greeter, running
+        # as the unprivileged `greeter` user that cannot read a 0700 $HOME, can
+        # actually find it. Matches constants.theme.cursor / the XCURSOR_THEME
+        # set above; without it the login screen falls back to the huge built-in
+        # cursor. HM installs it in the user profile via modules/theme.
+        pkgs.vimix-cursors
         # Waybar plugins (e.g. the custom power-profile script) require python3.
         pkgs.python3
         pkgs.imgcat
