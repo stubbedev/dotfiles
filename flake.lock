@@ -473,11 +473,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783134515,
-        "narHash": "sha256-qMoZazubXlXUD9k/syJ/aiWC4X4g73mwVmZ7Z4+rdpM=",
+        "lastModified": 1783222121,
+        "narHash": "sha256-E/ElL373TO8lQ2aMvYyzN+k4xkVaUGoRqoa8AtM71tI=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "b885baad531fa3d3beae2ba9a0712d22974d8016",
+        "rev": "a1645f40777620c4bd2b6d854b290c2fc354a266",
         "type": "github"
       },
       "original": {
@@ -1758,11 +1758,11 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1783196030,
-        "narHash": "sha256-/giNENVqmqQpSSxAoXx1SFjxU7hhXJlEYlimdNLz0yw=",
+        "lastModified": 1783198736,
+        "narHash": "sha256-55pDSVf5x/ivdyYenXTABiSv0YhnOvA2Aui+a3Xaqgs=",
         "ref": "master",
-        "rev": "d32766f38a142d86144fd48f860d86376ad8e191",
-        "revCount": 827,
+        "rev": "02d6eb96400e6f6049c400bce9747009cca4f98a",
+        "revCount": 828,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
