@@ -47,6 +47,7 @@
           nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
           mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
           mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
+          ptyMcp = "${inputs."pty-mcp".packages.${system}.default}/bin/pty-mcp";
           enableSrv = config.features.srv;
           enableTreeman = config.features.treeman;
           enableChrome = config.features.browsers;

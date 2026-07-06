@@ -24,6 +24,7 @@
         nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
         mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
         mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
+        ptyMcp = "${inputs."pty-mcp".packages.${system}.default}/bin/pty-mcp";
         # Gate client entries on the same feature flags mcp-services.nix uses to
         # gate the services, so we never advertise a server that isn't running.
         enableSrv = config.features.srv;

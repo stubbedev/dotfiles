@@ -93,6 +93,14 @@
       url = "github:stubbedev/proxy-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # pty-mcp (stubbedev): real-terminal MCP server — one-shot `run` in the
+    # user's shell plus persistent PTY sessions, sudo via a native askpass
+    # dialog. Rust. Joins the `proxied` set in lib/mcp-servers.nix (shared
+    # proxy port, on-demand). CI pushes its closure to nix.stubbe.dev/default
+    # built against its OWN flake.lock nixpkgs — don't follow ours or every
+    # store path misses the cache and rustc builds locally (same reason as
+    # wayle/fenix above).
+    pty-mcp.url = "github:stubbedev/pty-mcp";
     # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
     # Ships its own flake; we consume overlays.default (modules/overlays.nix).
     wayle = {

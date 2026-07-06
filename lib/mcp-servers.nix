@@ -17,6 +17,7 @@
   nixMcp ? throw "lib/mcp-servers.nix: nixMcp store path required",
   mysqlMcp ? throw "lib/mcp-servers.nix: mysqlMcp store path required",
   mongodbMcp ? throw "lib/mcp-servers.nix: mongodbMcp store path required",
+  ptyMcp ? throw "lib/mcp-servers.nix: ptyMcp store path required",
   # Per-feature gates (mirror modules/features.nix). A server is wired only when
   # its backing tool/daemon is actually installed — otherwise we'd start a
   # systemd unit and advertise a client entry for a binary whose state/daemon is
@@ -269,6 +270,30 @@ let
         args = [
           "--config"
           "${homeDir}/.config/mongodb-mcp/config.json"
+        ];
+      };
+      # pty-mcp: real terminal (one-shot `run` + persistent PTY sessions +
+      # sudo via askpass dialog). Stdio behind the shared proxy; "shared"
+      # multiplexing is fine because sessions are keyed by session_id — all
+      # windows just see one session table (pty_list lists them all), and the
+      # server captures the user's login-shell env at startup so running under
+      # systemd loses nothing. cwd-irrelevant (sessions take an explicit cwd,
+      # default HOME). idleSec matches pty-mcp's own default session
+      # idle-timeout (1800s): a shorter proxy clock would tear down the
+      # backend — and every live ssh/vim/REPL session in it — that the server
+      # itself still considers active. The explicit rofi askpass matches the
+      # desktop launcher (autodetect only finds kdialog/zenity/ssh-askpass);
+      # rofi reaches WAYLAND_DISPLAY via the systemd user-manager env, which
+      # hyprland/niri import at session start.
+      pty-mcp = {
+        host = "127.0.0.1";
+        port = proxiedPort;
+        path = "/pty-mcp/mcp";
+        idleSec = 1800;
+        command = ptyMcp;
+        args = [
+          "--askpass"
+          "rofi -dmenu -password -p sudo"
         ];
       };
     };
