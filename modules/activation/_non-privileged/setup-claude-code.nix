@@ -11,7 +11,12 @@
     }:
     let
       servers = import (self + "/lib/mcp-servers-wired.nix") {
-        inherit self inputs pkgs config;
+        inherit
+          self
+          inputs
+          pkgs
+          config
+          ;
       };
 
       # http client entries → the shared HTTP services (modules/home/

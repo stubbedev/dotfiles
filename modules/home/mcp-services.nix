@@ -34,7 +34,12 @@
       let
         system = pkgs.stdenv.hostPlatform.system;
         servers = import (self + "/lib/mcp-servers-wired.nix") {
-          inherit self inputs pkgs config;
+          inherit
+            self
+            inputs
+            pkgs
+            config
+            ;
         };
 
         # Shared service PATH. The work servers shell out to `git` (repo
