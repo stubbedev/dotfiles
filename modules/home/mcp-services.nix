@@ -33,24 +33,8 @@
     lib.mkIf config.features.claudeCode (
       let
         system = pkgs.stdenv.hostPlatform.system;
-        servers = import (self + "/lib/mcp-servers.nix") {
-          inherit pkgs;
-          homeDir = config.home.homeDirectory;
-          jenkinsMcp = "${inputs."jenkins-mcp".packages.${system}.default}/bin/jenkins-mcp";
-          sentryMcp = "${inputs."sentry-mcp".packages.${system}.default}/bin/sentry-mcp";
-          atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
-          srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
-          treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
-          # Readonly DB servers now live in `proxied` (socket-activated, shared,
-          # idle-exit), which this module forces — so their binaries must be
-          # passed here too, not just in setup-claude-code.nix.
-          nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
-          mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
-          mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
-          ptyMcp = "${inputs."pty-mcp".packages.${system}.default}/bin/pty-mcp";
-          enableSrv = config.features.srv;
-          enableTreeman = config.features.treeman;
-          enableChrome = config.features.browsers;
+        servers = import (self + "/lib/mcp-servers-wired.nix") {
+          inherit self inputs pkgs config;
         };
 
         # Shared service PATH. The work servers shell out to `git` (repo
@@ -175,25 +159,37 @@
         systemd.user.services = lib.mapAttrs mkService servers.httpServices // proxiedServices;
         systemd.user.sockets = proxiedSockets;
 
-        # Re-sync on every `hm switch` so a changed server set / store path is
-        # picked up even when sd-switch sees an identical unit (mirrors the
-        # treemand pattern in modules/packages/treeman.nix).
+        # Re-sync httpServices on every `hm switch` so a changed server set /
+        # store path is picked up even when sd-switch sees an identical unit
+        # (mirrors the treemand pattern in modules/packages/treeman.nix).
         #
         # httpServices are always-on (WantedBy=default.target): use `restart`,
         # which also STARTS a stopped unit. `try-restart` is wrong here — it is a
         # no-op on a stopped unit, so when sd-switch stops a changed unit to swap
         # store paths and leaves it down, try-restart can't bring it back and the
-        # server stays dead until the next login. mcp-proxy is the opposite: it's
-        # socket-activated with no [Install], so use `try-restart` to refresh it
-        # only if already running and let an idle proxy stay down.
+        # server stays dead until the next login.
+        #
+        # mcp-proxy is deliberately NOT restarted here — it is socket-activated
+        # with idle-exit, so restarting is all downside:
+        #   - idle (stopped): a restart is a no-op; the next connection re-activates
+        #     it on the new store paths regardless. Nothing to do.
+        #   - warm (an open Claude window holds live streamable-HTTP sessions to
+        #     mongodb/mysql/etc.): restarting drops those sessions, and the client
+        #     does NOT re-handshake a broken `type=http` session — so the DB tools
+        #     go dead mid-`hm switch` (the opposite of seamless), while the new
+        #     binaries only take effect on the client's next reconnect anyway.
+        # So we leave the warm proxy serving its now-stale binaries until its own
+        # idle-timeout retires it; the next connection then cold-starts it on the
+        # new store paths. Trade-off: a backend added to / removed from the server
+        # set is not (un)served until the proxy next goes idle — routine flake
+        # bumps need no restart at all. Force a pickup with
+        # `systemctl --user stop mcp-proxy.service` if you must (also drops live
+        # sessions).
         home.activation.restartMcpServices = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
           if command -v systemctl >/dev/null 2>&1; then
             systemctl --user restart ${
               lib.concatMapStringsSep " " (n: "${n}.service") (lib.attrNames servers.httpServices)
             } 2>/dev/null || true
-            ${lib.optionalString (servers.proxied != { }) ''
-              systemctl --user try-restart mcp-proxy.service 2>/dev/null || true
-            ''}
           fi
         '';
       }

@@ -10,26 +10,8 @@
       ...
     }:
     let
-      system = pkgs.stdenv.hostPlatform.system;
-      servers = import (self + "/lib/mcp-servers.nix") {
-        inherit pkgs;
-        homeDir = config.home.homeDirectory;
-        # Go-built work servers from flake inputs → offline store-path spawn.
-        jenkinsMcp = "${inputs."jenkins-mcp".packages.${system}.default}/bin/jenkins-mcp";
-        sentryMcp = "${inputs."sentry-mcp".packages.${system}.default}/bin/sentry-mcp";
-        atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
-        srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
-        treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
-        # Readonly DB servers → global stdio entries (Go bins from flake inputs).
-        nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
-        mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
-        mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
-        ptyMcp = "${inputs."pty-mcp".packages.${system}.default}/bin/pty-mcp";
-        # Gate client entries on the same feature flags mcp-services.nix uses to
-        # gate the services, so we never advertise a server that isn't running.
-        enableSrv = config.features.srv;
-        enableTreeman = config.features.treeman;
-        enableChrome = config.features.browsers;
+      servers = import (self + "/lib/mcp-servers-wired.nix") {
+        inherit self inputs pkgs config;
       };
 
       # http client entries → the shared HTTP services (modules/home/
