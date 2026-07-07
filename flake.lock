@@ -73,11 +73,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783151926,
-        "narHash": "sha256-VkuLQbA7Mm+nSGdvd42F31M/hcnh4wijmKVmHMPpPmE=",
+        "lastModified": 1783401494,
+        "narHash": "sha256-MrbxCaibRCAsx/3Uoz4gkIHJAPkt0j5L2e2lzBc0GKg=",
         "owner": "stubbedev",
         "repo": "atlassian-mcp",
-        "rev": "8e8fac110b762ee05a60def6e3848e120de0d94c",
+        "rev": "8f58b39ae8a219056cedc1d9d81bb647c330eadc",
         "type": "github"
       },
       "original": {
@@ -491,11 +491,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783358420,
-        "narHash": "sha256-UEyBpf+XmQe8laXfDzIlo11Er7E0rKrLS8jeMnMj0Ds=",
+        "lastModified": 1783388784,
+        "narHash": "sha256-w+YU5vatysjLZIg1wOKSzo/RL9Z66eBQuIjVnBM/1Zg=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "0d33882bd46c1f9ef62276700f5e5f2bd6ff6604",
+        "rev": "63d02d1c19f1c2b47a5bc7e55c620b6af7b218a6",
         "type": "github"
       },
       "original": {
@@ -1373,11 +1373,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783138217,
-        "narHash": "sha256-m57Ehlc+E35y0Y37DpD1j7mn2qe0nNBsbaeQIWEXWDg=",
+        "lastModified": 1783394415,
+        "narHash": "sha256-UwfSWKh/TINCIwYeECFKIamLPtJAoxbRDHTP+wfPAfM=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "0c17fedbcc7fbc4a8254809c855542fcc78b0214",
+        "rev": "6ab58cb2c5e6cc358f479c4cec2ccddf80e41f61",
         "type": "github"
       },
       "original": {
