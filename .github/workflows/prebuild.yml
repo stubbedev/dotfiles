@@ -103,6 +103,24 @@ jobs:
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add flake.lock
-          git commit -m "chore: update flake.lock (prebuild)"
-          git push
+          # This job runs ~1h. Another commit (e.g. a manual push) can land on
+          # master mid-run, so a plain push loses the fast-forward race. Only
+          # flake.lock changes here, so on rejection: stash the regenerated
+          # lock, reset to the moved remote tip, restore it, recommit, retry.
+          for attempt in 1 2 3 4 5; do
+            git add flake.lock
+            git commit -m "chore: update flake.lock (prebuild)" || true
+            if git push; then exit 0; fi
+            echo "push rejected; syncing to latest master (attempt $attempt)…"
+            cp flake.lock "$RUNNER_TEMP/flake.lock.prebuild"
+            git fetch origin master
+            git reset --hard origin/master
+            cp "$RUNNER_TEMP/flake.lock.prebuild" flake.lock
+            if git diff --quiet -- flake.lock; then
+              echo "remote already has this flake.lock — nothing to push."
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "flake.lock push still failing after 5 attempts" >&2
+          exit 1
