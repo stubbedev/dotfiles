@@ -16,11 +16,10 @@ _: {
         "atlassian"
         "jenkins"
         "sentry"
-        # Readonly DB servers (mysql-mcp / mongodb-mcp). Same shape: the server
-        # reads ~/.config/<provider>-mcp/config.json (live + staging sources,
-        # readonly:true). Edit creds with: hm secret edit mysql-mcp / mongodb-mcp.
-        "mysql"
-        "mongodb"
+        # Readonly DB server (ds-mcp). Same shape: the server reads
+        # ~/.config/ds-mcp/config.json (MySQL + MongoDB sources, live +
+        # staging, readonly:true). Edit creds with: hm secret edit ds-mcp.
+        "ds"
       ];
       mkSecret =
         provider:

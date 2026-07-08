@@ -15,8 +15,7 @@
   # throws: only setup-claude-code.nix forces `global`, so mcp-services.nix
   # (which only touches httpServices/proxied) need not pass these.
   nixMcp ? throw "lib/mcp-servers.nix: nixMcp store path required",
-  mysqlMcp ? throw "lib/mcp-servers.nix: mysqlMcp store path required",
-  mongodbMcp ? throw "lib/mcp-servers.nix: mongodbMcp store path required",
+  dsMcp ? throw "lib/mcp-servers.nix: dsMcp store path required",
   ptyMcp ? throw "lib/mcp-servers.nix: ptyMcp store path required",
   # Per-feature gates (mirror modules/features.nix). A server is wired only when
   # its backing tool/daemon is actually installed — otherwise we'd start a
@@ -202,17 +201,17 @@ let
   # a host with no browser installed. Stdio server; the extension auto-enables
   # when Playwright connects (PLAYWRITER_AUTO_ENABLE default true), so no flags.
   #
-  # mysql/mongodb (readonly DB servers) join the SAME proxy, ungated. proxied
-  # (not httpServices) is the right home precisely because of idle-exit — a
-  # source with an `ssh` block holds an SSH tunnel open for the life of the
-  # backend, so a login-time httpService would keep the staging tunnel up 24/7;
-  # here the tunnel (and the backend) die idleSec after the last query and
-  # re-establish on the next, while leaving the browser backend alone. mode
-  # "shared" multiplexes every window onto one upstream session, which is fine:
-  # each tool call is an independent query, no per-session state to collapse.
-  # mysql `--read-only` force-readonlies every source on top of the per-source
-  # flag; mongodb-mcp enforces readonly per source. Configs decrypt from sops
-  # (modules/files/mcp-secrets.nix) to ~/.config/<name>-mcp/config.json.
+  # ds-mcp (one readonly DB server for MySQL + MongoDB sources) joins the SAME
+  # proxy, ungated. proxied (not httpServices) is the right home precisely
+  # because of idle-exit — a source with an `ssh` block holds an SSH tunnel
+  # open for the life of the backend, so a login-time httpService would keep
+  # the staging tunnel up 24/7; here the tunnel (and the backend) die idleSec
+  # after the last query and re-establish on the next, while leaving the
+  # browser backend alone. mode "shared" multiplexes every window onto one
+  # upstream session, which is fine: each tool call is an independent query, no
+  # per-session state to collapse. `--read-only` force-readonlies every source
+  # on top of the per-source flag. Config decrypts from sops
+  # (modules/files/mcp-secrets.nix) to ~/.config/ds-mcp/config.json.
   proxiedPort = 39105;
   proxied =
     lib.optionalAttrs enableChrome {
@@ -248,28 +247,22 @@ let
         command = nixMcp;
         args = [ ];
       };
-      mysql = {
+      # ds-mcp: one unified readonly DB server (MySQL + MongoDB sources in one
+      # config), replacing the separate mysql/mongodb entries. `serve` is the
+      # stdio subcommand; `--read-only` force-readonlies every source on top of
+      # the per-source readonly flag. Tools land under mcp__ds__* (query,
+      # execute, schema, ping, list_sources).
+      ds = {
         host = "127.0.0.1";
         port = proxiedPort;
-        path = "/mysql/mcp";
+        path = "/ds/mcp";
         idleSec = 300;
-        command = mysqlMcp;
+        command = dsMcp;
         args = [
           "serve"
           "--read-only"
           "--config"
-          "${homeDir}/.config/mysql-mcp/config.json"
-        ];
-      };
-      mongodb = {
-        host = "127.0.0.1";
-        port = proxiedPort;
-        path = "/mongodb/mcp";
-        idleSec = 300;
-        command = mongodbMcp;
-        args = [
-          "--config"
-          "${homeDir}/.config/mongodb-mcp/config.json"
+          "${homeDir}/.config/ds-mcp/config.json"
         ];
       };
       # pty-mcp: real terminal (one-shot `run` + persistent PTY sessions +

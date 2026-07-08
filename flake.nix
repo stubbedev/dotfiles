@@ -60,16 +60,13 @@
       url = "github:stubbedev/atlassian-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Readonly DB MCP servers (Go). Scoped to the kontainer repo + worktrees
-    # only (see modules/home/kontainer-db-mcp.nix), not the global MCP set.
-    mysql-mcp = {
-      url = "github:stubbedev/mysql-mcp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    mongodb-mcp = {
-      url = "github:stubbedev/mongodb-mcp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Readonly DB MCP server (Rust). One unified server for MySQL + MongoDB
+    # (and more); replaces the separate mysql-mcp / mongodb-mcp. Joins the
+    # `proxied` set in lib/mcp-servers.nix. Like pty-mcp/wayle, it ships its
+    # own binary cache (nix.stubbe.dev/default) built against its OWN
+    # flake.lock nixpkgs — don't follow ours or every store path misses the
+    # cache and rustc builds locally.
+    ds-mcp.url = "github:stubbedev/ds-mcp";
     html-to-md = {
       url = "github:stubbedev/html-to-md";
       inputs.nixpkgs.follows = "nixpkgs";

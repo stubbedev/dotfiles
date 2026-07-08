@@ -22,8 +22,7 @@ import (self + "/lib/mcp-servers.nix") {
   srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
   treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
   nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
-  mysqlMcp = "${inputs."mysql-mcp".packages.${system}.default}/bin/mysql-mcp";
-  mongodbMcp = "${inputs."mongodb-mcp".packages.${system}.default}/bin/mongodb-mcp";
+  dsMcp = "${inputs."ds-mcp".packages.${system}.default}/bin/ds-mcp";
   ptyMcp = "${inputs."pty-mcp".packages.${system}.default}/bin/pty-mcp";
   # Feature gates (mirror modules/features.nix): a false gate drops the entry
   # and never forces its *Mcp store path.
