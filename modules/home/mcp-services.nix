@@ -213,27 +213,30 @@
         # store paths and leaves it down, try-restart can't bring it back and the
         # server stays dead until the next login.
         #
-        # mcp-proxy is deliberately NOT restarted here — it is socket-activated
-        # with idle-exit, so restarting is all downside:
-        #   - idle (stopped): a restart is a no-op; the next connection re-activates
-        #     it on the new store paths regardless. Nothing to do.
-        #   - warm (an open Claude window holds live streamable-HTTP sessions to
-        #     mongodb/mysql/etc.): restarting drops those sessions, and the client
-        #     does NOT re-handshake a broken `type=http` session — so the DB tools
-        #     go dead mid-`hm switch` (the opposite of seamless), while the new
-        #     binaries only take effect on the client's next reconnect anyway.
-        # So we leave the warm proxy serving its now-stale binaries until its own
-        # idle-timeout retires it; the next connection then cold-starts it on the
-        # new store paths. Trade-off: a backend added to / removed from the server
-        # set is not (un)served until the proxy next goes idle — routine flake
-        # bumps need no restart at all. Force a pickup with
-        # `systemctl --user stop mcp-proxy.service` if you must (also drops live
-        # sessions).
+        # mcp-proxy is socket-activated with idle-exit, so it takes the OPPOSITE
+        # verb — `try-restart`, which restarts it only if it is currently warm and
+        # is a no-op when idle:
+        #   - idle (stopped): no-op; the next connection cold-starts it on the new
+        #     store paths + EnvironmentFile. Nothing to do.
+        #   - warm (an open Claude window holds live sessions): restart so config
+        #     changes (backend set, repoWhitelist, KONTAINER_REMOTE) take effect
+        #     now, at the cost of dropping those live sessions.
+        # The restart is NOT optional: the proxy is kept perpetually warm by the
+        # always-polling backends (ds/nix/pty/playwriter clients GET every ~20s),
+        # so it never idle-exits on its own. Without this, a unit change — e.g.
+        # adding the repoWhitelist gate + EnvironmentFile — never reaches the
+        # running process, and jenkins/sentry fail closed (empty tools) even on
+        # whitelisted repos until the next login. `restart` would be wrong here:
+        # it would cold-START an idle proxy on every switch, defeating socket
+        # activation.
         home.activation.restartMcpServices = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
           if command -v systemctl >/dev/null 2>&1; then
             systemctl --user restart ${
               lib.concatMapStringsSep " " (n: "${n}.service") (lib.attrNames servers.httpServices)
             } 2>/dev/null || true
+            ${lib.optionalString (servers.proxied != { }) ''
+              systemctl --user try-restart mcp-proxy.service 2>/dev/null || true
+            ''}
           fi
         '';
       }
