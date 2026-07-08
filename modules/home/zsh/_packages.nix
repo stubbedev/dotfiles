@@ -7,9 +7,6 @@
 # zwc semantics this relies on: zsh ignores a .zwc only when the source
 # is *strictly newer*; nix store mtimes are all epoch-equal, so the
 # adjacent .zwc always wins for both `source` and autoload.
-# Takes the home-manager module argset wholesale (`...`) so zsh.nix can
-# forward it without re-listing every input; only the attrs used below
-# are named.
 {
   pkgs,
   lib,
@@ -20,7 +17,6 @@
   zsh-vim-mode,
   zsh-fzf-artisan,
   zsh-fzf-npm-run,
-  ...
 }:
 rec {
   # Content-addressed copy of just src/zsh, so these derivations rebuild

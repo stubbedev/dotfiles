@@ -6,7 +6,7 @@
 # < post=1000.
 _: {
   flake.modules.homeManager.zsh =
-    moduleArgs@{
+    {
       config,
       lib,
       pkgs,
@@ -19,10 +19,22 @@ _: {
       ...
     }:
     let
-      # Forward the whole module argset (it has a `...` tail) instead of
-      # re-listing each input in an inherit block. Args are named above
-      # only because home-manager provides _module.args by name.
-      z = import ./_packages.nix moduleArgs;
+      # Args are named in the pattern because the module system only
+      # injects _module.args entries NAMED there; the inherit forwards
+      # exactly what _packages.nix declares.
+      z = import ./_packages.nix {
+        inherit
+          config
+          lib
+          pkgs
+          self
+          srv
+          treeman
+          zsh-vim-mode
+          zsh-fzf-artisan
+          zsh-fzf-npm-run
+          ;
+      };
       sourcePlugins = lib.concatMapStringsSep "\n" (
         p: "source ${z.zshPlugins}/${p.name}/${p.file}"
       ) z.pluginSpecs;
