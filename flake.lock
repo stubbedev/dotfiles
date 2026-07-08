@@ -1836,11 +1836,11 @@
     "zsh-fzf-artisan": {
       "flake": false,
       "locked": {
-        "lastModified": 1783536459,
-        "narHash": "sha256-cU3bIahVSuqysZdX+S2hGiq2fLbznCyZAA+2nGnjuiw=",
+        "lastModified": 1783537196,
+        "narHash": "sha256-eonD9dqwXJkcLQNNrL5Jl0kwmzCk8hplYP3Qm6Eo1no=",
         "owner": "stubbedev",
         "repo": "zsh-fzf-artisan",
-        "rev": "7ed7453ff402ced13e169f78c177641c34257050",
+        "rev": "cdfc201239c8ac9235b60b06404b49834611d4a7",
         "type": "github"
       },
       "original": {
