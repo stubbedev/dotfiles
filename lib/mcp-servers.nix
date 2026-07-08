@@ -247,87 +247,86 @@ let
       mode = "perSession";
       repoWhitelist = [ kontainerRepo ];
     };
-  proxied =
-    {
-      jenkins-mcp = gateThroughProxy "jenkins-mcp";
-      sentry-mcp = gateThroughProxy "sentry-mcp";
-    }
-    // lib.optionalAttrs enableChrome {
-      playwriter = {
-        host = "127.0.0.1";
-        port = proxiedPort;
-        path = "/playwriter/mcp";
-        idleSec = 300;
-        command = "npx";
-        # @latest (not pinned) by request: playwriter ships fast; the cost is an
-        # npm "newer version?" round-trip on each cold backend spawn (~once per
-        # idleSec of silence). The exception to the pin-everything rule below.
-        args = [
-          "-y"
-          "playwriter@latest"
-        ];
-      };
-    }
-    // {
-      # nix-mcp: stateless (queries live APIs), cwd-irrelevant → safe behind the
-      # shared proxy. Moved off its own native-HTTP port (was 39101) to fold onto
-      # the shared proxiedPort. Stdio mode = no --http flag; "shared" multiplexing
-      # is harmless since it holds no per-session state. Route is /<attr>/mcp, so
-      # the attr name stays `nix-mcp` (keeps mcp__nix-mcp__* tool names) → path
-      # /nix-mcp/mcp.
-      # ponytail: idleSec matches the DB servers; bump it if the NixOS option
-      # index cold-reload after idle proves annoying.
-      nix-mcp = {
-        host = "127.0.0.1";
-        port = proxiedPort;
-        path = "/nix-mcp/mcp";
-        idleSec = 300;
-        command = nixMcp;
-        args = [ ];
-      };
-      # ds-mcp: one unified readonly DB server (MySQL + MongoDB sources in one
-      # config), replacing the separate mysql/mongodb entries. `serve` is the
-      # stdio subcommand; `--read-only` force-readonlies every source on top of
-      # the per-source readonly flag. Tools land under mcp__ds__* (query,
-      # execute, schema, ping, list_sources).
-      ds = {
-        host = "127.0.0.1";
-        port = proxiedPort;
-        path = "/ds/mcp";
-        idleSec = 300;
-        command = dsMcp;
-        args = [
-          "serve"
-          "--read-only"
-          "--config"
-          "${homeDir}/.config/ds-mcp/config.json"
-        ];
-      };
-      # pty-mcp: real terminal (one-shot `run` + persistent PTY sessions +
-      # sudo via askpass dialog). Stdio behind the shared proxy; "shared"
-      # multiplexing is fine because sessions are keyed by session_id — all
-      # windows just see one session table (pty_list lists them all), and the
-      # server captures the user's login-shell env at startup so running under
-      # systemd loses nothing. cwd-irrelevant (sessions take an explicit cwd,
-      # default HOME). idleSec matches pty-mcp's own default session
-      # idle-timeout (1800s): a shorter proxy clock would tear down the
-      # backend — and every live ssh/vim/REPL session in it — that the server
-      # itself still considers active. The explicit rofi askpass matches the
-      # desktop launcher (autodetect only finds kdialog/zenity/ssh-askpass);
-      # rofi reaches WAYLAND_DISPLAY via the systemd user-manager env, which
-      # hyprland/niri import at session start.
-      pty-mcp = {
-        host = "127.0.0.1";
-        port = proxiedPort;
-        path = "/pty-mcp/mcp";
-        idleSec = 1800;
-        command = ptyMcp;
-        args = [
-          "--askpass"
-          "rofi -dmenu -password -p sudo"
-        ];
-      };
+  proxied = {
+    jenkins-mcp = gateThroughProxy "jenkins-mcp";
+    sentry-mcp = gateThroughProxy "sentry-mcp";
+  }
+  // lib.optionalAttrs enableChrome {
+    playwriter = {
+      host = "127.0.0.1";
+      port = proxiedPort;
+      path = "/playwriter/mcp";
+      idleSec = 300;
+      command = "npx";
+      # @latest (not pinned) by request: playwriter ships fast; the cost is an
+      # npm "newer version?" round-trip on each cold backend spawn (~once per
+      # idleSec of silence). The exception to the pin-everything rule below.
+      args = [
+        "-y"
+        "playwriter@latest"
+      ];
     };
+  }
+  // {
+    # nix-mcp: stateless (queries live APIs), cwd-irrelevant → safe behind the
+    # shared proxy. Moved off its own native-HTTP port (was 39101) to fold onto
+    # the shared proxiedPort. Stdio mode = no --http flag; "shared" multiplexing
+    # is harmless since it holds no per-session state. Route is /<attr>/mcp, so
+    # the attr name stays `nix-mcp` (keeps mcp__nix-mcp__* tool names) → path
+    # /nix-mcp/mcp.
+    # ponytail: idleSec matches the DB servers; bump it if the NixOS option
+    # index cold-reload after idle proves annoying.
+    nix-mcp = {
+      host = "127.0.0.1";
+      port = proxiedPort;
+      path = "/nix-mcp/mcp";
+      idleSec = 300;
+      command = nixMcp;
+      args = [ ];
+    };
+    # ds-mcp: one unified readonly DB server (MySQL + MongoDB sources in one
+    # config), replacing the separate mysql/mongodb entries. `serve` is the
+    # stdio subcommand; `--read-only` force-readonlies every source on top of
+    # the per-source readonly flag. Tools land under mcp__ds__* (query,
+    # execute, schema, ping, list_sources).
+    ds = {
+      host = "127.0.0.1";
+      port = proxiedPort;
+      path = "/ds/mcp";
+      idleSec = 300;
+      command = dsMcp;
+      args = [
+        "serve"
+        "--read-only"
+        "--config"
+        "${homeDir}/.config/ds-mcp/config.json"
+      ];
+    };
+    # pty-mcp: real terminal (one-shot `run` + persistent PTY sessions +
+    # sudo via askpass dialog). Stdio behind the shared proxy; "shared"
+    # multiplexing is fine because sessions are keyed by session_id — all
+    # windows just see one session table (pty_list lists them all), and the
+    # server captures the user's login-shell env at startup so running under
+    # systemd loses nothing. cwd-irrelevant (sessions take an explicit cwd,
+    # default HOME). idleSec matches pty-mcp's own default session
+    # idle-timeout (1800s): a shorter proxy clock would tear down the
+    # backend — and every live ssh/vim/REPL session in it — that the server
+    # itself still considers active. The explicit rofi askpass matches the
+    # desktop launcher (autodetect only finds kdialog/zenity/ssh-askpass);
+    # rofi reaches WAYLAND_DISPLAY via the systemd user-manager env, which
+    # hyprland/niri import at session start.
+    pty-mcp = {
+      host = "127.0.0.1";
+      port = proxiedPort;
+      path = "/pty-mcp/mcp";
+      idleSec = 1800;
+      command = ptyMcp;
+      args = [
+        "--askpass"
+        "rofi -dmenu -password -p sudo"
+      ];
+    };
+  };
 
   # Per-window stdio servers, loaded everywhere. Empty since srv/treeman became
   # shared HTTP daemons and the DB servers moved to `proxied`; kept as an
