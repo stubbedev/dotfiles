@@ -213,8 +213,46 @@ let
   # on top of the per-source flag. Config decrypts from sops
   # (modules/files/mcp-secrets.nix) to ~/.config/ds-mcp/config.json.
   proxiedPort = 39105;
+  # jenkins/sentry are gated to ONE repo: only a Claude window whose workspace
+  # git remote matches sees their tools. proxy-mcp's per-backend repoWhitelist
+  # does the gating (matched against the client's remotes, normalized across
+  # ssh/https and a trailing .git; fails closed for a client exposing no
+  # workspace). They keep their native HTTP systemd units as the UPSTREAM — the
+  # proxy just fronts them as url-backends in `mode "perSession"` so each
+  # window's MCP roots are relayed to a dedicated upstream session (a "shared"
+  # session would collapse every window's roots onto one upstream, breaking
+  # per-repo resolution). The proxied entry reuses the same attr key as its
+  # httpServices twin, so setup-claude-code.nix's `httpServers // proxiedServers`
+  # makes the gated proxy route WIN the client entry (the direct :391xx entry is
+  # overridden away). atlassian stays ungated (works in every repo).
+  #
+  # The remote itself is NOT hard-coded here (this repo is public): it is an
+  # env-var placeholder proxy-mcp expands at runtime (--expand-env) from the
+  # sops-encrypted secrets/mcp-proxy-env, decrypted via EnvironmentFile (see
+  # modules/home/mcp-services.nix). Unset → expands to "" → matches nothing →
+  # fails closed, never accidentally exposes tools.
+  kontainerRepo = "\${KONTAINER_REMOTE}";
+  gateThroughProxy =
+    name:
+    let
+      up = httpServices.${name};
+    in
+    {
+      host = "127.0.0.1";
+      port = proxiedPort;
+      path = "/${name}/mcp";
+      idleSec = 300;
+      url = "http://${up.host}:${toString up.port}${up.path}";
+      transportType = "streamable-http";
+      mode = "perSession";
+      repoWhitelist = [ kontainerRepo ];
+    };
   proxied =
-    lib.optionalAttrs enableChrome {
+    {
+      jenkins-mcp = gateThroughProxy "jenkins-mcp";
+      sentry-mcp = gateThroughProxy "sentry-mcp";
+    }
+    // lib.optionalAttrs enableChrome {
       playwriter = {
         host = "127.0.0.1";
         port = proxiedPort;

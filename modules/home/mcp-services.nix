@@ -28,11 +28,18 @@
       pkgs,
       lib,
       config,
+      homeLib,
       ...
     }:
     lib.mkIf config.features.claudeCode (
       let
         system = pkgs.stdenv.hostPlatform.system;
+        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE=...), decrypted at
+        # activation. Fed to mcp-proxy as an EnvironmentFile so the gated repo
+        # remote never lands in this public repo or the world-readable store;
+        # proxy-mcp expands the ${KONTAINER_REMOTE} placeholder in its config
+        # (repoWhitelist) at runtime via --expand-env. Edit: hm secret edit mcp-proxy-env.
+        proxyEnvPath = "${config.home.homeDirectory}/.config/mcp-proxy/proxy.env";
         servers = import (self + "/lib/mcp-servers-wired.nix") {
           inherit
             self
@@ -119,13 +126,31 @@
               type = "streamable-http";
               options.logEnabled = true;
             };
-            mcpServers = lib.mapAttrs (_: p: {
-              inherit (p) command args;
-              options = {
-                mode = "shared";
-                idleTimeout = "${toString p.idleSec}s";
-              };
-            }) servers.proxied;
+            # A backend is either a spawned stdio command (command/args) or an
+            # existing HTTP upstream (url/transportType — used to front the
+            # jenkins/sentry HTTP services behind a repoWhitelist gate). Options
+            # default to mode "shared"; a backend that needs per-window roots
+            # relayed sets mode "perSession", and repoWhitelist (when present)
+            # gates tool visibility to matching repos.
+            mcpServers = lib.mapAttrs (
+              _: p:
+              (
+                if p ? url then
+                  {
+                    inherit (p) url;
+                    transportType = p.transportType or "streamable-http";
+                  }
+                else
+                  { inherit (p) command args; }
+              )
+              // {
+                options = {
+                  mode = p.mode or "shared";
+                  idleTimeout = "${toString p.idleSec}s";
+                }
+                // lib.optionalAttrs (p ? repoWhitelist) { inherit (p) repoWhitelist; };
+              }
+            ) servers.proxied;
           }
         );
 
@@ -145,11 +170,20 @@
             Service = {
               Type = "notify";
               Environment = [ backendPath ];
+              # sops-decrypted KONTAINER_REMOTE, read at service start (kept out
+              # of the store — unlike Environment=, which HM bakes into the unit).
+              # Leading `-`: a missing/failed secret must NOT stop the whole proxy
+              # (playwriter/ds/pty/nix share it) — instead KONTAINER_REMOTE stays
+              # unset, so jenkins/sentry's repoWhitelist expands to "" and fails
+              # closed (tools hidden), while the other backends keep serving.
+              EnvironmentFile = "-${proxyEnvPath}";
               # --idle-timeout: exit after procIdleSec of NO requests to any
               # route; the socket re-activates on the next connection. Per-backend
               # teardown is driven by each entry's options.idleTimeout in the
-              # config. --expand-env=false: config holds literal values.
-              ExecStart = "${mcpProxy} --config ${proxyConfig} --expand-env=false --idle-timeout=${toString procIdleSec}s";
+              # config. --expand-env=true: expand ${KONTAINER_REMOTE} in the
+              # repoWhitelist. No other config value contains a literal `$`, so
+              # global expansion is safe; keep it that way when adding backends.
+              ExecStart = "${mcpProxy} --config ${proxyConfig} --expand-env=true --idle-timeout=${toString procIdleSec}s";
               # Cold `npx` fetch of a backend can be slow on first run; allow
               # readiness up to 120s before systemd fails the start job.
               TimeoutStartSec = 120;
@@ -161,6 +195,11 @@
         };
       in
       {
+        sops.secrets."mcp-proxy-env" = homeLib.mkBinarySecret {
+          name = "mcp-proxy-env";
+          path = proxyEnvPath;
+        };
+
         systemd.user.services = lib.mapAttrs mkService servers.httpServices // proxiedServices;
         systemd.user.sockets = proxiedSockets;
 
