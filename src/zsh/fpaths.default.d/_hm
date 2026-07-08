@@ -235,7 +235,7 @@ _hm() {
               local -a targets
               targets=(
                 'nvim:Clear ~/.local/{share,state}/nvim and ~/.cache/nvim'
-                'zsh:Wipe src/zsh/{plugins.d,fpaths.d} and ~/.zcompdump; kick zsh-plugin-update'
+                'zsh:Remove legacy pre-nix zsh state (plugins.d, fpaths.d, stale zcompdump/zwc)'
                 'locks:Wipe ~/.local/state/nix/home-manager/*.lock.sum (re-prompts on next switch)'
                 'all:nvim + zsh (does NOT touch locks)'
               )

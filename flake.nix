@@ -112,6 +112,29 @@
       # fenix above. Cost: a second nixpkgs in the closure — worth it for a
       # working cache.
     };
+    # Zsh plugins consumed as pinned sources (no runtime git clones).
+    # zcompiled into the stubbe-zsh-plugins derivation by
+    # modules/home/zsh/_packages.nix; refreshed via `nix flake update`,
+    # which replaced the daily zsh-plugin-update timer.
+    zsh-vim-mode = {
+      url = "github:softmoth/zsh-vim-mode";
+      flake = false;
+    };
+    zsh-fzf-artisan = {
+      url = "github:stubbedev/zsh-fzf-artisan";
+      flake = false;
+    };
+    zsh-fzf-npm-run = {
+      url = "github:stubbedev/zsh-fzf-npm-run";
+      flake = false;
+    };
+    # Zsh syntax highlighting via a shared Rust daemon (syntect-based).
+    # Replaces the fast-syntax-highlighting zsh plugin; consumed as
+    # pkgs.zsh-patina via modules/overlays.nix, activated in src/zsh/settings.
+    zsh-patina = {
+      url = "github:michel-kraemer/zsh-patina";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # PHP language server (Rust). Ships its own flake; we consume
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
     phpantom_lsp = {

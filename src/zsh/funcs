@@ -204,17 +204,3 @@ if is_binary direnv; then
   }
 fi
 
-if is_binary claude; then
-  # Wrap `claude` so a linked worktree is auto-cleaned when claude exits.
-  # gwtc runs in the user's shell (not a hook subshell) so it can cd the
-  # parent shell back to main. Dirty/unpushed worktrees are skipped by
-  # `treeman worktree back --remove` itself — no work is destroyed.
-  function claude {
-    command claude "$@"
-    local _rc=$?
-    if in_git_repo && _in_linked_worktree; then
-      gwtc
-    fi
-    return $_rc
-  }
-fi

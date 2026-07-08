@@ -1,11 +1,6 @@
 bin/nvim
 src/nvim/lazy-lock.json
 src/nvim/lazyvim.json
-src/zsh/plugins.d
-src/zsh/fpaths.d
-src/zsh/history
-src/zsh/update_flag
-src/zsh/*.zwc
 src/btop/btop.log
 src/btop/btop.conf
 src/neomutt/accounts/*/*/cache/bodies/*

@@ -69,5 +69,8 @@ in
     # Requires wayle.inputs.nixpkgs NOT following ours (see flake.nix).
     wayle = _final: prev: { wayle = inputs.wayle.packages.${prev.system}.default; };
     phpantom_lsp = phpantomLspOverlay;
+    zsh-patina = final: _prev: {
+      zsh-patina = inputs.zsh-patina.packages.${final.stdenv.hostPlatform.system}.default;
+    };
   };
 }

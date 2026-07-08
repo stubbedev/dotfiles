@@ -62,52 +62,27 @@ function _settings_init {
   zstyle ':fzf-tab:*' switch-group '<' '>'
   zstyle ':fzf-tab:*' fuzzy-search true
 
-  # Add avahi-discovered .local hosts to ssh-style completion. avahi-browse
-  # takes ~1.5s, so we serve from a stale on-disk cache and refresh in the
-  # background — completion never blocks. The service-type filter excludes
-  # Sonos boxes, printers, etc. so only ssh-able machines show up.
-  if is_binary avahi-browse; then
-    function _avahi_ssh_hosts {
-      local cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-avahi-hosts"
-      local max_age=30
-      local mtime
-      mtime=$(stat -c %Y -- "$cache" 2>/dev/null || echo 0)
-      if (( EPOCHSECONDS - mtime > max_age )); then
-        {
-          mkdir -p -- "${cache:h}"
-          local tmp="$cache.$$"
-          if avahi-browse -atrp 2>/dev/null \
-               | awk -F';' '$1=="=" && $3=="IPv4" && ($5=="_workstation._tcp" || $5 ~ /ssh/) && $7!="" {print $7}' \
-               | sort -u > "$tmp" 2>/dev/null; then
-            mv -- "$tmp" "$cache"
-          else
-            rm -f -- "$tmp"
-          fi
-        } &!
-      fi
-      if [[ -s $cache ]]; then
-        reply=( ${(f)"$(<$cache)"} )
-      else
-        reply=()
-      fi
-    }
-    zstyle -e ':completion:*:hosts' hosts '_avahi_ssh_hosts'
-  fi
+  # Add avahi-discovered .local hosts to ssh-style completion. The cache
+  # file is maintained by the zsh-avahi-hosts systemd user timer
+  # (modules/home/zsh/avahi-hosts.nix) — completion only reads it, so it
+  # never blocks and never forks.
+  function _avahi_ssh_hosts {
+    local cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-avahi-hosts"
+    if [[ -s $cache ]]; then
+      reply=( ${(f)"$(<$cache)"} )
+    else
+      reply=()
+    fi
+  }
+  zstyle -e ':completion:*:hosts' hosts '_avahi_ssh_hosts'
 
   HYPHEN_INSENSITIVE=false
   DISABLE_AUTO_TITLE=true
   ENABLE_CORRECTION=true
   VIM_MODE_NO_DEFAULT_BINDINGS=true
   ARTISAN_OPEN_ON_MAKE_EDITOR=nvim
-  HISTFILE="$HOME/.zsh_history"
-  HISTTIMEFORMAT="[%F %T] "
-  SAVEHIST=10000
-  HISTSIZE=10000
+  # History options live in programs.zsh.history (modules/home/zsh/zsh.nix).
 
-  setopt APPEND_HISTORY
-  setopt SHARE_HISTORY
-  setopt EXTENDED_HISTORY
-  setopt HIST_IGNORE_ALL_DUPS
   setopt COMPLETE_ALIASES
 
   _bind_run "^[A" "tmux-lazy-docker"
@@ -117,61 +92,15 @@ function _settings_init {
   _bind_run "^[h" "tmux-claude"
   _bind_run "^[H" "tmux-claude --inline"
 
-  local _cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
-
   if is_binary fzf; then
       _bind_run "^[f" "tmux-pick-project"
       _bind_run "^[F" "fzf-project-picker"
       _bind_run "^[d" "tmux-pick-session"
       _bind_run "^[D" "fzf-directory-picker"
-      # Strip fzf's `bindkey '^I'` (Tab) line so fzf-tab keeps Tab, and its
-      # Alt-C `bindkey`s (cd widget — unused). The `zle -N fzf-cd-widget`
-      # line stays so the `if` block fzf wraps them in is not left empty.
-      function _settings_gen_fzf_init {
-        local _out
-        local -a _lines
-        _out=$(fzf --zsh 2>/dev/null) || return 1
-        _lines=( "${(@f)_out}" )
-        _lines=( "${(@)_lines:#bindkey '^I'*}" )
-        _lines=( "${(@)_lines:#*bindkey*fzf-cd-widget}" )
-        print -r -- "${(F)_lines}"
-      }
-      _cached_eval "$_cache_dir/fzf_init.zsh" "${commands[fzf]:A}" _settings_gen_fzf_init
-      unfunction _settings_gen_fzf_init
   fi
-
-  if is_binary starship && ! type starship_zle-keymap-select >/dev/null; then
-      function _settings_gen_starship_init { starship init zsh; }
-      _cached_eval "$_cache_dir/starship_init.zsh" "${commands[starship]:A}" _settings_gen_starship_init
-      unfunction _settings_gen_starship_init
-  fi
-
-  # direnv hook. Required for `denv on` to actually export .env vars
-  # into the shell — without this precmd hook, `direnv allow` just
-  # writes the auth file but no subsequent prompt evaluates
-  # `direnv export zsh`, so $VARS stay unset.
-  #
-  # The chatty "direnv: loading …" + "direnv: export +FOO +BAR …" lines
-  # aren't controlled by DIRENV_LOG_FORMAT (hardcoded in `direnv export`
-  # itself in 2.37.1), so we wrap the upstream hook to filter stderr
-  # through grep. Real errors (`direnv: error …`, blocked .envrc, parse
-  # errors) still pass through.
-  if is_binary direnv && ! (( $+functions[_direnv_hook] )); then
-      function _settings_gen_direnv_init { direnv hook zsh; }
-      _cached_eval "$_cache_dir/direnv_init.zsh" "${commands[direnv]:A}" _settings_gen_direnv_init
-      unfunction _settings_gen_direnv_init
-      if (( $+functions[_direnv_hook] )); then
-          # The "loading" / "export" lines are prefixed with an ANSI
-          # color reset (\x1b[0m / \x1b[2m), so a `^direnv:` anchor
-          # misses them. Plain substring match catches both colored and
-          # plain output. Real errors (`direnv: error …`) pass through.
-          function _direnv_hook {
-              trap -- '' SIGINT
-              eval "$(direnv export zsh 2> >(grep --line-buffered -vE 'direnv: (loading|export) ' >&2))"
-              trap - SIGINT
-          }
-      fi
-  fi
+  # fzf/starship/direnv/zoxide init scripts are built at nix build time
+  # (modules/home/zsh/_packages.nix) and sourced from the store by the
+  # generated .zshrc (modules/home/zsh/zsh.nix) — nothing to eval here.
 
   if is_binary pyenv; then
       export PYENV_ROOT="$HOME/.pyenv"

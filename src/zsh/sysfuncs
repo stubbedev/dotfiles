@@ -25,18 +25,3 @@ function is_file {
 function src_zsh {
   exec zsh
 }
-
-# Source $cache, regenerating it by calling $generator (a function or
-# command name) first if the cache is missing or if the resolved binary
-# path stored in ${cache}.ver doesn't match $resolved. Used to skip the
-# cost of `fzf --zsh` / `starship init zsh` on every shell start.
-function _cached_eval {
-  local cache=$1 resolved=$2 generator=$3
-  local cached=""
-  [[ -f "${cache}.ver" ]] && cached=$(<"${cache}.ver")
-  if [[ ! -f "$cache" || "$cached" != "$resolved" ]]; then
-    "$generator" >| "$cache" || return 1
-    print -r -- "$resolved" >| "${cache}.ver"
-  fi
-  source "$cache"
-}

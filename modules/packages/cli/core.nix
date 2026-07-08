@@ -21,6 +21,7 @@ _: {
         bc
         zsh
         zsh-completions
+        zsh-patina
         tmux
         starship
 

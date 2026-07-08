@@ -36,6 +36,13 @@
           treeman
           ;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
+        # Pinned zsh plugin sources (flake = false) consumed by
+        # modules/home/zsh/_packages.nix.
+        inherit (inputs)
+          zsh-vim-mode
+          zsh-fzf-artisan
+          zsh-fzf-npm-run
+          ;
       };
     };
 }

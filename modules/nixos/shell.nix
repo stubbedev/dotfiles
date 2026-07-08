@@ -15,18 +15,17 @@ _: {
         # NixOS defaults to enableGlobalCompInit=true and enableBashCompletion=true,
         # which inject `autoload -U compinit && compinit` into /etc/zshrc. That fires
         # before ~/.zshrc with no -C flag and re-audits /nix/store fpath dirs whose
-        # mtimes change on every rebuild, invalidating ~/.zcompdump and defeating
-        # the zcompile work done by modules/activation/_non-privileged/setup-zsh.nix.
-        # Our init runs its own `compinit -C` against the precompiled dump.
+        # mtimes change on every rebuild. Our HM-side programs.zsh runs its own
+        # `compinit -C` against the prebuilt store dump (modules/home/zsh/), so the
+        # global one is pure waste — disable it.
         enableGlobalCompInit = false;
         enableBashCompletion = false;
       };
 
       # Make the primary user's login shell zsh so greetd / tty login
-      # drop straight into it. The HM-side modules/files/shell.nix
-      # writes ~/.zshrc that sources ${HOME}/.stubbe/src/zsh/init, so
-      # the symlink created by bin/stb-install-nixos must exist for the
-      # config to load.
+      # drop straight into it. The .zshrc is owned by HM's programs.zsh
+      # (modules/home/zsh/zsh.nix) and sources only /nix/store paths, so
+      # zsh loading no longer depends on the ~/.stubbe symlink.
       users.users.${config.host.primaryUser}.shell = pkgs.zsh;
 
       environment.shells = [ pkgs.zsh ];
