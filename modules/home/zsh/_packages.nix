@@ -128,7 +128,7 @@ rec {
   # (the HM profile derivation) carries every package-shipped completion on
   # both targets and forces a dump rebuild whenever packages change.
   fpathDirs = [
-    "${zshConfig}/fpaths.default.d"
+    "${zshConfig}/completions"
     "${zshCompletionsGenerated}/share/zsh/site-functions"
     "${config.home.path}/share/zsh/site-functions"
   ];

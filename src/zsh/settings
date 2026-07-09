@@ -78,9 +78,19 @@ function _settings_init {
 
   HYPHEN_INSENSITIVE=false
   DISABLE_AUTO_TITLE=true
-  ENABLE_CORRECTION=true
   VIM_MODE_NO_DEFAULT_BINDINGS=true
+  # ESC→NORMAL and prefix-key disambiguation wait this long (×10ms). zsh
+  # default is 40 (400ms) — the source of vi-mode's "laggy" feel. 1 = 10ms,
+  # instant mode switch. Read live by ZLE per keystroke, so setting it here
+  # (after the plugin loads) takes effect immediately.
+  KEYTIMEOUT=1
   ARTISAN_OPEN_ON_MAKE_EDITOR=nvim
+  # zsh-autosuggestions perf. Default re-binds every ZLE widget on each
+  # precmd ("a decent performance hit" per the plugin) — every plugin here
+  # loads before the first prompt, so one rebind captures them all.
+  ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+  # Don't run the history search on long lines/pastes.
+  ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
   # History options live in programs.zsh.history (modules/home/zsh/zsh.nix).
 
   setopt COMPLETE_ALIASES
