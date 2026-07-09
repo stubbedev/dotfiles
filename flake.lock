@@ -1737,11 +1737,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783406875,
-        "narHash": "sha256-1kwpFgWlU+pNCxWtcy4t59gYVVXjDNKE+j6YJ52O+oc=",
+        "lastModified": 1783587329,
+        "narHash": "sha256-dmQyss7gZYUOcZHavWGODVuevvB0D9pZB9u5chXb5sQ=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "d8d086458027f16e2ad76b19e4ce14394289d7dd",
+        "rev": "ef102aa7df2e3802364ae28e8bfed6251435b30b",
         "type": "github"
       },
       "original": {
@@ -1836,11 +1836,11 @@
     "zsh-fzf-artisan": {
       "flake": false,
       "locked": {
-        "lastModified": 1783571266,
-        "narHash": "sha256-YUAvgyROrmZdb30VkWhSRay5d8iiNI0RrK9jXPVd/vU=",
+        "lastModified": 1783585284,
+        "narHash": "sha256-ls1gMYOziQlgHrsws3mL7tyxUnataVbp7+z2YeMPdkM=",
         "owner": "stubbedev",
         "repo": "zsh-fzf-artisan",
-        "rev": "72a473b24f34ff725d9a165a5dbc0dce67d06b2e",
+        "rev": "b7c05f6810fe02ac9bd470a6bd88ea03c567cc8b",
         "type": "github"
       },
       "original": {
