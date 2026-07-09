@@ -14,12 +14,13 @@ _: {
         # avoid a per-shell eval fork; HM's would inject a second,
         # duplicate hook after ours.
         enableZshIntegration = false;
-        # Silence the "direnv: loading/export" chatter at the source —
-        # direnv's own log filter drops these status lines while real
-        # errors (which route through log_error) still surface. Replaces
-        # the old stderr-grep wrapper. The message passed to the filter
-        # has no "direnv: " prefix, so anchor on the bare verb.
-        config.global.log_filter = "^(loading|export)";
+        # Silence ALL "direnv: loading/export/…" status chatter at the
+        # source. log_filter is an ALLOWLIST: logStatus prints a line only
+        # if the message matches, so a never-matching regex ("$." — a char
+        # after end-of-text is impossible) suppresses every status line.
+        # Errors go through logError, which ignores log_filter/log_format
+        # entirely (hardcoded "direnv: %s"), so real failures still surface.
+        config.global.log_filter = "$.";
       };
     };
 }
