@@ -64,9 +64,9 @@ let
   #
   #   proxied       shared stdio servers fronted by ONE proxy-mcp
   #                 (stdio→streamable-HTTP) and started ON DEMAND via systemd
-  #                 socket activation. playwriter lives here: we want
+  #                 socket activation. chrome-devtools lives here: we want
   #                 exactly ONE browser, so every Claude window is an HTTP client
-  #                 of one proxy-mcp that owns one `npx playwriter` stdio
+  #                 of one proxy-mcp that owns one `npx chrome-devtools-mcp` stdio
   #                 child (mode "shared": proxy-mcp multiplexes every window onto
   #                 one upstream session, so one browser). The accepted tradeoff
   #                 vs. the old per-window model: windows share one browser
@@ -91,8 +91,7 @@ let
   #                 stdio is the floor for any server that lands back here.
   #
   # npx commands are version-pinned (no `@latest`) so a spawn never makes an
-  # npm "is there a newer version?" round-trip — except playwriter, pinned to
-  # `@latest` by request (see its entry below).
+  # npm "is there a newer version?" round-trip.
 
   # Build a work-server HTTP service entry. The server serves streamable HTTP at
   # http://127.0.0.1:<port>/mcp and reads its instance config (URLs + tokens)
@@ -139,7 +138,7 @@ let
   # lives in ~/.config, reached via XDG_CONFIG_HOME) and shell out to `docker`
   # (PATH widened in mcp-services.nix). Repo/worktree comes from per-session MCP
   # roots / X-Repo-Root, so one process serves all windows. Ports continue the
-  # 391xx block (39105/06 belong to playwriter in `proxied`).
+  # 391xx block (39105/06 belong to chrome-devtools in `proxied`).
   // lib.optionalAttrs enableSrv {
     srv-mcp = {
       exe = srvMcp;
@@ -196,10 +195,11 @@ let
   #   command/args the stdio server proxy-mcp wraps (one shared instance, mode
   #               "shared"); they become this entry's `command`/`args` in the
   #               generated proxy-mcp config.json.
-  # playwriter gated on enableChrome (features.browsers): it drives the user's
-  # real Chrome through its Web Store extension (CDP under the hood), useless on
-  # a host with no browser installed. Stdio server; the extension auto-enables
-  # when Playwright connects (PLAYWRITER_AUTO_ENABLE default true), so no flags.
+  # chrome-devtools gated on enableChrome (features.browsers): it drives the
+  # user's real Chrome over CDP, useless on a host with no browser installed.
+  # --autoConnect attaches to the already-running stable-channel Chrome instead
+  # of launching its own (Chrome 144+; remote debugging must be enabled once in
+  # chrome://inspect/#remote-debugging).
   #
   # ds-mcp (one readonly DB server for MySQL + MongoDB sources) joins the SAME
   # proxy, ungated. proxied (not httpServices) is the right home precisely
@@ -252,18 +252,16 @@ let
     sentry-mcp = gateThroughProxy "sentry-mcp";
   }
   // lib.optionalAttrs enableChrome {
-    playwriter = {
+    chrome-devtools = {
       host = "127.0.0.1";
       port = proxiedPort;
-      path = "/playwriter/mcp";
+      path = "/chrome-devtools/mcp";
       idleSec = 300;
       command = "npx";
-      # @latest (not pinned) by request: playwriter ships fast; the cost is an
-      # npm "newer version?" round-trip on each cold backend spawn (~once per
-      # idleSec of silence). The exception to the pin-everything rule below.
       args = [
         "-y"
-        "playwriter@latest"
+        "chrome-devtools-mcp@1.5.0"
+        "--autoConnect"
       ];
     };
   }

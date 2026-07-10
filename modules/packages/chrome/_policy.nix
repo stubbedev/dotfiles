@@ -24,7 +24,6 @@ let
     "nebkdnlhchcbbjpgfmhifafhfjipphgi" = "Nuxt Assistant";
     "iaajmlceplecbljialhhkmedjlpdblhp" = "Vue.js devtools";
     "bcjindcccaagfpapjjmafapmmgkkhgoa" = "JSON Formatter";
-    "jfeammnjpkecdekppnclgkkffahnhfhe" = "Playwriter MCP";
   };
 in
 {

@@ -14,9 +14,9 @@
   # a stdio→HTTP proxy (which would collapse all windows onto one upstream
   # session and lose roots).
   #
-  # The `proxied` set (playwriter + the readonly DB servers, plus nix-mcp which
-  # is stateless and just folds its port onto the shared one) is the deliberate
-  # inverse for playwriter/DBs: we WANT one shared upstream per backend so there
+  # The `proxied` set (chrome-devtools + the readonly DB servers, plus nix-mcp
+  # which is stateless and just folds its port onto the shared one) is the
+  # deliberate inverse for browser/DBs: we WANT one shared upstream per backend so there
   # is exactly one browser / one DB connection. The WHOLE set is bridged through a
   # single proxy-mcp (stdio→streamable-HTTP), socket-activated on one shared
   # port, serving each backend at /<name>/mcp. proxy-mcp connects each backend
@@ -98,7 +98,7 @@
         # in the backlog rather than racing route registration.
         mcpProxy = "${inputs.proxy-mcp.packages.${system}.proxy-mcp}/bin/proxy-mcp";
         # proxy-mcp spawns `npx`, which needs node on PATH; the npx-fetched
-        # playwriter child inherits it.
+        # chrome-devtools-mcp child inherits it.
         backendPath = "PATH=${pkgs.nodejs}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
         # One shared loopback addr for the whole proxied set (every entry carries
@@ -173,7 +173,7 @@
               # sops-decrypted KONTAINER_REMOTE, read at service start (kept out
               # of the store — unlike Environment=, which HM bakes into the unit).
               # Leading `-`: a missing/failed secret must NOT stop the whole proxy
-              # (playwriter/ds/pty/nix share it) — instead KONTAINER_REMOTE stays
+              # (chrome-devtools/ds/pty/nix share it) — instead KONTAINER_REMOTE stays
               # unset, so jenkins/sentry's repoWhitelist expands to "" and fails
               # closed (tools hidden), while the other backends keep serving.
               EnvironmentFile = "-${proxyEnvPath}";
@@ -222,7 +222,7 @@
         #     changes (backend set, repoWhitelist, KONTAINER_REMOTE) take effect
         #     now, at the cost of dropping those live sessions.
         # The restart is NOT optional: the proxy is kept perpetually warm by the
-        # always-polling backends (ds/nix/pty/playwriter clients GET every ~20s),
+        # always-polling backends (ds/nix/pty/chrome-devtools clients GET every ~20s),
         # so it never idle-exits on its own. Without this, a unit change — e.g.
         # adding the repoWhitelist gate + EnvironmentFile — never reaches the
         # running process, and jenkins/sentry fail closed (empty tools) even on
