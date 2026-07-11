@@ -509,7 +509,7 @@ hm_cache() {
       # Privileged activations (modules/activation/_privileged/*) skip
       # themselves on each switch when their lock file matches the action
       # hash + state-input hash. Wiping the lock files forces every gated
-      # activation to re-prompt for sudo on the next switch — useful when
+      # activation to re-run on the next switch — useful when
       # a system file has drifted out from under us (manual edit, package
       # upgrade clobber, …) and we want home-manager to reassert the
       # managed copy. See lib.nix:sudoPromptScript.
@@ -526,7 +526,7 @@ hm_cache() {
       else
         echo "$lock_dir does not exist; nothing to do."
       fi
-      echo "Next 'hm switch' will re-prompt for each privileged activation."
+      echo "Next 'hm switch' will re-run each privileged activation."
       ;;
     all)
       hm_cache nvim
@@ -543,9 +543,9 @@ Targets:
                fully nix-managed now (modules/home/zsh/) — one-time cleanup,
                nothing repopulates these.
   locks        Wipe ~/.local/state/nix/home-manager/*.lock.sum so every
-               privileged activation re-prompts for sudo on next switch.
+               privileged activation re-runs on next switch.
   all          nvim + zsh. Does NOT touch locks — that's intentional
-               (re-prompts for sudo on every gated activation; opt-in only).
+               (re-runs every gated activation; opt-in only).
 EOF
       [ -z "$target" ] && return 2 || return 0
       ;;

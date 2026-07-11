@@ -621,10 +621,12 @@ rec {
       preCheck ? "",
       promptTitle,
       promptBody,
-      promptQuestion,
+      # Kept for caller compat; no longer used — see note above the action
+      # invocation below for why the confirmation prompt was removed.
+      promptQuestion ? null,
       actionScript,
       stateInputs ? [ ],
-      skipMessage ? "Skipped. Re-run 'hm switch' to retry.",
+      skipMessage ? null,
     }:
     let
       actionHash = builtins.hashString "sha256" actionScript;
@@ -632,6 +634,13 @@ rec {
     in
     pkgs.writeShellScript name ''
       set -e
+
+      # nh pipes (and hides) activation output, so a switch sitting in a slow
+      # action (update-initramfs, mkcert -install, …) looks hung. Write our
+      # progress straight to the terminal when there is one.
+      if [ -w /dev/tty ]; then
+        exec >/dev/tty 2>&1
+      fi
 
       SUDO=""
       for path in /bin/sudo /usr/bin/sudo /usr/local/bin/sudo; do
@@ -671,17 +680,14 @@ rec {
       echo "--------------------------------------------------------------------"
       echo ""
       printf '%s\n' ${lib.escapeShellArg promptBody}
-      read -p ${lib.escapeShellArg "${promptQuestion} [Y/n] "} -n 1 -r
-      echo
 
-      if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-        ${actionScript}
-        mkdir -p "$HOME/.local/state/nix/home-manager"
-        echo -n "$combinedHash" > "$lockFile"
-      else
-        echo ""
-        printf '%s\n' ${lib.escapeShellArg skipMessage}
-      fi
+      # No confirmation prompt: activation runs behind nh, which pipes our
+      # stdout/stderr, so a `read -p` blocks invisibly and the switch looks
+      # hung. sudo itself still authenticates on /dev/tty when the timestamp
+      # has expired, so the privilege gate stays interactive where it must be.
+      ${actionScript}
+      mkdir -p "$HOME/.local/state/nix/home-manager"
+      echo -n "$combinedHash" > "$lockFile"
       echo ""
     '';
 
