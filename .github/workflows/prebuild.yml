@@ -1,7 +1,7 @@
 name: prebuild
 
 # Nightly prebuild of THIS flake's toplevel closures, pushed to the
-# `default` cache on nix.stubbe.dev. This is what lets a laptop `hm switch`
+# `default` cache on nix.stubbe.dev (xilo). This is what lets a laptop `hm switch`
 # substitute the heavy first-party builds (phpantom_lsp, hyprland, wayle,
 # rust nightly, …) instead of compiling them locally.
 #
@@ -51,7 +51,7 @@ jobs:
           # nix-community; cache.nixos.org is on by default.
           extra-conf: |
             extra-substituters = https://nix.stubbe.dev/default https://nix.stubbe.dev/wayle https://nix.stubbe.dev/treeman https://nix.stubbe.dev/srv https://nix-community.cachix.org
-            extra-trusted-public-keys = default:9P4FePqHV1rGv5NDBun0GN26y83pcaaMr/NHZrxKaac= wayle:XD2O2h1Mmka+VegRi2JY7ywNbG9al+TUAZp6CObizFU= treeman:wK3AZux2l7fX+L4Lo9OLh7zzQAC/OJDUQanldOgNhO4= srv:zIqJz/1IhxGYhVu5uihWmWHyTSv6GPzCAk/6NCgrAMo= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+            extra-trusted-public-keys = default:6uWvXutL9cXjV3lii+Ur5ff+ArQoG4kMBKNXWrIxhHg= wayle:BA9vQHJFl0dx4Zl5y0tbk+Osfly7y6k6tPKWAy49rdQ= treeman:nOhvFetrH3t/RtM5sPG1fYuX4dFjhbzrttIOVGJpPDI= srv:FfS/3wZKXdWv2JB+w2d5rlwRhKOYEyxFROsQGIs6etk= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
 
       - name: Update flake inputs
         run: nix flake update
@@ -76,22 +76,23 @@ jobs:
 
       - name: Push closures to the default cache
         env:
-          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+          XILO_URL: https://nix.stubbe.dev
+          XILO_TOKEN: ${{ secrets.XILO_TOKEN }}
         run: |
           set -euo pipefail
-          nix run nixpkgs#attic-client -- login stubbe https://nix.stubbe.dev "$ATTIC_TOKEN"
-          # attic push uploads each path's full closure by default. The server
-          # occasionally throws transient 500s mid-push; push is idempotent
-          # (already-uploaded paths are skipped) so just retry a few times.
-          # ponytail: 3 tries w/ backoff; make it a real queue if 500s persist.
+          # xilo push uploads each path's full closure, skipping paths and
+          # chunks the server already has and anything signed by
+          # cache.nixos.org — push is idempotent, so retry transient failures.
+          # ponytail: 3 tries w/ backoff; make it a real queue if it persists.
+          curl -fsSL https://github.com/stubbedev/xilo/releases/latest/download/xilo-linux-amd64.tar.gz | tar -xz
           for attempt in 1 2 3; do
-            if nix run nixpkgs#attic-client -- push default ${{ steps.build.outputs.paths }}; then
+            if ./xilo push default ${{ steps.build.outputs.paths }}; then
               exit 0
             fi
-            echo "attic push failed (attempt $attempt); retrying in $((attempt * 15))s…"
+            echo "xilo push failed (attempt $attempt); retrying in $((attempt * 15))s…"
             sleep $((attempt * 15))
           done
-          echo "attic push still failing after 3 attempts" >&2
+          echo "xilo push still failing after 3 attempts" >&2
           exit 1
 
       - name: Commit updated flake.lock

@@ -12,10 +12,10 @@
     "https://nix-community.cachix.org"
   ];
   trusted-public-keys = [
-    "default:9P4FePqHV1rGv5NDBun0GN26y83pcaaMr/NHZrxKaac="
-    "wayle:XD2O2h1Mmka+VegRi2JY7ywNbG9al+TUAZp6CObizFU="
-    "treeman:wK3AZux2l7fX+L4Lo9OLh7zzQAC/OJDUQanldOgNhO4="
-    "srv:zIqJz/1IhxGYhVu5uihWmWHyTSv6GPzCAk/6NCgrAMo="
+    "default:6uWvXutL9cXjV3lii+Ur5ff+ArQoG4kMBKNXWrIxhHg="
+    "wayle:BA9vQHJFl0dx4Zl5y0tbk+Osfly7y6k6tPKWAy49rdQ="
+    "treeman:nOhvFetrH3t/RtM5sPG1fYuX4dFjhbzrttIOVGJpPDI="
+    "srv:FfS/3wZKXdWv2JB+w2d5rlwRhKOYEyxFROsQGIs6etk="
     "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
     "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
   ];
