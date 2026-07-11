@@ -55,12 +55,9 @@ let
     phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
   };
 
-  # matplotlib 3.11 removed matplotlib.style.core, which catppuccin's style
-  # registration still imports on plain `import catppuccin`, so the package's
-  # own import check explodes whenever matplotlib is visible. Drop the
-  # matplotlib extra from the check env (runtime users like catppuccin-gtk
-  # never install it) until upstream catppuccin/python adapts.
-  catppuccinPythonOverlay = _final: prev: {
+  # Assorted Python 3.14 / new-toolchain fallout in nixpkgs python packages.
+  # Each override is deletable once nixpkgs/upstream adapts.
+  pythonFixesOverlay = _final: prev: {
     # catppuccin-gtk 1.0.3's build script passes type=bool alongside
     # argparse.BooleanOptionalAction, which Python 3.14 rejects (the combo
     # was deprecated in 3.12 and removed in 3.14). Strip the kwarg; the
@@ -73,6 +70,17 @@ let
 
     pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
       (pyfinal: pyprev: {
+        # click-threading's pytest setup collects docs/conf.py, which imports
+        # pkg_resources — removed from setuptools 82. Skip the docs dir.
+        click-threading = pyprev.click-threading.overridePythonAttrs (_old: {
+          disabledTestPaths = [ "docs/conf.py" ];
+        });
+
+        # matplotlib 3.11 removed matplotlib.style.core, which catppuccin's
+        # style registration still imports on plain `import catppuccin`, so the
+        # package's own import check explodes whenever matplotlib is visible.
+        # Drop the matplotlib extra from the check env (runtime users like
+        # catppuccin-gtk never install it).
         catppuccin = pyprev.catppuccin.overridePythonAttrs (_old: {
           nativeCheckInputs = [
             pyfinal.pytestCheckHook
@@ -99,7 +107,7 @@ in
     # Requires wayle.inputs.nixpkgs NOT following ours (see flake.nix).
     wayle = _final: prev: { wayle = inputs.wayle.packages.${prev.system}.default; };
     phpantom_lsp = phpantomLspOverlay;
-    catppuccin-python = catppuccinPythonOverlay;
+    python-fixes = pythonFixesOverlay;
     zsh-patina = final: _prev: {
       zsh-patina = inputs.zsh-patina.packages.${final.stdenv.hostPlatform.system}.default;
     };
