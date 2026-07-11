@@ -74,19 +74,22 @@ jobs:
           # Newline -> space for the push arg list.
           echo "paths=$(echo $out | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
+      - name: setup xilo
+        uses: stubbedev/xilo@v0
+        with:
+          url: https://nix.stubbe.dev
+          cache: default
+          token: ${{ secrets.XILO_TOKEN }}
+
       - name: Push closures to the default cache
-        env:
-          XILO_URL: https://nix.stubbe.dev
-          XILO_TOKEN: ${{ secrets.XILO_TOKEN }}
         run: |
           set -euo pipefail
           # xilo push uploads each path's full closure, skipping paths and
           # chunks the server already has and anything signed by
           # cache.nixos.org — push is idempotent, so retry transient failures.
           # ponytail: 3 tries w/ backoff; make it a real queue if it persists.
-          curl -fsSL https://github.com/stubbedev/xilo/releases/latest/download/xilo-linux-amd64.tar.gz | tar -xz
           for attempt in 1 2 3; do
-            if ./xilo push default ${{ steps.build.outputs.paths }}; then
+            if xilo push default ${{ steps.build.outputs.paths }}; then
               exit 0
             fi
             echo "xilo push failed (attempt $attempt); retrying in $((attempt * 15))s…"
