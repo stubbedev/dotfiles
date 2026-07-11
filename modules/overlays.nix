@@ -55,6 +55,36 @@ let
     phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
   };
 
+  # matplotlib 3.11 removed matplotlib.style.core, which catppuccin's style
+  # registration still imports on plain `import catppuccin`, so the package's
+  # own import check explodes whenever matplotlib is visible. Drop the
+  # matplotlib extra from the check env (runtime users like catppuccin-gtk
+  # never install it) until upstream catppuccin/python adapts.
+  catppuccinPythonOverlay = _final: prev: {
+    # catppuccin-gtk 1.0.3's build script passes type=bool alongside
+    # argparse.BooleanOptionalAction, which Python 3.14 rejects (the combo
+    # was deprecated in 3.12 and removed in 3.14). Strip the kwarg; the
+    # action never used it.
+    catppuccin-gtk = prev.catppuccin-gtk.overrideAttrs (old: {
+      postPatch = (old.postPatch or "") + ''
+        sed -i '/type=bool,/d' sources/build/args.py
+      '';
+    });
+
+    pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
+      (pyfinal: pyprev: {
+        catppuccin = pyprev.catppuccin.overridePythonAttrs (_old: {
+          nativeCheckInputs = [
+            pyfinal.pytestCheckHook
+            pyfinal.pygments
+            pyfinal.rich
+          ];
+          disabledTestPaths = [ "tests/test_matplotlib.py" ];
+        });
+      })
+    ];
+  };
+
 in
 {
   flake.overlays = {
@@ -69,6 +99,7 @@ in
     # Requires wayle.inputs.nixpkgs NOT following ours (see flake.nix).
     wayle = _final: prev: { wayle = inputs.wayle.packages.${prev.system}.default; };
     phpantom_lsp = phpantomLspOverlay;
+    catppuccin-python = catppuccinPythonOverlay;
     zsh-patina = final: _prev: {
       zsh-patina = inputs.zsh-patina.packages.${final.stdenv.hostPlatform.system}.default;
     };
