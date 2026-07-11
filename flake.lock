@@ -1291,11 +1291,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1783279667,
-        "narHash": "sha256-/NAkDSsve+GNM0Bt6tleJdCGfsTlK89nPjkVOzZMo0s=",
+        "lastModified": 1783604885,
+        "narHash": "sha256-tzMgSkV7kljEkqIjlgV6F+n+xD+/a35Db8bs7a4BFAo=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "f205b5574fd0cb7da5b702a2da51507b7f4fdd1b",
+        "rev": "767b0d3ec98a143ad9ed7dfc0d5553510ac27133",
         "type": "github"
       },
       "original": {
@@ -1551,11 +1551,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1783751562,
-        "narHash": "sha256-3/WceIFrGsTExronPAab4stHEuOM8D9v+e492UEHLvI=",
+        "lastModified": 1783753427,
+        "narHash": "sha256-IutpGr6eJTzci2g//ZLc9pd+mE5kev1tSGYjH9Vwo6Q=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "e2d1ba68b95591ed6452e316e67fdc0cf6745b8d",
+        "rev": "5b63e4ed1e8426118f85e29e1e73f9e7214904e9",
         "type": "github"
       },
       "original": {
@@ -1737,11 +1737,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783751550,
-        "narHash": "sha256-ywdb+IGlL4TbaEKkmGeCiIGKUNy8FZKh/tCK2KNXPuM=",
+        "lastModified": 1783753425,
+        "narHash": "sha256-tBn9C34gJWbVnzKIAmqUl6j3tvP776GEFXrP7VNcmmY=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "29c509b56e30b5c6903c564f6a4e6cc01c0be223",
+        "rev": "ce7868ec7eb9d467590dc84ff24d6861978edeb5",
         "type": "github"
       },
       "original": {
@@ -1756,11 +1756,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1783751548,
-        "narHash": "sha256-E9POPOOagg4k0EvT/0x0LtMJHxYjthtDu6fiBSv1DHU=",
+        "lastModified": 1783753423,
+        "narHash": "sha256-kPBdp4Fp+m4XC304BwOYMvK3UVO+mtvg3Oj6V8izh9w=",
         "ref": "master",
-        "rev": "3df6c1efec7fb5353f290625ea8d177a6b09b8d1",
-        "revCount": 854,
+        "rev": "0e6e4183a2dc60cbac0d5fd0fc5a2442e36a1b60",
+        "revCount": 855,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
