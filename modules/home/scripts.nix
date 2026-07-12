@@ -95,6 +95,9 @@
             SOPS = "${pkgs.sops}/bin/sops";
             AGE = "${pkgs.age}/bin/age";
             SSH_TO_AGE = "${pkgs.ssh-to-age}/bin/ssh-to-age";
+            # Cache push after switch/upgrade. getExe' (not getExe): don't
+            # assume the flake package carries meta.mainProgram.
+            XILO = lib.getExe' pkgs.xilo "xilo";
           };
         };
         nixos-iso = {

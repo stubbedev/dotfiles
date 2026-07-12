@@ -225,6 +225,49 @@ commit_flake_lock() {
     echo "flake.lock committed locally; push failed (resolve manually)" >&2
 }
 
+# --- push freshly-built closure to the binary cache ----------------------
+# After a switch, upload what THIS machine compiled to nix.stubbe.dev so other
+# machines substitute it instead of rebuilding (replaces the retired nightly
+# prebuild CI job). Best-effort: a push failure must never fail the switch.
+push_to_cache() {
+  # @XILO@ is templated to an absolute store path; skip if unavailable.
+  has_cmd @XILO@ || return 0
+
+  local tokenFile="$hm_flake_dir/secrets/xilo-token"
+  if [ ! -f "$tokenFile" ]; then
+    echo "cache push: secrets/xilo-token missing — run 'hm secret set xilo-token'. Skipping." >&2
+    return 0
+  fi
+
+  # Decrypt the push token with the age identity derived from the SSH key —
+  # the same path sops-nix uses, so it doesn't depend on a materialised
+  # ~/.config/sops/age/keys.txt.
+  local ageKey token
+  ageKey=$(@SSH_TO_AGE@ -private-key -i "$HOME/.ssh/id_ed25519" 2>/dev/null) || return 0
+  token=$(SOPS_AGE_KEY="$ageKey" @SOPS@ --decrypt \
+    --input-type binary --output-type binary "$tokenFile" 2>/dev/null) || {
+    echo "cache push: could not decrypt xilo-token; skipping." >&2
+    return 0
+  }
+
+  # What we just activated. `xilo push` uploads the full closure but skips
+  # paths the server already has and anything signed by cache.nixos.org, so
+  # only the first-party deltas actually transfer. `default` resolves to the
+  # default/default cache under xilo's namespacing.
+  local path
+  if is_nixos; then
+    path=$(readlink -f /run/current-system 2>/dev/null)
+  else
+    path=$(readlink -f "$HOME/.local/state/nix/profiles/home-manager" 2>/dev/null)
+  fi
+  [ -n "$path" ] && [ -e "$path" ] || return 0
+
+  echo "Pushing $(basename "$path") closure to the cache…"
+  XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" \
+    @XILO@ push default "$path" --quiet \
+    || echo "cache push failed (non-fatal)." >&2
+}
+
 update_system() {
   local needs_sudo="false"
 
@@ -638,7 +681,7 @@ case "${1:-}" in
     prime_sudo_nixos
     update_system
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
-    run_hm_subcmd switch "$@"
+    run_hm_subcmd switch "$@" && push_to_cache
     ;;
   whoami)
     shift
@@ -667,7 +710,7 @@ case "${1:-}" in
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
     shift
     prime_sudo_nixos
-    run_hm_subcmd switch "$@"
+    run_hm_subcmd switch "$@" && push_to_cache
     ;;
   boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
     rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1

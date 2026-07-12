@@ -44,6 +44,15 @@
       url = "github:stubbedev/treeman";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # xilo: client for our self-hosted Nix binary cache (nix.stubbe.dev).
+    # bin/hm pushes each switch's closure here so other machines substitute
+    # what this one compiled. Pinned to the tag the SERVER runs (v1.0.0): the
+    # cache-config API is versioned, so a client ahead of the server 404s.
+    # Bump in lockstep with the server (see project_xilo_cache_server memory).
+    xilo = {
+      url = "github:stubbedev/xilo/v1.0.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Go-rewritten work MCP servers, consumed as flake packages (buildGoModule)
     # so they spawn as offline store-path binaries instead of `npx …@latest`.
     # Wired into lib/mcp-servers.nix via setup-claude-code.nix. atlassian-mcp is

@@ -111,5 +111,9 @@ in
     zsh-patina = final: _prev: {
       zsh-patina = inputs.zsh-patina.packages.${final.stdenv.hostPlatform.system}.default;
     };
+    # xilo cache client — bin/hm calls it to push each switch's closure.
+    xilo = final: _prev: {
+      xilo = inputs.xilo.packages.${final.stdenv.hostPlatform.system}.default;
+    };
   };
 }
