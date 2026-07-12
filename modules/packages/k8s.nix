@@ -10,7 +10,10 @@ _: {
       home.packages = with pkgs; [
         kubectl
         kubectl.convert
-        minikube
+        # minikube bundles its own bin/kubectl, which collides with the
+        # standalone kubectl above in buildEnv. lowPrio makes minikube lose
+        # that one file so the explicit kubectl wins; both tools stay.
+        (lib.lowPrio minikube)
       ];
     };
 }
