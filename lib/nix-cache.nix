@@ -1,13 +1,14 @@
 {
   substituters = [
-    # Prebuilt toplevel closures for THIS flake (stubbe HM + NixOS), pushed
-    # nightly by .github/workflows/prebuild.yml. Lets `hm switch` substitute
-    # the heavy first-party builds (phpantom_lsp, hyprland, wayle, rust
-    # nightly, …) instead of compiling them locally. See nix-cache repo.
-    "https://nix.stubbe.dev/default"
-    "https://nix.stubbe.dev/wayle"
-    "https://nix.stubbe.dev/treeman"
-    "https://nix.stubbe.dev/srv"
+    # First-party closures for THIS flake (stubbe HM + NixOS), so `hm switch`
+    # substitutes the heavy first-party builds (phpantom_lsp, hyprland, wayle,
+    # rust nightly, …) instead of compiling them locally. Pushed by whichever
+    # machine compiled them (see bin/hm). Xilo ≥1.0 namespaces caches, so the
+    # URL is /c/<namespace>/<cache>; ours all live in the `default` namespace.
+    "https://nix.stubbe.dev/c/default/default"
+    "https://nix.stubbe.dev/c/default/wayle"
+    "https://nix.stubbe.dev/c/default/treeman"
+    "https://nix.stubbe.dev/c/default/srv"
     "https://cache.nixos.org"
     "https://nix-community.cachix.org"
   ];
