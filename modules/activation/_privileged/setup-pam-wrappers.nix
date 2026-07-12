@@ -29,7 +29,6 @@ _: {
         This will install a systemd service to enable password authentication
         for wayle's session lock. The service will persist across reboots.
       '';
-      promptQuestion = "Install nix-pam-wrappers.service?";
       actionScript = ''
         ${homeLib.installSystemFile {
           target = "/etc/systemd/system/nix-pam-wrappers.service";

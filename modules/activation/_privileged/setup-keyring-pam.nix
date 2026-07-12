@@ -7,7 +7,6 @@ _: {
       This will add GNOME Keyring PAM lines to login session files
       to enable automatic keyring unlock on login.
     '';
-    promptQuestion = "Add GNOME Keyring PAM lines?";
     # Lock re-evaluates when any of these appear/disappear so installing
     # a new display manager later forces a re-run.
     stateInputs = [

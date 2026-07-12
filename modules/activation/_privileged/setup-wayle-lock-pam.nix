@@ -13,7 +13,6 @@
         Wayle's session lock needs a PAM configuration to authenticate the
         unlock. This will create a minimal Nix-compatible PAM config.
       '';
-      promptQuestion = "Create /etc/pam.d/wayle?";
       actionScript = homeLib.installSystemFile {
         target = "/etc/pam.d/wayle";
         content = builtins.readFile (self + "/src/pam.d/wayle");

@@ -241,7 +241,6 @@ rec {
         This installs an AppArmor profile that whitelists the Nix-store
         ${appName} binary (and its sandbox helper) for unprivileged userns.
       '';
-      promptQuestion = "Install AppArmor profile for Nix ${appName}?";
       actionScript = installApparmorProfile {
         name = profileName;
         content = ''
@@ -290,7 +289,6 @@ rec {
         SDDM needs a desktop entry to show ${displayName} in the session menu.
         This will create the session entry.
       '';
-      promptQuestion = "Create ${target}?";
       actionScript = ''
         sudo install -d -m 0755 /usr/share/wayland-sessions
         ${installSystemFile { inherit target content; }}
@@ -477,8 +475,8 @@ rec {
 
   # Build the prompt fields from a single `subject`, then merge any
   # extra fields the caller supplies (preCheck, actionScript, body, …).
-  # Title and question follow the "Installing <subject>" / "Install
-  # <subject>?" form, matching the most common sudo-prompt setups.
+  # Title follows the "Installing <subject>" form, matching the most
+  # common sudo-prompt setups.
   mkInstallPrompt =
     {
       subject,
@@ -491,7 +489,6 @@ rec {
     ]
     // {
       promptTitle = "Installing ${subject}";
-      promptQuestion = "Install ${subject}?";
       promptBody = body;
     };
 
@@ -621,12 +618,8 @@ rec {
       preCheck ? "",
       promptTitle,
       promptBody,
-      # Kept for caller compat; no longer used — see note above the action
-      # invocation below for why the confirmation prompt was removed.
-      promptQuestion ? null,
       actionScript,
       stateInputs ? [ ],
-      skipMessage ? null,
     }:
     let
       actionHash = builtins.hashString "sha256" actionScript;

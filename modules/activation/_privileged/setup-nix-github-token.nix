@@ -60,7 +60,6 @@
         The token is decrypted from secrets/github-token at activation; it
         never lands in the Nix store or in the activation script.
       '';
-      promptQuestion = "Install GitHub token into /etc/nix?";
       actionScript = ''
         # Derive the age identity straight from the SSH key (same path
         # sops-nix uses) so this doesn't depend on ~/.config/sops/age/keys.txt
