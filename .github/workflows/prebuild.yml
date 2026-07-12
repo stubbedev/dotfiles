@@ -55,6 +55,20 @@ jobs:
           sudo docker image prune --all --force || true
           df -h /
 
+      # The runner froze mid-build once disk was no longer the limit: several
+      # heavy source builds (hyprland, wayle, rust nightly) linking at once
+      # exhaust the 16GB RAM, thrash, and the runner gets SIGTERM'd (exit
+      # 143). max-jobs=1 below serialises the heavy builds; this 14G swapfile
+      # is the cushion for a single build's peak so a spike spills to disk
+      # instead of OOM-killing the runner.
+      - name: Add swap
+        run: |
+          sudo fallocate -l 14G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
+
       - uses: DeterminateSystems/nix-installer-action@v22
         with:
           # Trust + pull from the same caches the flake declares
@@ -83,9 +97,19 @@ jobs:
         #   accidental impure read would be empty — but the ISO attr is
         #   never referenced regardless.
         # ONLY these two attrs. Do not add installer-iso (bakes private keys).
+        #
+        # --max-jobs 1: build one derivation at a time so two heavy source
+        #   builds never contend for RAM (the OOM-freeze fix). Tiny drvs are
+        #   instant, so this only slows the rare cache-miss night — and makes
+        #   it finish instead of hang. There is no job timeout (6h default),
+        #   so slower-but-completes is the right trade.
+        # --max-silent-time 1800: kill any build silent for 30min and print
+        #   which derivation it was, so a genuine hang fails fast and named
+        #   instead of freezing blind for an hour.
         run: |
           set -euo pipefail
           out=$(nix build --impure --no-link --print-out-paths \
+            --max-jobs 1 --max-silent-time 1800 \
             '.#homeConfigurations.stubbe.activationPackage' \
             '.#nixosConfigurations.stubbe-nixos.config.system.build.toplevel')
           echo "Built:"
