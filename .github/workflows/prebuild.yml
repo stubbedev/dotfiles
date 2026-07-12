@@ -123,6 +123,11 @@ jobs:
           url: https://nix.stubbe.dev
           cache: default
           token: ${{ secrets.XILO_TOKEN }}
+          # Pin the client: the action defaults to the latest xilo binary,
+          # and v1.0.0 (2026-07-12) changed the cache-config endpoint, so
+          # `xilo use` 404s against the v0-API server on nix.stubbe.dev.
+          # Bump this once the server is upgraded to the v1 protocol.
+          version: v0.2.5
 
       - name: Push closures to the default cache
         run: |
