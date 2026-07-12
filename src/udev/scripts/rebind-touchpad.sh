@@ -39,6 +39,29 @@ mt_back() {
   return 1
 }
 
+# Re-apply Hyprland's per-device touchpad config to every live instance.
+# The unbind/bind above destroys and re-creates the input device, so the
+# per-device block in src/hypr/hyprland.lua (scroll_method=2fg, natural_scroll,
+# ...) must be reapplied or two-finger scroll stays dead. scripts/monitor.toggle.sh
+# already reloads Hyprland on the undock DRM-hotplug, but that fires seconds
+# before this async rebind re-creates the device, and the no-monitor undock
+# (thunderbolt-remove fallback) never reaches that user-side reactor at all —
+# so the reload has to happen here, once MT is confirmed back.
+#
+# Talk to Hyprland's request socket directly instead of going through hyprctl:
+# the wire protocol is just the command string, and hyprctl is a home-manager
+# per-user binary that isn't on this root service's PATH. Root reaches the
+# user-owned socket via DAC_OVERRIDE. socat is on the service PATH (NixOS) or
+# the system (FHS); absent → the `|| true` degrades to before.
+reload_hypr() {
+  local sock
+  command -v socat >/dev/null 2>&1 || return 0
+  for sock in /run/user/*/hypr/*/.socket.sock; do
+    [ -S "$sock" ] || continue
+    printf 'reload' | socat - "UNIX-CONNECT:$sock" >/dev/null 2>&1 || true
+  done
+}
+
 # Rebind, then verify MT came back; retry with a growing settle if it didn't.
 # A single unbind/bind with a fixed sleep loses the race when the probe lands
 # before the bus settles. Worst case ~14s of sleeps, all in this background
@@ -48,6 +71,10 @@ for settle in 2 3 4 5; do
   echo "$dev" > "$drv/unbind" 2>/dev/null || true
   echo "$dev" > "$drv/bind"   2>/dev/null || true
   sleep 1
-  mt_back && exit 0
+  mt_back && break
 done
+
+# Reapply compositor scroll config now the device is back (even if the MT
+# verify never passed — a reload is cheap and idempotent).
+reload_hypr
 exit 0

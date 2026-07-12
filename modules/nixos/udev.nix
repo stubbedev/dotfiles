@@ -1,7 +1,7 @@
 { self, ... }:
 {
   flake.modules.nixos.udev =
-    { config, ... }:
+    { config, pkgs, ... }:
     {
       # Source-of-truth: src/udev/rules.d/*.rules. The non-NixOS activation
       # script (setup-usb-autosuspend-disable.nix) installs the same
@@ -32,6 +32,9 @@
       systemd.services.touchpad-rebind = {
         description = "Rebind wedged i2c-hid touchpad after dock undock";
         serviceConfig.Type = "oneshot";
+        # socat: the script pokes Hyprland's request socket to reapply the
+        # per-device scroll config after rebind (see rebind-touchpad.sh).
+        path = [ pkgs.socat ];
         script = builtins.readFile (self + "/src/udev/scripts/rebind-touchpad.sh");
       };
     };
