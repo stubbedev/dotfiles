@@ -49,8 +49,10 @@
     # what this one compiled. Pinned to the tag the SERVER runs (v1.0.0): the
     # cache-config API is versioned, so a client ahead of the server 404s.
     # Bump in lockstep with the server (see project_xilo_cache_server memory).
+    # v1.0.1 == v1.0.0 code + corrected buildGoModule vendorHash (metadata
+    # only, same binary/API) — safe while the server stays on v1.0.0.
     xilo = {
-      url = "github:stubbedev/xilo/v1.0.0";
+      url = "github:stubbedev/xilo/v1.0.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Go-rewritten work MCP servers, consumed as flake packages (buildGoModule)
