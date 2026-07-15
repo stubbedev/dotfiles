@@ -69,13 +69,29 @@ _: {
         { all, ... }:
         builtins.attrValues (removeAttrs all excluded);
 
+      # xberg (Rust/ext-php-rs, out-of-tree) can't ride the nixpkgs extension
+      # set — php.override { packageOverrides = ... } silently drops the
+      # overlay on the buildEnv passthru chain in current nixpkgs — so it's
+      # built explicitly against each base php and appended per buildEnv.
+      # ext-php-rs picks up ZTS from whatever php-config it's pointed at.
+      mkXberg = basePhp: pkgs.callPackage ./_php-xberg.nix { php = basePhp; };
+
+      # Pre-apply the exact override frankenphp does internally
+      # (pkgs/by-name/fr/frankenphp: php.override { embedSupport; ztsSupport })
+      # so its re-override is a no-op and our appended ZTS xberg stays
+      # consistent with the php it's loaded into.
+      phpPackageZts = phpPackage.override {
+        embedSupport = true;
+        ztsSupport = true;
+      };
+
       php = phpPackage.buildEnv {
-        extensions = pickExtensions phpExcludedExts;
+        extensions = args: pickExtensions phpExcludedExts args ++ [ (mkXberg phpPackage) ];
         extraConfig = extraIni;
       };
 
-      phpForFrankenphp = phpPackage.buildEnv {
-        extensions = pickExtensions frankenphpExcludedExts;
+      phpForFrankenphp = phpPackageZts.buildEnv {
+        extensions = args: pickExtensions frankenphpExcludedExts args ++ [ (mkXberg phpPackageZts) ];
         extraConfig = extraIni;
       };
 
