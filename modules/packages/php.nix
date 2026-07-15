@@ -110,6 +110,11 @@ _: {
         frankenphp
         composer
         mago
+        # OCR engine for PHP tesseract wrappers (thiagoalessio/tesseract_ocr
+        # et al). No maintained native PHP extension exists; the composer
+        # packages shell out to this binary, so PATH covers both php-fpm/CLI
+        # and frankenphp.
+        tesseract
         # PHP language server. On global PATH so Claude Code's phpantom-lsp
         # plugin (src/claude/phpantom-lsp) and any non-nvim consumer find it;
         # nvim gets its own copy via the wrapper's runtimePkgs.
