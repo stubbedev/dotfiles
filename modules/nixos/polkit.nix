@@ -13,7 +13,6 @@
       # /etc/profiles/per-user/<user>; this mirrors config.home.profileDirectory
       # used in the standalone-HM activation (setup-vpn-polkit.nix).
       profileDir = "/etc/profiles/per-user/${username}";
-      helperPath = homeLib.powerProfileHelperPath;
     in
     {
       security.polkit.enable = true;
@@ -26,14 +25,6 @@
           vars = {
             USERNAME = username;
             PROFILE_DIR = profileDir;
-          };
-        };
-
-        "polkit-1/rules.d/50-power-profile-fix.rules".text = homeLib.substituteFile {
-          file = self + "/src/polkit/50-power-profile-fix.rules";
-          vars = {
-            USERNAME = username;
-            HELPER_PATH = helperPath;
           };
         };
 

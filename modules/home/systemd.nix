@@ -166,31 +166,6 @@ _: {
             };
           };
 
-          power-profile-fix = {
-            Unit = {
-              Description = "Fix CPU frequency scaling for power profiles";
-              After = [
-                "default.target"
-                "power-profiles-daemon.service"
-              ];
-              # Bound the restart loop. Without this a misconfigured polkit
-              # rule (or any persistent failure) spins forever, silently
-              # burning the dbus-monitor handshake every 5s with no visible
-              # signal in `systemctl status`. With these set the unit goes
-              # into `failed` state after 5 retries / 60s — `journalctl -u`
-              # and waybar's failed-units widget surface it loudly.
-              StartLimitBurst = 5;
-              StartLimitIntervalSec = 60;
-            };
-            Install.WantedBy = [ "default.target" ];
-            Service = {
-              Type = "simple";
-              ExecStart = "${scripts.power-profile-fix}/bin/power-profile-fix";
-              ExecStop = "${pkgs.bash}/bin/bash -c '${pkgs.procps}/bin/pkill -TERM -f dbus-monitor.*PowerProfiles || true'";
-              Restart = "on-failure";
-              RestartSec = "5s";
-            };
-          };
         }
         // (lib.optionalAttrs (secretsExec != null) {
           secrets-service = {

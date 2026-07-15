@@ -25,7 +25,7 @@
       #     file's *contents*, not the flake source, so it's invariant across
       #     commits but DOES change when the token is re-encrypted
       #     (hm secret rotate/edit/set) — exactly when we want a re-prompt.
-      #     Same trick as lib.nix:powerProfileHelperPath.
+      #     (builtins.path keyed on file contents, not flake source.)
       #   profileBin — ~/.nix-profile/bin (a fixed string), where sops +
       #     ssh-to-age live via modules/sops.nix's home.packages. Stable
       #     across nixpkgs bumps, unlike ${pkgs.sops}.

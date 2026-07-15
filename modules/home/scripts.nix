@@ -78,13 +78,6 @@
         # Reshapes the status scripts' JSON for wayle custom modules: drops the
         # nerd-font glyph (wayle shows icon-name instead), keeps a clean value.
         wayle-widget.source = "src/_shared/scripts/wayle.widget.sh";
-        power-profile-fix = {
-          source = "src/_shared/scripts/power.profile.fix.sh";
-          # Must match modules/nixos/polkit.nix and the activation module —
-          # pkexec canonicalises symlinks, so the polkit rule and this
-          # script point at the same content-addressed path.
-          vars.HELPER_PATH = homeLib.powerProfileHelperPath;
-        };
         # bin/hm and bin/nixos-iso are templated against absolute store
         # paths for sops/age/ssh-to-age so the wrapper doesn't depend on
         # whatever happens to be on $PATH at invocation time.

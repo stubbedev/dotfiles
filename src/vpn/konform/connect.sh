@@ -18,7 +18,7 @@ SETSID_BIN="$(command -v setsid || true)"
 # (often symlinked) path. Our 49-openconnect.rules enforces
 # args[0] === program, so the script must hand pkexec the canonical store
 # path or the rule rejects on argv[0] mismatch and pkexec falls back to
-# interactive auth — same root cause as power.profile.fix.sh's readlink -f.
+# interactive auth.
 if [ -n "$OPENCONNECT_BIN" ]; then
   OPENCONNECT_BIN="$(readlink -f "$OPENCONNECT_BIN")"
 fi

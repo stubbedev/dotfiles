@@ -325,20 +325,6 @@ rec {
   # Live symlinks (point ~/.config/<x> at ~/.stubbe/src/<y>)
   # ============================================================
 
-  # Content-addressed store path for the power-profile helper script.
-  # pkexec resolves symlinks before matching allowedPrograms, so the
-  # polkit rule and the live script (in scripts.nix) must point at the
-  # same canonical path AND that path must be stable across rebuilds.
-  # Keying on `self + "/..."` would re-hash on every commit and retrigger
-  # the sudo prompt in setup-power-profile-fix.nix; `builtins.path` hashes
-  # only the helper file's contents instead.
-  powerProfileHelperPath = toString (
-    builtins.path {
-      name = "power-profile-helper";
-      path = self + "/src/_shared/scripts/power.profile.helper.sh";
-    }
-  );
-
   # Canonical URL of the local new-tab / new-window page. `srv` serves it
   # as a static site at https://start.local (registered once with
   # `srv add` — see the README). A file:// page can't be used: Tridactyl's
