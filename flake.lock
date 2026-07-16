@@ -1347,11 +1347,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784141398,
-        "narHash": "sha256-JwlTbJFSXVspB7FQnD6vV9zV1j8tJ7BBnd0OL5GxKY8=",
+        "lastModified": 1784170564,
+        "narHash": "sha256-f/Xp5769TgZCsG/UWa+7rEmUbxzvtJbc13YdB8R1ksg=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "01d6a6986af28af8b1a1005ab9e7fc49bc418f51",
+        "rev": "c73e4101f6b8435a1f5afed76077f3077a21d55e",
         "type": "github"
       },
       "original": {
@@ -1907,11 +1907,11 @@
     "zsh-fzf-npm-run": {
       "flake": false,
       "locked": {
-        "lastModified": 1776785290,
-        "narHash": "sha256-YmQdOTIogxa4+Fj155eq/il37CwnADsZXYsu7LWnCmY=",
+        "lastModified": 1784182181,
+        "narHash": "sha256-NZWWKi78eD5UWEAyo+ItghbH3CQV5FH1PxA8Tl7DgHc=",
         "owner": "stubbedev",
         "repo": "zsh-fzf-npm-run",
-        "rev": "1b13c00a7996a0a28a3d9608b28d60668389021b",
+        "rev": "d59ee71757123735f51c474429d25f8cf56d774d",
         "type": "github"
       },
       "original": {
