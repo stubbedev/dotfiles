@@ -91,6 +91,21 @@
                 background-color = "#1e1e2e";
                 date-format = "%A, %d %B %Y";
               };
+              # Login-screen background + cursor. The greeter reads
+              # `settings.greeter.*` (NOT `settings.lock.*`, which themes the
+              # lock screen), so without this block it falls back to a black
+              # fill. background-image is the repo wallpaper as a store path:
+              # the greeter runs as the greetd user and cannot read the primary
+              # user's home, so the deployed `~/.stubbe/...` copy is invisible
+              # to it — a store path is world-readable. Cursor is set
+              # explicitly (Vimix 24) rather than relying on the env derivation.
+              greeter = {
+                background-mode = "image";
+                background-image = "${../../src/wallpapers/ballet.jpg}";
+                background-color = "#1e1e2e";
+                cursor-theme = "Vimix-cursors";
+                cursor-size = 24;
+              };
             };
           };
         };
