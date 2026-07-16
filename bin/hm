@@ -277,8 +277,11 @@ bump_release_pins() {
   local repo latest name bumped=""
   has_cmd curl || return 0
   for repo in $release_pinned_repos; do
+    # `|| true`: grep -m1 exits at the first match and closes the pipe while
+    # curl is still writing — curl then fails (23) and pipefail + set -e would
+    # kill the whole script silently. Empty $latest is handled below.
     latest=$(curl -fsSL --max-time 10 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
-      | grep -om1 '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      | grep -om1 '"tag_name": *"[^"]*"' | cut -d'"' -f4) || true
     [ -n "$latest" ] || continue
     grep -q "github:$repo/$latest" "$hm_flake_dir/flake.nix" && continue
     sed -i "s|github:$repo/[^\"]*|github:$repo/$latest|" "$hm_flake_dir/flake.nix"
