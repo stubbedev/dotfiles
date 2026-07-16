@@ -1907,11 +1907,11 @@
     "zsh-fzf-npm-run": {
       "flake": false,
       "locked": {
-        "lastModified": 1784182181,
-        "narHash": "sha256-NZWWKi78eD5UWEAyo+ItghbH3CQV5FH1PxA8Tl7DgHc=",
+        "lastModified": 1784195318,
+        "narHash": "sha256-BC9K+rr1By7Z8jC7DpdkY5hL3XjalkAYjD70MM0hl2k=",
         "owner": "stubbedev",
         "repo": "zsh-fzf-npm-run",
-        "rev": "d59ee71757123735f51c474429d25f8cf56d774d",
+        "rev": "14e679f1b6fefeaeb9f7260ad9536b9a5ffdaf0c",
         "type": "github"
       },
       "original": {
