@@ -1347,11 +1347,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784225102,
-        "narHash": "sha256-m6ZW4yjQdIdop6DkWNEPBz2jgE48ONBfXyOeYTP+ngE=",
+        "lastModified": 1784229754,
+        "narHash": "sha256-yhWqh4/jBeJ/VHeUAOaGedYPqEhvcFeQO1D4IMNqRAs=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "67a925ceac31be1717e9ef841070671a2ccd6f2c",
+        "rev": "421f71ad2826302a5d20e8096c321a1abf31daa7",
         "type": "github"
       },
       "original": {
