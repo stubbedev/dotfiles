@@ -72,9 +72,23 @@ _: {
           #   (was previously set via chrome://flags).
           # AcceleratedVideoEncoder: VA-API video encode — without it camera
           #   calls (Meet/Zoom) encode on CPU; decode is already hardware.
+          #
+          # --enable-zero-copy: raster tiles written straight into GPU
+          #   memory instead of upload copies — iGPU with unified memory is
+          #   exactly the case it's for. Falls back per-buffer if the
+          #   format can't map. Revert first if tab contents ever render
+          #   corrupted.
+          #
+          # Deliberately NOT enabled (re-evaluate when defaults flip):
+          #   SkiaGraphite (replaces Ganesh, still glitchy on Linux),
+          #   DelegatedCompositing (known artifacts with Wayland
+          #   fractional scale), AcceleratedVideoDecodeLinuxZeroCopyGL
+          #   (decode is already hardware; the zero-copy GL import path is
+          #   the classic source of corrupted video frames).
           pkg = pkgs.google-chrome.override {
             commandLineArgs = builtins.concatStringsSep " " [
               "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
+              "--enable-zero-copy"
               "--ignore-gpu-blocklist"
             ];
           };
