@@ -7,9 +7,9 @@ _: {
     # since modules/nixos/hardware.nix only enables it on Intel boxes
     # via mkDefault that mirrors enableRedistributableFirmware.
     lib.mkIf config.hardware.cpu.intel.updateMicrocode {
-      # Adjusts the Intel P-state governor + thermal trip points so the
-      # CPU doesn't run at a fixed conservative ceiling. Fixes the
-      # all-cores-at-400MHz problem some laptops show under heavy load.
+      # Manages DPTF thermal tables so sustained load isn't stuck at a
+      # conservative ceiling. No-op on ThinkPads: thermald sees DYTC
+      # (dytc_lapmode) and exits, deferring to the EC + platform_profile.
       services.thermald.enable = true;
     };
 }
