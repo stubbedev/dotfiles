@@ -1347,15 +1347,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1784229754,
-        "narHash": "sha256-yhWqh4/jBeJ/VHeUAOaGedYPqEhvcFeQO1D4IMNqRAs=",
+        "lastModified": 1778761324,
+        "narHash": "sha256-00NAiPm3qqxyS1u1GPpJlgnBlUjDx9VmjK6oOwH8kcU=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "421f71ad2826302a5d20e8096c321a1abf31daa7",
+        "rev": "10252dbf957b3d58504d1de483546fb7e4a01436",
         "type": "github"
       },
       "original": {
         "owner": "PHPantom-dev",
+        "ref": "0.8.0",
         "repo": "phpantom_lsp",
         "type": "github"
       }
@@ -1927,15 +1928,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1784220934,
-        "narHash": "sha256-rhqOnzt4+ZFluXX6zjsn18utPeHCN1dB0Z1RTOKgcTc=",
+        "lastModified": 1781451642,
+        "narHash": "sha256-M14IeK+Nsst+6RK6ayhq37YSoFPVptNqE9blVHDI1YM=",
         "owner": "michel-kraemer",
         "repo": "zsh-patina",
-        "rev": "8ebbecae0515f9f77ced743153b28a0989253e3c",
+        "rev": "fdbdce4514b146afbead7362d3f31662bbcd111b",
         "type": "github"
       },
       "original": {
         "owner": "michel-kraemer",
+        "ref": "1.8.0",
         "repo": "zsh-patina",
         "type": "github"
       }

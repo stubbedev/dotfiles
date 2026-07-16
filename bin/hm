@@ -268,6 +268,31 @@ push_to_cache() {
     || echo "cache push failed (non-fatal)." >&2
 }
 
+# Some inputs are pinned to a release tag in flake.nix (tracking master
+# rebuilds on every upstream commit). Move each pin to the latest GitHub
+# release before `nix flake update` so the new tags are locked in the same
+# pass. Best-effort: offline / API failure keeps the current pin.
+release_pinned_repos="PHPantom-dev/phpantom_lsp michel-kraemer/zsh-patina"
+bump_release_pins() {
+  local repo latest name bumped=""
+  has_cmd curl || return 0
+  for repo in $release_pinned_repos; do
+    latest=$(curl -fsSL --max-time 10 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
+      | grep -om1 '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+    [ -n "$latest" ] || continue
+    grep -q "github:$repo/$latest" "$hm_flake_dir/flake.nix" && continue
+    sed -i "s|github:$repo/[^\"]*|github:$repo/$latest|" "$hm_flake_dir/flake.nix"
+    name=${repo##*/}
+    echo "Bumped $name pin to $latest"
+    bumped="$bumped $name→$latest"
+  done
+  [ -n "$bumped" ] || return 0
+  if flake_in_git; then
+    flake_git add -- flake.nix >/dev/null 2>&1 || return 0
+    flake_git commit -qm "chore: bump release pins:$bumped" -- flake.nix >/dev/null 2>&1 || true
+  fi
+}
+
 update_system() {
   local needs_sudo="false"
 
@@ -314,6 +339,7 @@ update_system() {
       ensure_flakelock_driver
       sync_flake_repo
     fi
+    bump_release_pins
     # --quiet drops the per-input "copying path …" spam; warnings/errors
     # still surface. The nh switch afterwards shows the actual version diff.
     nix flake update --flake "$hm_flake_ref" --quiet
