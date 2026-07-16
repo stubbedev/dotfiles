@@ -748,11 +748,11 @@
         "systems": "systems_3"
       },
       "locked": {
-        "lastModified": 1784194573,
-        "narHash": "sha256-hEZqNwL7re3JP0QZtFkt1iu3+v+IjEf/+awOgd4IxdU=",
+        "lastModified": 1784196523,
+        "narHash": "sha256-ahtKMGXFJdlQNhatQm1+BBU/pGfGYnAqQt3vWvq4p8s=",
         "owner": "hyprwm",
         "repo": "hyprland-guiutils",
-        "rev": "4457eee95b6bd61da4ba3a9d2b5da7cf4c9f29cd",
+        "rev": "a6ccb6cb112ed5a244c0191fb972347ecfa893e0",
         "type": "github"
       },
       "original": {
@@ -1347,11 +1347,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784170564,
-        "narHash": "sha256-f/Xp5769TgZCsG/UWa+7rEmUbxzvtJbc13YdB8R1ksg=",
+        "lastModified": 1784225102,
+        "narHash": "sha256-m6ZW4yjQdIdop6DkWNEPBz2jgE48ONBfXyOeYTP+ngE=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "c73e4101f6b8435a1f5afed76077f3077a21d55e",
+        "rev": "67a925ceac31be1717e9ef841070671a2ccd6f2c",
         "type": "github"
       },
       "original": {
@@ -1790,11 +1790,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1784139904,
-        "narHash": "sha256-atPvnlMNHN6a2LhZLJKXUPsNpWawhE+8Vcq4AQIQBks=",
+        "lastModified": 1784227265,
+        "narHash": "sha256-mbNitUlzNmIPEn54n/jbHzYmWooOCAPHVLt1SvF5eGk=",
         "ref": "master",
-        "rev": "a84f9cad336ce07607f981fea8d848725f5eab51",
-        "revCount": 862,
+        "rev": "c5a74d8dc975423ad04c3a83c3816822f4b2d1f0",
+        "revCount": 865,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
@@ -1927,11 +1927,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782989899,
-        "narHash": "sha256-4c7jpWqdqOslXv9D6v1/E9+dRUUtd7xJtNCHlXfZCtc=",
+        "lastModified": 1784220934,
+        "narHash": "sha256-rhqOnzt4+ZFluXX6zjsn18utPeHCN1dB0Z1RTOKgcTc=",
         "owner": "michel-kraemer",
         "repo": "zsh-patina",
-        "rev": "5a0f7889343c1c14ca2b49372a973c7975033e40",
+        "rev": "8ebbecae0515f9f77ced743153b28a0989253e3c",
         "type": "github"
       },
       "original": {
