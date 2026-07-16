@@ -61,7 +61,23 @@ _: {
     lib.mkIf config.features.browsers {
       home.packages = [
         (homeLib.mkWrappedPackage {
-          pkg = pkgs.google-chrome;
+          # Chrome keeps only the LAST --enable-features occurrence, and
+          # chrome://flags experiments are appended after the command line —
+          # so this list is only authoritative while the flags page stays at
+          # defaults. Keep feature flags here, not in chrome://flags.
+          #
+          # WaylandWindowDecorations: re-stated because this --enable-features
+          #   overrides the one nixpkgs' wrapper passes earlier on the line.
+          # WaylandSessionManagement: window-position session restore
+          #   (was previously set via chrome://flags).
+          # AcceleratedVideoEncoder: VA-API video encode — without it camera
+          #   calls (Meet/Zoom) encode on CPU; decode is already hardware.
+          pkg = pkgs.google-chrome.override {
+            commandLineArgs = builtins.concatStringsSep " " [
+              "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
+              "--ignore-gpu-blocklist"
+            ];
+          };
           env.CHROME_DEVEL_SANDBOX = "/dev/null";
           includeUpstream = false;
           extraPaths = [ chromeDesktop ];
