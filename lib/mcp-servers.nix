@@ -262,6 +262,10 @@ let
         "-y"
         "chrome-devtools-mcp@1.5.0"
         "--autoConnect"
+        # Telemetry off: the Clearcut watchdog is a detached (setsid) ~180MB
+        # node child that escapes group kills and orphans on every idle
+        # teardown. No watchdog spawn at all with stats off.
+        "--no-usage-statistics"
       ];
     };
   }

@@ -1419,11 +1419,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783926036,
-        "narHash": "sha256-ghKuhJPIOtbsirXLaxmjUUBkIc5e5hWF9kSun4E9qEA=",
+        "lastModified": 1784231727,
+        "narHash": "sha256-HeB1oa3Fi6NzxIMNbZdXpUCj0xKmT8xq3wLs/tcZqpw=",
         "owner": "stubbedev",
         "repo": "proxy-mcp",
-        "rev": "b8f60c8c534a70909827825c6816d2554dce2335",
+        "rev": "3f53c4a920a4062e9e46446008363366dc08d4a0",
         "type": "github"
       },
       "original": {
