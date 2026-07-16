@@ -79,12 +79,20 @@ _: {
           #   format can't map. Revert first if tab contents ever render
           #   corrupted.
           #
-          # Deliberately NOT enabled (re-evaluate when defaults flip):
-          #   SkiaGraphite (replaces Ganesh, still glitchy on Linux),
-          #   DelegatedCompositing (known artifacts with Wayland
-          #   fractional scale), AcceleratedVideoDecodeLinuxZeroCopyGL
-          #   (decode is already hardware; the zero-copy GL import path is
-          #   the classic source of corrupted video frames).
+          # Tried for max perf/mem, all reverted — none took on this
+          # Chrome/Wayland/LNL combo:
+          #   SkiaGraphite: refused by the platform safety guard
+          #     ("Enabling Graphite on a not-yet-supported platform is
+          #     disallowed for safety", gpu_finch_features.cc) — the
+          #     --enable-features flag can't override it. Dead + log spam.
+          #   RawDraw / EnableDrDc / TreesInViz: caused blank-white render
+          #     (whole viewport unpainted).
+          #   Re-try individually when defaults flip.
+          #
+          # Vulkan stays CPU-fallback under Wayland (Chrome won't composite
+          # via Vulkan on Wayland). Not a regression: GL is the active path
+          # and IS hardware-accelerated on the iGPU. Leave it — do not add
+          # --ozone-platform=x11 to "fix" Vulkan; Wayland is intentional.
           pkg = pkgs.google-chrome.override {
             commandLineArgs = builtins.concatStringsSep " " [
               "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
