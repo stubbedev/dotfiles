@@ -1,0 +1,6 @@
+# Cap charging at 80% for battery longevity; resume charging below 75%
+# so a docked machine doesn't micro-cycle between 79 and 80.
+# start is assigned before end: from any state 75 < current end always
+# holds, and end=80 > 75 — either write alone would be rejected by the
+# EC if it crossed the other threshold.
+ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_control_start_threshold}="75", ATTR{charge_control_end_threshold}="80"
