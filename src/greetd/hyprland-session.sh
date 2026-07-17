@@ -9,6 +9,14 @@
 # XDG_DATA_DIRS, XCURSOR_*, MOZ_ENABLE_WAYLAND, ...) from whichever profile
 # location this host uses, then hand off to the Hyprland launch wrapper.
 #
+# greetd sets HOME/USER for the session, but the profile lookups below are
+# useless without them — derive from the passwd db if either is missing so a
+# thin session env can't silently strand us (no profile sourced → start-hyprland
+# not on PATH → exit → text tty).
+[ -n "${USER:-}" ] || USER="$(id -un)"
+[ -n "${HOME:-}" ] || HOME="$(getent passwd "$USER" | cut -d: -f6)"
+export USER HOME
+
 # Both profile paths are probed so one script works on both platforms:
 #   ~/.nix-profile               — standalone home-manager (Ubuntu, ...)
 #   /etc/profiles/per-user/$USER — home-manager as a NixOS module

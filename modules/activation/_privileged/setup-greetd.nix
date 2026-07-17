@@ -27,7 +27,12 @@
         # Managed by stubbedev dotfiles —
         # modules/activation/_privileged/setup-greetd.nix
         [terminal]
-        vt = 1
+        # VT 7: the Debian/Ubuntu greetd.service unit ships
+        # `Conflicts=getty@tty7`, so greetd must own tty7 or it collides with
+        # the un-conflicted getty@tty1 (both grab the VT, getty wins the
+        # console, autologin never renders → stranded on a text tty). tty1..6
+        # stay as text-console fallbacks for recovery.
+        vt = 7
 
         # Autologin: no interactive greeter at boot, straight into Hyprland.
         [initial_session]
