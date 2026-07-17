@@ -256,45 +256,6 @@ rec {
       };
     };
 
-  # Build the prompt args for an SDDM/GDM Wayland session entry under
-  # /usr/share/wayland-sessions/<name>.desktop. The body is a Desktop
-  # Entry rendered via lib.generators.toINI so callers pass attrs
-  # rather than heredoc text.
-  mkSddmSession =
-    {
-      config,
-      name, # filename basename (without .desktop)
-      displayName, # "Hyprland (Nix)"
-      comment,
-      execName, # binary in config.home.profileDirectory/bin
-      desktopNames,
-      extraEntries ? { }, # additional Desktop Entry keys
-    }:
-    let
-      target = "/usr/share/wayland-sessions/${name}.desktop";
-      content = lib.generators.toINI { } {
-        "Desktop Entry" = {
-          Name = displayName;
-          Comment = comment;
-          Exec = "${config.home.profileDirectory}/bin/${execName}";
-          Type = "Application";
-          DesktopNames = desktopNames;
-        }
-        // extraEntries;
-      };
-    in
-    {
-      promptTitle = "⚠️  SDDM ${displayName} session entry missing";
-      promptBody = ''
-        SDDM needs a desktop entry to show ${displayName} in the session menu.
-        This will create the session entry.
-      '';
-      actionScript = ''
-        sudo install -d -m 0755 /usr/share/wayland-sessions
-        ${installSystemFile { inherit target content; }}
-      '';
-    };
-
   # ============================================================
   # Script binaries (live in config.home.profileDirectory/bin/)
   # ============================================================

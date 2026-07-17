@@ -4,7 +4,7 @@
   # module). wayle's native ext-session-lock unlock authenticates against this
   # PAM service; src/wayle/config.toml sets lock.pam-service = "wayle" to match.
   # Both compositors lock via wayle, so gate on either.
-  enableIf = { config, ... }: config.features.hyprland || config.features.niri;
+  enableIf = { config, ... }: config.features.hyprland;
   args =
     { homeLib, ... }:
     {

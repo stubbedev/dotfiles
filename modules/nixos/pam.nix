@@ -8,9 +8,10 @@ _: {
         # since wayle locks natively via ext-session-lock-v1 on both compositors.
 
         # Enable GNOME keyring autounlock on both the tty-login and greetd PAM
-        # stacks. greetd (the wayle greeter's display manager) authenticates the
-        # graphical login under its own PAM service ("greetd"), not "login", so
-        # both need the hook or the keyring stays locked after graphical login.
+        # stacks. greetd (autologin into Hyprland, modules/nixos/greetd.nix)
+        # authenticates the graphical login under its own PAM service
+        # ("greetd"), not "login", so both need the hook or the keyring stays
+        # locked after graphical login.
         login.enableGnomeKeyring = lib.mkDefault true;
         greetd.enableGnomeKeyring = true;
       };

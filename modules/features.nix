@@ -14,7 +14,7 @@ _: {
   #                         have development=true, desktop=false.
   #
   # Other flags below are toggles for individual subsystems (docker, hyprland,
-  # niri, k8s, php, slack, …). All default true on stubbe's machines; flip
+  # k8s, php, slack, …). All default true on stubbe's machines; flip
   # them off per-host where appropriate.
   flake.modules.homeManager.features =
     { lib, ... }:
@@ -49,11 +49,6 @@ _: {
           type = lib.types.bool;
           default = true;
           description = "Enable Hyprland-specific packages and configuration.";
-        };
-        niri = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable Niri-specific packages and configuration.";
         };
         wayle = lib.mkOption {
           type = lib.types.bool;

@@ -217,10 +217,9 @@ in
         services = {
           # The ISO's only job is to run stb-install-nixos. Skip the display
           # manager and autologin root on tty1 so the live boot lands directly
-          # at a root shell. The installed system still uses SDDM from
-          # modules/nixos/sddm.nix; this override is scoped to the ISO.
+          # at a root shell. The installed system logs in via greetd autologin
+          # (modules/nixos/greetd.nix); this override is scoped to the ISO.
           greetd.enable = lib.mkForce false;
-          displayManager.sddm.enable = lib.mkForce false;
 
           # The live ISO is a console-only installer; X stays off. The
           # nvidia kernel module is pulled into the closure and force-loaded

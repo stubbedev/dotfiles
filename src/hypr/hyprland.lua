@@ -180,6 +180,13 @@ end
 local function setup_autostart()
     hl.on("hyprland.start", function()
         for _, cmd in ipairs({
+            -- Lock immediately on session start. Login is greetd autologin (no
+            -- password at boot; see modules/nixos/greetd.nix +
+            -- modules/activation/_privileged/setup-greetd.nix), so wayle-lock is
+            -- the access gate — the session comes up locked and needs the
+            -- password to unlock. First in the list to minimise the unlocked
+            -- window before the lock surface maps.
+            "wayle-lock",
             -- Update D-Bus and systemd environment. QT_QPA_PLATFORMTHEME and
             -- QT_STYLE_OVERRIDE are intentionally NOT imported to systemd to keep
             -- them from persisting and breaking a later KDE Plasma login.

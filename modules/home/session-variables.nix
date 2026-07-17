@@ -17,8 +17,8 @@
         XCURSOR_THEME = constants.theme.cursor;
         XCURSOR_SIZE = toString constants.theme.cursorSize;
 
-        # Wallpaper path for the DRM-hotplug listeners (monitor.toggle.sh on
-        # Hyprland, wallpaper.hotplug.sh on niri) to re-apply on dock. Single
+        # Wallpaper path for the DRM-hotplug listener (monitor.toggle.sh on
+        # Hyprland) to re-apply on dock. Single
         # source of truth: constants.paths.wallpaper — also templated into
         # wayle-launch's startup set (modules/home/scripts.nix).
         WALLPAPER = constants.paths.wallpaper;

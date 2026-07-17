@@ -74,7 +74,7 @@ button-border-location = "none"
 
 [[bar.layout]]
 monitor = "*"
-left = ["hyprland-workspaces", "niri-workspaces", "custom-submap"]
+left = ["hyprland-workspaces", "custom-submap"]
 # Clock centered as the focal point; everything else on the right.
 center = ["clock"]
 # Grouped left-to-right by purpose: activity → audio/hardware → connectivity →
@@ -114,13 +114,10 @@ format = "%Y-%m-%d %H:%M"
 # and would replace the number (that was the missing-numbers bug). `color` is
 # the active-workspace background (active-indicator defaults to "background");
 # the number itself is colored by the module's active/occupied/empty-color.
-# Hyprland IDs are stable 1-10 so the map lands; niri IDs are dynamic (plain
-# numbers, no map). label-size pinned in px to match the bar buttons.
+# Hyprland IDs are stable 1-10 so the map lands. label-size pinned in px to
+# match the bar buttons.
 [modules.hyprland-workspaces]
 display-mode = "label"
-label-size = "14px"
-
-[modules.niri-workspaces]
 label-size = "14px"
 
 [modules.hyprland-workspaces.workspace-map]
@@ -219,7 +216,7 @@ left-click = "wleave"
 # Native GStreamer recorder (replaces the old custom-screenrec module +
 # gpu-screen-recorder stack). left-click toggles capture (`wayle recorder
 # toggle`), right-click opens the options dropdown (codec/fps/webcam/audio).
-# SUPER+SHIFT+R also toggles it (hyprland.lua / niri config.kdl).
+# SUPER+SHIFT+R also toggles it (hyprland.lua).
 #
 # Bar fit: button-variant = "basic" renders a transparent background, so the
 # module's red icon-bg/button-bg defaults never paint. The recording state is

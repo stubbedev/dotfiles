@@ -11,7 +11,7 @@ _: {
     {
       # Reload Hyprland after every successful home-manager switch when a live
       # Hyprland session is detected. Skipped silently otherwise (e.g. running
-      # `home-manager switch` from niri or a TTY) so it never blocks activation.
+      # `home-manager switch` from a TTY) so it never blocks activation.
       #
       # Hyprland's built-in config auto-reload is disabled via
       # misc.disable_autoreload in hyprland.lua because reloading with multiple
