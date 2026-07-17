@@ -41,7 +41,7 @@
           # Fallback shown only after an explicit logout: agreety, a minimal
           # text prompt. It is not a compositor and never takes DRM master, so
           # it reintroduces no handoff race. Runs as the greetd `greeter` user.
-          default_session.command = "${lib.getExe' pkgs.greetd.greetd "agreety"} --cmd ${launcher}";
+          default_session.command = "${lib.getExe' pkgs.greetd "agreety"} --cmd ${launcher}";
         };
       };
     };
