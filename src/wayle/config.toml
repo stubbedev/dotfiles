@@ -37,6 +37,12 @@ blue = "#89b4fa"
 # setup-wayle-lock-pam activation script) and point the unlock at it.
 [lock]
 pam-service = "wayle"
+# Login is greetd autologin with no password at boot (modules/nixos/greetd.nix,
+# modules/activation/_privileged/setup-greetd.nix), so the shell self-locks on
+# start — the session comes up locked and gates on the password. Replaces the
+# racy `wayle-lock` autostart in src/hypr/hyprland.lua (that poked the shell's
+# lock IPC before the shell itself was up).
+lock-on-start = true
 # Solid Catppuccin base, matching the old hyprlock background.
 background-mode = "color"
 background-color = "#1e1e2e"
