@@ -209,6 +209,11 @@ local function setup_autostart()
             -- modules replace those tray icons.
             scripts .. "/hy3.tiling.sh",
             scripts .. "/monitor.toggle.sh daemon",
+            -- Reapply per-device touchpad config after unlock: a lid cycle
+            -- suspends the i2c-hid pad and the lid daemon's reload reapplies
+            -- hl.device() before it resumes, killing 2-finger scroll. Reload
+            -- again on the logind unlock edge, which lands after the resume.
+            scripts .. "/touchpad.unlock-reload.sh",
             -- Toast the active keyboard layout on each grp:toggle switch (xkb
             -- toggles internally — no keybind to hook; listen to socket2).
             "wayle-widget kb-toast hypr",
