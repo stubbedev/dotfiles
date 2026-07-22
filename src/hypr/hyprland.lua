@@ -111,6 +111,12 @@ local function setup_config()
             -- (modules/activation/_non-privileged/reload-hyprland.nix) so it can
             -- preserve focused workspace across multi-monitor reload.
             disable_autoreload = true,
+            -- At cold boot the wayle shell needs >1s (GTK init + first frame) to
+            -- present its lock surface after `lock-on-start` acquires the session
+            -- lock. The default 1000ms lockdead delay expires first and Hyprland
+            -- flashes the red "lock screen crashed" screen until wayle paints.
+            -- Bump the grace window past wayle's cold-start paint latency.
+            lockdead_screen_delay = 5000,
         },
         xwayland = { force_zero_scaling = true },
     })
