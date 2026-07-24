@@ -6,16 +6,26 @@
   # Both compositors lock via wayle, so gate on either.
   enableIf = { config, ... }: config.features.hyprland;
   args =
-    { homeLib, ... }:
+    { config, homeLib, ... }:
     {
       promptTitle = "⚠️  Wayle lock PAM configuration missing";
       promptBody = ''
         Wayle's session lock needs a PAM configuration to authenticate the
-        unlock. This will create a minimal Nix-compatible PAM config.
+        unlock. This will create a minimal Nix-compatible PAM config that also
+        unlocks the login keyring on unlock.
       '';
-      actionScript = homeLib.installSystemFile {
-        target = "/etc/pam.d/wayle";
-        content = builtins.readFile (self + "/src/pam.d/wayle");
-      };
+      actionScript = ''
+        ${homeLib.installSystemFile {
+          target = "/etc/pam.d/wayle";
+          # pam_gnome_keyring.so must be the nix-built module by absolute
+          # path (see comment in src/pam.d/wayle); the ~/.nix-profile path
+          # is stable, so the rendered file only changes when the src
+          # template does.
+          content =
+            builtins.replaceStrings [ "@PAM_GNOME_KEYRING@" ]
+              [ "${config.home.homeDirectory}/.nix-profile/lib/security/pam_gnome_keyring.so" ]
+              (builtins.readFile (self + "/src/pam.d/wayle"));
+        }}
+      '';
     };
 }
