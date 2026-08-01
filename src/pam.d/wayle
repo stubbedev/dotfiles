@@ -1,9 +1,36 @@
 #%PAM-1.0
-auth       sufficient   pam_unix.so nullok
-auth       required     pam_deny.so
+# gnome-keyring autounlock on the wayle session-lock unlock. Login on these
+# hosts is greetd *autologin* (no password entered), so the keyring never
+# PAM-unlocks at boot — the wayle unlock is the only place the login password
+# is typed, so it must unlock the keyring or Chrome et al. prompt on first use.
+#
+# pam_unix is `required` (not `sufficient`): a `sufficient` pass short-circuits
+# the auth stack and skips the gnome_keyring hook below it. `required` runs the
+# whole stack, so pam_unix collects the password (AUTHTOK) and gnome_keyring
+# reads it — the Arch `system-login` ordering. required-failure fails the stack,
+# so pam_deny is no longer needed. Mirrors NixOS enableGnomeKeyring (see
+# modules/nixos/pam.nix).
+#
+# The keyring-module placeholder below is substituted at activation time
+# (setup-wayle-lock-pam) with the absolute path
+# $HOME/.nix-profile/lib/security/pam_gnome_keyring.so. It MUST be an
+# absolute nix path: wayle is a nix binary, so its libpam resolves bare module
+# names against the nix store securedir (where only pam_unix et al. live), and
+# the host distro's module can't dlopen anyway (host-only deps like libselinux
+# aren't visible to nix's ld.so). The nix-profile path is stable across
+# upgrades and GC-rooted via gnome-keyring in home.packages.
+auth       required     pam_unix.so nullok
+auth       optional     @PAM_GNOME_KEYRING@
 
 account    required     pam_unix.so
 
 password   required     pam_unix.so nullok
+password   optional     @PAM_GNOME_KEYRING@ use_authtok
 
+# No gnome_keyring session/auto_start line: the daemon is socket-activated by
+# systemd (gnome-keyring-daemon.socket). An auto_start here spawns a stray
+# `gnome-keyring-daemon --unlock` that rebinds $XDG_RUNTIME_DIR/keyring/control
+# out from under the real daemon — later unlocks then hit the stray while the
+# D-Bus secrets service stays locked. Auth-phase unlock via the control socket
+# is all the lock screen needs.
 session    required     pam_unix.so

@@ -1,6 +1,5 @@
 _: {
-  enableIf =
-    { config, ... }: config.features.hyprland || config.features.niri || config.features.theming;
+  enableIf = { config, ... }: config.features.hyprland || config.features.theming;
   args = _: {
     promptTitle = "GNOME Keyring PAM setup";
     promptBody = ''
@@ -14,7 +13,7 @@ _: {
       "/etc/pam.d/ly"
       "/etc/pam.d/lightdm"
       "/etc/pam.d/gdm"
-      "/etc/pam.d/sddm"
+      "/etc/pam.d/greetd"
     ];
     actionScript = ''
       authLine="auth optional pam_gnome_keyring.so"
@@ -38,7 +37,7 @@ _: {
         /etc/pam.d/ly
         /etc/pam.d/lightdm
         /etc/pam.d/gdm
-        /etc/pam.d/sddm
+        /etc/pam.d/greetd
       )
       hasPhase() {
         local file="$1" phase="$2"
@@ -50,23 +49,6 @@ _: {
         hasPhase "$file" session  || printf '%s\n' "$sessionLine"  | sudo tee -a "$file" > /dev/null
         hasPhase "$file" password || printf '%s\n' "$passwordLine" | sudo tee -a "$file" > /dev/null
       done
-
-      # Ubuntu's stock /etc/pam.d/sddm puts `auth sufficient pam_unix.so` and
-      # `auth sufficient pam_fprintd.so` BEFORE `@include common-auth`. The
-      # `sufficient` short-circuit means pam_unix collects the password and
-      # exits the auth stack with success — the `-auth optional
-      # pam_gnome_keyring.so` line further down never runs, so pam_gnome_keyring
-      # at session phase has no password and logs
-      # "gkr-pam: no password is available for user". Comment those two lines
-      # out so the stack falls through to common-auth (which uses
-      # `[success=1 default=ignore]` for pam_unix — non-short-circuit) and the
-      # keyring auth line gets PAM_AUTHTOK. Idempotent: the regex only matches
-      # uncommented lines.
-      if [ -f /etc/pam.d/sddm ]; then
-        sudo sed -i -E \
-          's|^(auth[[:space:]]+sufficient[[:space:]]+pam_unix\.so.*)|# \1|; s|^(auth[[:space:]]+sufficient[[:space:]]+pam_fprintd\.so.*)|# \1|' \
-          /etc/pam.d/sddm
-      fi
     '';
   };
 }

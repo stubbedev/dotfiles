@@ -1,5 +1,5 @@
 _: {
-  enableIf = { config, ... }: config.features.hyprland || config.features.niri;
+  enableIf = { config, ... }: config.features.hyprland;
   args =
     { lib, homeLib, ... }:
     let

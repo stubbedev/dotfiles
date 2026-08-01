@@ -19,10 +19,7 @@
       ...
     }:
     let
-      enabled =
-        config.features.wayle
-        && (config.features.hyprland || config.features.niri)
-        && config.host.platform != "nixos";
+      enabled = config.features.wayle && config.features.hyprland && config.host.platform != "nixos";
     in
     {
       imports = [ inputs.wayle.homeManagerModules.default ];

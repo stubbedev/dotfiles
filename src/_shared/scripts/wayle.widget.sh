@@ -85,26 +85,11 @@ case "${1:-}" in
     ;;
 
   # Keyboard-layout toast. xkb `grp:toggle` switches the layout internally
-  # (no compositor keybind to hook), so listen to each compositor's event
+  # (no compositor keybind to hook), so listen to the compositor's event
   # stream and fire a transient OSD toast on every switch — the bar's
-  # keyboard-input module already shows the persistent state. $2 = niri|hypr.
+  # keyboard-input module already shows the persistent state. $2 = hypr.
   kb-toast)
     case "${2:-}" in
-      niri)
-        # event-stream emits KeyboardLayoutsChanged (the layout names) once,
-        # then KeyboardLayoutSwitched {idx} on each toggle — index into names.
-        names="[]"
-        niri msg --json event-stream 2>/dev/null | while IFS= read -r ev; do
-          case "$ev" in
-            *KeyboardLayoutsChanged*)
-              names="$(printf '%s' "$ev" | jq -c '.KeyboardLayoutsChanged.keyboard_layouts.names' 2>/dev/null)" ;;
-            *KeyboardLayoutSwitched*)
-              idx="$(printf '%s' "$ev" | jq -r '.KeyboardLayoutSwitched.idx' 2>/dev/null)"
-              name="$(printf '%s' "$names" | jq -r ".[$idx] // empty" 2>/dev/null)"
-              [ -n "$name" ] && wayle toast "$name" --icon ld-keyboard-symbolic --duration 1000 ;;
-          esac
-        done
-        ;;
       hypr)
         sock="$rt/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket2.sock"
         [ -S "$sock" ] || exit 0

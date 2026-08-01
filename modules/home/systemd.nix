@@ -10,17 +10,14 @@ _: {
     }:
     let
       hyprlandEnabled = config.features.hyprland;
-      niriEnabled = config.features.niri;
-      anyCompositor = hyprlandEnabled || niriEnabled;
+      anyCompositor = hyprlandEnabled;
 
       # wayle is the desktop shell (bar + notifications + OSD + wallpaper).
       wayleEnabled = config.features.wayle;
 
-      # Targets the active compositor activates. Services that should run
-      # under either compositor pull from this list for After/PartOf/WantedBy.
-      compositorTargets =
-        (lib.optional hyprlandEnabled "hyprland-session.target")
-        ++ (lib.optional niriEnabled "niri-session.target");
+      # Target the compositor activates. Services that should run under the
+      # compositor pull from this list for After/PartOf/WantedBy.
+      compositorTargets = lib.optional hyprlandEnabled "hyprland-session.target";
 
       compositorActiveCondition = lib.concatMapStringsSep " || " (
         target: "${pkgs.systemd}/bin/systemctl --user is-active --quiet ${target}"
@@ -43,13 +40,9 @@ _: {
           null;
     in
     lib.mkIf anyCompositor {
-      systemd.user.targets =
-        (lib.optionalAttrs hyprlandEnabled {
-          hyprland-session.Unit.Description = "Hyprland session";
-        })
-        // (lib.optionalAttrs niriEnabled {
-          niri-session.Unit.Description = "niri session";
-        });
+      systemd.user.targets = lib.optionalAttrs hyprlandEnabled {
+        hyprland-session.Unit.Description = "Hyprland session";
+      };
 
       # Blue-light scheduling is now wayle's native hyprsunset module (it owns
       # the daemon + solar schedule), and the xdg-desktop-portal backend is wayle
@@ -90,7 +83,7 @@ _: {
           # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
           # entry — so home-manager's bin-only linking can't surface it and
           # `systemctl --user start hyprpolkitagent` (called from
-          # src/hypr/hyprland.lua and conceptually from niri) finds no
+          # src/hypr/hyprland.lua) finds no
           # unit. Defining the service here fixes both compositors and
           # gives pkexec something to talk to when our 49-openconnect.rules
           # rule doesn't match (e.g. nmcli, brightness, anything that

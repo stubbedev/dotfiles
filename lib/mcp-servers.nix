@@ -262,6 +262,10 @@ let
         "-y"
         "chrome-devtools-mcp@1.5.0"
         "--autoConnect"
+        # Telemetry off: the Clearcut watchdog is a detached (setsid) ~180MB
+        # node child that escapes group kills and orphans on every idle
+        # teardown. No watchdog spawn at all with stats off.
+        "--no-usage-statistics"
       ];
     };
   }
@@ -312,7 +316,7 @@ let
     # itself still considers active. The explicit rofi askpass matches the
     # desktop launcher (autodetect only finds kdialog/zenity/ssh-askpass);
     # rofi reaches WAYLAND_DISPLAY via the systemd user-manager env, which
-    # hyprland/niri import at session start.
+    # hyprland import at session start.
     pty-mcp = {
       host = "127.0.0.1";
       port = proxiedPort;

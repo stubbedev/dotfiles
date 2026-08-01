@@ -7,7 +7,7 @@ _: {
       ...
     }:
     let
-      enabled = config.features.hyprland || config.features.niri;
+      enabled = config.features.hyprland;
     in
     lib.mkIf enabled {
       home.packages = with pkgs; [

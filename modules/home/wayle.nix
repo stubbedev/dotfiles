@@ -26,7 +26,7 @@ _: {
         builtins.pathExists psu
         && lib.any (lib.hasPrefix "BAT") (builtins.attrNames (builtins.readDir psu));
     in
-    lib.mkIf (config.features.wayle && (config.features.hyprland || config.features.niri)) {
+    lib.mkIf (config.features.wayle && config.features.hyprland) {
       home.packages = [
         # mkWrappedPackage (not bare gfx): symlinkJoins the nixGL-wrapped
         # binaries back with the upstream package, so $out/share survives into

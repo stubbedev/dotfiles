@@ -8,7 +8,7 @@ _: {
       ...
     }:
     let
-      enabled = config.features.hyprland || config.features.niri;
+      enabled = config.features.hyprland;
 
       # Custom wleave layout: backs wayle's `power` widget (left-click =
       # "wleave"). The bundled default locks with gtklock/swaylock (neither
@@ -116,14 +116,10 @@ _: {
               label = "logout";
               action = [
                 {
-                  "$DESKTOP_SESSION" = "niri";
-                  shell = "niri msg action quit --skip-confirmation";
-                }
-                {
                   "$DESKTOP_SESSION" = "hyprland";
                   shell = "hyprctl dispatch exit";
                 }
-                # Works on any systemd-logind session regardless of compositor.
+                # Works on any systemd-logind session as a fallback.
                 "loginctl terminate-user $USER"
               ];
               text = "Logout";
