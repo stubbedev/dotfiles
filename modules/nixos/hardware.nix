@@ -60,10 +60,21 @@ _: {
         # Load i2c-dev kernel module + udev rules so ddcutil works without sudo.
         # The i2c group is created automatically; users.nix adds the primary user.
         i2c.enable = true;
+
+        # logitech-udev-rules, so solaar can talk to the Unifying/Bolt
+        # receiver's hidraw node without root. enableGraphical stays off:
+        # that would add a second copy of solaar to systemPackages, and the
+        # app itself ships from home-manager (modules/packages/system.nix).
+        logitech.wireless.enable = true;
       };
 
-      # SSDs benefit from periodic discard; the timer is cheap.
-      services.fstrim.enable = true;
+      # No periodic fstrim: btrfs mounts with discard=async by default since
+      # kernel 6.2, so freed extents are already trimmed continuously. A
+      # weekly full-FS `fstrim -a` over ~1.6T free on this DRAM-less SATA SSD
+      # (PNY CS900) is redundant and pins the disk in D-state for 15+ min,
+      # starving concurrent nix builds. Flip back on only if a future host
+      # uses a filesystem without async discard.
+      services.fstrim.enable = false;
 
       # Newer brightnessctl uses systemd-logind API instead of udev rules,
       # so the NixOS module was removed. Install the package directly.

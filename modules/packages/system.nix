@@ -70,6 +70,10 @@ _: {
         # Bluetooth (GUI)
         blueman
 
+        # Logitech Unifying/Bolt peripherals (battery, DPI, per-device rules).
+        # Needs the udev rules from hardware.logitech.wireless on NixOS.
+        solaar
+
         # Monitor Brightness (CLI tools)
         brightnessctl
         ddcutil
