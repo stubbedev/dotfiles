@@ -22,7 +22,8 @@
           # is stable, so the rendered file only changes when the src
           # template does.
           content =
-            builtins.replaceStrings [ "@PAM_GNOME_KEYRING@" ]
+            builtins.replaceStrings
+              [ "@PAM_GNOME_KEYRING@" ]
               [ "${config.home.homeDirectory}/.nix-profile/lib/security/pam_gnome_keyring.so" ]
               (builtins.readFile (self + "/src/pam.d/wayle"));
         }}
