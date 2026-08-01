@@ -190,13 +190,17 @@ _: {
 
         # maildir-account-path scopes each tab's dirlist (and the
         # folder names used by copy-to/postpone/archive) to that
-        # account's subtree under maildir-store. Without it, aerc
+        # account's subtree under the maildir root. Without it, aerc
         # enumerates the shared maildir root and every tab shows
         # both accounts' folders in the sidebar.
+        #
+        # aerc ≥0.22 deprecated maildir-store and explicit database
+        # paths in the source URL — the root and the database both come
+        # from the notmuch config, which aerc finds via NOTMUCH_CONFIG
+        # (set in home.sessionVariables below).
         aercAccountsConf = ''
           [kontainer]
-          source=notmuch://${maildir}
-          maildir-store=${maildir}
+          source=notmuch://
           maildir-account-path=kontainer
           query-map=${home}/.config/aerc/queries-kontainer
           exclude-tags=deleted,spam
@@ -212,8 +216,7 @@ _: {
           check-mail=30s
 
           [gmail]
-          source=notmuch://${maildir}
-          maildir-store=${maildir}
+          source=notmuch://
           maildir-account-path=gmail
           query-map=${home}/.config/aerc/queries-gmail
           exclude-tags=deleted,spam,trash
@@ -257,6 +260,12 @@ _: {
         };
 
         home.packages = [ mailSync ];
+
+        # aerc no longer takes the database path from the source URL; it
+        # relies on notmuch config discovery. Point that at the legacy
+        # ~/.notmuch-config we write below instead of leaving aerc to
+        # guess XDG paths that don't exist here.
+        home.sessionVariables.NOTMUCH_CONFIG = "${home}/.notmuch-config";
 
         home.file = {
           ".w3m".source = self + "/src/w3m";
