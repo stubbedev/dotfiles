@@ -22,7 +22,6 @@ _: {
         adwaita-icon-theme
         vimix-icon-theme
         hicolor-icon-theme
-        rose-pine-gtk-theme
         gnome-themes-extra # Includes Adwaita-dark GTK theme
         gtk4-layer-shell
 
