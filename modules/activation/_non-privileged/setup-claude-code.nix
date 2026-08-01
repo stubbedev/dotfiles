@@ -65,7 +65,7 @@
             includeCoAuthoredBy = false;
             tui = "fullscreen";
             editorMode = "vi";
-            model = "claude-opus-4-8[1m]";
+            model = "claude-opus-5";
             # Use the PHPantom language server for .php instead of the
             # official php-lsp plugin. Local marketplace lives in the
             # live src checkout; the phpantom_lsp binary is on PATH via
