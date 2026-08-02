@@ -51,6 +51,10 @@ _: {
         # winetricks for hand-rolled wine prefixes; Steam's proton runtime
         # is self-contained, but wine bottles outside of Steam still use it.
         winetricks
+        # Thunderstore mod manager (Risk of Rain 2 etc). Launching a modded
+        # profile works by pasting the command r2modman prints into the
+        # game's Steam launch options.
+        r2modman
       ];
     };
 }
