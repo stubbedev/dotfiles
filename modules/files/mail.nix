@@ -259,23 +259,25 @@ _: {
           path = "${home}/.config/aerc/passwords/kontainer";
         };
 
-        home.packages = [ mailSync ];
+        home = {
+          packages = [ mailSync ];
 
-        # aerc no longer takes the database path from the source URL; it
-        # relies on notmuch config discovery. Point that at the legacy
-        # ~/.notmuch-config we write below instead of leaving aerc to
-        # guess XDG paths that don't exist here.
-        home.sessionVariables.NOTMUCH_CONFIG = "${home}/.notmuch-config";
+          # aerc no longer takes the database path from the source URL; it
+          # relies on notmuch config discovery. Point that at the legacy
+          # ~/.notmuch-config we write below instead of leaving aerc to
+          # guess XDG paths that don't exist here.
+          sessionVariables.NOTMUCH_CONFIG = "${home}/.notmuch-config";
 
-        home.file = {
-          ".w3m".source = self + "/src/w3m";
+          file = {
+            ".w3m".source = self + "/src/w3m";
 
-          # mbsync still reads ~/.mbsyncrc by default in nixpkgs' isync.
-          ".mbsyncrc".text = mbsyncrc;
+            # mbsync still reads ~/.mbsyncrc by default in nixpkgs' isync.
+            ".mbsyncrc".text = mbsyncrc;
 
-          # notmuch reads ~/.notmuch-config (legacy path) regardless of XDG
-          # if the file exists — keep it explicit.
-          ".notmuch-config".text = notmuchConfig;
+            # notmuch reads ~/.notmuch-config (legacy path) regardless of XDG
+            # if the file exists — keep it explicit.
+            ".notmuch-config".text = notmuchConfig;
+          };
         };
 
         xdg.configFile = {
