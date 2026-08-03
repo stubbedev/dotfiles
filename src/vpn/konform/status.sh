@@ -4,7 +4,8 @@ set -euo pipefail
 
 PROVIDER_NAME="@PROVIDER_NAME@"
 
-PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
+# Hardcoded /run/user/<uid> to match connect.sh — see the polkit note there.
+PID_FILE="/run/user/$(id -u)/openconnect-${PROVIDER_NAME}.pid"
 
 # Linux interface names cap at 15 chars; keep the same form as connect.sh.
 IFACE_NAME="$(printf '%s' "oc-${PROVIDER_NAME}" | cut -c1-15)"

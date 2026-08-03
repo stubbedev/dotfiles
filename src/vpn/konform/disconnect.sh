@@ -4,7 +4,12 @@ set -euo pipefail
 
 PROVIDER_NAME="@PROVIDER_NAME@"
 
-PID_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/openconnect-${PROVIDER_NAME}.pid"
+# Not XDG_RUNTIME_DIR: 49-openconnect.rules' isPidFilePath only accepts
+# ^/run/user/<uid>/openconnect-*.pid, and the pidfile is an argument to the
+# pkexec'd pkill. A non-standard XDG_RUNTIME_DIR would fail the polkit rule
+# and silently fall back to interactive auth. Keep in sync across all four
+# vpn-<provider>-* scripts.
+PID_FILE="/run/user/$(id -u)/openconnect-${PROVIDER_NAME}.pid"
 PKILL_BIN="$(command -v pkill || true)"
 
 # pkexec canonicalises the program path before the polkit rule checks
@@ -24,6 +29,9 @@ is_running() {
         return 0
       fi
 
+      # openconnect runs as root, this script as the user, so kill -0 fails
+      # with EPERM on a *live* VPN. /proc/$pid is the reliable liveness test
+      # for a process we cannot signal.
       if [ -d "/proc/$pid" ]; then
         return 0
       fi

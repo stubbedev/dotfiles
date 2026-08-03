@@ -96,13 +96,22 @@ polkit.addRule(function(action, subject) {
         i += 1;
         continue;
       }
+      // Cookie must arrive on stdin, never in argv: argv is world-readable via
+      // /proc/<pid>/cmdline and pkexec logs the whole command line to the
+      // journal. Accepting only this flag means a regression to
+      // `--cookie <value>` fails the rule instead of silently leaking.
+      if (token === "--cookie-on-stdin") {
+        hasCookie = true;
+        i += 1;
+        continue;
+      }
       if (token === "--background") {
         hasBackground = true;
         i += 1;
         continue;
       }
 
-      if (token === "--user" || token === "--cookie" || token === "--interface" || token === "--pid-file" || token === "--servercert") {
+      if (token === "--user" || token === "--interface" || token === "--pid-file" || token === "--servercert") {
         if (i + 1 >= args.length) {
           return false;
         }
@@ -113,8 +122,6 @@ polkit.addRule(function(action, subject) {
 
         if (token === "--user") {
           hasUser = true;
-        } else if (token === "--cookie") {
-          hasCookie = true;
         } else if (token === "--interface") {
           if (!/^[A-Za-z0-9_.:-]+$/.test(value)) {
             return false;

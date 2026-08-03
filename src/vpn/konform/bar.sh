@@ -5,7 +5,8 @@ PROVIDER_NAME="@PROVIDER_NAME@"
 CONFIG_DIR="$HOME/.config/vpn/$PROVIDER_NAME"
 CONFIG_FILE="$CONFIG_DIR/config"
 PASSWORD_FILE="$CONFIG_DIR/password"
-RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+# Hardcoded /run/user/<uid> to match connect.sh — see the polkit note there.
+RUNTIME_DIR="/run/user/$(id -u)"
 PID_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.pid"
 CONNECTING_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}.connecting"
 LOG_FILE="$RUNTIME_DIR/openconnect-${PROVIDER_NAME}-bar.log"
@@ -16,6 +17,18 @@ CONNECT_TIMEOUT=30
 
 # Linux interface names cap at 15 chars; keep the same form as connect.sh.
 IFACE_NAME="$(printf '%s' "oc-${PROVIDER_NAME}" | cut -c1-15)"
+
+# Gate for the process-group kills below. `kill -- -$PID` with PID=1 becomes
+# `kill -- -1`, which POSIX defines as "every process the caller may signal" —
+# i.e. SIGTERM to the whole session. PID=1 is exactly what connect() writes as
+# its spawning placeholder, so both signal sites must refuse it. Also rejects
+# non-numeric junk from a truncated or hand-edited marker file.
+killable() {
+  case "${1:-}" in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  [ "$1" -gt 1 ]
+}
 
 interface_up() {
   if [ -d "/sys/class/net/$IFACE_NAME" ]; then
@@ -80,8 +93,11 @@ connecting_active() {
     return 1
   fi
 
-  # Stale marker (process gone, trap didn't run for some reason)
-  if ! kill -0 "$PID" 2>/dev/null; then
+  # Stale marker (process gone, trap didn't run for some reason).
+  # /proc, not kill -0: the PID=1 placeholder written by connect() below is
+  # root-owned, so kill -0 fails with EPERM and would delete the marker while
+  # the wrapper is still spawning — dropping the bar out of "connecting".
+  if [ ! -d "/proc/$PID" ]; then
     rm -f "$CONNECTING_FILE"
     return 1
   fi
@@ -91,7 +107,11 @@ connecting_active() {
   age=$(( now - START ))
 
   if (( age >= CONNECT_TIMEOUT )); then
-    kill -TERM -- "-$PID" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
+    # Placeholder PID (wrapper died before overwriting the marker) means there
+    # is no wrapper group to kill — just drop the marker.
+    if killable "$PID"; then
+      kill -TERM -- "-$PID" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
+    fi
     rm -f "$CONNECTING_FILE"
     if [ -f "$PID_FILE" ]; then
       setsid "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
@@ -149,10 +169,11 @@ connect() {
   now=$(date +%s)
 
   # Pre-write the connecting marker so the bar sees the "connecting" state
-  # immediately (its inotify watch fires on this create). PID=1 (init) is
-  # always alive, so connecting_active() doesn't clean the marker up while
-  # the wrapper is still spawning; the wrapper then overwrites with its own
-  # PID for the timeout-kill path.
+  # immediately (its inotify watch fires on this create). PID=1 (init) always
+  # exists, so connecting_active()'s /proc check keeps the marker while the
+  # wrapper is still spawning; the wrapper then overwrites with its own PID
+  # for the timeout-kill path. Note connecting_active() must not use kill -0
+  # here — pid 1 is root-owned and that returns EPERM for us.
   printf 'PID=1\nSTART=%s\n' "$now" > "$CONNECTING_FILE"
 
   # Spawn the connect script in its own session so we can kill the whole group
@@ -185,7 +206,7 @@ disconnect() {
     local PID="" START=0
     # shellcheck source=/dev/null
     source "$CONNECTING_FILE" 2>/dev/null || true
-    if [ -n "$PID" ]; then
+    if killable "$PID"; then
       kill -TERM -- "-$PID" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
     fi
     rm -f "$CONNECTING_FILE"

@@ -115,6 +115,14 @@ _: {
               Description = "Alacritty daemon (shared single-instance process)";
               After = compositorTargets;
               PartOf = compositorTargets;
+              # Never restart on `hm switch`. KillMode=control-group plus
+              # single-instance means a restart takes every terminal window
+              # with it — and every tmux server, which double-forks but stays
+              # in this unit's cgroup. Any alacritty store-path bump changes
+              # the unit file, so sd-switch would otherwise restart it on a
+              # routine flake update. New binary lands on next login (or an
+              # explicit `systemctl --user restart alacritty-daemon`).
+              X-SwitchMethod = "keep-old";
             };
             Install.WantedBy = compositorTargets;
             Service = {
