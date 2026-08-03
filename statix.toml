@@ -1,0 +1,6 @@
+# repeated_keys (W20) is style-only and statix has no fixer for it — it wants
+# `home.a`/`home.b` collapsed into `home = { a; b; }`, which only a human can
+# do. Every statix CI failure on master between 2026-08-01 and 2026-08-03 was
+# this one lint, so it blocks pushes without ever self-correcting. Drop the
+# line to re-enable it.
+disabled = [ "repeated_keys" ]

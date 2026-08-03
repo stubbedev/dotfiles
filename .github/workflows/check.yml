@@ -5,14 +5,44 @@ on:
     branches: [master]
   pull_request:
 
+# The autofix step commits back to the branch it ran on.
+permissions:
+  contents: write
+
 jobs:
   checks:
     name: lint + eval
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The default PR checkout is a detached merge commit with no branch
+          # to push back to; autofix needs the real branch.
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: DeterminateSystems/nix-installer-action@v22
+
+      # Apply every fix the linters can apply themselves and push the result,
+      # so formatting and dead-code drift never costs a red build and a manual
+      # round trip. Pushes authenticated with GITHUB_TOKEN do not trigger
+      # workflows, so this cannot loop back into itself.
+      #
+      # Not everything is fixable: shellcheck has no reliable fixer, and the
+      # statix lints without one still fail the checks below. Fork PRs get no
+      # write token, so they skip straight to the checks.
+      - name: Autofix what the linters can fix
+        if: github.event.pull_request.head.repo.fork != true
+        run: |
+          nix run .#lint-fix
+          if git diff --quiet; then
+            echo "nothing to fix"
+            exit 0
+          fi
+          git diff --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "style: lint autofix"
+          git push
 
       # Scoped to lint + eval checks only. hyprland-config is deliberately
       # excluded: it builds Hyprland from source, which is far too slow for
