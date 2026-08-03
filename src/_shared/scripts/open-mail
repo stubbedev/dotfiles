@@ -6,6 +6,12 @@
 APP_ID="aerc-mail"
 
 spawn_term() {
+  # aerc ignores SIGHUP, so closing its window leaves the process orphaned and
+  # window-less forever, still owning $XDG_RUNTIME_DIR/aerc.sock — every later
+  # `aerc :<cmd>` IPC call (see binds.conf) then lands in that ghost instead of
+  # the live instance. We only get here when no aerc window matched, so any
+  # aerc still running is a ghost. SIGTERM shuts it down cleanly.
+  pkill -TERM -f '/bin/aerc$'
   @TERM@ --class "$APP_ID" -e aerc
 }
 
