@@ -25,7 +25,6 @@
           # back. See modules/files/mail.nix for the wiring.
           isync
           notmuch
-          glow
           # aerc text/html filter: parses with html5ever (kuchikiki), flattens
           # layout tables (heuristic preserves real data tables), strips
           # MSO/Word noise, then renders Markdown via htmd. Single static

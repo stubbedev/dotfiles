@@ -56,7 +56,13 @@
           vars.TERM = constants.paths.term;
         };
         mail-unsubscribe.source = "src/aerc/scripts/unsubscribe";
-        mail-pager.source = "src/aerc/scripts/mail-pager";
+        mail-pager = {
+          source = "src/aerc/scripts/mail-pager";
+          # mkScriptBin emits a lone bin/mail-pager, so the pager's Lua half
+          # has no sibling to find at runtime — point at it in the source
+          # store path instead of resolving relative to $0.
+          vars.PAGER_LUA = "${self}/src/aerc/scripts/mail-pager.lua";
+        };
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
         # wayle shell: launch wrapper (Wayland socket detection). wayle's
         # custom module parses waybar-style JSON natively (text/tooltip/class),

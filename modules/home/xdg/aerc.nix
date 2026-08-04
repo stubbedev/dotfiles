@@ -11,7 +11,6 @@ _: {
         "aerc/aerc.conf"
         "aerc/binds.conf"
         "aerc/scripts"
-        "glow/catppuccin-mocha.json"
       ];
     };
 }

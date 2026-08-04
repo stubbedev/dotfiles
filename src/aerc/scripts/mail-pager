@@ -1,6 +1,51 @@
 #!/usr/bin/env bash
-# Aerc viewer pager: render the (already-filtered) message body as markdown
-# via glow. Closing the viewer is aerc's job: q/<Esc> are bound in [view].
-# Force less (alt-screen) over the global PAGER=more: more writes to the normal
-# buffer, so aerc's embedded terminal parks the viewport at the bottom on open.
-PAGER='less -R' glow --pager --style "${XDG_CONFIG_HOME:-$HOME/.config}/glow/catppuccin-mocha.json" -
+# Aerc viewer pager: read the (already-filtered) message body in nvim.
+# Minimal nvim, same shape as the [compose] editor: no plugins, no swap, no
+# shada — the buffer is throwaway. Everything that would pollute a mouse
+# drag-select is off (gutter, statusline, ruler); `mouse=` leaves selection to
+# the terminal, and clipboard=unnamedplus makes a plain `y` land in wl-copy.
+# nvim always paints from the top, so no bottom-parked first screen.
+# Closing the viewer is aerc's job: q is bound in [view].
+
+# aerc exports AERC_MIME_TYPE to the pager, not only to the filters the manual
+# documents (verified against 0.22). The part type decides how to read it.
+case "$AERC_MIME_TYPE" in
+image/*)
+  # chafa emits ANSI art, which nvim would show as literal escape codes.
+  exec less -Rc
+  ;;
+text/html)
+  # Already through html-to-md, so it really is markdown. Colours come from
+  # treesitter rather than `syntax on`: the markdown and markdown_inline
+  # parsers ship inside the neovim derivation, so this holds under -u NONE
+  # with no plugins, and the default colourscheme defines the @markup.* groups.
+  # conceallevel hides the markup itself; mail-pager.lua puts the hidden link
+  # destination in a float so revealing one never reflows the line. Sourced
+  # with `silent!` so a missing Lua half costs you the float and nothing else
+  # — bare `-S` raises a modal E484 that blocks reading the message at all.
+  syntax=(
+    -c 'set filetype=markdown conceallevel=2 concealcursor=nvic'
+    -c 'lua pcall(vim.treesitter.start, 0, "markdown")'
+    -c 'silent! source @PAGER_LUA@'
+  )
+  ;;
+*)
+  # Prose the sender typed by hand. Markdown conceal here would swallow
+  # literal **, ` and (…) that were never markup. ft=mail is nvim's own
+  # syntax for this: quote depth, headers, signatures.
+  syntax=(
+    -c 'syntax enable'
+    -c 'set filetype=mail'
+  )
+  ;;
+esac
+
+# Normal is cleared last so aerc's styleset background shows through instead
+# of nvim's — `syntax enable` would otherwise reset it.
+exec nvim -u NONE -U NONE --noplugin -n -i NONE -M \
+  -c 'set mouse= clipboard=unnamedplus' \
+  -c 'set nonumber norelativenumber signcolumn=no nolist laststatus=0 noruler noshowcmd' \
+  -c 'set linebreak termguicolors' \
+  "${syntax[@]}" \
+  -c 'hi Normal guibg=NONE ctermbg=NONE' \
+  -
