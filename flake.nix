@@ -153,6 +153,15 @@
       url = "github:PHPantom-dev/phpantom_lsp/0.9.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # All-in-one Node.js toolkit (Rust): TS-first `nub <file>`, `nub run`,
+    # `nubx`, `nub install`, `nub node`. Ships its own flake (packages.nub,
+    # with a `nubx` symlink in the same output), consumed in
+    # modules/packages/development.nix. Tracks main — no upstream binary
+    # cache either way, so follow ours and keep one nixpkgs in the lock.
+    nub = {
+      url = "github:nubjs/nub";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Used by the installer ISO build for partitioning declaration.
     disko = {
       url = "github:nix-community/disko";
