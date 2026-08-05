@@ -41,7 +41,16 @@ _: {
     in
     lib.mkIf anyCompositor {
       systemd.user.targets = lib.optionalAttrs hyprlandEnabled {
-        hyprland-session.Unit.Description = "Hyprland session";
+        hyprland-session.Unit = {
+          Description = "Hyprland session";
+          # xdg-desktop-portal 1.22+ has Requisite=graphical-session.target, which
+          # never starts the target itself — so without this bind the portal fails
+          # instantly ("Dependency failed for Portal service"). BindsTo pulls
+          # graphical-session.target up with the session and drops it on exit
+          # (the target is RefuseManualStart + StopWhenUnneeded).
+          BindsTo = [ "graphical-session.target" ];
+          Before = [ "graphical-session.target" ];
+        };
       };
 
       # Blue-light scheduling is now wayle's native hyprsunset module (it owns
