@@ -40,6 +40,18 @@ _: {
           null;
     in
     lib.mkIf anyCompositor {
+      # Mask the distro-packaged waybar.service. It lives in
+      # /usr/lib/systemd/user, is preset-enabled, and is
+      # WantedBy=graphical-session.target — so the compositor session pulls it
+      # up on its own. It used to be shadowed by HM's own waybar.service; once
+      # the legacy bar stack was removed (d61e3782) the distro unit became
+      # visible again and waybar started next to wayle → two bars on screen
+      # (waybar's exclusive zone even pushed the wayle bar 30px down).
+      # A symlink to /dev/null in the user unit dir is how systemd masks a unit.
+      xdg.configFile = lib.mkIf wayleEnabled {
+        "systemd/user/waybar.service".source = config.lib.file.mkOutOfStoreSymlink "/dev/null";
+      };
+
       systemd.user.targets = lib.optionalAttrs hyprlandEnabled {
         hyprland-session.Unit = {
           Description = "Hyprland session";
