@@ -100,6 +100,11 @@ _: {
           default = true;
           description = "Enable claude-code CLI from nixpkgs unstable.";
         };
+        codex = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable codex CLI from nixpkgs unstable.";
+        };
         browsers = lib.mkOption {
           type = lib.types.bool;
           default = true;
