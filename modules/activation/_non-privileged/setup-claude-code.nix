@@ -21,18 +21,40 @@
 
       # http client entries → the shared HTTP services (modules/home/
       # mcp-services.nix). No per-window subprocess: every window reuses the one
-      # warm process and is scoped to its repo via per-session MCP roots.
+      # warm process and is scoped to its repo by the X-Repo-Root header below.
+      #
+      # The header is what keeps the shared-process model alive. MCP *roots* —
+      # the server asking each window "which workspace are you?" over its own
+      # session — did the same job and still does today, but MCP 2026-07-28
+      # (SEP-2322/2575) forbids server→client requests, so roots/list stops
+      # working the moment Claude Code negotiates that revision. Every
+      # roots-dependent server would then fail every cwd-relative call at once.
+      #
+      # `\${PWD}` stays a literal in the generated JSON; Claude Code expands it
+      # per window at launch (env-var expansion is supported in `headers`), so
+      # each window reports its own launch dir — the same value roots carried.
+      # Servers rank this header ABOVE roots, so today it changes nothing.
       httpServers = lib.mapAttrs (_: s: {
         type = "http";
         url = "http://${s.host}:${toString s.port}${s.path}";
+        headers."X-Repo-Root" = "\${PWD}";
       }) servers.httpServices;
 
       # http client entries → the socket-activated proxy-mcp frontends (same
       # module). Connecting here is what spawns the single shared backend on
       # demand; every window points at the one port.
+      #
+      # Same X-Repo-Root header as above. It matters most here: the
+      # `perSession` backends (jenkins/sentry) are gated by repoWhitelist,
+      # which proxy-mcp evaluates against the caller's repo — sourced from
+      # roots until now. A whitelist that can no longer see the repo fails
+      # CLOSED (tools hidden), so without the header those two would go dark
+      # on every repo the day Claude Code moves to 2026-07-28. Inert for the
+      # cwd-irrelevant backends (chrome-devtools/ds/nix-mcp/pty-mcp).
       proxiedServers = lib.mapAttrs (_: p: {
         type = "http";
         url = "http://${p.host}:${toString p.port}${p.path}";
+        headers."X-Repo-Root" = "\${PWD}";
       }) servers.proxied;
 
       # Claude's stdio shape: { type, command, args, env? }

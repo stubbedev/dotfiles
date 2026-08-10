@@ -49,13 +49,18 @@ let
   #                 one process because they are NOT tied to the process cwd:
   #                 atlassian/jenkins/sentry/srv/treeman are cwd-sensitive in
   #                     spirit, but they resolve the caller's repo/worktree from
-  #                     the per-session MCP *roots* (the launch dir each Claude
-  #                     window reports over its own HTTP session) or an
-  #                     X-Repo-Root header, not the server's cwd. So one shared
-  #                     server serves every worktree correctly. This is why they
-  #                     are NATIVE http (a direct per-window session): a
-  #                     stdio→HTTP bridge would collapse all windows onto one
-  #                     upstream session and lose per-session roots.
+  #                     the X-Repo-Root header each window sends (set to that
+  #                     window's launch dir in setup-claude-code.nix), not the
+  #                     server's cwd. So one shared server serves every worktree
+  #                     correctly. Per-session MCP *roots* is the older path to
+  #                     the same value and still works, but MCP 2026-07-28
+  #                     (SEP-2322/2575) bans the server→client call it needs, so
+  #                     the header — which outranks roots in every server — is
+  #                     now the mechanism and roots is only the fallback for
+  #                     clients that don't send it. This is still why they are
+  #                     NATIVE http (a direct per-window session): a stdio→HTTP
+  #                     bridge would collapse all windows onto one upstream
+  #                     session and lose per-session roots.
   #                     srv/treeman additionally shell out to `docker` and read
   #                     ~/.config state, so their service env carries
   #                     XDG_CONFIG_HOME and a docker-reaching PATH (see

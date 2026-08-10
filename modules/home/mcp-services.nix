@@ -8,10 +8,11 @@
   #
   # The login-time httpServices are safe to share as ONE process because none
   # depends on the service's working directory: atlassian/jenkins/sentry/srv/
-  # treeman resolve the caller's repo from the per-session MCP *roots* each
-  # Claude window reports over its own HTTP session. That
-  # per-session isolation is why they are native HTTP rather than bridged through
-  # a stdio→HTTP proxy (which would collapse all windows onto one upstream
+  # treeman resolve the caller's repo from the per-request X-Repo-Root header
+  # (setup-claude-code.nix sets it to each window's launch dir), falling back to
+  # per-session MCP roots for clients that don't send it. That per-request
+  # isolation is why they are native HTTP rather than bridged through a
+  # stdio→HTTP proxy (which would collapse all windows onto one upstream
   # session and lose roots).
   #
   # The `proxied` set (chrome-devtools + the readonly DB servers, plus nix-mcp
