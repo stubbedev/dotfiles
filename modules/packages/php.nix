@@ -72,17 +72,27 @@ _: {
         extraConfig = extraIni;
       };
 
-      # The assert is the whole point: frankenphp re-overrides whatever php it
-      # is handed, so if nixpkgs adds or changes an arg in phpEmbedWithZts,
-      # phpPackageZts above stops matching and nix quietly compiles a second
-      # php. Comparing what frankenphp actually embeds against what we PATH
-      # turns that into an eval failure the flake checks catch.
+      # Deliberately NOT `frankenphp.override { inherit php; }`: that only
+      # changes which php.ini the binary symlinks, yet rebuilds the whole Go
+      # binary (plus a 300M+ go-modules fetch) on every nixpkgs bump. Since
+      # phpPackageZts matches phpEmbedWithZts arg-for-arg, the *cached*
+      # frankenphp already embeds our exact libphp — it just needs pointing at
+      # our extensions, which PHP_INI_SCAN_DIR does. --set beats the
+      # --set-default in nixpkgs' own wrapper.
+      #
+      # The assert is the load-bearing part: if nixpkgs adds or changes an arg
+      # in phpEmbedWithZts, our php stops being the one frankenphp embeds and
+      # the extensions would be ABI-mismatched. Fail eval instead.
       frankenphp =
-        let
-          fp = pkgs.frankenphp.override { inherit php; };
-        in
-        assert fp.php.drvPath == php.drvPath;
-        fp;
+        assert pkgs.frankenphp.php.unwrapped.drvPath == phpPackageZts.unwrapped.drvPath;
+        pkgs.symlinkJoin {
+          name = "frankenphp-${pkgs.frankenphp.version}";
+          paths = [ pkgs.frankenphp ];
+          nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/frankenphp --set PHP_INI_SCAN_DIR ${php}/lib
+          '';
+        };
 
       # php-fpm wrapper so `php-fpm` defaults to ~/.config/php/php-fpm.conf
       # without forcing the user to pass -y every invocation. An explicit
