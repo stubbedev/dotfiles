@@ -67,17 +67,8 @@ _: {
         zendMaxExecutionTimersSupport = pkgs.stdenv.hostPlatform.isLinux;
       };
 
-      # xberg (Rust/ext-php-rs, out-of-tree) can't ride the nixpkgs extension
-      # set — php.override { packageOverrides = ... } silently drops the
-      # overlay on the buildEnv passthru chain in current nixpkgs — so it's
-      # built explicitly against the base php and appended to the buildEnv.
-      # ext-php-rs picks up ZTS from whatever php-config it's pointed at.
-      xberg = pkgs.callPackage ./_php-xberg.nix { php = phpPackageZts; };
-
       php = phpPackageZts.buildEnv {
-        extensions =
-          { all, ... }:
-          builtins.attrValues (removeAttrs all excludedExts) ++ [ xberg ];
+        extensions = { all, ... }: builtins.attrValues (removeAttrs all excludedExts);
         extraConfig = extraIni;
       };
 
