@@ -8,17 +8,14 @@ _: {
     }:
     let
       # === Knobs ============================================================
-      # phpPackage         — switch the major version here (e.g. pkgs.php83).
-      # sharedExcludedExts — broken / proprietary / conflicting; excluded
-      #                      everywhere.
-      # phpExcludedExts    — extensions excluded from the CLI/FPM build.
-      # frankenphpExcludedExts — extensions excluded from the FrankenPHP build
-      #                          (ZTS, embedded SAPI). Anything that doesn't
-      #                          support ZTS lands here.
-      # extraIni           — runtime limits applied to every SAPI.
+      # phpPackage   — switch the major version here (e.g. pkgs.php83).
+      # excludedExts — broken / proprietary / conflicting / non-ZTS; excluded
+      #                everywhere. One build serves CLI, FPM and FrankenPHP,
+      #                so anything that can't ride ZTS lands here.
+      # extraIni     — runtime limits applied to every SAPI.
       phpPackage = pkgs.php84;
 
-      sharedExcludedExts = [
+      excludedExts = [
         "blackfire" # proprietary, requires license
         "couchbase" # broken
         "datadog_trace" # broken
@@ -34,11 +31,6 @@ _: {
         "openswoole" # conflicts with swoole
         "xml" # statically compiled into PHP base; loading as shared ext warns
         "snuffleupagus" # security hardening; needs a config to be useful
-      ];
-
-      phpExcludedExts = sharedExcludedExts;
-
-      frankenphpExcludedExts = sharedExcludedExts ++ [
         "memprof" # ZTS not supported (memprof.c #error)
       ];
 
@@ -60,60 +52,56 @@ _: {
       '';
 
       # === Builders =========================================================
-      # buildEnv preserves both the chosen extensions and the override chain
-      # (mkBuildEnv uses lib.makeOverridable), so frankenphp's internal
-      # `php.override { embedSupport = true; ztsSupport = true; ... }` re-
-      # applies on top of our extension-laden php without losing the list.
-      pickExtensions =
-        excluded:
-        { all, ... }:
-        builtins.attrValues (removeAttrs all excluded);
+      # ONE php build serves CLI, FPM and FrankenPHP. phpPackageZts replicates
+      # frankenphp's internal override *exactly* (pkgs/by-name/fr/frankenphp:
+      # phpEmbedWithZts) so its re-override on our buildEnv is a genuine no-op
+      # — buildEnv preserves the extension list and the override chain
+      # (mkBuildEnv uses lib.makeOverridable), so frankenphp ends up embedding
+      # the very same store path we put on PATH. Diverge on any of these args
+      # and nix silently compiles a second php.
+      phpPackageZts = phpPackage.override {
+        embedSupport = true;
+        ztsSupport = true;
+        staticSupport = pkgs.stdenv.hostPlatform.isDarwin;
+        zendSignalsSupport = false;
+        zendMaxExecutionTimersSupport = pkgs.stdenv.hostPlatform.isLinux;
+      };
 
       # xberg (Rust/ext-php-rs, out-of-tree) can't ride the nixpkgs extension
       # set — php.override { packageOverrides = ... } silently drops the
       # overlay on the buildEnv passthru chain in current nixpkgs — so it's
-      # built explicitly against each base php and appended per buildEnv.
+      # built explicitly against the base php and appended to the buildEnv.
       # ext-php-rs picks up ZTS from whatever php-config it's pointed at.
-      mkXberg = basePhp: pkgs.callPackage ./_php-xberg.nix { php = basePhp; };
+      xberg = pkgs.callPackage ./_php-xberg.nix { php = phpPackageZts; };
 
-      # Pre-apply the exact override frankenphp does internally
-      # (pkgs/by-name/fr/frankenphp: php.override { embedSupport; ztsSupport })
-      # so its re-override is a no-op and our appended ZTS xberg stays
-      # consistent with the php it's loaded into.
-      phpPackageZts = phpPackage.override {
-        embedSupport = true;
-        ztsSupport = true;
-      };
-
-      php = phpPackage.buildEnv {
-        extensions = args: pickExtensions phpExcludedExts args ++ [ (mkXberg phpPackage) ];
+      php = phpPackageZts.buildEnv {
+        extensions =
+          { all, ... }:
+          builtins.attrValues (removeAttrs all excludedExts) ++ [ xberg ];
         extraConfig = extraIni;
       };
 
-      phpForFrankenphp = phpPackageZts.buildEnv {
-        extensions = args: pickExtensions frankenphpExcludedExts args ++ [ (mkXberg phpPackageZts) ];
-        extraConfig = extraIni;
-      };
-
-      frankenphp = pkgs.frankenphp.override { php = phpForFrankenphp; };
+      # The assert is the whole point: frankenphp re-overrides whatever php it
+      # is handed, so if nixpkgs adds or changes an arg in phpEmbedWithZts,
+      # phpPackageZts above stops matching and nix quietly compiles a second
+      # php. Comparing what frankenphp actually embeds against what we PATH
+      # turns that into an eval failure the flake checks catch.
+      frankenphp =
+        let
+          fp = pkgs.frankenphp.override { inherit php; };
+        in
+        assert fp.php.drvPath == php.drvPath;
+        fp;
 
       # php-fpm wrapper so `php-fpm` defaults to ~/.config/php/php-fpm.conf
-      # without forcing the user to pass -y every invocation. Pass-through
-      # for explicit -y / --fpm-config so debugging configs stays easy.
-      phpFpmBin = pkgs.writeShellScriptBin "php-fpm" ''
-        cfg="''${XDG_CONFIG_HOME:-$HOME/.config}/php/php-fpm.conf"
-        case " $* " in
-          *" -y "*|*" --fpm-config "*) exec ${php}/bin/php-fpm "$@" ;;
-          *) exec ${php}/bin/php-fpm -y "$cfg" "$@" ;;
-        esac
-      '';
-
-      # Surface every php binary except php-fpm (replaced by phpFpmBin).
-      phpBins = pkgs.symlinkJoin {
-        name = "php-with-extensions-${phpPackage.version}";
-        paths = [ php ];
-        postBuild = "rm $out/bin/php-fpm";
-      };
+      # without forcing the user to pass -y every invocation. An explicit
+      # -y / --fpm-config still wins: php-fpm takes the *last* one given.
+      # hiPrio resolves the bin/php-fpm collision with php's own copy.
+      phpFpmBin = lib.hiPrio (
+        pkgs.writeShellScriptBin "php-fpm" ''
+          exec ${php}/bin/php-fpm -y "''${XDG_CONFIG_HOME:-$HOME/.config}/php/php-fpm.conf" "$@"
+        ''
+      );
 
       # Composer pinned to our extension-laden php so `composer install`
       # uses the same SAPI/extension set as the user's `php` invocations.
@@ -121,7 +109,11 @@ _: {
     in
     lib.mkIf config.features.php {
       home.packages = with pkgs; [
-        phpBins
+        # `php` on PATH is literally frankenphp's embedded interpreter — same
+        # store path, one build. Kept as the real CLI SAPI rather than a
+        # `frankenphp php-cli` shim: php-cli takes only `script.php [args]`
+        # and `-r`, and chokes on -d/-v/-m/-i/-a/stdin.
+        php
         phpFpmBin
         frankenphp
         composer
