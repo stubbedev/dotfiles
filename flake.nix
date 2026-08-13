@@ -108,6 +108,14 @@
     # store path misses the cache and rustc builds locally (same reason as
     # wayle/fenix above).
     pty-mcp.url = "github:stubbedev/pty-mcp";
+    # notmuch-mcp (stubbedev): search/read/tag mail over the local notmuch
+    # index (Go). Joins the `proxied` set in lib/mcp-servers.nix, gated on
+    # features.desktop — it shells out to the `notmuch` binary and reads the
+    # ~/.notmuch-config + maildir that modules/files/mail.nix only wires on a
+    # desktop host. Master + tags are pushed to nix.stubbe.dev/default built
+    # against its OWN flake.lock nixpkgs — don't follow ours or the store paths
+    # miss the cache.
+    notmuch-mcp.url = "github:stubbedev/notmuch-mcp";
     # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
     # Ships its own flake; we consume overlays.default (modules/overlays.nix).
     wayle = {

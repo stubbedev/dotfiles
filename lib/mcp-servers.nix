@@ -17,6 +17,7 @@
   nixMcp ? throw "lib/mcp-servers.nix: nixMcp store path required",
   dsMcp ? throw "lib/mcp-servers.nix: dsMcp store path required",
   ptyMcp ? throw "lib/mcp-servers.nix: ptyMcp store path required",
+  notmuchMcp ? throw "lib/mcp-servers.nix: notmuchMcp store path required",
   # Per-feature gates (mirror modules/features.nix). A server is wired only when
   # its backing tool/daemon is actually installed — otherwise we'd start a
   # systemd unit and advertise a client entry for a binary whose state/daemon is
@@ -25,6 +26,7 @@
   enableSrv ? true,
   enableTreeman ? true,
   enableChrome ? true,
+  enableMail ? true,
 }:
 let
   inherit (pkgs) lib;
@@ -333,7 +335,32 @@ let
         "rofi -dmenu -password -p sudo"
       ];
     };
-  };
+  }
+  # notmuch-mcp: search/read/tag the local notmuch mail index. Stdio behind the
+  # shared proxy — "shared" multiplexing is fine (each tool call is an
+  # independent notmuch invocation, no per-session state) and cwd-irrelevant
+  # (queries name the mail store, not the repo). Gated on enableMail
+  # (features.desktop): it shells out to `notmuch`, which only lands in
+  # home.packages on a desktop host (modules/packages/cli/mail.nix), and reads
+  # the maildir/index that modules/files/mail.nix wires there.
+  #
+  # No env: notmuch falls back to the legacy ~/.notmuch-config, which mail.nix
+  # writes, when no XDG config exists — so the NOTMUCH_CONFIG sessionVariable
+  # (a shell-profile value the systemd user service never sees) is not needed.
+  # The `notmuch` binary comes off the proxy service's profileDirectory PATH.
+  # Attachments are written to ~/.cache/notmuch-mcp/attachments, never piped
+  # through the conversation.
+  //
+    lib.optionalAttrs enableMail {
+      notmuch-mcp = {
+        host = "127.0.0.1";
+        port = proxiedPort;
+        path = "/notmuch-mcp/mcp";
+        idleSec = 300;
+        command = notmuchMcp;
+        args = [ ];
+      };
+    };
 
   # Per-window stdio servers, loaded everywhere. Empty since srv/treeman became
   # shared HTTP daemons and the DB servers moved to `proxied`; kept as an
