@@ -350,17 +350,16 @@ let
   # The `notmuch` binary comes off the proxy service's profileDirectory PATH.
   # Attachments are written to ~/.cache/notmuch-mcp/attachments, never piped
   # through the conversation.
-  //
-    lib.optionalAttrs enableMail {
-      notmuch-mcp = {
-        host = "127.0.0.1";
-        port = proxiedPort;
-        path = "/notmuch-mcp/mcp";
-        idleSec = 300;
-        command = notmuchMcp;
-        args = [ ];
-      };
+  // lib.optionalAttrs enableMail {
+    notmuch-mcp = {
+      host = "127.0.0.1";
+      port = proxiedPort;
+      path = "/notmuch-mcp/mcp";
+      idleSec = 300;
+      command = notmuchMcp;
+      args = [ ];
     };
+  };
 
   # Per-window stdio servers, loaded everywhere. Empty since srv/treeman became
   # shared HTTP daemons and the DB servers moved to `proxied`; kept as an
