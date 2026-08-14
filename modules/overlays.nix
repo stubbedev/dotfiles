@@ -93,11 +93,26 @@ let
     ];
   };
 
+  # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so its glib
+  # finds no gvfs client module and every dav:// / smb:// / mtp:// URI fails with
+  # "Operation not supported" - on non-NixOS hosts nothing else exports the
+  # variable, and pcmanfm-mounts.nix installs gvfs without pointing at it.
+  # wrapGAppsHook3 appends the module dir of any buildInput that ships one, so
+  # listing gvfs bakes the path into the binary whatever launches it (rofi,
+  # .desktop, shell). On NixOS services.gvfs already sets the variable
+  # session-wide; the baked prefix is the same directory.
+  pcmanfmGvfsOverlay = _final: prev: {
+    pcmanfm = prev.pcmanfm.overrideAttrs (old: {
+      buildInputs = (old.buildInputs or [ ]) ++ [ prev.gvfs ];
+    });
+  };
+
 in
 {
   flake.overlays = {
     nixgl = nixglOverlay;
     cship = cshipOverlay;
+    pcmanfm-gvfs = pcmanfmGvfsOverlay;
     # wayle ships its own flake. Use its prebuilt package (from the
     # nix.stubbe.dev/wayle binary cache) rather than overlays.default:
     # that overlay rebuilds via `prev.callPackage` against OUR nixpkgs, whose
