@@ -115,14 +115,30 @@ restart_wireplumber() {
 # react() reads the lid state from /proc and handles both directions
 # (close -> disable eDP, open -> apply_reload re-enables it), so every
 # toggle just calls react() regardless of the reported state.
+#
+# The same stream also carries the touchpad's own resume. Closing the lid makes
+# libinput suspend the i2c-hid pad; it is re-added on lid open *after* the
+# switch toggle, so the apply_reload triggered by the toggle lands too early and
+# the per-device block (src/hypr/hyprland.lua hl.device{ scroll_method = "2fg" })
+# is dropped when the pad comes back — cursor moves, two-finger scroll dead.
+# --verbose surfaces libinput's own "lid: resume touchpad" debug line, which is
+# the actual "pad is live again" edge, so reload on that instead of guessing a
+# settle delay. Same reason applies after an undock that never rebinds the
+# driver (thinkpad_acpi port-replicator undock emits no DRM hotplug and no
+# thunderbolt remove, so touchpad-rebind.service never runs).
 listen_lid() {
   command -v libinput >/dev/null 2>&1 || return 0
   # Respawn if libinput exits, so a transient backend hiccup doesn't
   # silently kill lid handling for the rest of the session.
   while true; do
-    stdbuf -oL libinput debug-events 2>/dev/null \
-      | grep --line-buffered -iE 'switch_toggle.*lid' \
-      | while IFS= read -r _; do react; done
+    stdbuf -oL libinput debug-events --verbose 2>/dev/null \
+      | grep --line-buffered -iE 'switch_toggle.*lid|lid: resume touchpad' \
+      | while IFS= read -r line; do
+        case "$line" in
+        *"resume touchpad"*) apply_reload ;;
+        *) react ;;
+        esac
+      done
     sleep 2
   done
 }
