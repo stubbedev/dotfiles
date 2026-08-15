@@ -128,6 +128,11 @@ _: {
         # This causes crashes when LD_LIBRARY_PATH contains nixGL NVIDIA drivers
         pavucontrol-wrapped
 
+        # Ebook reader (Tauri/WebKitGTK GUI app).
+        # mkWrappedPackage for the same reason as mpv/imv: keep readest.desktop
+        # + icons on XDG_DATA_DIRS so it shows in rofi on non-NixOS.
+        (homeLib.mkWrappedPackage { pkg = readest; })
+
         # Office suite (GUI app)
         # mkWrappedPackage (not bare gfx): keeps the writer/calc/impress/… .desktop
         # files + icons on XDG_DATA_DIRS so they show in rofi on non-NixOS.
