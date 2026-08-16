@@ -30,6 +30,28 @@ vim.filetype.add({
 -- src/alacritty/alacritty.toml so neovide and alacritty render the same.
 vim.o.guifont = "JetBrainsMono Nerd Font:h12"
 
+if vim.g.neovide then
+  -- Neovide blends glyphs gamma-corrected, so the same catppuccin hexes look
+  -- washed out next to alacritty. Values from neovide's docs for emulating
+  -- alacritty's font rendering.
+  vim.g.neovide_text_gamma = 0.8
+  vim.g.neovide_text_contrast = 0.1
+end
+
+-- :terminal ANSI palette. catppuccin ships term_colors = false, so without
+-- this nvim's builtin terminal falls back to the default ANSI colors -- fine
+-- under alacritty (its own palette wins), wrong under neovide. Values are
+-- src/alacritty/catppuccin-mocha.toml verbatim; catppuccin-nvim's own mapping
+-- picks different shades for 0/6/7/8/15.
+for i, color in ipairs({
+  "#45475a", "#f38ba8", "#a6e3a1", "#f9e2af", -- black red green yellow
+  "#89b4fa", "#f5c2e7", "#94e2d5", "#bac2de", -- blue magenta cyan white
+  "#585b70", "#f38ba8", "#a6e3a1", "#f9e2af", -- bright black red green yellow
+  "#89b4fa", "#f5c2e7", "#94e2d5", "#a6adc8", -- bright blue magenta cyan white
+}) do
+  vim.g["terminal_color_" .. (i - 1)] = color
+end
+
 -- Folding
 vim.opt.foldlevel = 99
 vim.opt.foldtext = "v:lua.require'lazyvim.util'.ui.foldtext()"

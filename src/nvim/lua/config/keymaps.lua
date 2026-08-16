@@ -30,6 +30,11 @@ map("n", "<leader>ba", delete_other_buffers, { desc = "Delete Other Buffers Exce
 map("n", "<leader>ur", "<cmd>nohlsearch<cr>", { desc = "Clear search highlighting" })
 map("n", "gx", function() vim.ui.open(vim.fn.expand("<cfile>")) end, { desc = "Open with system app" })
 
+-- Leave terminal mode. Not <esc><esc>: zsh-vim-mode owns <esc>, and the
+-- mapping would swallow the second one and delay the first by timeoutlen.
+-- Alacritty already sends <C-space> as CSI u, so this works in both GUIs.
+map("t", "<C-space>", "<C-\\><C-n>", { desc = "Enter normal mode" })
+
 -- Snacks terminal is disabled; remove the keymaps LazyVim registers globally
 pcall(vim.keymap.del, "n", "<leader>ft")
 pcall(vim.keymap.del, "n", "<leader>fT")
