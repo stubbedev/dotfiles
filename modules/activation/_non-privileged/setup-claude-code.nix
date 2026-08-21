@@ -85,9 +85,14 @@
               refreshInterval = 5;
             };
             includeCoAuthoredBy = false;
+            # Retention sweep for ~/.claude/{projects,tasks,shell-snapshots,
+            # backups}. Default is 30 days; 14 keeps ~/.claude/projects (500 MB
+            # over 400+ transcripts) in check. Deliberately unconditional — an
+            # older session is not worth keeping even if it was /rename'd.
+            cleanupPeriodDays = 14;
             tui = "fullscreen";
             editorMode = "vi";
-            model = "claude-opus-5";
+            model = "claude-opus-5[1m]";
             # Use the PHPantom language server for .php instead of the
             # official php-lsp plugin. Local marketplace lives in the
             # live src checkout; the phpantom_lsp binary is on PATH via
