@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 CLAUDE_WINDOW_NAME="claude"
+PINNED_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/tmux/pinned"
 
 toggle_window() {
   local window_name="$1"
@@ -17,6 +18,13 @@ toggle_window() {
   fi
 
   if tmux select-window -t "=$window_name" 2>/dev/null; then
+    # A resurrected window keeps its name but not its program: resurrect only
+    # re-runs whitelisted processes, so lazygit/sysmon/claude come back as a
+    # bare shell. Respawn so the toggle still lands on a live pane.
+    if [ "$#" -gt 0 ] &&
+      [ "$(tmux display-message -p '#{pane_current_command}')" = "$(basename "$(tmux show-option -gv default-shell)")" ]; then
+      tmux respawn-pane -k "$@"
+    fi
     return
   fi
 
@@ -198,6 +206,36 @@ toggle_pin() {
   fi
 }
 
+# resurrect carries over no pane options, so @pinned — and with it the
+# double-tap guard on M-q/M-Q — would silently vanish on restore. Dumped from
+# resurrect's post-save-all hook and replayed from post-restore-all, so the
+# session/window/pane keys always match the snapshot resurrect wrote.
+save_pins() {
+  mkdir -p "${PINNED_STATE%/*}"
+  tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}' |
+    sed -n 's/^1	//p' > "$PINNED_STATE.tmp"
+  mv "$PINNED_STATE.tmp" "$PINNED_STATE"
+}
+
+restore_pins() {
+  [ -f "$PINNED_STATE" ] || return 0
+  local sess win pane
+  while IFS=$'\t' read -r sess win pane; do
+    [ -n "$pane" ] || continue
+    tmux set -p -t "=$sess:$win.$pane" @pinned 1 2>/dev/null || true
+  done < "$PINNED_STATE"
+}
+
+# Continuum only polls once a minute; detaching or killing the server is the
+# usual prelude to a reboot, so flush the state right then instead of betting
+# on the next tick.
+save_state() {
+  local save_script
+  save_script=$(tmux show-option -gv @resurrect-save-script-path 2>/dev/null)
+  [ -n "$save_script" ] || return 0
+  "$save_script" quiet >/dev/null 2>&1
+}
+
 kill_pane() {
   local pending pane_id window_id
 
@@ -251,6 +289,7 @@ kill_server_confirm() {
   local pending
   pending=$(tmux show-option -gv @kill_server_pending 2>/dev/null)
   if [ "$pending" = "1" ]; then
+    save_state
     tmux kill-server
     return
   fi
@@ -284,6 +323,13 @@ toggle_mark_join() {
   fi
 }
 
+# tmux runs status strings through strftime and then format expansion, but the
+# values it substitutes in (#W, #() output) are inserted literally and never
+# re-scanned — checked against the drawn bar, where a window named 'a#Sb' draws
+# as 'a#Sb' and a '%H' in a name stays '%H'. So any already-substituted text
+# this function feeds back through either pass has to be escaped ('#'->'##',
+# '%'->'%%') or the label mutates mid-animation: a window named 'a#Sb' would
+# flash the session name, '50%H' the current hour.
 pending_animation() {
   local pane_id="$1"
   local win_id="$2"
@@ -296,14 +342,38 @@ pending_animation() {
   pane)   flag_scope=-p ; flag_target="$pane_id" ; flag_name=@kill_pane_pending ;;
   window) flag_scope=-w ; flag_target="$win_id"  ; flag_name=@kill_window_pending ;;
   esac
-  trap "tmux set -wu -t '$win_id' window-status-current-format 2>/dev/null; \
-        tmux set $flag_scope -t '$flag_target' $flag_name 0 2>/dev/null" EXIT INT TERM
+  # %q the interpolated values: the trap body is eval'd after the function has
+  # returned, so the locals are gone and they cannot be expanded lazily.
+  local restore
+  printf -v restore 'tmux set -wu -t %q window-status-current-format 2>/dev/null; tmux set %s -t %q %s 0 2>/dev/null' \
+    "$win_id" "$flag_scope" "$flag_target" "$flag_name"
+  trap "$restore" EXIT INT TERM
 
   shopt -s extglob
   local raw base_style template
   raw=$(tmux show-options -gqv window-status-current-format)
   [[ "$raw" =~ ^(#\[[^]]*\]) ]] && base_style="${BASH_REMATCH[1]}"
   template="${raw//#\[*([^]])\]/}"
+
+  # display-message expands #{...} but silently drops #(...) — only the
+  # status-line draw loop runs those jobs. Left unresolved, the frozen frames
+  # lose whatever the jobs contribute (the branch ticket), so tapping M-q/M-Q
+  # visibly shortens the label before the bar snaps back. Run them here.
+  # Built left to right rather than by substitution, so job output that itself
+  # looks like a job can never be re-scanned.
+  local rest="$template" expanded="" pre job out
+  while [[ "$rest" == *'#('* ]]; do
+    pre="${rest%%#(*}"
+    rest="${rest#*#(}"
+    job="${rest%%)*}"
+    rest="${rest#*)}"
+    out=$(eval "$(tmux display-message -p -t "$win_id" "$job")" 2>/dev/null)
+    # Only '%' is escaped here. The bar re-scans job output for '#' directives
+    # but does not strftime it; display-message does both, so escaping '#' too
+    # would freeze a literal '#S' where the bar had already resolved it.
+    expanded+="$pre${out//%/%%}"
+  done
+  template="$expanded$rest"
 
   local rendered
   rendered=$(tmux display-message -p -t "$win_id" "$template")
@@ -312,6 +382,16 @@ pending_animation() {
   while IFS= read -r c; do
     chars+=("$c")
   done < <(LC_ALL=C.UTF-8 grep -o . <<<"$rendered")
+
+  # Escaped once up front, and by parameter expansion rather than a subshell:
+  # the frames are rebuilt every tick, so anything per-char here multiplies out.
+  # chars stays unescaped — it still counts rendered cells, which the fill walks.
+  local -a esc=()
+  local n
+  for n in "${chars[@]}"; do
+    n="${n//#/##}"
+    esc+=("${n//%/%%}")
+  done
 
   local per_cell total=${#chars[@]}
   if (( total == 0 )); then
@@ -326,7 +406,7 @@ pending_animation() {
     frame=""
     for ((j = 0; j < total; j++)); do
       ((j < i)) && style="$fill_style" || style="$base_style"
-      frame+="${style}${chars[$j]}"
+      frame+="${style}${esc[$j]}"
     done
     tmux set -wt "$win_id" window-status-current-format "$frame" 2>/dev/null
     sleep "$per_cell"
@@ -339,9 +419,12 @@ pending_animation() {
 
 reload_animation() {
   local chars=("⡿" "⣟" "⣯" "⣷" "⣾" "⣽" "⣻" "⢿")
-  local original
-  original=$(tmux show-option -gv status-left 2>/dev/null)
-  trap "tmux set -g status-left '$original' 2>/dev/null" EXIT INT TERM
+  local original restore
+  original=$(tmux show-option -gqv status-left)
+  # %q, so a theme string containing a quote cannot break out of the restore
+  # command and leave status-left wiped.
+  printf -v restore 'tmux set -g status-left %q 2>/dev/null' "$original"
+  trap "$restore" EXIT INT TERM
 
   local n=${#chars[@]}
   local total=$((n * 2))
@@ -481,6 +564,9 @@ move_pane_to_window() {
 
 case "$1" in
 "toggle_pin")               toggle_pin ;;
+"save_pins")                save_pins ;;
+"restore_pins")             restore_pins ;;
+"save_state")               save_state ;;
 "kill_pane")                kill_pane ;;
 "kill_window")              kill_window ;;
 "kill_server_confirm")      kill_server_confirm ;;
