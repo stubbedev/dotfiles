@@ -1,5 +1,5 @@
 _: {
-  # Reclaim the two dev-artifact sinks that silently balloon /:
+  # Reclaim the dev-artifact sinks that silently balloon /:
   #
   #   1. Docker — build cache, dangling images, *anonymous* volumes, and
   #      orphaned buildx builder state. These regularly grow into the
@@ -19,6 +19,15 @@ _: {
   #      reached 166 GB here. We remove only targets not touched in 30 days
   #      (next `cargo build` rebuilds them), and only when a sibling
   #      Cargo.toml confirms it really is a cargo build dir.
+  #
+  #   3. Claude Code session transcripts in ~/.claude/projects — one .jsonl
+  #      per session, ~500 MB across 400+ files. Claude Code's own
+  #      `cleanupPeriodDays` sweep would do this, but it cannot tell a
+  #      session you deliberately named from a throwaway one. So we prune at
+  #      14 days and exempt any transcript holding a `custom-title` record
+  #      (written by `/rename`) — an explicit name means keep it. Only
+  #      depth-2 *.jsonl files are touched, never the `memory/` and `cship/`
+  #      sibling dirs that also live under a project.
   #
   # Weekly, low priority (Nice + idle IO) so it never competes with
   # interactive work. Docker steps are gated on features.docker.
@@ -55,6 +64,21 @@ _: {
               fi
             done
 
+        # --- Claude Code: stale, unnamed session transcripts ------------
+        # mtime +14 and no custom-title record. mtime tracks appends, so a
+        # resumed session keeps resetting its own clock. maxdepth 2 keeps us
+        # to <project>/<uuid>.jsonl and out of memory/ and cship/.
+        "$find" "$HOME/.claude/projects" -mindepth 2 -maxdepth 2 -type f -name '*.jsonl' -mtime +14 -print0 2>/dev/null \
+          | while IFS= read -r -d "" f; do
+              if ! "$grep" -qF '"type":"custom-title"' "$f"; then
+                echo "rm stale session: $f"
+                # `<uuid>/subagents/` sidecars belong to this session and
+                # would orphan without it, so they go with the parent — and
+                # inherit its custom-title exemption for free.
+                rm -rf "$f" "''${f%.jsonl}"
+              fi
+            done
+
         ${lib.optionalString dockerEnabled ''
           docker="$(command -v docker || true)"
           if [ -n "$docker" ]; then
@@ -86,7 +110,7 @@ _: {
     in
     {
       systemd.user.services.dev-cleanup = {
-        Unit.Description = "Prune dev build artifacts (cargo targets, docker cache/volumes)";
+        Unit.Description = "Prune dev build artifacts (cargo targets, docker cache/volumes, stale Claude sessions)";
         Service = {
           Type = "oneshot";
           ExecStart = "${cleanupScript}";
