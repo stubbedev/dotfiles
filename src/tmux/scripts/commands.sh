@@ -18,9 +18,9 @@ toggle_window() {
   fi
 
   if tmux select-window -t "=$window_name" 2>/dev/null; then
-    # A resurrected window keeps its name but not its program: resurrect only
-    # re-runs whitelisted processes, so lazygit/sysmon/claude come back as a
-    # bare shell. Respawn so the toggle still lands on a live pane.
+    # A restored window can still land on a bare shell — lazy-tmux replays the
+    # pane command, but an older snapshot (or a denied command) leaves the
+    # shell. Respawn so the toggle always lands on a live pane.
     if [ "$#" -gt 0 ] &&
       [ "$(tmux display-message -p '#{pane_current_command}')" = "$(basename "$(tmux show-option -gv default-shell)")" ]; then
       tmux respawn-pane -k "$@"
@@ -204,12 +204,14 @@ toggle_pin() {
   else
     tmux set -p -t "$pane_id" @pinned 1
   fi
+  save_pins
 }
 
-# resurrect carries over no pane options, so @pinned — and with it the
-# double-tap guard on M-q/M-Q — would silently vanish on restore. Dumped from
-# resurrect's post-save-all hook and replayed from post-restore-all, so the
-# session/window/pane keys always match the snapshot resurrect wrote.
+# lazy-tmux carries over no pane options, so @pinned — and with it the
+# double-tap guard on M-q/M-Q — would silently vanish on restore. Dumped on
+# every toggle_pin (the only place @pinned changes) and replayed by
+# tmux-pick-project after a wakeup; the session/window/pane keys survive
+# because lazy-tmux restores windows and panes at their saved indices.
 save_pins() {
   mkdir -p "${PINNED_STATE%/*}"
   tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}' |
@@ -226,14 +228,32 @@ restore_pins() {
   done < "$PINNED_STATE"
 }
 
-# Continuum only polls once a minute; detaching or killing the server is the
-# usual prelude to a reboot, so flush the state right then instead of betting
-# on the next tick.
+# The lazy-tmux daemon only ticks every few minutes; detaching or killing the
+# server is the usual prelude to a reboot, so flush the snapshots right then
+# instead of betting on the next tick. Scrollback settings come from
+# ~/.config/lazy-tmux/lazy-tmux.toml.
 save_state() {
-  local save_script
-  save_script=$(tmux show-option -gv @resurrect-save-script-path 2>/dev/null)
-  [ -n "$save_script" ] || return 0
-  "$save_script" quiet >/dev/null 2>&1
+  command -v lazy-tmux >/dev/null 2>&1 || return 0
+  lazy-tmux save --all >/dev/null 2>&1
+}
+
+# Close a session without losing it: snapshot first (scrollback settings come
+# from lazy-tmux.toml), then let lazy-tmux kill it. The client is moved to
+# another session first — detach-on-destroy would otherwise drop it to the bare
+# terminal. `tmux-pick-session` (M-d in zsh) lists it as sleeping afterwards.
+sleep_session() {
+  local current other
+  if ! command -v lazy-tmux >/dev/null 2>&1; then
+    return 0
+  fi
+
+  current=$(tmux display-message -p '#S')
+  other=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -vxF "$current" | head -1)
+  [ -n "$other" ] && tmux switch-client -t "=$other"
+
+  if ! lazy-tmux sleep --session "$current" >/dev/null 2>&1; then
+    tmux display-message "lazy-tmux: could not sleep $current"
+  fi
 }
 
 kill_pane() {
@@ -567,6 +587,7 @@ case "$1" in
 "save_pins")                save_pins ;;
 "restore_pins")             restore_pins ;;
 "save_state")               save_state ;;
+"sleep_session")            sleep_session ;;
 "kill_pane")                kill_pane ;;
 "kill_window")              kill_window ;;
 "kill_server_confirm")      kill_server_confirm ;;

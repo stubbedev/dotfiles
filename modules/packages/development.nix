@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ ... }:
 {
   flake.modules.homeManager.packagesDevelopment =
     {
@@ -9,13 +9,7 @@
       ...
     }:
     lib.mkIf config.features.development {
-      home.packages = [
-        # nub: TS-first node runner + pnpm-compatible installer + node version
-        # manager, from its own flake (nixpkgs has no `nub`). One output ships
-        # both bin/nub and the bin/nubx symlink.
-        inputs.nub.packages.${pkgs.stdenv.hostPlatform.system}.nub
-      ]
-      ++ (with pkgs; [
+      home.packages = with pkgs; [
         # JavaScript/TypeScript runtimes (CLI tools)
         # nodejs_24 not bare nodejs: kontainer pins engines.node 24.x and
         # yarn 1 hard-fails install on mismatch; yarn must run under the
@@ -71,6 +65,6 @@
         (lib.setPrio 15 clang)
         sccache
         cargo-sweep
-      ]);
+      ];
     };
 }

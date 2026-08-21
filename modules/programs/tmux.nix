@@ -7,56 +7,81 @@ _: {
       pkgs,
       ...
     }:
+    let
+      # lazy-tmux replaces resurrect+continuum: it snapshots window names,
+      # layouts, pane commands and shell scrollback, and restores *one* session
+      # on demand (`wakeup --session`) instead of every session at server
+      # start. Its claude integration records the Claude Code session id and
+      # restores the pane as `claude --resume <id>`, so Alt+f on a repo brings
+      # the conversation back instead of a fresh one.
+      #
+      # Not in nixpkgs and upstream ships no flake, so pin the release tarball
+      # — a statically linked Go binary, nothing to compile. Bumping = new
+      # version + that release's sha256 from its checksums.txt; hm's
+      # bump_release_pins only rewrites `github:owner/repo/tag` flake inputs,
+      # so this pin is manual. x86_64-linux only, which is every host here.
+      lazy-tmux = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
+        pname = "lazy-tmux";
+        version = "0.2.1";
+        src = pkgs.fetchurl {
+          url = "https://github.com/alchemmist/lazy-tmux/releases/download/v${finalAttrs.version}/lazy-tmux_linux_amd64.tar.gz";
+          sha256 = "ec3d100fd5d297f2f91660977692c24f238896ae265999b32aede8fd1e91c2fa";
+        };
+        # Tarball has no top-level directory (bin, LICENSE, README side by side).
+        sourceRoot = ".";
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 lazy-tmux $out/bin/lazy-tmux
+          runHook postInstall
+        '';
+        meta = {
+          description = "Lazy tmux session saver and restorer";
+          homepage = "https://lazy-tmux.xyz";
+          license = lib.licenses.mit;
+          mainProgram = "lazy-tmux";
+          platforms = [ "x86_64-linux" ];
+        };
+      });
+    in
     lib.mkIf config.features.desktop {
       home.file.".config/tmux/scripts/commands.sh" = {
         source = self + "/src/tmux/scripts/commands.sh";
         executable = true;
       };
 
+      # Single source of truth for save behaviour: the daemon, `save_state` on
+      # detach and the Alt+f restore path all read this instead of repeating
+      # flags at every call site. scrollback is opt-in upstream. 1m matches the
+      # old @continuum-save-interval and costs ~36K for every live session with
+      # 10k lines of scrollback, so the interval is not worth stretching.
+      home.file.".config/lazy-tmux/lazy-tmux.toml".text = ''
+        save_interval = "1m"
+
+        [scrollback]
+        enabled = true
+        lines = 10000
+      '';
+
+      home.packages = [ lazy-tmux ];
+
       programs.tmux = {
         enable = true;
         sensibleOnTop = true;
-        # Home Manager emits plugins *before* extraConfig, so the theme block
-        # in tmux.conf wins on any option both set — see the status-right
-        # re-attach at the end of this list.
         extraConfig = builtins.readFile (self + "/src/tmux/tmux.conf") + ''
 
           # ==============================================
-          # Continuum auto-save hook
+          # lazy-tmux autosave daemon
           # ==============================================
-          # Continuum polls for save work through an interpolation it prepends
-          # to status-right at plugin load. The theme block above assigns
-          # status-right outright and drops it, which is why saves only ever
-          # happened by hand. Re-attach it here; the match guard keeps M-r
-          # reloads (which re-source this file) from stacking copies, and the
-          # string is byte-identical to continuum's so the plugin's own
-          # idempotence check sees it too.
-          if -F "#{==:#{m:*continuum_save.sh*,#{status-right}},0}" \
-            "set -ag status-right '#(${pkgs.tmuxPlugins.continuum}/share/tmux-plugins/continuum/scripts/continuum_save.sh)'"
+          # Started per tmux server, killed with it. The daemon flocks a file
+          # keyed by the tmux socket path, so re-sourcing this file on M-r
+          # exits non-zero instead of stacking a second daemon — hence the
+          # `|| true`. Interval and scrollback come from lazy-tmux.toml.
+          run-shell -b '${lazy-tmux}/bin/lazy-tmux daemon >/dev/null 2>&1 || true'
+
+          # Saved-session picker (includes sessions that are not running).
+          bind -n M-o display-popup -B -w 70% -h 75% -E '${lazy-tmux}/bin/lazy-tmux picker'
         '';
-        plugins = with pkgs.tmuxPlugins; [
-          yank
-          {
-            plugin = resurrect;
-            extraConfig = ''
-              set -g @resurrect-capture-pane-contents 'on'
-              # Hook values are bash-eval'd by resurrect, so $HOME expands at
-              # run time — no need for the @stubbe_commands format, which is
-              # only set further down in extraConfig.
-              set -g @resurrect-hook-post-save-all    '$HOME/.config/tmux/scripts/commands.sh save_pins'
-              set -g @resurrect-hook-post-restore-all '$HOME/.config/tmux/scripts/commands.sh restore_pins'
-            '';
-          }
-          {
-            # Must stay last: continuum reads resurrect's save/restore script
-            # paths, which resurrect only sets once loaded.
-            plugin = continuum;
-            extraConfig = ''
-              set -g @continuum-restore     'on'
-              set -g @continuum-save-interval '1'
-            '';
-          }
-        ];
+        plugins = with pkgs.tmuxPlugins; [ yank ];
       };
     };
 }

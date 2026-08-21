@@ -1392,26 +1392,6 @@
         "type": "github"
       }
     },
-    "nub": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1786829186,
-        "narHash": "sha256-AZj3oUjCEY3PLrkAAF2189sUo66s/3Xw3VM/z8OyjA0=",
-        "owner": "nubjs",
-        "repo": "nub",
-        "rev": "b1408409c9b36958daa6aa04e7b8ad4dd0b5db94",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nubjs",
-        "repo": "nub",
-        "type": "github"
-      }
-    },
     "phpantom_lsp": {
       "inputs": {
         "flake-utils": "flake-utils_6",
@@ -1545,7 +1525,6 @@
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_4",
         "notmuch-mcp": "notmuch-mcp",
-        "nub": "nub",
         "phpantom_lsp": "phpantom_lsp",
         "proxy-mcp": "proxy-mcp",
         "pty-mcp": "pty-mcp",
