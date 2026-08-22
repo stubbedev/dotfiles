@@ -15,33 +15,9 @@ _: {
       # restores the pane as `claude --resume <id>`, so Alt+f on a repo brings
       # the conversation back instead of a fresh one.
       #
-      # Not in nixpkgs and upstream ships no flake, so pin the release tarball
-      # — a statically linked Go binary, nothing to compile. Bumping = new
-      # version + that release's sha256 from its checksums.txt; hm's
-      # bump_release_pins only rewrites `github:owner/repo/tag` flake inputs,
-      # so this pin is manual. x86_64-linux only, which is every host here.
-      lazy-tmux = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
-        pname = "lazy-tmux";
-        version = "0.2.1";
-        src = pkgs.fetchurl {
-          url = "https://github.com/alchemmist/lazy-tmux/releases/download/v${finalAttrs.version}/lazy-tmux_linux_amd64.tar.gz";
-          sha256 = "ec3d100fd5d297f2f91660977692c24f238896ae265999b32aede8fd1e91c2fa";
-        };
-        # Tarball has no top-level directory (bin, LICENSE, README side by side).
-        sourceRoot = ".";
-        installPhase = ''
-          runHook preInstall
-          install -Dm755 lazy-tmux $out/bin/lazy-tmux
-          runHook postInstall
-        '';
-        meta = {
-          description = "Lazy tmux session saver and restorer";
-          homepage = "https://lazy-tmux.xyz";
-          license = lib.licenses.mit;
-          mainProgram = "lazy-tmux";
-          platforms = [ "x86_64-linux" ];
-        };
-      });
+      # The pin lives in _lazy-tmux.nix so modules/checks/tmux-session.nix can
+      # test against the same binary this installs.
+      lazy-tmux = pkgs.callPackage (self + "/modules/packages/_lazy-tmux.nix") { };
     in
     lib.mkIf config.features.desktop {
       home.file.".config/tmux/scripts/commands.sh" = {

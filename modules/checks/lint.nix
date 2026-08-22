@@ -79,6 +79,25 @@
           [ "$status" -eq 0 ]
           touch "$out"
         '';
+
+        # The other half of bin/: zsh scripts shellcheck refuses to read. `zsh
+        # -n` is only a parse, but it is the one check that runs over them at
+        # all, and it also covers the zsh files sourced into every shell —
+        # a syntax error there breaks login, not just one command.
+        lint-zsh-parse = pkgs.runCommand "lint-zsh-parse" { nativeBuildInputs = [ pkgs.zsh ]; } ''
+          status=0
+          for f in ${self}/bin/* ${self}/src/zsh/*; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.md | *.json) continue ;;
+            esac
+            if head -n1 "$f" | grep -q zsh || [ "''${f#${self}/src/zsh/}" != "$f" ]; then
+              zsh -n "$f" || { echo "zsh -n failed: $f" >&2; status=1; }
+            fi
+          done
+          [ "$status" -eq 0 ]
+          touch "$out"
+        '';
       };
     };
 }
