@@ -158,7 +158,7 @@
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
     # Pinned to release tag; bumped by `hm upgrade` (bump_release_pins).
     phpantom_lsp = {
-      url = "github:PHPantom-dev/phpantom_lsp/0.9.0";
+      url = "github:PHPantom-dev/phpantom_lsp/0.10.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Used by the installer ISO build for partitioning declaration.
