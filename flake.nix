@@ -151,7 +151,7 @@
     # pkgs.zsh-patina via modules/overlays.nix, activated in src/zsh/settings.
     # Pinned to release tag; bumped by `hm upgrade` (bump_release_pins).
     zsh-patina = {
-      url = "github:michel-kraemer/zsh-patina/1.9.0";
+      url = "github:michel-kraemer/zsh-patina/1.10.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # PHP language server (Rust). Ships its own flake; we consume
