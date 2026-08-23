@@ -1,8 +1,7 @@
 # Resolves flake-input store paths + feature gates, then imports the canonical
-# server definitions (lib/mcp-servers.nix). Both consumers call this so the
-# binary wiring lives in ONE place — add/rename a server once, not twice:
-#   modules/activation/_non-privileged/setup-claude-code.nix  (client entries)
-#   modules/home/mcp-services.nix                              (systemd units)
+# server definitions (lib/mcp-servers.nix). Every consumer calls this so the
+# binary wiring lives in ONE place. lib/mcp-client-configs.nix projects the
+# result 1:1 into Claude and Codex; mcp-services.nix builds the shared services.
 {
   self,
   inputs,

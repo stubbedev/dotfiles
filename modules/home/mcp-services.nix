@@ -1,16 +1,16 @@
 { self, inputs, ... }:
 {
   # Long-lived MCP servers run as shared systemd user services: each serves
-  # streamable HTTP on a loopback port, started once at login. Opening N Claude
-  # windows then costs no extra processes — every window is just an HTTP client
-  # (setup-claude-code.nix wires the matching `type = "http"` entries), so each
-  # loads once for the whole session.
+  # streamable HTTP on a loopback port, started once at login. Opening N agent
+  # windows then costs no extra processes — every window is just an HTTP
+  # client (lib/mcp-client-configs.nix wires the matching entries), so each loads
+  # once for the whole session.
   #
   # The login-time httpServices are safe to share as ONE process because none
   # depends on the service's working directory: atlassian/jenkins/sentry/srv/
   # treeman resolve the caller's repo from the per-request X-Repo-Root header
-  # (setup-claude-code.nix sets it to each window's launch dir), falling back to
-  # per-session MCP roots for clients that don't send it. That per-request
+  # (the shared client config sets it to each window's launch dir), falling back
+  # to per-session MCP roots for clients that don't send it. That per-request
   # isolation is why they are native HTTP rather than bridged through a
   # stdio→HTTP proxy (which would collapse all windows onto one upstream
   # session and lose roots).
@@ -32,7 +32,7 @@
       homeLib,
       ...
     }:
-    lib.mkIf config.features.claudeCode (
+    lib.mkIf (config.features.claudeCode || config.features.codex) (
       let
         system = pkgs.stdenv.hostPlatform.system;
         # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE=...), decrypted at
@@ -219,7 +219,7 @@
         # is a no-op when idle:
         #   - idle (stopped): no-op; the next connection cold-starts it on the new
         #     store paths + EnvironmentFile. Nothing to do.
-        #   - warm (an open Claude window holds live sessions): restart so config
+        #   - warm (an open agent window holds live sessions): restart so config
         #     changes (backend set, repoWhitelist, KONTAINER_REMOTE) take effect
         #     now, at the cost of dropping those live sessions.
         # The restart is NOT optional: the proxy is kept perpetually warm by the

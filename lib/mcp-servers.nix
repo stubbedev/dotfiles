@@ -3,7 +3,7 @@
   # Home directory, for building absolute --config paths in the work services.
   homeDir,
   # Absolute paths to the Go-built server binaries (flake inputs, passed by both
-  # setup-claude-code.nix and mcp-services.nix). The throw defaults are lazy: a
+  # client config and mcp-services.nix). The throw defaults are lazy: a
   # consumer that never forces the matching `httpServices.*` entry need not
   # supply them.
   jenkinsMcp ? throw "lib/mcp-servers.nix: jenkinsMcp store path required",
@@ -11,9 +11,8 @@
   atlassianMcp ? throw "lib/mcp-servers.nix: atlassianMcp store path required",
   srvMcp ? throw "lib/mcp-servers.nix: srvMcp store path required",
   treemanMcp ? throw "lib/mcp-servers.nix: treemanMcp store path required",
-  # Readonly DB servers, loaded as global stdio (see `global` below). Lazy
-  # throws: only setup-claude-code.nix forces `global`, so mcp-services.nix
-  # (which only touches httpServices/proxied) need not pass these.
+  # Stdio server binaries hosted behind the shared proxy below. The throw
+  # defaults stay lazy so a feature-gated entry does not require its package.
   nixMcp ? throw "lib/mcp-servers.nix: nixMcp store path required",
   dsMcp ? throw "lib/mcp-servers.nix: dsMcp store path required",
   ptyMcp ? throw "lib/mcp-servers.nix: ptyMcp store path required",
@@ -30,29 +29,28 @@
 }:
 let
   inherit (pkgs) lib;
-  # Canonical MCP server definitions, split by how each is loaded into Claude
-  # Code. Consumed by:
+  # Canonical MCP server definitions, split by how each is hosted. Consumed by:
   #   modules/home/mcp-services.nix
   #     - `httpServices` → one systemd user service per entry (the server serves
   #       HTTP itself; `env`/`args` configure it), started at login.
   #     - `proxied`      → a .socket + a socket-activated proxy-mcp service per
   #       entry (stdio→streamable-HTTP bridge), started on demand.
-  #   modules/activation/_non-privileged/setup-claude-code.nix
-  #     - `httpServices` + `proxied` → global type:"http" client entries.
-  #     - `global`       → top-level stdio entries.
+  #   lib/mcp-client-configs.nix
+  #     - `httpServices` + `proxied` → shared HTTP entries for Claude/Codex.
+  #     - `global`       → top-level stdio entries for Claude/Codex.
   #
   # The split follows two axes — how a server learns the caller's repo, and how
   # its process is best shared:
   #
   #
   #   httpServices  long-lived shared HTTP servers, one process each, started at
-  #                 login. Every Claude window is just an HTTP client, so opening
+  #                 login. Every agent window is just an HTTP client, so opening
   #                 N windows costs no extra process. All are safe to share as
   #                 one process because they are NOT tied to the process cwd:
   #                 atlassian/jenkins/sentry/srv/treeman are cwd-sensitive in
   #                     spirit, but they resolve the caller's repo/worktree from
   #                     the X-Repo-Root header each window sends (set to that
-  #                     window's launch dir in setup-claude-code.nix), not the
+  #                     window's launch dir via the shared client config), not the
   #                     server's cwd. So one shared server serves every worktree
   #                     correctly. Per-session MCP *roots* is the older path to
   #                     the same value and still works, but MCP 2026-07-28
@@ -72,7 +70,7 @@ let
   #   proxied       shared stdio servers fronted by ONE proxy-mcp
   #                 (stdio→streamable-HTTP) and started ON DEMAND via systemd
   #                 socket activation. chrome-devtools lives here: we want
-  #                 exactly ONE browser, so every Claude window is an HTTP client
+  #                 exactly ONE browser, so every agent window is an HTTP client
   #                 of one proxy-mcp that owns one `npx chrome-devtools-mcp` stdio
   #                 child (mode "shared": proxy-mcp multiplexes every window onto
   #                 one upstream session, so one browser). The accepted tradeoff
@@ -185,7 +183,7 @@ let
   # is served by the same proxy process on the same `proxiedPort`, distinguished
   # by `path` (/<name>/mcp); mcp-services.nix aggregates them into one config.
   #   host/port   the single shared loopback addr the one .socket listens on and
-  #               every Claude http client connects to. proxy-mcp adopts the
+  #               every agent HTTP client connects to. proxy-mcp adopts the
   #               socket fd directly (no private backend port). All entries share
   #               it; only `path` differs per server.
   #   path        the streamable-HTTP route proxy-mcp serves this server at:
@@ -220,7 +218,7 @@ let
   # on top of the per-source flag. Config decrypts from sops
   # (modules/files/mcp-secrets.nix) to ~/.config/ds-mcp/config.json.
   proxiedPort = 39105;
-  # jenkins/sentry are gated to ONE repo: only a Claude window whose workspace
+  # jenkins/sentry are gated to ONE repo: only an agent window whose workspace
   # git remote matches sees their tools. proxy-mcp's per-backend repoWhitelist
   # does the gating (matched against the client's remotes, normalized across
   # ssh/https and a trailing .git; fails closed for a client exposing no
@@ -229,9 +227,9 @@ let
   # window's MCP roots are relayed to a dedicated upstream session (a "shared"
   # session would collapse every window's roots onto one upstream, breaking
   # per-repo resolution). The proxied entry reuses the same attr key as its
-  # httpServices twin, so setup-claude-code.nix's `httpServers // proxiedServers`
-  # makes the gated proxy route WIN the client entry (the direct :391xx entry is
-  # overridden away). atlassian stays ungated (works in every repo).
+  # httpServices twin, so mcp-client-configs.nix's merge makes the gated proxy
+  # route WIN the client entry (the direct :391xx entry is overridden away).
+  # atlassian stays ungated (works in every repo).
   #
   # The remote itself is NOT hard-coded here (this repo is public): it is an
   # env-var placeholder proxy-mcp expands at runtime (--expand-env) from the
@@ -364,7 +362,7 @@ let
   # Per-window stdio servers, loaded everywhere. Empty since srv/treeman became
   # shared HTTP daemons and the DB servers moved to `proxied`; kept as an
   # explicit category so a future stdio-only server has an obvious home (and
-  # setup-claude-code.nix still maps it).
+  # mcp-client-configs.nix still maps it).
   global = { };
 in
 {
