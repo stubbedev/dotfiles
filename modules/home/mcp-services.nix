@@ -35,7 +35,8 @@
     lib.mkIf (config.features.claudeCode || config.features.codex) (
       let
         system = pkgs.stdenv.hostPlatform.system;
-        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE=..., KONFORM_HOST=...),
+        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE / KONTAINER_CMS_REMOTE /
+        # KONTAINER_SITE_REMOTE / KONFORM_HOST),
         # decrypted at
         # activation. Fed to mcp-proxy as an EnvironmentFile so the gated repo
         # remote never lands in this public repo or the world-readable store;
@@ -170,12 +171,13 @@
             Service = {
               Type = "notify";
               Environment = [ backendPath ];
-              # sops-decrypted KONTAINER_REMOTE + KONFORM_HOST, read at service start (kept out
+              # sops-decrypted repo-gate values (KONTAINER*_REMOTE + KONFORM_HOST),
+              # read at service start (kept out
               # of the store — unlike Environment=, which HM bakes into the unit).
               # Leading `-`: a missing/failed secret must NOT stop the whole proxy
-              # (chrome-devtools/ds/pty/nix share it) — instead the gate values stay
-              # unset, so jenkins/sentry's repoWhitelist expands to "" and fails
-              # closed (tools hidden), while the other backends keep serving.
+              # (pty/nix share it, ungated) — instead the gate values stay unset, so
+              # every gated backend's repoWhitelist expands to "" and fails closed
+              # (tools hidden), while the ungated backends keep serving.
               EnvironmentFile = "-${proxyEnvPath}";
               # --idle-timeout: exit after procIdleSec of NO requests to any
               # route; the socket re-activates on the next connection. Per-backend

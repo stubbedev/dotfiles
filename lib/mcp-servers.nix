@@ -161,12 +161,14 @@ let
   #               a real terminal) — see that file for the exact JSON.
   # chrome-devtools gated on enableChrome (features.browsers): it drives the
   # user's real Chrome over CDP, useless on a host with no browser installed.
+  # It is ALSO repo-gated (repoWhitelist, see its entry below) to the three web
+  # apps it is ever pointed at.
   # --autoConnect attaches to the already-running stable-channel Chrome instead
   # of launching its own (Chrome 144+; remote debugging must be enabled once in
   # chrome://inspect/#remote-debugging).
   #
   # ds-mcp (one readonly DB server for MySQL + MongoDB sources) joins the SAME
-  # proxy, ungated. proxied (not httpServices) is the right home precisely
+  # proxy (repo-gated too — see its entry). proxied (not httpServices) is the right home precisely
   # because of idle-exit — a source with an `ssh` block holds an SSH tunnel
   # open for the life of the backend, so a login-time httpService would keep
   # the staging tunnel up 24/7; here the tunnel (and the backend) die idleSec
@@ -198,6 +200,11 @@ let
   # → no entry resolves → proxy-mcp >= 0.0.22 gates every client out, so a
   # missing secret hides the tools rather than exposing them everywhere.
   kontainerRepo = "\${KONTAINER_REMOTE}";
+  # The two other frontend/app repos worth driving a browser against. Same
+  # placeholder scheme (values live in secrets/mcp-proxy-env), same fail-closed
+  # behaviour when unset.
+  kontainerCmsRepo = "\${KONTAINER_CMS_REMOTE}";
+  kontainerSiteRepo = "\${KONTAINER_SITE_REMOTE}";
   # A whitelist entry with no path component gates a whole git host: every repo
   # cloned from it matches, across ssh/https and regardless of port (proxy-mcp
   # >= 0.0.21). Set KONFORM_HOST to the bare hostname — a value WITH a path
@@ -229,6 +236,15 @@ let
       port = proxiedPort;
       path = "/chrome-devtools/mcp";
       idleSec = 300;
+      # Repo-gated like ds/jenkins/sentry: browser automation is only ever
+      # aimed at the three web apps, and everywhere else its 30-odd tools are
+      # pure schema noise. Gating is per DOWNSTREAM session (from the client's
+      # X-Repo-Root), so the one shared browser upstream is unaffected.
+      repoWhitelist = [
+        kontainerRepo
+        kontainerCmsRepo
+        kontainerSiteRepo
+      ];
       command = "npx";
       args = [
         "-y"
