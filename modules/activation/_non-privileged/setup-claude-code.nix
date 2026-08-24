@@ -21,6 +21,27 @@
       mcpClients = import (self + "/lib/mcp-client-configs.nix") {
         inherit lib servers;
       };
+
+      # PreToolUse hook: strip shell aliases from every agent-run command.
+      #
+      # Claude Code snapshots the user's zsh (aliases AND functions) into
+      # ~/.claude/shell-snapshots/ and sources it before every Bash call, so the
+      # agent inherits `cp -i` / `mv -i` / `rm -i` (which block on a y/n prompt
+      # nobody can answer) and TUI/pager substitutes like `ls`→eza. The hook
+      # rewrites tool_input.command via hookSpecificOutput.updatedInput, putting
+      # `unalias -a` on its OWN LINE ahead of the command: zsh expands aliases
+      # while parsing a line, so a `;`-joined `unalias -a` would come too late —
+      # the alias on that same line is already expanded.
+      #
+      # Aliases only. Shell FUNCTIONS survive on purpose: the useful CLI
+      # entrypoints here (hm, treeman, gwt, …) are functions, and killing those
+      # would break the commands the agent is supposed to run.
+      #
+      # No permissionDecision is emitted — updatedInput alone is honored, and
+      # returning "allow" here would auto-approve every Bash call.
+      noAliasesHook = pkgs.writeShellScript "claude-hook-no-aliases" ''
+        exec ${lib.getExe pkgs.jq} -c '{hookSpecificOutput:{hookEventName:"PreToolUse",updatedInput:(.tool_input+{command:("unalias -a 2>/dev/null\n"+.tool_input.command)})}}'
+      '';
     in
     {
       actionScript = ''
@@ -41,6 +62,21 @@
             cleanupPeriodDays = 14;
             tui = "fullscreen";
             editorMode = "vi";
+            # See noAliasesHook above. Matches the Bash tool and pty-mcp's
+            # one-shot `run` (same `command` field, same login-shell aliases);
+            # interactive pty sessions are left alone — a human may be driving
+            # them and wants their own aliases.
+            hooks.PreToolUse = [
+              {
+                matcher = "Bash|mcp__pty-mcp__run";
+                hooks = [
+                  {
+                    type = "command";
+                    command = "${noAliasesHook}";
+                  }
+                ];
+              }
+            ];
             model = "claude-opus-5[1m]";
             # Use the PHPantom language server for .php instead of the
             # official php-lsp plugin. Local marketplace lives in the
