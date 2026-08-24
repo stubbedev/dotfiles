@@ -7,11 +7,14 @@ let
   # intentionally wins over its native HTTP service with the same name (the
   # proxy adds repo gating for jenkins/sentry). A future global stdio entry wins
   # last, matching the old Claude merge order.
+  # `repoScoped` entries are deliberately absent here: their unit/proxy route is
+  # still built, but no agent loads them globally — the repos that want them
+  # name the same URL in their own .mcp.json (see lib/mcp-servers.nix).
   clientServers =
     lib.mapAttrs (_: s: {
       transport = "http";
       url = "http://${s.host}:${toString s.port}${s.path}";
-    }) (servers.httpServices // servers.proxied)
+    }) (lib.filterAttrs (_: s: !(s.repoScoped or false)) (servers.httpServices // servers.proxied))
     // lib.mapAttrs (
       _: s:
       {

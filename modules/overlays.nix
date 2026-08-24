@@ -120,12 +120,9 @@ in
     # own nixpkgs), so everything rebuilds from source. packages.default is the
     # same whole-workspace derivation (wayle + wayle-settings + desktop/icons).
     # Requires wayle.inputs.nixpkgs NOT following ours (see flake.nix).
-    wayle = _final: prev: { wayle = inputs.wayle.packages.${prev.system}.default; };
+    wayle = _final: prev: { wayle = inputs.wayle.packages.${prev.stdenv.hostPlatform.system}.default; };
     phpantom_lsp = phpantomLspOverlay;
     python-fixes = pythonFixesOverlay;
-    zsh-patina = final: _prev: {
-      zsh-patina = inputs.zsh-patina.packages.${final.stdenv.hostPlatform.system}.default;
-    };
     # xilo cache client — bin/hm calls it to push each switch's closure.
     xilo = final: _prev: {
       xilo = inputs.xilo.packages.${final.stdenv.hostPlatform.system}.default;

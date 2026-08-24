@@ -7,8 +7,8 @@
   # once for the whole session.
   #
   # The login-time httpServices are safe to share as ONE process because none
-  # depends on the service's working directory: atlassian/jenkins/sentry/srv/
-  # treeman resolve the caller's repo from the per-request X-Repo-Root header
+  # depends on the service's working directory: atlassian/jenkins/sentry
+  # resolve the caller's repo from the per-request X-Repo-Root header
   # (the shared client config sets it to each window's launch dir), falling back
   # to per-session MCP roots for clients that don't send it. That per-request
   # isolation is why they are native HTTP rather than bridged through a
@@ -35,10 +35,11 @@
     lib.mkIf (config.features.claudeCode || config.features.codex) (
       let
         system = pkgs.stdenv.hostPlatform.system;
-        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE=...), decrypted at
+        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE=..., KONFORM_HOST=...),
+        # decrypted at
         # activation. Fed to mcp-proxy as an EnvironmentFile so the gated repo
         # remote never lands in this public repo or the world-readable store;
-        # proxy-mcp expands the ${KONTAINER_REMOTE} placeholder in its config
+        # proxy-mcp expands the ${KONTAINER_REMOTE}/${KONFORM_HOST} placeholders in its config
         # (repoWhitelist) at runtime via --expand-env. Edit: hm secret edit mcp-proxy-env.
         proxyEnvPath = "${config.home.homeDirectory}/.config/mcp-proxy/proxy.env";
         servers = import (self + "/lib/mcp-servers-wired.nix") {
@@ -51,11 +52,9 @@
         };
 
         # Shared service PATH. The work servers shell out to `git` (repo
-        # detection from MCP roots); srv/treeman additionally shell out to
-        # `docker`. The server binaries themselves are absolute store paths and
-        # need nothing. /run/wrappers/bin + /usr/local/bin mirror srv-daemon so
-        # the docker client is found on both NixOS and standalone-HM hosts.
-        pathEnv = "PATH=${config.home.profileDirectory}/bin:/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin";
+        # detection from the X-Repo-Root header / MCP roots); the server
+        # binaries themselves are absolute store paths and need nothing.
+        pathEnv = "PATH=${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
         mkService = name: s: {
           Unit = {
@@ -171,17 +170,17 @@
             Service = {
               Type = "notify";
               Environment = [ backendPath ];
-              # sops-decrypted KONTAINER_REMOTE, read at service start (kept out
+              # sops-decrypted KONTAINER_REMOTE + KONFORM_HOST, read at service start (kept out
               # of the store — unlike Environment=, which HM bakes into the unit).
               # Leading `-`: a missing/failed secret must NOT stop the whole proxy
-              # (chrome-devtools/ds/pty/nix share it) — instead KONTAINER_REMOTE stays
+              # (chrome-devtools/ds/pty/nix share it) — instead the gate values stay
               # unset, so jenkins/sentry's repoWhitelist expands to "" and fails
               # closed (tools hidden), while the other backends keep serving.
               EnvironmentFile = "-${proxyEnvPath}";
               # --idle-timeout: exit after procIdleSec of NO requests to any
               # route; the socket re-activates on the next connection. Per-backend
               # teardown is driven by each entry's options.idleTimeout in the
-              # config. --expand-env=true: expand ${KONTAINER_REMOTE} in the
+              # config. --expand-env=true: expand ${KONTAINER_REMOTE}/${KONFORM_HOST} in the
               # repoWhitelist. No other config value contains a literal `$`, so
               # global expansion is safe; keep it that way when adding backends.
               ExecStart = "${mcpProxy} --config ${proxyConfig} --expand-env=true --idle-timeout=${toString procIdleSec}s";
@@ -220,7 +219,7 @@
         #   - idle (stopped): no-op; the next connection cold-starts it on the new
         #     store paths + EnvironmentFile. Nothing to do.
         #   - warm (an open agent window holds live sessions): restart so config
-        #     changes (backend set, repoWhitelist, KONTAINER_REMOTE) take effect
+        #     changes (backend set, repoWhitelist, the gate env values) take effect
         #     now, at the cost of dropping those live sessions.
         # The restart is NOT optional: the proxy is kept perpetually warm by the
         # always-polling backends (ds/nix/pty/chrome-devtools clients GET every ~20s),

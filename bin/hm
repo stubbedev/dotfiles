@@ -272,7 +272,7 @@ push_to_cache() {
 # rebuilds on every upstream commit). Move each pin to the latest GitHub
 # release before `nix flake update` so the new tags are locked in the same
 # pass. Best-effort: offline / API failure keeps the current pin.
-release_pinned_repos="PHPantom-dev/phpantom_lsp michel-kraemer/zsh-patina"
+release_pinned_repos="PHPantom-dev/phpantom_lsp"
 bump_release_pins() {
   local repo latest name bumped=""
   has_cmd curl || return 0

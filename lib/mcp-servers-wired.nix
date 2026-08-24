@@ -18,16 +18,12 @@ import (self + "/lib/mcp-servers.nix") {
   jenkinsMcp = "${inputs."jenkins-mcp".packages.${system}.default}/bin/jenkins-mcp";
   sentryMcp = "${inputs."sentry-mcp".packages.${system}.default}/bin/sentry-mcp";
   atlassianMcp = "${inputs."atlassian-mcp".packages.${system}.default}/bin/atlassian-mcp";
-  srvMcp = "${inputs.srv.packages.${system}.srv}/bin/srv";
-  treemanMcp = "${inputs.treeman.packages.${system}.treeman}/bin/treeman";
   nixMcp = "${inputs."nix-mcp".packages.${system}.default}/bin/nix-mcp";
   dsMcp = "${inputs."ds-mcp".packages.${system}.default}/bin/ds-mcp";
   ptyMcp = "${inputs."pty-mcp".packages.${system}.default}/bin/pty-mcp";
   notmuchMcp = "${inputs."notmuch-mcp".packages.${system}.default}/bin/notmuch-mcp";
   # Feature gates (mirror modules/features.nix): a false gate drops the entry
   # and never forces its *Mcp store path.
-  enableSrv = config.features.srv;
-  enableTreeman = config.features.treeman;
   enableChrome = config.features.browsers;
   # notmuch-mcp needs the `notmuch` binary + mail wiring, both desktop-only
   # (modules/packages/cli/mail.nix, modules/files/mail.nix).

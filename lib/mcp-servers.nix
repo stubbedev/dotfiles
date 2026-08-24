@@ -9,8 +9,6 @@
   jenkinsMcp ? throw "lib/mcp-servers.nix: jenkinsMcp store path required",
   sentryMcp ? throw "lib/mcp-servers.nix: sentryMcp store path required",
   atlassianMcp ? throw "lib/mcp-servers.nix: atlassianMcp store path required",
-  srvMcp ? throw "lib/mcp-servers.nix: srvMcp store path required",
-  treemanMcp ? throw "lib/mcp-servers.nix: treemanMcp store path required",
   # Stdio server binaries hosted behind the shared proxy below. The throw
   # defaults stay lazy so a feature-gated entry does not require its package.
   nixMcp ? throw "lib/mcp-servers.nix: nixMcp store path required",
@@ -22,8 +20,6 @@
   # systemd unit and advertise a client entry for a binary whose state/daemon is
   # absent. Defaults true keep callers that don't care unchanged; when a gate is
   # false the matching entry vanishes and its *Mcp throw is never forced.
-  enableSrv ? true,
-  enableTreeman ? true,
   enableChrome ? true,
   enableMail ? true,
 }:
@@ -47,7 +43,7 @@ let
   #                 login. Every agent window is just an HTTP client, so opening
   #                 N windows costs no extra process. All are safe to share as
   #                 one process because they are NOT tied to the process cwd:
-  #                 atlassian/jenkins/sentry/srv/treeman are cwd-sensitive in
+  #                 atlassian/jenkins/sentry are cwd-sensitive in
   #                     spirit, but they resolve the caller's repo/worktree from
   #                     the X-Repo-Root header each window sends (set to that
   #                     window's launch dir via the shared client config), not the
@@ -61,11 +57,6 @@ let
   #                     NATIVE http (a direct per-window session): a stdio→HTTP
   #                     bridge would collapse all windows onto one upstream
   #                     session and lose per-session roots.
-  #                     srv/treeman additionally shell out to `docker` and read
-  #                     ~/.config state, so their service env carries
-  #                     XDG_CONFIG_HOME and a docker-reaching PATH (see
-  #                     mcp-services.nix). They moved here from `global` once
-  #                     their `mcp --http` mode landed.
   #
   #   proxied       shared stdio servers fronted by ONE proxy-mcp
   #                 (stdio→streamable-HTTP) and started ON DEMAND via systemd
@@ -87,9 +78,7 @@ let
   #                 the socket. A panic in one backend is contained, never
   #                 crashing its siblings.
   #
-  #   global        per-window stdio, loaded everywhere. Currently empty: srv and
-  #                 treeman moved to httpServices once they grew roots-aware
-  #                 `mcp --http` modes. Note: a stdio server's process spawns
+  #   global        per-window stdio, loaded everywhere. Currently empty. Note: a stdio server's process spawns
   #                 eagerly at session start (`alwaysLoad:false` only defers the
   #                 tool schema, not the process), and MCP servers resolve only
   #                 at launch — no skill/hook can hot-add one — so per-window
@@ -136,48 +125,11 @@ let
       port = 39104;
       name = "sentry-mcp";
     };
-  }
-  # srv/treeman: native `mcp --http` daemons, gated on their own feature flags
-  # so we never start a unit whose CLI + state daemon (srv-daemon / treemand)
-  # the host opted out of. Unlike the work servers they take no --config (state
-  # lives in ~/.config, reached via XDG_CONFIG_HOME) and shell out to `docker`
-  # (PATH widened in mcp-services.nix). Repo/worktree comes from per-session MCP
-  # roots / X-Repo-Root, so one process serves all windows. Ports continue the
-  # 391xx block (39105/06 belong to chrome-devtools in `proxied`).
-  // lib.optionalAttrs enableSrv {
-    srv-mcp = {
-      exe = srvMcp;
-      host = "127.0.0.1";
-      port = 39107;
-      path = "/mcp";
-      env = {
-        XDG_CONFIG_HOME = "${homeDir}/.config";
-      };
-      args = [
-        "mcp"
-        "--http=127.0.0.1:39107"
-        "--http-path=/mcp"
-      ];
-    };
-  }
-  // lib.optionalAttrs enableTreeman {
-    treeman-mcp = {
-      exe = treemanMcp;
-      host = "127.0.0.1";
-      port = 39108;
-      path = "/mcp";
-      # `--http=<addr>` both enables HTTP and sets the bind addr; path defaults
-      # to /mcp. (The TREEMAN_MCP_HTTP_ADDR env is NOT honored — verified — so
-      # the addr must be passed on the flag.)
-      env = {
-        XDG_CONFIG_HOME = "${homeDir}/.config";
-      };
-      args = [
-        "mcp"
-        "--http=127.0.0.1:39108"
-      ];
-    };
   };
+  # NOTE: 39107/39108 are retired (srv-mcp / treeman-mcp). Their CLIs and state
+  # daemons stay — only the MCP fronts are gone: their tools duplicated what the
+  # shell already does well, at the cost of two always-on units. Don't reuse the
+  # ports without checking for a stale unit on an un-switched host.
 
   # Shared stdio servers fronted by ONE socket-activated proxy-mcp. Every entry
   # is served by the same proxy process on the same `proxiedPort`, distinguished
@@ -200,6 +152,13 @@ let
   #   command/args the stdio server proxy-mcp wraps (one shared instance, mode
   #               "shared"); they become this entry's `command`/`args` in the
   #               generated proxy-mcp config.json.
+  #   repoScoped  opt OUT of the global client inventory: the systemd unit and
+  #               the proxy route are built exactly as usual, but
+  #               lib/mcp-client-configs.nix drops the entry, so no agent loads
+  #               it everywhere. A repo that wants it names the URL below in its
+  #               own .mcp.json. For servers whose tools are noise in most repos
+  #               (nix-mcp outside a Nix repo, pty-mcp outside one you trust with
+  #               a real terminal) — see that file for the exact JSON.
   # chrome-devtools gated on enableChrome (features.browsers): it drives the
   # user's real Chrome over CDP, useless on a host with no browser installed.
   # --autoConnect attaches to the already-running stable-channel Chrome instead
@@ -218,8 +177,10 @@ let
   # on top of the per-source flag. Config decrypts from sops
   # (modules/files/mcp-secrets.nix) to ~/.config/ds-mcp/config.json.
   proxiedPort = 39105;
-  # jenkins/sentry are gated to ONE repo: only an agent window whose workspace
-  # git remote matches sees their tools. proxy-mcp's per-backend repoWhitelist
+  # atlassian/jenkins/sentry are repo-gated: only an agent window whose workspace
+  # git remote matches sees their tools. atlassian is gated by HOST — every repo
+  # on the company forge has Jira/Bitbucket context worth reaching — while
+  # jenkins/sentry are gated to the ONE repo they are configured against. proxy-mcp's per-backend repoWhitelist
   # does the gating (matched against the client's remotes, normalized across
   # ssh/https and a trailing .git; fails closed for a client exposing no
   # workspace). They keep their native HTTP systemd units as the UPSTREAM — the
@@ -229,20 +190,26 @@ let
   # per-repo resolution). The proxied entry reuses the same attr key as its
   # httpServices twin, so mcp-client-configs.nix's merge makes the gated proxy
   # route WIN the client entry (the direct :391xx entry is overridden away).
-  # atlassian stays ungated (works in every repo).
   #
-  # The remote itself is NOT hard-coded here (this repo is public): it is an
-  # env-var placeholder proxy-mcp expands at runtime (--expand-env) from the
-  # sops-encrypted secrets/mcp-proxy-env, decrypted via EnvironmentFile (see
-  # modules/home/mcp-services.nix). Unset → expands to "" → matches nothing →
-  # fails closed, never accidentally exposes tools.
+  # Neither the remote nor the forge hostname is hard-coded here (this repo is
+  # public): both are env-var placeholders proxy-mcp expands at runtime
+  # (--expand-env) from the sops-encrypted secrets/mcp-proxy-env, decrypted via
+  # EnvironmentFile (see modules/home/mcp-services.nix). Unset → expands to ""
+  # → no entry resolves → proxy-mcp >= 0.0.22 gates every client out, so a
+  # missing secret hides the tools rather than exposing them everywhere.
   kontainerRepo = "\${KONTAINER_REMOTE}";
+  # A whitelist entry with no path component gates a whole git host: every repo
+  # cloned from it matches, across ssh/https and regardless of port (proxy-mcp
+  # >= 0.0.21). Set KONFORM_HOST to the bare hostname — a value WITH a path
+  # would silently narrow this to one repo instead.
+  konformHost = "\${KONFORM_HOST}";
   gateThroughProxy =
-    name:
+    name: repoWhitelist:
     let
       up = httpServices.${name};
     in
     {
+      inherit repoWhitelist;
       host = "127.0.0.1";
       port = proxiedPort;
       path = "/${name}/mcp";
@@ -250,11 +217,11 @@ let
       url = "http://${up.host}:${toString up.port}${up.path}";
       transportType = "streamable-http";
       mode = "perSession";
-      repoWhitelist = [ kontainerRepo ];
     };
   proxied = {
-    jenkins-mcp = gateThroughProxy "jenkins-mcp";
-    sentry-mcp = gateThroughProxy "sentry-mcp";
+    atlassian-mcp = gateThroughProxy "atlassian-mcp" [ konformHost ];
+    jenkins-mcp = gateThroughProxy "jenkins-mcp" [ kontainerRepo ];
+    sentry-mcp = gateThroughProxy "sentry-mcp" [ kontainerRepo ];
   }
   // lib.optionalAttrs enableChrome {
     chrome-devtools = {
@@ -290,17 +257,23 @@ let
       idleSec = 300;
       command = nixMcp;
       args = [ ];
+      repoScoped = true;
     };
     # ds-mcp: one unified readonly DB server (MySQL + MongoDB sources in one
     # config), replacing the separate mysql/mongodb entries. `serve` is the
     # stdio subcommand; `--read-only` force-readonlies every source on top of
     # the per-source readonly flag. Tools land under mcp__ds__* (query,
     # execute, schema, ping, list_sources).
+    # repoWhitelist: the only databases configured are the Kontainer ones, so
+    # the tools are noise (and a footgun) in any other repo. mode stays "shared"
+    # — gating is evaluated per DOWNSTREAM session from its X-Repo-Root, so it
+    # works regardless of how the upstream is multiplexed.
     ds = {
       host = "127.0.0.1";
       port = proxiedPort;
       path = "/ds/mcp";
       idleSec = 300;
+      repoWhitelist = [ kontainerRepo ];
       command = dsMcp;
       args = [
         "serve"
@@ -332,6 +305,7 @@ let
         "--askpass"
         "rofi -dmenu -password -p sudo"
       ];
+      repoScoped = true;
     };
   }
   # notmuch-mcp: search/read/tag the local notmuch mail index. Stdio behind the

@@ -136,7 +136,7 @@ _: {
         # Office suite (GUI app)
         # mkWrappedPackage (not bare gfx): keeps the writer/calc/impress/… .desktop
         # files + icons on XDG_DATA_DIRS so they show in rofi on non-NixOS.
-        (homeLib.mkWrappedPackage { pkg = libreoffice-fresh; })
+        (homeLib.mkWrappedPackage { pkg = libreoffice-stable; })
       ];
     };
 }

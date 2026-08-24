@@ -146,14 +146,6 @@
       url = "github:stubbedev/zsh-fzf-npm-run";
       flake = false;
     };
-    # Zsh syntax highlighting via a shared Rust daemon (syntect-based).
-    # Replaces the fast-syntax-highlighting zsh plugin; consumed as
-    # pkgs.zsh-patina via modules/overlays.nix, activated in src/zsh/settings.
-    # Pinned to release tag; bumped by `hm upgrade` (bump_release_pins).
-    zsh-patina = {
-      url = "github:michel-kraemer/zsh-patina/1.10.0";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     # PHP language server (Rust). Ships its own flake; we consume
     # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
     # Pinned to release tag; bumped by `hm upgrade` (bump_release_pins).

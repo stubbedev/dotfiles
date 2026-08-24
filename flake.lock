@@ -1472,11 +1472,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787462994,
-        "narHash": "sha256-uadLbs13n3jylOBxbq6JyA7UxQKFP44UJTi/jpGjjpw=",
+        "lastModified": 1787552147,
+        "narHash": "sha256-73YtkRcsaPE/CU3bQkeILLUzm3+IwWiTlo4Lg7Whz/o=",
         "owner": "stubbedev",
         "repo": "proxy-mcp",
-        "rev": "a802a83ef68f35e3916869d990641d673bf5e4c1",
+        "rev": "dc72fd5e3bbb1e0eb8513fca81ad7219624e65f1",
         "type": "github"
       },
       "original": {
@@ -1537,7 +1537,6 @@
         "xilo": "xilo",
         "zsh-fzf-artisan": "zsh-fzf-artisan",
         "zsh-fzf-npm-run": "zsh-fzf-npm-run",
-        "zsh-patina": "zsh-patina",
         "zsh-vim-mode": "zsh-vim-mode"
       }
     },
@@ -1987,27 +1986,6 @@
       "original": {
         "owner": "stubbedev",
         "repo": "zsh-fzf-npm-run",
-        "type": "github"
-      }
-    },
-    "zsh-patina": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1787464374,
-        "narHash": "sha256-uJlJCVe3jt4xIZAb5TMgkcva2WVKBQ2zVavHmpvG26s=",
-        "owner": "michel-kraemer",
-        "repo": "zsh-patina",
-        "rev": "42e5071ac3cc32ea6abe10bfe709a253dead2020",
-        "type": "github"
-      },
-      "original": {
-        "owner": "michel-kraemer",
-        "ref": "1.10.0",
-        "repo": "zsh-patina",
         "type": "github"
       }
     },
