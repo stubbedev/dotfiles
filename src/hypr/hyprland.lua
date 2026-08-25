@@ -45,11 +45,14 @@ end
 -- Single source of truth for monitor rules. Re-applied on every reload and
 -- by scripts/monitor.toggle.sh (and the HM reload hook) on dock/lid events
 -- via the exposed _G.reflow_monitors.
+-- `mode` is omitted where "preferred" is wanted: since 0.56 monitor rules
+-- default to mode "preferred", position "auto", scale "auto" (#15193), so only
+-- the catch-all's "highres" and the explicit scales need spelling out.
 local monitors = {
     { output = "", mode = "highres", scale = "1" },
-    { output = "eDP-1", mode = "preferred", scale = "1.5" },
-    { output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", mode = "preferred", scale = "1" },
-    { output = "desc:LG Electronics LG HDR 4K 0x00016261", mode = "preferred", scale = "1.5" },
+    { output = "eDP-1", scale = "1.5" },
+    { output = "desc:LG Electronics LG HDR WQHD 207NTXRAJ498", scale = "1" },
+    { output = "desc:LG Electronics LG HDR 4K 0x00016261", scale = "1.5" },
 }
 
 -- Re-apply every monitor rule in one pass. When lid_closed is true the

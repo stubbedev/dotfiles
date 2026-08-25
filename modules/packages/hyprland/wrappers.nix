@@ -3,14 +3,12 @@ _: {
     {
       pkgs,
       homeLib,
-      hyprland,
       lib,
       config,
       ...
     }:
     let
-      inherit (pkgs.stdenv.hostPlatform) system;
-      hyprlandPkg = hyprland.packages.${system}.hyprland;
+      hyprlandPkg = pkgs.hyprland;
       inherit (homeLib.resolveSessionPaths config) pathPrefix dataDirsPrefix;
 
       # Create custom Hyprland wrapper with build-time GPU detection

@@ -31,7 +31,7 @@ in
           # modules/home/nix.nix only applies to the standalone-HM target on
           # non-NixOS hosts (useGlobalPkgs gates it off here). Without this,
           # system rebuilds miss the nix-community cache (fenix, lanzaboote,
-          # hy3, etc.) and rebuild from source.
+          # etc.) and rebuild from source.
           inherit (cache) substituters trusted-public-keys;
 
           # Don't let a "path absent" verdict linger. nix queries substituters

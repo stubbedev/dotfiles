@@ -17,20 +17,15 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 
-    # Use official Hyprland flake for better plugin compatibility.
-    # Use tag ref explicitly (refs/tags/…) so Nix does not look for a
-    # non-existent branch named the version string when updating the flake input.
-    hyprland.url = "git+https://github.com/hyprwm/Hyprland?ref=refs/tags/v0.56.2&submodules=1";
-
+    # Hyprland + hy3 come from nixpkgs (pkgs.hyprland,
+    # pkgs.hyprlandPlugins.hy3): nixpkgs builds the plugin against the same
+    # compositor, so they can never drift apart, and both substitute from
+    # cache.nixos.org instead of compiling here. The official flake was
+    # dropped when its own locked nixpkgs stopped satisfying Hyprland's
+    # `glaze 7...<8` CMake range — nixpkgs patches that; the flake does not.
     hyprland-guiutils = {
       url = "github:hyprwm/hyprland-guiutils";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    hy3 = {
-      # hl0.56.0.1 targets hyprland 0.56.0; compatible with our v0.56.2.
-      # Follows our hyprland input so it builds against the same headers.
-      url = "github:outfoxxed/hy3?ref=refs/tags/hl0.56.0.1";
-      inputs.hyprland.follows = "hyprland";
     };
     home-manager = {
       url = "github:nix-community/home-manager/master";

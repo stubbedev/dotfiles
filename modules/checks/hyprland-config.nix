@@ -1,15 +1,14 @@
-{ inputs, ... }:
-{
+_: {
   # `nix flake check` validates src/hypr/hyprland.lua with Hyprland's own
   # --verify-config (headless config parse). Catches the whole class of bugs
   # that only surface at login: unknown/renamed config keys, wrong value
   # types, hy3 plugin config errors, and lua errors — none of which a plain
   # lua syntax check sees.
   perSystem =
-    { system, pkgs, ... }:
+    { pkgs, ... }:
     let
-      hyprland = inputs.hyprland.packages.${system}.hyprland;
-      hy3 = inputs.hy3.packages.${system}.hy3;
+      inherit (pkgs) hyprland;
+      inherit (pkgs.hyprlandPlugins) hy3;
 
       # Stand-in for the HM-generated nix.lua: loads the real hy3 plugin (so the
       # hy3 config block is actually validated) and returns colors/paths shaped

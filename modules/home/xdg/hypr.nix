@@ -7,16 +7,17 @@ _: {
       pkgs,
       systemInfo,
       homeLib,
-      hy3,
-      hyprland,
       ...
     }:
     let
-      # LuaCATS type stubs for the `hl` API, generated from the exact pinned
-      # Hyprland source so they stay in sync with the running version. Gives
-      # lua-language-server completion/signatures when editing hyprland.lua.
+      # LuaCATS type stubs for the `hl` API, generated from the exact
+      # Hyprland source we run so they stay in sync with the running version.
+      # Gives lua-language-server completion/signatures when editing
+      # hyprland.lua. `.src` (not the built package) — the generator and the
+      # headers it parses only exist in the source tree.
+      hyprlandSrc = pkgs.hyprland.src;
       hlMetaStub = pkgs.runCommand "hl.meta.lua" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-        python3 ${hyprland}/meta/generateLuaStubs.py --root ${hyprland} --output "$out"
+        python3 ${hyprlandSrc}/meta/generateLuaStubs.py --root ${hyprlandSrc} --output "$out"
       '';
 
       # Script dirs (live in the in-tree dotfiles checkout, not /nix/store).
@@ -59,8 +60,9 @@ _: {
           "hypr/nix.lua" = {
             text =
               let
-                # hy3 is already built against the correct hyprland from the flake
-                hy3-plugin = hy3.packages.${pkgs.stdenv.hostPlatform.system}.hy3;
+                # nixpkgs builds hy3 against pkgs.hyprland, the same compositor
+                # the wrappers run — the plugin ABI can't drift.
+                hy3-plugin = pkgs.hyprlandPlugins.hy3;
               in
               ''
                 -- Nix Generated
@@ -103,7 +105,7 @@ _: {
           # the language server here.
           "hypr/hl.meta.lua".source = hlMetaStub;
 
-          # hy3 ships no stubs; hand-written from hy3 hl0.55.0 dispatchers.cpp.
+          # hy3 ships no stubs; hand-written from hy3 hl0.56.0.1 dispatchers.cpp.
           # Extends HL.PluginNamespace (from hl.meta.lua) with the hy3 factories.
           "hypr/hy3.meta.lua".text = ''
             ---@meta

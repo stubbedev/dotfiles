@@ -29,8 +29,6 @@
           self
           ;
         inherit (inputs)
-          hyprland
-          hy3
           fenix
           srv
           treeman
