@@ -1,4 +1,15 @@
 # managed-by: stubbedev dotfiles — src/udev/rules.d/90-usb-autosuspend-disable.rules
 # Consumed by modules/activation/_privileged/setup-usb-autosuspend-disable.nix
 # (non-NixOS) and modules/nixos/udev.nix (NixOS).
-ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="on"
+#
+# HID only. This used to pin *every* USB device to power/control=on, which
+# also pinned the four xHCI root hubs and so kept their controllers out of
+# runtime suspend — the package can't reach its deep C-states with a USB
+# controller held awake, and that is real battery on an idle laptop.
+#
+# The reason for the rule was only ever input devices: a wireless receiver
+# coming out of autosuspend can swallow the keypress that woke it. So match
+# the HID class (03) in ID_USB_INTERFACES and leave everything else on the
+# kernel default. USB *audio* is pinned separately and for a different
+# reason (pops) by 90-usb-audio-power.rules.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_INTERFACES}=="*:03*", TEST=="power/control", ATTR{power/control}="on"

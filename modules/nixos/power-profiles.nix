@@ -8,6 +8,8 @@ _: {
     # PPD alone handles CPU scaling (platform_profile + EPP) since the
     # Lunar Lake 400MHz firmware bug was fixed in BIOS 1.45 — the old
     # power.profile.fix.sh layer and intel_pstate=passive are gone.
+    #
+    # Switching profiles with the power source is modules/nixos/power-source.nix.
     services.power-profiles-daemon.enable = true;
   };
 }

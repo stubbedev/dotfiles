@@ -6,6 +6,11 @@ _: {
         networkmanager = {
           enable = true;
           plugins = with pkgs; [ networkmanager-openconnect ];
+          # Let the Wi-Fi chip use its power-save mode. NM's own default is
+          # "leave the driver alone"; Debian/Ubuntu ship a conf.d snippet
+          # turning it on, which is what omarchy's battery setup reaches for
+          # too. Costs a little latency on the first packet after an idle gap.
+          wifi.powersave = true;
         };
         firewall = {
           enable = true;

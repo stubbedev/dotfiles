@@ -4,3 +4,15 @@
 # holds, and end=80 > 75 — either write alone would be rejected by the
 # EC if it crossed the other threshold.
 ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_control_start_threshold}="75", ATTR{charge_control_end_threshold}="80"
+
+# Restore the cap on unplug, so raising it for a trip
+#   echo 100 | sudo tee /sys/class/power_supply/BAT0/charge_control_end_threshold
+# reverts itself the moment the charger comes out, instead of leaving the
+# machine parked at 100% on the dock for weeks — which is the wear this
+# whole file exists to avoid. Relying on the boot rule above isn't enough:
+# this laptop suspends far more often than it reboots.
+#
+# BAT0 emits a change event on the AC transition. The end!="80" match keeps
+# this to a single EC write per override rather than one on every capacity
+# tick, and status=="Discharging" keeps it from fighting a top-up in progress.
+ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{status}=="Discharging", ATTR{charge_control_end_threshold}!="80", ATTR{charge_control_start_threshold}="75", ATTR{charge_control_end_threshold}="80"

@@ -64,6 +64,9 @@
           vars.PAGER_LUA = "${self}/src/aerc/scripts/mail-pager.lua";
         };
         monitor-brightness.source = "src/_shared/scripts/monitor.brightness.sh";
+        # "Charge to full now" override for power-source.service; drops a flag
+        # file that power-source-full.path is watching, so no sudo.
+        battery-full.source = "src/_shared/scripts/battery-full.sh";
         # wayle shell: launch wrapper (Wayland socket detection). wayle's
         # custom module parses waybar-style JSON natively (text/tooltip/class),
         # so the mail/treeman status scripts are reused as-is — registered as

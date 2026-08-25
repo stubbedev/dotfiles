@@ -12,7 +12,11 @@
         the thresholds immediately. Costs ~1h of unplugged runtime; buys
         battery capacity measured in years. Charge to full for a trip with
         `echo 100 | sudo tee /sys/class/power_supply/BAT0/charge_control_end_threshold`
-        — the rule restores 80% on next boot.
+        — the rule drops back to 80% the moment you unplug, so
+        there is nothing to remember to undo. Worth doing every few
+        months anyway: the EC only recalibrates its full-charge estimate
+        on a complete charge, so a battery that never finishes reports a
+        health figure that drifts low.
       '';
       actionScript = ''
         sudo install -d -m 0755 /etc/udev/rules.d

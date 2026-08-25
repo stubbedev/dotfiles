@@ -7,6 +7,7 @@
       # script (setup-usb-autosuspend-disable.nix) installs the same
       # files into /etc/udev/rules.d/.
       services.udev.extraRules = ''
+        ${builtins.readFile (self + "/src/udev/rules.d/85-battery-charge-threshold.rules")}
         ${builtins.readFile (self + "/src/udev/rules.d/90-usb-autosuspend-disable.rules")}
         ${builtins.readFile (self + "/src/udev/rules.d/90-usb-audio-power.rules")}
         ${builtins.readFile (self + "/src/udev/rules.d/90-touchpad-rebind.rules")}
