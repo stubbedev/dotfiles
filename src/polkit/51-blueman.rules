@@ -1,0 +1,22 @@
+// blueman's privileged half (blueman-mechanism) guards rfkill, PAN setup, the
+// DHCP client and pppd behind polkit. Upstream defaults all four to
+// auth_admin_keep, which means a password prompt every time the Bluetooth
+// toggle is flipped. Debian ships a rule granting them to sudo/netdev; the Nix
+// package ships no polkit files at all, so this is the replacement for both —
+// see modules/activation/_privileged/setup-blueman.nix.
+//
+// Same trust boundary Debian used: a local, active session belonging to
+// someone who is already in sudo. Nothing here grants anything to a remote or
+// inactive session.
+polkit.addRule(function (action, subject) {
+  var allowed = {
+    "org.blueman.network.setup": true,
+    "org.blueman.dhcp.client": true,
+    "org.blueman.rfkill.setstate": true,
+    "org.blueman.pppd.pppconnect": true,
+  };
+
+  if (allowed[action.id] && subject.local && subject.active && subject.isInGroup("sudo")) {
+    return polkit.Result.YES;
+  }
+});
