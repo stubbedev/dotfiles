@@ -20,16 +20,16 @@
     # Use official Hyprland flake for better plugin compatibility.
     # Use tag ref explicitly (refs/tags/…) so Nix does not look for a
     # non-existent branch named the version string when updating the flake input.
-    hyprland.url = "git+https://github.com/hyprwm/Hyprland?ref=refs/tags/v0.55.4&submodules=1";
+    hyprland.url = "git+https://github.com/hyprwm/Hyprland?ref=refs/tags/v0.56.2&submodules=1";
 
     hyprland-guiutils = {
       url = "github:hyprwm/hyprland-guiutils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     hy3 = {
-      # hl0.55.0 targets hyprland 0.55.1; compatible with our v0.55.4.
+      # hl0.56.0.1 targets hyprland 0.56.0; compatible with our v0.56.2.
       # Follows our hyprland input so it builds against the same headers.
-      url = "github:outfoxxed/hy3?ref=refs/tags/hl0.55.0";
+      url = "github:outfoxxed/hy3?ref=refs/tags/hl0.56.0.1";
       inputs.hyprland.follows = "hyprland";
     };
     home-manager = {
