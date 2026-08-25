@@ -18,6 +18,8 @@ _: {
         # WirePlumber ALSA configuration (new .conf format for WirePlumber 1.4+)
         "wireplumber/wireplumber.conf.d/50-enable-hdmi-audio.conf"
         "wireplumber/wireplumber.conf.d/51-alsa-usb-dock.conf"
+        # Idle timeout for the internal SoundWire sinks (pop on codec resume)
+        "wireplumber/wireplumber.conf.d/52-sof-codec-idle.conf"
         "wireplumber/wireplumber.conf.d/60-disable-bt-autoswitch.conf"
       ];
     };
