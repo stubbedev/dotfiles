@@ -20,7 +20,7 @@
       lazy-tmux = pkgs.callPackage (self + "/modules/packages/_lazy-tmux.nix") { };
 
       # The config home-manager actually deploys, not a stand-in: this is what
-      # carries the daemon launch, the M-o picker binding and the hook wiring.
+      # carries the daemon launch, the M-i picker binding and the hook wiring.
       tmuxConf = self.homeConfigurations.stubbe.config.xdg.configFile."tmux/tmux.conf".source;
     in
     {
@@ -96,7 +96,7 @@
 
             keys=$(tmux list-keys -T root)
             grep -q 'M-x .*sleep_session' <<< "$keys" || fail "M-x is not bound to sleep_session"
-            grep -q 'M-o .*lazy-tmux picker' <<< "$keys" || fail "M-o is not bound to the picker"
+            grep -q 'M-i .*lazy-tmux picker' <<< "$keys" || fail "M-i is not bound to the picker"
             ok "config loads with the lazy-tmux bindings"
 
             hooks=$(tmux show-hooks -g)

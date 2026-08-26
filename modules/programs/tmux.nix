@@ -55,7 +55,9 @@ _: {
           run-shell -b '${lazy-tmux}/bin/lazy-tmux daemon >/dev/null 2>&1 || true'
 
           # Saved-session picker (includes sessions that are not running).
-          bind -n M-o display-popup -B -w 70% -h 75% -E '${lazy-tmux}/bin/lazy-tmux picker'
+          # M-o is deliberately left unbound in tmux so it falls through to
+          # the zsh `^[o` -> nvim binding (src/zsh/settings).
+          bind -n M-i display-popup -B -w 70% -h 75% -E '${lazy-tmux}/bin/lazy-tmux picker'
         '';
         plugins = with pkgs.tmuxPlugins; [ yank ];
       };
