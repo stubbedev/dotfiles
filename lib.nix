@@ -577,8 +577,12 @@ rec {
 
       # nh pipes (and hides) activation output, so a switch sitting in a slow
       # action (update-initramfs, mkcert -install, …) looks hung. Write our
-      # progress straight to the terminal when there is one.
-      if [ -w /dev/tty ]; then
+      # progress straight to the terminal when there is one. `[ -w /dev/tty ]`
+      # is not enough: without a controlling terminal the node exists and
+      # tests writable, but opening it fails ("No such device or address")
+      # and set -e would abort the whole activation — so probe with a real
+      # open in a subshell.
+      if (exec >/dev/tty) 2>/dev/null; then
         exec >/dev/tty 2>&1
       fi
 

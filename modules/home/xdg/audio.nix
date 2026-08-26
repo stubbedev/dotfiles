@@ -8,10 +8,8 @@ _: {
     }:
     lib.mkIf config.features.desktop {
       xdg.configFile = homeLib.xdgSources [
-        # Low-latency PipeWire configuration for screen sharing and camera
-        "pipewire/pipewire.conf.d/10-screenshare-optimize.conf"
-        # Prevent initial pop when starting audio playback
-        "pipewire/pipewire.conf.d/11-prevent-startup-pop.conf"
+        # Realtime scheduling for PipeWire threads (audio, camera, capture)
+        "pipewire/pipewire.conf.d/10-realtime-scheduling.conf"
         # Pin clock rate / resampler quality at context level
         "pipewire/pipewire.conf.d/12-default-clock-rate.conf"
 
