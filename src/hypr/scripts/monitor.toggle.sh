@@ -94,10 +94,39 @@ react() {
   apply_wallpaper
 }
 
+# Suspend when a DRM change leaves a closed-lid machine with no external
+# display — the macOS "unplug the dock in clamshell mode and it goes to
+# sleep" behaviour. logind can't do this: HandleLidSwitch* only fires on
+# the lid switch edge, never on a later display change (systemd#7690).
+# Only called from the DRM hotplug path; plain lid closes are logind's job
+# (suspending from both paths could re-suspend right after a wake).
+suspend_if_closed_undocked() {
+  local state c
+  state=$(grep -oEi 'open|closed' /proc/acpi/button/lid/*/state 2>/dev/null | head -n1 | tr '[:upper:]' '[:lower:]' || echo "open")
+  [ "$state" = "closed" ] || return 0
+  for c in /sys/class/drm/card*-*/status; do
+    case "$c" in *eDP*) continue ;; esac
+    [ "$(cat "$c" 2>/dev/null)" = "connected" ] && return 0
+  done
+  systemctl suspend >/dev/null 2>&1 || true
+}
+
 # Restart WirePlumber so it re-evaluates ALSA card availability after a
 # dock/undock. Without this, HDMI/DP sinks tied to the dock can linger as
 # unavailable or fail to reappear in pavucontrol until the next login.
+#
+# Cooldown: a dock brings its connectors up over several seconds, and a
+# docked resume replays the whole burst — each spaced past the 1s event
+# debounce, so one physical event could restart wireplumber 2-3 times.
+# Repeated pipewire/wireplumber churn is what wedges the SOF HDMI codec
+# (ELDV stuck, needs a snd_sof_pci_intel_lnl reload), so cap restarts to
+# one per 30s window.
+_last_wp_restart=0
 restart_wireplumber() {
+  local now
+  now=$(date +%s)
+  [ $((now - _last_wp_restart)) -lt 30 ] && return 0
+  _last_wp_restart=$now
   systemctl --user restart wireplumber.service >/dev/null 2>&1 || true
 }
 
@@ -166,6 +195,7 @@ listen_events() {
     fi
     react
     restart_wireplumber
+    suspend_if_closed_undocked
     last_action=$(date +%s)
   done < <(udevadm monitor --property --udev --subsystem-match=drm 2>/dev/null)
 }

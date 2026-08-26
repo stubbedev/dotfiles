@@ -4,6 +4,7 @@ _: {
       pkgs,
       lib,
       config,
+      constants,
       scripts,
       homeLib,
       ...
@@ -89,6 +90,53 @@ _: {
           };
         })
         // {
+          # hypridle — idle lock, dpms, idle sleep, and the logind sleep
+          # delay-inhibitor that runs before_sleep_cmd (lock before suspend).
+          # A unit instead of exec-once so a crash can't silently leave the
+          # session suspending unlocked (Restart=on-failure), and so sd-switch
+          # restarts it when hypridle.conf changes — exec-once processes kept
+          # running the old config until the next login.
+          hypridle = {
+            Unit = {
+              Description = "Hypridle idle daemon (lock, dpms, idle sleep)";
+              After = compositorTargets;
+              PartOf = compositorTargets;
+              X-Restart-Triggers = [
+                (toString config.xdg.configFile."hypr/hypridle.conf".source)
+              ];
+            };
+            Install.WantedBy = compositorTargets;
+            Service = {
+              Type = "simple";
+              # Listener commands (hyprctl, wayle-lock, loginctl) resolve via
+              # PATH; the systemd user manager's PATH has no nix profile.
+              Environment = [ "PATH=${config.home.profileDirectory}/bin:/usr/bin:/bin" ];
+              ExecStart = "${pkgs.hypridle}/bin/hypridle";
+              Restart = "on-failure";
+              RestartSec = "2s";
+            };
+          };
+
+          # DRM hotplug + lid reactor (monitors, wallpaper, wireplumber,
+          # undock-while-closed suspend). Runs from the live checkout, so a
+          # `systemctl --user restart monitor-toggle` picks up script edits —
+          # no relogin, no pkill hunting like the old exec-once launch.
+          monitor-toggle = {
+            Unit = {
+              Description = "DRM hotplug + lid reactor (monitor.toggle.sh)";
+              After = compositorTargets;
+              PartOf = compositorTargets;
+            };
+            Install.WantedBy = compositorTargets;
+            Service = {
+              Type = "simple";
+              Environment = [ "PATH=${config.home.profileDirectory}/bin:/usr/bin:/bin" ];
+              ExecStart = "${constants.paths.dotfiles}/src/hypr/scripts/monitor.toggle.sh daemon";
+              Restart = "on-failure";
+              RestartSec = "2s";
+            };
+          };
+
           # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
           # entry — so home-manager's bin-only linking can't surface it and
           # `systemctl --user start hyprpolkitagent` (called from

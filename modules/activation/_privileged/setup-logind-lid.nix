@@ -4,20 +4,26 @@ _: {
     homeLib.mkInstallPrompt {
       subject = "systemd-logind lid switch handler";
       body = ''
-        This installs a drop-in that makes systemd-logind ignore the lid
-        switch, so closing the lid does not suspend the machine. The
-        laptop stays reachable over SSH with the lid closed.
+        macOS-style lid behaviour: closing the lid suspends (s2idle) on
+        battery and on AC, but the machine stays awake in clamshell mode
+        when an external display is connected (logind's "docked" state
+        counts connected non-eDP DRM connectors). Opening the lid wakes.
+
+        Undocking with the lid already closed is handled separately by
+        src/hypr/scripts/monitor.toggle.sh — logind only acts on the lid
+        switch edge, not on later display changes (systemd#7690).
       '';
       actionScript = ''
         sudo install -d -m 0755 /etc/systemd/logind.conf.d
 
         ${homeLib.installSystemFile {
-          target = "/etc/systemd/logind.conf.d/10-lid-ignore.conf";
+          target = "/etc/systemd/logind.conf.d/10-lid.conf";
           content = ''
             # managed-by: home-manager logind-lid
             [Login]
-            HandleLidSwitch=ignore
-            HandleLidSwitchExternalPower=ignore
+            HandleLidSwitch=suspend
+            HandleLidSwitchExternalPower=suspend
+            HandleLidSwitchDocked=ignore
           '';
         }}
 

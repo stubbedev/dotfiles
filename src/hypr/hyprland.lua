@@ -201,7 +201,10 @@ local function setup_autostart()
             "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP GTK_THEME XDG_DATA_DIRS SSH_AUTH_SOCK HYPRLAND_INSTANCE_SIGNATURE",
             "compositor-session hyprland",
             "hyprctl setcursor $XCURSOR_THEME $XCURSOR_SIZE",
-            "hypridle",
+            -- No hypridle / monitor.toggle.sh here: both are systemd user
+            -- units now (modules/home/systemd.nix) so sd-switch restarts
+            -- them on config/script changes and crashes auto-restart —
+            -- exec-once processes ran stale code until the next login.
             -- No hyprsunset autostart: wayle's native hyprsunset module owns the
             -- daemon now (spawns `hyprsunset -t/-g` at night on its own solar
             -- schedule, kills it by day). A bare always-on daemon here would
@@ -211,7 +214,6 @@ local function setup_autostart()
             -- No nm-applet/blueman-applet: wayle's native network + bluetooth
             -- modules replace those tray icons.
             scripts .. "/hy3.tiling.sh",
-            scripts .. "/monitor.toggle.sh daemon",
             -- Reapply per-device touchpad config after unlock: a lid cycle
             -- suspends the i2c-hid pad and the lid daemon's reload reapplies
             -- hl.device() before it resumes, killing 2-finger scroll. Reload
