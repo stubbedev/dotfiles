@@ -22,6 +22,7 @@ _hm() {
     'trust:Add an age recipient to .sops.yaml and re-wrap secrets/*'
     'secret:Edit, set, or rotate an encrypted file under secrets/'
     'cache:Wipe cached state (nvim|zsh|locks|all)'
+    'clean:Interactive TUI to scan/reclaim disk space (build dirs, caches, core dumps, nix gc)'
     'iso:Build the NixOS installer ISO or burn it to a USB device'
     'search:Search for nix packages'
     'help:Print help message'
@@ -226,6 +227,10 @@ _hm() {
               fi
               ;;
           esac
+          return 0
+          ;;
+        clean)
+          _arguments '1:directory:_directories'
           return 0
           ;;
         cache)

@@ -372,6 +372,11 @@ Commands:
   secret set <name>   Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)
   secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
   cache <target>      Wipe cached state (target: nvim|zsh|locks|all)
+  clean [dir]         Interactive fzf TUI to scan/reclaim disk space: build
+                        dirs (node_modules, target, .next, dist, vendor,
+                        .venv), ~/.cache subdirs, ~/core dumps, and nix gc.
+                        Scans [dir] (default $HOME). Nothing deleted without
+                        confirmation.
   iso build [args]    Build the NixOS installer ISO
   iso path [args]     Build the ISO and print its store path
   iso devices         List removable/block devices
@@ -628,6 +633,60 @@ EOF
   esac
 }
 
+hm_clean() {
+  local root="${1:-$HOME}"
+  has_cmd fzf || { echo "hm clean: fzf not found" >&2; return 1; }
+
+  echo "Scanning $root for reclaimable space (build artifacts, caches, core dumps)..." >&2
+
+  local -a paths=()
+  # Regenerable build/dependency dirs — match once, don't descend into them.
+  while IFS= read -r -d '' p; do paths+=("$p"); done < <(
+    find "$root" -xdev \( -path '*/.git' -o -path "$HOME/.cache" \) -prune -o \
+      \( -name node_modules -o -name target -o -name .next -o -name dist -o -name vendor -o -name .venv \) \
+      -type d -print0 -prune 2>/dev/null
+  )
+  # Crash dumps directly under $HOME.
+  while IFS= read -r -d '' p; do paths+=("$p"); done < <(
+    find "$HOME" -maxdepth 1 \( -name 'core.[0-9]*' -o -name 'core' \) -type f -print0 2>/dev/null
+  )
+  # Cache subdirectories.
+  while IFS= read -r -d '' p; do paths+=("$p"); done < <(
+    find "$HOME/.cache" -mindepth 1 -maxdepth 1 -print0 2>/dev/null
+  )
+
+  local -a menu=($'(action)\tNix store garbage — old generations + unreachable paths (runs: hm gc)')
+  if [ "${#paths[@]}" -gt 0 ]; then
+    while IFS= read -r line; do menu+=("$line"); done < <(
+      du -sh -- "${paths[@]}" 2>/dev/null | sort -rh
+    )
+  fi
+
+  local selection
+  selection=$(printf '%s\n' "${menu[@]}" | fzf --multi \
+    --header='TAB select, ENTER to review & delete. Regenerable build dirs, caches, core dumps, nix gc.' \
+    --delimiter=$'\t' --with-nth=1,2)
+  [ -n "$selection" ] || { echo "hm clean: nothing selected"; return 0; }
+
+  echo
+  echo "About to remove:"
+  echo "$selection" | sed 's/^/  /'
+  read -rp "Proceed? [y/N] " confirm
+  [[ "$confirm" =~ ^[Yy]$ ]] || { echo "hm clean: aborted"; return 0; }
+
+  local size target
+  while IFS=$'\t' read -r size target; do
+    if [ "$size" = "(action)" ]; then
+      run_gc
+      continue
+    fi
+    echo "Removing $target ($size)..."
+    rm -rf -- "$target"
+  done <<< "$selection"
+
+  echo "Done."
+}
+
 hm_secret() {
   local action="${1:-}"
   local name="${2:-}"
@@ -727,6 +786,10 @@ case "${1:-}" in
   cache)
     shift
     hm_cache "$@"
+    ;;
+  clean)
+    shift
+    hm_clean "$@"
     ;;
   iso)
     shift
