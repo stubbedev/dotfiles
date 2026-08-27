@@ -64,6 +64,7 @@ _: {
         (lib.setPrio 15 clang)
         sccache
         cargo-sweep
+        cargo-nextest # preferred test runner: `cargo nextest run`
       ];
     };
 }
