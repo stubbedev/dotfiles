@@ -12,8 +12,8 @@
           args =
             { pkgs, homeLib, ... }:
             let
-              # Shared with modules/nixos/plymouth.nix.
-              theme = (import (self + "/lib/plymouth.nix") { inherit pkgs; }).catppuccinMochaPlymouth;
+              # Shared with the NixOS half; packaged in modules/core/overlays.nix.
+              theme = pkgs.catppuccin-mocha-plymouth;
             in
             homeLib.mkInstallPrompt {
               subject = "Catppuccin Mocha Plymouth theme";

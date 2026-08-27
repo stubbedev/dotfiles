@@ -64,6 +64,7 @@ _: {
         zip
         unzip
         p7zip
+        rar # ships both rar and unrar
 
         # System utilities
         xsel

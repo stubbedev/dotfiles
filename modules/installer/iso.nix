@@ -101,7 +101,6 @@ in
 {
   configurations.nixos.installer-iso = {
     inherit system;
-    extraSpecialArgs = { inherit self; };
     module =
       {
         lib,

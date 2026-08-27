@@ -7,19 +7,13 @@
       config,
       ...
     }:
-    let
-      # Shared with modules/activation/privileged/setup-plymouth-theme.nix.
-      inherit (import (self + "/lib/plymouth.nix") { inherit pkgs; })
-        catppuccinMochaPlymouth
-        ;
-    in
     {
       boot = {
         plymouth = {
           enable = true;
           package = pkgs.plymouth.override { systemd = config.boot.initrd.systemd.package; };
           theme = "catppuccin-mocha";
-          themePackages = [ catppuccinMochaPlymouth ];
+          themePackages = [ pkgs.catppuccin-mocha-plymouth ];
         };
 
         # Quiet kernel + low console log level keep the splash readable

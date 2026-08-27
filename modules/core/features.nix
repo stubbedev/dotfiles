@@ -5,7 +5,7 @@ _: {
   #                         to drive one (rofi, alacritty, mail TUI, theming,
   #                         clipboard, …). Baseline CLI tools (git, tmux,
   #                         jq, ripgrep) are NOT gated on this — they ship
-  #                         unconditionally via modules/packages/cli/core.nix.
+  #                         unconditionally via modules/cli.nix.
   #
   #   features.development  Extra language toolchains beyond the baseline
   #                         (nodejs/bun/pnpm, go, neovide, jetbrains-toolbox,

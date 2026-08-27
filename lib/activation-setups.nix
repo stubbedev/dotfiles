@@ -46,8 +46,15 @@ rec {
       enableIf ? true,
       after ? [ ],
     }:
+    # These names must be spelled out even though `...` follows: the module
+    # system only injects `_module.args` entries (pkgs, homeLib, …) that the
+    # function actually names in its pattern, so `{ lib, ... }@margs` would
+    # hand the args/enableIf thunks a margs without pkgs.
     {
       lib,
+      config,
+      pkgs,
+      homeLib,
       ...
     }@margs:
     let
