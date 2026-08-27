@@ -78,9 +78,9 @@ checkout — it bootstraps Nix and home-manager on a fresh host.
 
 6. **Mutable files.** `xdg.configFile` / `home.file` — read-only store symlinks
    — are the default. `stubbe.mutable.<path>` (`modules/core/mutable.nix`) is
-   for the three cases that cannot be: `link` (point at the live checkout so an
-   edit needs no rebuild), `copy` (the app rewrites the file, so re-assert ours
-   each switch) and `seed` (write only if absent).
+   for the two cases that cannot be: `link` (point at the live checkout so an
+   edit needs no rebuild) and `copy` (the app rewrites the file, so re-assert
+   ours each switch).
 
 7. **Everything is Nix.** Config is structured Nix data rendered through
    `lib.generators` / `pkgs.formats` where a format exists (INI, TOML, YAML,
@@ -97,7 +97,7 @@ git clone --depth 1 https://github.com/stubbedev/dotfiles.git
 cd dotfiles && ./bin/stb-install
 ```
 
-The installer prompts for what to install. Day-to-day rebuilds then run
+The installer asks once for confirmation, then does everything. Day-to-day rebuilds then run
 through `hm`.
 
 ## APPLYING THE CONFIG
@@ -133,7 +133,7 @@ stb-install-nixos
 ```
 
 It partitions the disks as a btrfs volume, runs `nixos-install`, and clones the
-repo to `/mnt/etc/nixos`.
+repo to `/mnt/etc/nixos/dotfiles`.
 
 Optional hardening is available behind per-host flags in the host file
 (`modules/hosts/stubbe-nixos.nix`):

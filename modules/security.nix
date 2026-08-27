@@ -52,7 +52,7 @@ _: {
     };
 
   flake.modules.nixos.polkit =
-    { config, ... }:
+    { config, lib, ... }:
     let
       username = config.host.primaryUser;
     in
@@ -63,45 +63,48 @@ _: {
       # non-NixOS activations install under /etc/polkit-1/rules.d/. The VPN
       # rule (49-openconnect.rules) lives with its aspect in modules/vpn.nix.
       environment.etc = {
-        "polkit-1/rules.d/52-power-management.rules".text = ''
-          polkit.addRule(function(action, subject) {
-            if (action.id.indexOf("org.freedesktop.login1.") !== 0) {
-              return;
-            }
+        "polkit-1/rules.d/52-power-management.rules".text =
+          let
+            # verb (+ its -multiple-sessions form; inhibit-overriding variants
+            # only where systemd defines them).
+            verbs = [
+              "reboot"
+              "reboot-ignore-inhibit"
+              "power-off"
+              "power-off-ignore-inhibit"
+              "halt"
+              "halt-ignore-inhibit"
+              "suspend"
+              "suspend-ignore-inhibit"
+              "hibernate"
+              "hibernate-ignore-inhibit"
+              "hybrid-sleep"
+              "suspend-then-hibernate"
+            ];
+            actions = map (v: "org.freedesktop.login1.${v}") (
+              verbs
+              ++ map (v: "${v}-multiple-sessions") (builtins.filter (v: !lib.hasSuffix "-ignore-inhibit" v) verbs)
+            );
+          in
+          ''
+            polkit.addRule(function(action, subject) {
+              if (action.id.indexOf("org.freedesktop.login1.") !== 0) {
+                return;
+              }
 
-            var allowed = {
-              "org.freedesktop.login1.reboot": true,
-              "org.freedesktop.login1.reboot-multiple-sessions": true,
-              "org.freedesktop.login1.reboot-ignore-inhibit": true,
-              "org.freedesktop.login1.power-off": true,
-              "org.freedesktop.login1.power-off-multiple-sessions": true,
-              "org.freedesktop.login1.power-off-ignore-inhibit": true,
-              "org.freedesktop.login1.halt": true,
-              "org.freedesktop.login1.halt-multiple-sessions": true,
-              "org.freedesktop.login1.halt-ignore-inhibit": true,
-              "org.freedesktop.login1.suspend": true,
-              "org.freedesktop.login1.suspend-multiple-sessions": true,
-              "org.freedesktop.login1.suspend-ignore-inhibit": true,
-              "org.freedesktop.login1.hibernate": true,
-              "org.freedesktop.login1.hibernate-multiple-sessions": true,
-              "org.freedesktop.login1.hibernate-ignore-inhibit": true,
-              "org.freedesktop.login1.hybrid-sleep": true,
-              "org.freedesktop.login1.hybrid-sleep-multiple-sessions": true,
-              "org.freedesktop.login1.suspend-then-hibernate": true,
-              "org.freedesktop.login1.suspend-then-hibernate-multiple-sessions": true
-            };
+              var allowed = ${builtins.toJSON (lib.genAttrs actions (_: true))};
 
-            if (!allowed[action.id]) {
-              return;
-            }
+              if (!allowed[action.id]) {
+                return;
+              }
 
-            if (subject.user !== "${username}" || !subject.local || !subject.active) {
-              return;
-            }
+              if (subject.user !== "${username}" || !subject.local || !subject.active) {
+                return;
+              }
 
-            return polkit.Result.YES;
-          });
-        '';
+              return polkit.Result.YES;
+            });
+          '';
       };
     };
 

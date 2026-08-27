@@ -161,6 +161,8 @@ in
             pkgs.stubbe.bashApp {
               inherit text;
               name = "vpn-${provider}-${action}";
+              # setsid (bar's detached spawns) must not depend on host PATH.
+              runtimeInputs = [ pkgs.util-linux ];
             }
           )
           {
@@ -560,7 +562,7 @@ in
           Installs one openconnect-<provider>.service system unit per VPN
           provider, a runner for it under /usr/local/sbin, and a polkit rule
           letting ${config.home.username} start/stop exactly those units
-          without a password. Replaces the old pkexec-based scripts.
+          without a password.
         '';
         script =
           let

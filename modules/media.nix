@@ -118,10 +118,8 @@ _: {
         # XDG_DATA_DIRS so the image/* defaults resolve in file managers.
         (gfx.bundle { pkg = imv; })
 
-        # Terminal image viewers (some use GPU)
-        chafa
-        imgcat
-        (gfx.wrap viu)
+        # yazi's image-preview adapter on alacritty: the terminal has no
+        # graphics protocol, so yazi falls back to ueberzugpp's overlay.
         (gfx.wrapExe "ueberzugpp" ueberzugpp)
 
         # Audio control (wrapped to avoid nixGL conflicts)

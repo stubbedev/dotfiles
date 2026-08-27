@@ -236,7 +236,7 @@
             mode ? "0600",
           }:
           let
-            patchFile = final.writeText "${name}.json" (builtins.toJSON patch);
+            patchFile = (final.formats.json { }).generate "${name}.json" patch;
           in
           ''
             mkdir -p "$(dirname ${lib.escapeShellArg target})"
@@ -264,7 +264,7 @@
             mode ? "0600",
           }:
           let
-            valueFile = final.writeText "${name}.json" (builtins.toJSON value);
+            valueFile = (final.formats.json { }).generate "${name}.json" value;
           in
           ''
             mkdir -p "$(dirname ${lib.escapeShellArg target})"
@@ -361,18 +361,6 @@
               ''}--add-flag "${programPath}"
           '';
 
-        # No nixGL: for DRM/KMS contexts that need the HOST's EGL stack.
-        mkDriverWrapper =
-          name: programPath:
-          final.runCommand name { nativeBuildInputs = [ final.makeWrapper ]; } ''
-            makeWrapper ${programPath} $out/bin/${name} \
-              --set GBM_BACKENDS_PATH "${final.stubbe.driverEnv.GBM_BACKENDS_PATH}" \
-              --set LIBGL_DRIVERS_PATH "${final.stubbe.driverEnv.LIBGL_DRIVERS_PATH}" \
-              --set __EGL_VENDOR_LIBRARY_DIRS "${final.stubbe.driverEnv.EGL_VENDOR_LIBRARY_DIRS}" \
-              --set LD_LIBRARY_PATH "${final.stubbe.driverEnv.LD_LIBRARY_PATHS}" \
-              --unset __EGL_VENDOR_LIBRARY_FILENAMES
-          '';
-
         nixGLBin = "${final.stubbe.nixGL}/bin/${final.stubbe.nixGL.name}";
 
         driverEnv = {
@@ -389,15 +377,6 @@
             "/usr/lib/dri"
             "/run/opengl-driver/lib/dri"
             "/run/opengl-driver-32/lib/dri"
-          ];
-          EGL_VENDOR_LIBRARY_DIRS = lib.concatStringsSep ":" [
-            "/usr/share/glvnd/egl_vendor.d"
-            "/usr/local/share/glvnd/egl_vendor.d"
-            "/etc/glvnd/egl_vendor.d"
-          ];
-          LD_LIBRARY_PATHS = lib.concatStringsSep ":" [
-            "/usr/lib"
-            "/usr/lib64"
           ];
         };
 

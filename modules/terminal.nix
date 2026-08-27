@@ -66,6 +66,10 @@ _: {
       };
     in
     lib.mkIf config.features.desktop {
+      # A stale pre-home-manager real file may sit at this path; without force
+      # activation aborts with "would be clobbered". HM owns the content.
+      xdg.configFile."alacritty/alacritty.toml".force = true;
+
       programs.alacritty = {
         enable = true;
         package = alacritty;

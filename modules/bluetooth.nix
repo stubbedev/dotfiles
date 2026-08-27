@@ -122,11 +122,15 @@ _: {
                 // someone who is already in sudo. Nothing here grants anything to a remote
                 // or inactive session.
                 polkit.addRule(function (action, subject) {
-                  var allowed = {
-                    "org.blueman.network.setup": true,
-                    "org.blueman.dhcp.client": true,
-                    "org.blueman.rfkill.setstate": true,
-                    "org.blueman.pppd.pppconnect": true,
+                  var allowed = ${
+                    builtins.toJSON (
+                      lib.genAttrs [
+                        "org.blueman.network.setup"
+                        "org.blueman.dhcp.client"
+                        "org.blueman.rfkill.setstate"
+                        "org.blueman.pppd.pppconnect"
+                      ] (_: true)
+                    )
                   };
 
                   if (allowed[action.id] && subject.local && subject.active && subject.isInGroup("sudo")) {

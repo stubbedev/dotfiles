@@ -251,6 +251,9 @@ in
         wlprop
         wl-clipboard
         wl-clip-persist
+        # The SUPER+V clipboard bind (hyprland.lua) ends with `wtype -M ctrl v`
+        # to paste the picked entry back into the focused window.
+        wtype
         # IPC glue for the scripts that talk to compositor/daemon sockets
         # (hy3 tiling, jetbrains popup resize, wayle widget helpers).
         socat
@@ -316,7 +319,7 @@ in
           hl.plugin.load("${pkgs.hyprlandPlugins.hy3}/lib/libhy3.so")
 
           return {
-            paths.scripts = "${scriptDir}",
+            paths = { scripts = "${scriptDir}" },
             colors = {
               ${lib.concatStringsSep "\n    " (
                 lib.mapAttrsToList (n: hex: ''${n} = "rgb(${hex})",'') palette

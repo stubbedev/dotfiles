@@ -59,8 +59,10 @@ _: {
           done
 
           # No sudo on this host — nothing privileged is possible, so skip.
+          # exit, not return: this is a top-level script, not a sourced file —
+          # `return` here is a bash error that would abort the activation.
           if [ -z "$SUDO" ]; then
-            return 0
+            exit 0
           fi
 
           sudo() { "$SUDO" "$@"; }

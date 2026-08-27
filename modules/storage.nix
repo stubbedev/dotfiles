@@ -106,7 +106,7 @@ _: {
     };
 
   flake.modules.homeManager.storage =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
     {
       stubbe.setup.zram = {
         privileged = true;
@@ -155,12 +155,14 @@ _: {
           ${pkgs.stubbe.installText {
             name = "zram-generator.conf";
             target = "/etc/systemd/zram-generator.conf";
-            text = ''
-              # managed-by: stubbe zram
-              [zram0]
-              zram-size = ram / 2
-              compression-algorithm = zstd
-            '';
+            text =
+              "# managed-by: stubbe zram\n"
+              + lib.generators.toINI { } {
+                zram0 = {
+                  zram-size = "ram / 2";
+                  compression-algorithm = "zstd";
+                };
+              };
           }}
 
           # daemon-reload re-runs the generator against the new conf (creating

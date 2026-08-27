@@ -94,7 +94,7 @@
     # live in one xilo cache — `default` in the `default` namespace, hence
     # /c/default/default. `hm switch` substitutes the heavy first-party builds
     # from here instead of compiling locally; whichever machine compiles a
-    # path pushes it back (see bin/hm). Everything is signed by the single
+    # path pushes it back (see the hm script in modules/scripts.nix). Everything is signed by the single
     # `default:` key below.
     cache = {
       substituters = [

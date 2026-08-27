@@ -6,7 +6,7 @@ set -euo pipefail
 # Detects fixed disks attached to the live system, prompts to pick which
 # disks to wipe, formats them as ONE multi-device btrfs volume labeled
 # `stubbe`, lays down the subvolume structure that
-# modules/nixos/filesystems.nix expects, runs `nixos-install` against
+# modules/storage.nix expects, runs `nixos-install` against
 # /etc/nixos/dotfiles#<host>, replaces the read-only
 # /etc/nixos/dotfiles store-path with a writable git checkout owned by
 # the primary user, and applies the user password captured at the start
@@ -445,7 +445,7 @@ if [ "$RESUME" -eq 0 ]; then
   mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
   mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
   mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
-  # fmask/dmask matches modules/nixos/filesystems.nix so the install-time
+  # fmask/dmask matches modules/storage.nix so the install-time
   # mount sees /boot the same way the installed system will.
   mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
 
@@ -513,10 +513,10 @@ if [[ "$clone_ok" == true ]]; then
 fi
 chown "${user_uid}:${user_gid}" "$home_dir"
 
-# Copy the user's SSH keys from /root/.ssh (where modules/installer/iso.nix
+# Copy the user's SSH keys from /root/.ssh (where modules/installer.nix
 # baked them on the live ISO) into the installed user's home. Required
 # for: git push/pull on the ${FLAKE_PATH} clone, sops-nix decryption at HM
-# activation (modules/sops.nix reads ~/.ssh/id_ed25519 to derive an age
+# activation (modules/core/secrets.nix reads ~/.ssh/id_ed25519 to derive an age
 # identity), and general SSH access from the new machine. cp -a preserves
 # the 0600/0644 modes the tmpfiles rule set.
 if [ -d /root/.ssh ]; then

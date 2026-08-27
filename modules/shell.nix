@@ -55,7 +55,7 @@
           # PATH initialisation for interactive zsh.
           #
           # home-manager already exports the canonical PATH via home.sessionPath
-          # (see modules/home/base.nix). This file just guarantees the order is
+          # (see modules/core/home.nix). This file just guarantees the order is
           # right when zsh starts from contexts that bypass the profile (e.g. tmux
           # panes attaching across reboots) and adds the few dirs Nix doesn't own.
           #
@@ -367,7 +367,7 @@
 
           if is_binary nvim; then
             # vi/vim/nano/ed/code come from the nix-wrapper-modules wrapper aliases —
-            # see modules/programs/nvim/_wrapper.nix.
+            # see modules/nvim.nix.
             # svim still needs a real alias because it passes -u NONE.
             alias svim='nvim -u NONE'
           fi
@@ -443,7 +443,7 @@
 
             # Add avahi-discovered .local hosts to ssh-style completion. The cache
             # file is maintained by the zsh-avahi-hosts systemd user timer
-            # (modules/home/zsh/avahi-hosts.nix) — completion only reads it, so it
+            # (modules/network.nix) — completion only reads it, so it
             # never blocks and never forks.
             function _avahi_ssh_hosts {
               local cache="''${XDG_CACHE_HOME:-$HOME/.cache}/zsh-avahi-hosts"
@@ -470,7 +470,7 @@
             ZSH_AUTOSUGGEST_MANUAL_REBIND=1
             # Don't run the history search on long lines/pastes.
             ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
-            # History options live in programs.zsh.history (modules/home/zsh/zsh.nix).
+            # History options live in programs.zsh.history (modules/shell.nix).
 
             setopt COMPLETE_ALIASES
 
@@ -488,8 +488,8 @@
                 _bind_run "^[D" "fzf-directory-picker"
             fi
             # fzf/starship/direnv/zoxide init scripts are built at nix build time
-            # (modules/home/zsh/_packages.nix) and sourced from the store by the
-            # generated .zshrc (modules/home/zsh/zsh.nix) — nothing to eval here.
+            # (modules/shell.nix) and sourced from the store by the
+            # generated .zshrc (modules/shell.nix) — nothing to eval here.
 
             if is_binary pyenv; then
                 export PYENV_ROOT="$HOME/.pyenv"
@@ -579,7 +579,7 @@
             local context state line
             typeset -A opt_args
 
-            # Mirror is_nixos() in modules/packages/hm.nix so completion only offers
+            # Mirror is_nixos() in modules/scripts.nix so completion only offers
             # verbs the wrapper will actually accept. /etc/os-release is the canonical
             # systemd-distributed identifier; absent on most non-NixOS hosts but cheap
             # to read, so the grep stays scoped to it.
@@ -809,7 +809,7 @@
                     return 0
                     ;;
                   cache)
-                    # `hm cache nvim|zsh|locks|all` — see hm_cache() in bin/hm.
+                    # `hm cache nvim|zsh|locks|all` — see hm_cache() in modules/scripts.nix.
                     case $CURRENT in
                       2)
                         local -a targets

@@ -11,7 +11,5 @@ src/nvim/lazyvim.json
 result
 result-*
 
-# Local cargo builds (we package via rustPlatform; target/ is throwaway).
-src/**/target/
 
 .claude/

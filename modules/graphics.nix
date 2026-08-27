@@ -9,7 +9,7 @@ let
 
   # Build-time GPU detection. Reads /proc/driver/nvidia/version, which
   # only exists once nvidia.ko has loaded — so the live installer ISO
-  # force-loads `nvidia` at boot (modules/installer/iso.nix) to make
+  # force-loads `nvidia` at boot (modules/installer.nix) to make
   # detection work for `stb-install-nixos --impure`.
   #
   # Sysfs would be the ideal source (PCI vendor 0x10de is exposed for
@@ -141,7 +141,7 @@ in
 
       hardware.nvidia = lib.mkIf hasNvidia {
         modesetting.enable = true;
-        # NVIDIA Open Kernel Module — matches modules/overlays.nix:6-17
+        # NVIDIA Open Kernel Module — matches modules/core/overlays.nix
         # which the HM build uses on non-NixOS hosts, and matches the
         # `.open` variant pulled into the closure unconditionally above.
         open = true;

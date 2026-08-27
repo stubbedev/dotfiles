@@ -47,14 +47,13 @@
     };
 
   flake.modules.nixos.secrets =
-    { lib, pkgs, ... }:
+    { ... }:
     {
       imports = [ inputs.sops-nix.nixosModules.sops ];
 
-      # System secrets live in secrets/system.yaml (re-keyed under .sops.yaml to
-      # the host's age recipient). Per-user secrets keep flowing through the HM
-      # module above, one backing file per secret.
-      sops.defaultSopsFile = lib.mkDefault (pkgs.stubbe.src + "/secrets/system.yaml");
+      # No defaultSopsFile here either: every secret (including the NixOS-class
+      # github-token in modules/nix.nix) names its own backing file via
+      # pkgs.stubbe.secret.
 
       # Decrypt at boot from the host's SSH ed25519 key; sops-nix derives an age
       # identity from it in memory, so no /var/lib age key needs provisioning.

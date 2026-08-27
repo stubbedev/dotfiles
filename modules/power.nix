@@ -533,11 +533,8 @@ _: {
               ${pkgs.stubbe.installText {
                 name = "plocate-ac-only.conf";
                 target = "/etc/systemd/system/plocate-updatedb.service.d/ac-only.conf";
-                text = ''
-                  # managed-by: stubbe battery-power
-                  [Unit]
-                  ConditionACPower=true
-                '';
+                text =
+                  "# managed-by: stubbe battery-power\n" + lib.generators.toINI { } { Unit.ConditionACPower = true; };
               }}
               sudo systemctl daemon-reload
             fi
@@ -562,13 +559,15 @@ _: {
             ${pkgs.stubbe.installText {
               name = "10-lid.conf";
               target = "/etc/systemd/logind.conf.d/10-lid.conf";
-              text = ''
-                # managed-by: stubbe logind-lid
-                [Login]
-                HandleLidSwitch=suspend
-                HandleLidSwitchExternalPower=suspend
-                HandleLidSwitchDocked=ignore
-              '';
+              text =
+                "# managed-by: stubbe logind-lid\n"
+                + lib.generators.toINI { } {
+                  Login = {
+                    HandleLidSwitch = "suspend";
+                    HandleLidSwitchExternalPower = "suspend";
+                    HandleLidSwitchDocked = "ignore";
+                  };
+                };
             }}
 
             if command -v systemctl >/dev/null 2>&1; then

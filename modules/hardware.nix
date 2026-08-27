@@ -221,10 +221,6 @@ in
       # async discard.
       services.fstrim.enable = false;
 
-      # Newer brightnessctl uses the systemd-logind API instead of udev rules,
-      # so the NixOS module was removed. Install the package directly.
-      environment.systemPackages = [ pkgs.brightnessctl ];
-
       services.udev.extraRules = ''
         ${usbAutosuspendRules}
         ${usbAudioPowerRules}

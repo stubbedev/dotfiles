@@ -9,7 +9,7 @@
     # Switch back to github:nix-community/nixGL once #221 is merged
     nixgl = {
       url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
-      # We import nixgl via a path with `pkgs = final` (modules/overlays.nix),
+      # We import nixgl via a path with `pkgs = final` (modules/core/overlays.nix),
       # so nixgl's flake outputs (and its own nixpkgs) are never used — follow
       # ours to drop a redundant nixpkgs from the lock.
       inputs.nixpkgs.follows = "nixpkgs";
@@ -40,7 +40,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # xilo: client for our self-hosted Nix binary cache (nix.stubbe.dev).
-    # bin/hm pushes each switch's closure here so other machines substitute
+    # `hm` pushes each switch's closure here so other machines substitute
     # what this one compiled. Pinned to the tag the SERVER runs (v1.0.0): the
     # cache-config API is versioned, so a client ahead of the server 404s
     # — tracking master means a client push can outrun the server's API;
@@ -51,7 +51,7 @@
     };
     # Go-rewritten work MCP servers, consumed as flake packages (buildGoModule)
     # so they spawn as offline store-path binaries instead of `npx …@latest`.
-    # Wired into lib/mcp-servers.nix via setup-claude-code.nix. atlassian-mcp is
+    # Wired into modules/ai/mcp-servers.nix via modules/ai/claude-code.nix. atlassian-mcp is
     # not here yet — still the pinned npx wrapper until its Go rewrite lands.
     jenkins-mcp = {
       url = "github:stubbedev/jenkins-mcp";
@@ -67,7 +67,7 @@
     };
     # Readonly DB MCP server (Rust). One unified server for MySQL + MongoDB
     # (and more); replaces the separate mysql-mcp / mongodb-mcp. Joins the
-    # `proxied` set in lib/mcp-servers.nix. Like pty-mcp/wayle, it ships its
+    # `proxied` set in modules/ai/mcp-servers.nix. Like pty-mcp/wayle, it ships its
     # own binary cache (nix.stubbe.dev/default) built against its OWN
     # flake.lock nixpkgs — don't follow ours or every store path misses the
     # cache and rustc builds locally.
@@ -85,7 +85,7 @@
       flake = false;
     };
     # proxy-mcp (stubbedev): aggregating MCP proxy with a real readiness gate.
-    # Backs the chrome-devtools `proxied` entry in lib/mcp-servers.nix,
+    # Backs the chrome-devtools `proxied` entry in modules/ai/mcp-servers.nix,
     # replacing TBXark/mcp-proxy. Ships its own flake, so it is consumed as a
     # package directly (no buildGoModule overlay). Its Type=notify
     # sd_notify(READY=1) gate fires only after the wrapped upstream's MCP route
@@ -97,14 +97,14 @@
     };
     # pty-mcp (stubbedev): real-terminal MCP server — one-shot `run` in the
     # user's shell plus persistent PTY sessions, sudo via a native askpass
-    # dialog. Rust. Joins the `proxied` set in lib/mcp-servers.nix (shared
+    # dialog. Rust. Joins the `proxied` set in modules/ai/mcp-servers.nix (shared
     # proxy port, on-demand). CI pushes its closure to nix.stubbe.dev/default
     # built against its OWN flake.lock nixpkgs — don't follow ours or every
     # store path misses the cache and rustc builds locally (same reason as
     # wayle/fenix above).
     pty-mcp.url = "github:stubbedev/pty-mcp";
     # notmuch-mcp (stubbedev): search/read/tag mail over the local notmuch
-    # index (Go). Joins the `proxied` set in lib/mcp-servers.nix, gated on
+    # index (Go). Joins the `proxied` set in modules/ai/mcp-servers.nix, gated on
     # features.desktop — it shells out to the `notmuch` binary and reads the
     # ~/.notmuch-config + maildir that modules/mail.nix only wires on a
     # desktop host. Master + tags are pushed to nix.stubbe.dev/default built
@@ -112,7 +112,7 @@
     # miss the cache.
     notmuch-mcp.url = "github:stubbedev/notmuch-mcp";
     # Wayland desktop shell (Rust/GTK4): bar + notifications + OSD + wallpaper.
-    # Ships its own flake; we consume overlays.default (modules/overlays.nix).
+    # Ships its own flake; we consume overlays.default (modules/core/overlays.nix).
     wayle = {
       # ?submodules=1: wayle-cava vendors cava's C sources as a git submodule
       # (crates/wayle-cava/cava); the github fetcher skips submodules by default,
@@ -127,7 +127,7 @@
     };
     # Zsh plugins consumed as pinned sources (no runtime git clones).
     # zcompiled into the stubbe-zsh-plugins derivation by
-    # lib/zsh-packages.nix; refreshed via `nix flake update`,
+    # modules/shell.nix; refreshed via `nix flake update`,
     # which replaced the daily zsh-plugin-update timer.
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
@@ -142,7 +142,7 @@
       flake = false;
     };
     # PHP language server (Rust). Ships its own flake; we consume
-    # packages.default via the phpantom_lsp overlay (modules/overlays.nix).
+    # packages.default via the phpantom_lsp overlay (modules/core/overlays.nix).
     # Pinned to release tag; bumped by `hm upgrade` (bump_release_pins).
     phpantom_lsp = {
       url = "github:PHPantom-dev/phpantom_lsp/0.10.0";

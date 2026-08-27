@@ -92,31 +92,25 @@
         ExpireUnread no
       '';
 
-      notmuchConfig = ''
-        [database]
-        path=${maildir}
-
-        [user]
-        name=Alexander Bugge Stage
-        primary_email=abs@kontainer.com
-        other_email=alexander.bugge.stage@gmail.com
-
-        # `unread` is the contract between notmuch and aerc: aerc strips this
-        # tag when the user opens a message, notmuch's synchronize_flags then
-        # renames the maildir file to add the `S` flag, and mbsync propagates
-        # that back to IMAP on the next run. Nothing else marks mail as read.
-        [new]
-        tags=unread;inbox;
-        ignore=
-
-        [search]
-        exclude_tags=deleted;spam;
-
-        # Bidirectional flag↔tag sync. Without this, aerc reading a message
-        # would update notmuch but never reach the IMAP server.
-        [maildir]
-        synchronize_flags=true
-      '';
+      # `new.tags = unread` is the contract between notmuch and aerc: aerc
+      # strips the tag when the user opens a message, notmuch's
+      # maildir.synchronize_flags (bidirectional flag↔tag sync) then renames
+      # the maildir file to add the `S` flag, and mbsync propagates that back
+      # to IMAP on the next run. Nothing else marks mail as read.
+      notmuchConfig = (pkgs.formats.ini { }).generate "notmuch-config" {
+        database.path = maildir;
+        user = {
+          name = "Alexander Bugge Stage";
+          primary_email = "abs@kontainer.com";
+          other_email = "alexander.bugge.stage@gmail.com";
+        };
+        new = {
+          tags = "unread;inbox;";
+          ignore = "";
+        };
+        search.exclude_tags = "deleted;spam;";
+        maildir.synchronize_flags = true;
+      };
 
       # Tagging used to live in a notmuch post-new hook, but the hook dir is
       # inside ${maildir}/.notmuch/ which notmuch creates itself —
@@ -191,39 +185,40 @@
       # aerc ≥0.22 deprecated maildir-store and explicit database paths in the
       # source URL — both now come from the notmuch config, which aerc finds
       # via NOTMUCH_CONFIG (set below).
-      accountsConf = ''
-        [kontainer]
-        source=notmuch://
-        maildir-account-path=kontainer
-        query-map=${home}/.config/aerc/queries-kontainer
-        exclude-tags=deleted,spam
-        default=INBOX
-        folders=INBOX,Sent
-        from=Alexander Bugge Stage <abs@kontainer.com>
-        outgoing=smtp+login://abs@kontainer.com@ex.konformit.com:587
-        outgoing-cred-cmd=cat ${passwords.kontainer}
-        copy-to=Sent
-        postpone=Drafts
-        archive=Archive
-        check-mail-cmd=${lib.getExe mailSync} kontainer
-        check-mail=30s
-
-        [gmail]
-        source=notmuch://
-        maildir-account-path=gmail
-        query-map=${home}/.config/aerc/queries-gmail
-        exclude-tags=deleted,spam,trash
-        default=INBOX
-        folders=INBOX,Sent
-        from=Alexander Bugge Stage <alexander.bugge.stage@gmail.com>
-        outgoing=smtp+plain://alexander.bugge.stage@gmail.com@smtp.gmail.com:587
-        outgoing-cred-cmd=cat ${passwords.gmail}
-        copy-to=[Gmail]/Sent Mail
-        postpone=[Gmail]/Drafts
-        archive=[Gmail]/All Mail
-        check-mail-cmd=${lib.getExe mailSync} gmail
-        check-mail=30s
-      '';
+      accountsConf = (pkgs.formats.ini { }).generate "aerc-accounts.conf" {
+        kontainer = {
+          source = "notmuch://";
+          maildir-account-path = "kontainer";
+          query-map = "${home}/.config/aerc/queries-kontainer";
+          exclude-tags = "deleted,spam";
+          default = "INBOX";
+          folders = "INBOX,Sent";
+          from = "Alexander Bugge Stage <abs@kontainer.com>";
+          outgoing = "smtp+login://abs@kontainer.com@ex.konformit.com:587";
+          outgoing-cred-cmd = "cat ${passwords.kontainer}";
+          copy-to = "Sent";
+          postpone = "Drafts";
+          archive = "Archive";
+          check-mail-cmd = "${lib.getExe mailSync} kontainer";
+          check-mail = "30s";
+        };
+        gmail = {
+          source = "notmuch://";
+          maildir-account-path = "gmail";
+          query-map = "${home}/.config/aerc/queries-gmail";
+          exclude-tags = "deleted,spam,trash";
+          default = "INBOX";
+          folders = "INBOX,Sent";
+          from = "Alexander Bugge Stage <alexander.bugge.stage@gmail.com>";
+          outgoing = "smtp+plain://alexander.bugge.stage@gmail.com@smtp.gmail.com:587";
+          outgoing-cred-cmd = "cat ${passwords.gmail}";
+          copy-to = "[Gmail]/Sent Mail";
+          postpone = "[Gmail]/Drafts";
+          archive = "[Gmail]/All Mail";
+          check-mail-cmd = "${lib.getExe mailSync} gmail";
+          check-mail = "30s";
+        };
+      };
 
       # Virtual folder name → notmuch query; aerc opens the named folder by
       # running its query against the local index. Sent is virtualised so the
@@ -245,6 +240,11 @@
       # aerc updates the displayed folder/count.
       mailOpen = pkgs.stubbe.bashApp {
         name = "mail-open";
+        # pkill/jq must not depend on the host providing them.
+        runtimeInputs = with pkgs; [
+          procps
+          jq
+        ];
         text = ''
           APP_ID="aerc-mail"
 
@@ -487,14 +487,8 @@
         ++ (with pkgs; [
           # The client itself, and the address-book/calendar tooling beside it.
           aerc
-          khard
-          vdirsyncer
-          mailutils
-          msmtp
-          pandoc
-          lynx
+          # aerc's image/* filter (aerc.conf) renders through chafa.
           chafa
-          catimg
           # IMAP → local maildir mirror, paired with notmuch indexing. aerc's
           # `source=notmuch://` reads the indexed maildir rather than talking
           # to IMAP per message; mbsync propagates flag/tag changes back.
@@ -512,7 +506,7 @@
           ".mbsyncrc".text = mbsyncrc;
           # notmuch reads ~/.notmuch-config (the legacy path) regardless of
           # XDG when the file exists — keep it explicit.
-          ".notmuch-config".text = notmuchConfig;
+          ".notmuch-config".source = notmuchConfig;
         };
       };
 
@@ -681,7 +675,7 @@
           p = :postpone<Enter> # Save as draft
           q = :abort<Enter> # Quit compose
         '';
-        "aerc/accounts.conf".text = accountsConf;
+        "aerc/accounts.conf".source = accountsConf;
         "aerc/queries-kontainer".text = queries.kontainer;
         "aerc/queries-gmail".text = queries.gmail;
       };

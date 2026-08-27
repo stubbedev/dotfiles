@@ -2,7 +2,7 @@
 #
 # Both configs are generated from Nix: lazygit's theme then draws from
 # `pkgs.stubbe.colors` instead of carrying its own copy of the palette, and its
-# runtime state file is seeded through `stubbe.mutable` because lazygit rewrites
+# runtime state file is copied through `stubbe.mutable` because lazygit rewrites
 # it in place.
 _: {
   flake.modules.homeManager.git =
@@ -75,12 +75,23 @@ _: {
       programs.git = {
         enable = true;
         hooks.commit-msg = stripClaudeCoauthors;
+        # Rendered to ~/.config/git/ignore — git's default global-ignore path,
+        # so no core.excludesfile is needed.
+        ignores = [
+          ".worktrees"
+          ".gwt-*"
+          ".treeman.yaml"
+          ".treeman.local.yaml"
+          ".treeman/"
+          ".treeman-hooks/"
+          ".envrc"
+          ".direnv/"
+        ];
         settings = {
           user = {
             name = "Alexander Bugge Stage";
             email = "abs@stubbe.dev";
           };
-          core.excludesfile = "~/.config/git/ignore";
           # Cache untracked-file enumeration per directory (keyed on mtime) so
           # `git status` skips re-walking unchanged trees — the big gitignored
           # vendor/ and node_modules/ dirs in large checkouts. Takes a cold
@@ -105,36 +116,25 @@ _: {
         settings = lazygitSettings;
       };
 
-      xdg.configFile."git/ignore".text = ''
-        .worktrees
-        .gwt-*
-        .treeman.yaml
-        .treeman.local.yaml
-        .treeman/
-        .treeman-hooks/
-        .envrc
-        .direnv/
-      '';
-
       # lazygit rewrites state.yml as you use it, so it cannot be a store
       # symlink. `lastversion` pins the current package version so lazygit's
       # "new version available" popup stays quiet after a nixpkgs bump.
       stubbe.mutable.".config/lazygit/state.yml" = {
         method = "copy";
-        text = ''
-          lastupdatecheck: 0
-          startuppopupversion: 5
-          customcommandshistory: []
-          hidecommandlog: false
-          ignorewhitespaceindiffview: true
-          diffcontextsize: 3
-          renamesimilaritythreshold: 50
-          localbranchsortorder: recency
-          remotebranchsortorder: alphabetical
-          gitlogorder: topo-order
-          gitlogshowgraph: always
-          lastversion: ${pkgs.lazygit.version}
-        '';
+        source = (pkgs.formats.yaml { }).generate "lazygit-state.yml" {
+          lastupdatecheck = 0;
+          startuppopupversion = 5;
+          customcommandshistory = [ ];
+          hidecommandlog = false;
+          ignorewhitespaceindiffview = true;
+          diffcontextsize = 3;
+          renamesimilaritythreshold = 50;
+          localbranchsortorder = "recency";
+          remotebranchsortorder = "alphabetical";
+          gitlogorder = "topo-order";
+          gitlogshowgraph = "always";
+          lastversion = pkgs.lazygit.version;
+        };
       };
     };
 }

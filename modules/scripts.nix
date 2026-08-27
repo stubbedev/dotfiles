@@ -487,8 +487,8 @@ _: {
           }
 
           # Generation trimming on every switch is handled by activation hooks, not
-          # here: modules/nixos/nix-gc.nix (system.activationScripts.pruneSystemGenerations)
-          # and modules/home/nix-gc.nix (home.activation.pruneNixGenerations) both trim
+          # here: modules/nix.nix (system.activationScripts.pruneSystemGenerations)
+          # and modules/nix.nix (home.activation.pruneNixGenerations) both trim
           # profiles to "current + 1 previous" as part of the switch. Store GC runs on
           # the weekly nix.gc / nix-collect-garbage timers. So `hm switch`/`upgrade`
           # need do nothing extra — for an immediate store sweep, run `hm gc`.
@@ -714,7 +714,7 @@ _: {
             secret edit <name>  Open secrets/<name> in $EDITOR via sops, binary mode (creates if absent)
             secret set <name>   Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)
             secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
-            cache <target>      Wipe cached state (target: nvim|zsh|locks|all)
+            cache <target>      Wipe cached state (target: nvim|locks|all)
             clean [dir]         Interactive fzf TUI to scan/reclaim disk space: build
                                   dirs (node_modules, target, .next, dist, vendor,
                                   .venv), ~/.cache subdirs, ~/core dumps, and nix gc.
@@ -906,29 +906,14 @@ _: {
                   "$HOME/.local/state/nvim" \
                   "$HOME/.cache/nvim"
                 ;;
-              zsh)
-                # One-time legacy cleanup. Everything zsh now ships from the nix
-                # store (modules/shell.nix): plugins, completions, zcompdump, and
-                # generator init scripts are build products; the patina hook is the
-                # only cache file left and setup-zsh-patina regenerates it each
-                # switch. Nothing repopulates these paths anymore.
-                echo "Removing legacy zsh state (pre nix-managed zsh)..."
-                rm -f "$HOME/.zcompdump" "$HOME/.zcompdump.zwc"
-                for _c in fzf_init starship_init direnv_init zsh_patina_init; do
-                  rm -f "''${XDG_CACHE_HOME:-$HOME/.cache}/$_c.zsh" \
-                    "''${XDG_CACHE_HOME:-$HOME/.cache}/$_c.zsh.zwc" \
-                    "''${XDG_CACHE_HOME:-$HOME/.cache}/$_c.zsh.ver"
-                done
-                unset _c
-                ;;
               locks)
-                # Privileged activations (modules/activation/_privileged/*) skip
+                # Privileged activations (modules/core/setup.nix) skip
                 # themselves on each switch when their lock file matches the action
                 # hash + state-input hash. Wiping the lock files forces every gated
                 # activation to re-run on the next switch — useful when
                 # a system file has drifted out from under us (manual edit, package
                 # upgrade clobber, …) and we want home-manager to reassert the
-                # managed copy. See lib.nix:sudoPromptScript.
+                # managed copy. See modules/core/setup.nix (sudoScript).
                 local lock_dir="$HOME/.local/state/nix/home-manager"
                 if [ -d "$lock_dir" ]; then
                   local count
@@ -946,7 +931,6 @@ _: {
                 ;;
               all)
                 hm_cache nvim
-                hm_cache zsh
                 ;;
               ""|-h|--help)
                 cat <<EOF >&2
@@ -954,19 +938,15 @@ _: {
 
           Targets:
             nvim         Clear ~/.local/{share,state}/nvim and ~/.cache/nvim.
-            zsh          Remove legacy pre-nix zsh state: ~/.zcompdump* and old
-                         *_init.zsh caches. Zsh is
-                         fully nix-managed now (modules/shell.nix) — one-time cleanup,
-                         nothing repopulates these.
             locks        Wipe ~/.local/state/nix/home-manager/*.lock.sum so every
                          privileged activation re-runs on next switch.
-            all          nvim + zsh. Does NOT touch locks — that's intentional
+            all          nvim. Does NOT touch locks — that's intentional
                          (re-runs every gated activation; opt-in only).
           EOF
                 [ -z "$target" ] && return 2 || return 0
                 ;;
               *)
-                echo "hm cache: unknown target '$target' (want nvim|zsh|locks|all)" >&2
+                echo "hm cache: unknown target '$target' (want nvim|locks|all)" >&2
                 return 2
                 ;;
             esac

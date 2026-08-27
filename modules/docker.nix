@@ -95,12 +95,10 @@ _: {
           # stripped because it conflicts with containerd-snapshotter. Same
           # settings as virtualisation.docker.daemon.settings above.
           _stb_patch=${
-            pkgs.writeText "docker-daemon-patch.json" (
-              builtins.toJSON {
-                features.containerd-snapshotter = true;
-                insecure-registries = [ "localhost:5000" ];
-              }
-            )
+            (pkgs.formats.json { }).generate "docker-daemon-patch.json" {
+              features.containerd-snapshotter = true;
+              insecure-registries = [ "localhost:5000" ];
+            }
           }
 
           sudo mkdir -p /etc/docker

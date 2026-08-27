@@ -51,8 +51,8 @@ in
       ...
     }:
     lib.mkIf config.stubbe.userFeatures.browsers {
-      environment.etc."opt/chrome/policies/managed/stubbedev-newtab.json".text = builtins.toJSON (
-        pkgs.stubbe.chromePolicy pkgs.stubbe.newtabUrl
-      );
+      environment.etc."opt/chrome/policies/managed/stubbedev-newtab.json".source =
+        (pkgs.formats.json { }).generate "stubbedev-newtab.json"
+          (pkgs.stubbe.chromePolicy pkgs.stubbe.newtabUrl);
     };
 }

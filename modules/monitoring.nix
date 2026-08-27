@@ -83,7 +83,7 @@ _: {
       # re-adds its explanatory comments the first time it saves.
       stubbe.mutable.".config/btop/btop.conf" = {
         method = "copy";
-        text =
+        source =
           let
             render =
               v:
@@ -96,7 +96,7 @@ _: {
               else
                 toString v;
           in
-          lib.generators.toKeyValue { mkKeyValue = k: v: "${k} = ${render v}"; } {
+          (pkgs.formats.keyValue { mkKeyValue = k: v: "${k} = ${render v}"; }).generate "btop.conf" {
             color_theme = themePath;
             theme_background = true;
             truecolor = true;

@@ -135,14 +135,6 @@ in
           ${lib.getExe' config.nix.package "nix-env"} --profile /nix/var/nix/profiles/system --delete-generations +2 || true
         '';
 
-        # Leftover from any pre-flake nix-channel use of this host. Channels are
-        # disabled above, but Nix still warns at every activation while these
-        # directories exist (NixOS/nix#9574). The `-rf` is safe: with channels
-        # disabled the daemon never reads them, and a recreated copy would just
-        # re-trigger the warning.
-        removeLegacyNixChannels.text = ''
-          rm -rf /root/.nix-defexpr/channels /nix/var/nix/profiles/per-user/root/channels
-        '';
       };
 
       # GitHub API token for flake input fetches. sops-nix decrypts it into /run
@@ -180,7 +172,6 @@ in
           # nh ships unconditionally via modules/scripts.nix (the `hm` wrapper
           # depends on it), so it is deliberately absent here.
           pass
-          age
           cachix
           attic-client
           nixd

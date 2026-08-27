@@ -409,8 +409,10 @@
           # killing it by day — so it only needs to be on PATH for the service.
           hyprsunset
           # inotifywait — the event-driven VPN widget (wayle-widget vpn-watch)
-          # waits on the openconnect marker files instead of polling.
+          # waits on the openconnect marker files instead of polling — and
+          # `ip monitor link` is its second event source.
           inotify-tools
+          iproute2
           # wayle has no brightness CLI, so the brightness module's scroll
           # actions shell out to this.
           brightnessctl
@@ -796,130 +798,128 @@
           let
             icon = name: "${pkgs.wleave}/share/wleave/icons/${name}.svg";
           in
-          pkgs.writeText "wleave-layout.json" (
-            builtins.toJSON {
-              css = toString (
-                pkgs.writeText "wleave.css" ''
-                  window {
-                      background-color: rgba(12, 12, 12, 0.8);
-                  }
-
-                  button {
-                      color: oklab(from var(--view-fg-color) var(--standalone-color-oklab));
-                      background-color: var(--view-bg-color);
-                      border: none;
-                      padding: 10px;
-                  }
-
-                  /* Icon-only: collapse the text label. wleave always builds it from the
-                     button's `text`, and a vertical box packs children from the top, so a
-                     visible label pushes the icon up. Zeroing it leaves the picture as the
-                     only space-taking child → it fills the button and ScaleDown centres
-                     the glyph vertically. */
-                  button label.action-name {
-                      font-size: 0;
-                      min-height: 0;
-                      min-width: 0;
-                      margin: 0;
-                      padding: 0;
-                  }
-
-                  button label.keybind {
-                      font-size: 11px;
-                      font-family: monospace;
-                  }
-
-                  button:hover label.keybind, button:focus label.keybind {
-                      opacity: 1;
-                  }
-
-                  button:focus,
-                  button:hover {
-                      background-color: color-mix(in srgb, var(--accent-bg-color), var(--view-bg-color));
-                  }
-
-                  button:active {
-                      color: var(--accent-fg-color);
-                      background-color: var(--accent-bg-color);
-                  }
-
-                  button#shutdown { --view-fg-color: #ff8d8d; }
-                  button#hibernate { --view-fg-color: #a8c0ff; }
-                  button#reboot { --view-fg-color: #84ffaa; }
-                  button#lock { --view-fg-color: #ffe8b6; }
-                  button#logout { --view-fg-color: #ffcca8; }
-                  button#suspend { --view-fg-color: #caaff9; }
-
-                  /* Shrink the icons: margin reduces the picture's allocation. */
-                  .icon-dropshadow {
-                      margin: 10px;
-                  }
-                ''
-              );
-              # wleave is a fullscreen layer-shell window whose buttons ALWAYS
-              # fill the inter-margin box (layout.rs maximises button area;
-              # aspect-ratio only changes their shape, not their size), so the
-              # only size lever is the margins — which accept a percentage of
-              # the viewport per axis, making this resolution-independent.
-              #
-              # One row of small square tiles, centred: "1/1" puts every button
-              # on one row, top/bottom 46% leaves ~8% of screen height (this is
-              # what makes them ~4x smaller — raise it to shrink further),
-              # left/right 15% just centres the row, aspect "1" squares them.
-              "buttons-per-row" = "1/1";
-              margin = "15%";
-              "margin-top" = "46%";
-              "margin-bottom" = "46%";
-              "button-aspect-ratio" = "1";
-              "close-on-lost-focus" = true;
-              # Drop the "Wleave x.y. Missing or broken icons?" footer.
-              "no-version-info" = true;
-              buttons = [
-                {
-                  label = "lock";
-                  action = "wayle-lock";
-                  text = "Lock";
-                  keybind = "l";
-                  icon = icon "lock";
+          (pkgs.formats.json { }).generate "wleave-layout.json" {
+            css = toString (
+              pkgs.writeText "wleave.css" ''
+                window {
+                    background-color: rgba(12, 12, 12, 0.8);
                 }
-                {
-                  label = "logout";
-                  action = [
-                    {
-                      "$DESKTOP_SESSION" = "hyprland";
-                      shell = "hyprctl dispatch exit";
-                    }
-                    # Works on any systemd-logind session, as a fallback.
-                    "loginctl terminate-user $USER"
-                  ];
-                  text = "Logout";
-                  keybind = "e";
-                  icon = icon "logout";
+
+                button {
+                    color: oklab(from var(--view-fg-color) var(--standalone-color-oklab));
+                    background-color: var(--view-bg-color);
+                    border: none;
+                    padding: 10px;
                 }
-                {
-                  label = "suspend";
-                  action = "systemctl suspend";
-                  text = "Suspend";
-                  keybind = "u";
-                  icon = icon "suspend";
+
+                /* Icon-only: collapse the text label. wleave always builds it from the
+                   button's `text`, and a vertical box packs children from the top, so a
+                   visible label pushes the icon up. Zeroing it leaves the picture as the
+                   only space-taking child → it fills the button and ScaleDown centres
+                   the glyph vertically. */
+                button label.action-name {
+                    font-size: 0;
+                    min-height: 0;
+                    min-width: 0;
+                    margin: 0;
+                    padding: 0;
                 }
-                {
-                  label = "reboot";
-                  action = "systemctl reboot";
-                  text = "Reboot";
-                  keybind = "r";
-                  icon = icon "reboot";
+
+                button label.keybind {
+                    font-size: 11px;
+                    font-family: monospace;
                 }
-                {
-                  label = "shutdown";
-                  action = "systemctl poweroff";
-                  text = "Shutdown";
-                  keybind = "s";
-                  icon = icon "shutdown";
+
+                button:hover label.keybind, button:focus label.keybind {
+                    opacity: 1;
                 }
-              ];
-            }
-          );
+
+                button:focus,
+                button:hover {
+                    background-color: color-mix(in srgb, var(--accent-bg-color), var(--view-bg-color));
+                }
+
+                button:active {
+                    color: var(--accent-fg-color);
+                    background-color: var(--accent-bg-color);
+                }
+
+                button#shutdown { --view-fg-color: #ff8d8d; }
+                button#hibernate { --view-fg-color: #a8c0ff; }
+                button#reboot { --view-fg-color: #84ffaa; }
+                button#lock { --view-fg-color: #ffe8b6; }
+                button#logout { --view-fg-color: #ffcca8; }
+                button#suspend { --view-fg-color: #caaff9; }
+
+                /* Shrink the icons: margin reduces the picture's allocation. */
+                .icon-dropshadow {
+                    margin: 10px;
+                }
+              ''
+            );
+            # wleave is a fullscreen layer-shell window whose buttons ALWAYS
+            # fill the inter-margin box (layout.rs maximises button area;
+            # aspect-ratio only changes their shape, not their size), so the
+            # only size lever is the margins — which accept a percentage of
+            # the viewport per axis, making this resolution-independent.
+            #
+            # One row of small square tiles, centred: "1/1" puts every button
+            # on one row, top/bottom 46% leaves ~8% of screen height (this is
+            # what makes them ~4x smaller — raise it to shrink further),
+            # left/right 15% just centres the row, aspect "1" squares them.
+            "buttons-per-row" = "1/1";
+            margin = "15%";
+            "margin-top" = "46%";
+            "margin-bottom" = "46%";
+            "button-aspect-ratio" = "1";
+            "close-on-lost-focus" = true;
+            # Drop the "Wleave x.y. Missing or broken icons?" footer.
+            "no-version-info" = true;
+            buttons = [
+              {
+                label = "lock";
+                action = "wayle-lock";
+                text = "Lock";
+                keybind = "l";
+                icon = icon "lock";
+              }
+              {
+                label = "logout";
+                action = [
+                  {
+                    "$DESKTOP_SESSION" = "hyprland";
+                    shell = "hyprctl dispatch exit";
+                  }
+                  # Works on any systemd-logind session, as a fallback.
+                  "loginctl terminate-user $USER"
+                ];
+                text = "Logout";
+                keybind = "e";
+                icon = icon "logout";
+              }
+              {
+                label = "suspend";
+                action = "systemctl suspend";
+                text = "Suspend";
+                keybind = "u";
+                icon = icon "suspend";
+              }
+              {
+                label = "reboot";
+                action = "systemctl reboot";
+                text = "Reboot";
+                keybind = "r";
+                icon = icon "reboot";
+              }
+              {
+                label = "shutdown";
+                action = "systemctl poweroff";
+                text = "Shutdown";
+                keybind = "s";
+                icon = icon "shutdown";
+              }
+            ];
+          };
 
         systemd.user.services = {
           wayle = {

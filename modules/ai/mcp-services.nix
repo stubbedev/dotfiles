@@ -109,43 +109,41 @@
         # type must be set explicitly — proxy-mcp defaults to SSE otherwise. addr
         # is ignored under socket activation (the adopted fd wins) but kept valid
         # for config validation.
-        proxyConfig = pkgs.writeText "mcp-proxy.json" (
-          builtins.toJSON {
-            mcpProxy = {
-              baseURL = "http://${proxyHost}:${toString proxyPort}";
-              addr = "${proxyHost}:${toString proxyPort}";
-              name = "mcp-proxy";
-              version = "1.0.0";
-              type = "streamable-http";
-              options.logEnabled = true;
-            };
-            # A backend is either a spawned stdio command (command/args) or an
-            # existing HTTP upstream (url/transportType — used to front the
-            # jenkins/sentry HTTP services behind a repoWhitelist gate). Options
-            # default to mode "shared"; a backend that needs per-window roots
-            # relayed sets mode "perSession", and repoWhitelist (when present)
-            # gates tool visibility to matching repos.
-            mcpServers = lib.mapAttrs (
-              _: p:
-              (
-                if p ? url then
-                  {
-                    inherit (p) url;
-                    transportType = p.transportType or "streamable-http";
-                  }
-                else
-                  { inherit (p) command args; }
-              )
-              // {
-                options = {
-                  mode = p.mode or "shared";
-                  idleTimeout = "${toString p.idleSec}s";
+        proxyConfig = (pkgs.formats.json { }).generate "mcp-proxy.json" {
+          mcpProxy = {
+            baseURL = "http://${proxyHost}:${toString proxyPort}";
+            addr = "${proxyHost}:${toString proxyPort}";
+            name = "mcp-proxy";
+            version = "1.0.0";
+            type = "streamable-http";
+            options.logEnabled = true;
+          };
+          # A backend is either a spawned stdio command (command/args) or an
+          # existing HTTP upstream (url/transportType — used to front the
+          # jenkins/sentry HTTP services behind a repoWhitelist gate). Options
+          # default to mode "shared"; a backend that needs per-window roots
+          # relayed sets mode "perSession", and repoWhitelist (when present)
+          # gates tool visibility to matching repos.
+          mcpServers = lib.mapAttrs (
+            _: p:
+            (
+              if p ? url then
+                {
+                  inherit (p) url;
+                  transportType = p.transportType or "streamable-http";
                 }
-                // lib.optionalAttrs (p ? repoWhitelist) { inherit (p) repoWhitelist; };
+              else
+                { inherit (p) command args; }
+            )
+            // {
+              options = {
+                mode = p.mode or "shared";
+                idleTimeout = "${toString p.idleSec}s";
               }
-            ) servers.proxied;
-          }
-        );
+              // lib.optionalAttrs (p ? repoWhitelist) { inherit (p) repoWhitelist; };
+            }
+          ) servers.proxied;
+        };
 
         # Only build the units when at least one proxied backend exists.
         proxiedSockets = lib.optionalAttrs (servers.proxied != { }) {

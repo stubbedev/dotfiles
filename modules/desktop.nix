@@ -62,7 +62,7 @@ let
 in
 {
   flake.modules.nixos.desktop =
-    { lib, pkgs, ... }:
+    { lib, ... }:
     {
       # dbus-broker is the modern, faster D-Bus implementation: lower latency,
       # structured journal logging, kdbus-style design without the kernel
@@ -76,13 +76,6 @@ in
 
       xdg.mime.defaultApplications = mimeDefaults "firefox.desktop" lib;
 
-      environment.systemPackages = with pkgs; [
-        # The custom shell widgets shell out to python3.
-        python3
-        imgcat
-        freerdp
-        redis # provides redis-cli
-      ];
     };
 
   flake.modules.homeManager.desktop =
@@ -150,12 +143,12 @@ in
           # Needs the udev rules from hardware.logitech.wireless on NixOS.
           solaar
 
-          # Monitor brightness
-          brightnessctl
+          # Monitor brightness (brightnessctl ships from modules/wayle.nix,
+          # whose bar scroll actions are its consumer)
           ddcutil
 
-          # Clipboard
-          clipman
+          # Clipboard (stored by the hyprland.lua wl-paste watcher, browsed
+          # via the SUPER+V rofi bind)
           cliphist
 
           # `secret-tool`, for scripts that reach the keyring from the CLI.
@@ -258,7 +251,15 @@ in
           };
         };
 
-        configFile."pcmanfm/default/pcmanfm.conf".source = (pkgs.formats.ini { }).generate "pcmanfm.conf" {
+      };
+
+      # pcmanfm rewrites this file at runtime (window geometry, view state),
+      # so a store symlink gets replaced by a real file on first run and the
+      # next activation refuses to clobber it. Writable copy, re-asserted each
+      # switch — same treatment as btop.conf and kdeglobals.
+      stubbe.mutable.".config/pcmanfm/default/pcmanfm.conf" = {
+        method = "copy";
+        source = (pkgs.formats.ini { }).generate "pcmanfm.conf" {
           config.bm_open_method = 0;
           volume = {
             mount_on_startup = 1;
@@ -286,22 +287,22 @@ in
             pathbar_mode_buttons = 0;
           };
         };
+      };
 
-        # Defaults for D-Bus / xdg-open / portal callers. The browser default
-        # differs per target: Firefox on NixOS, Chrome on standalone HM.
-        mimeApps = {
-          enable = true;
-          defaultApplications =
-            let
-              browser =
-                if config.host.platform == "nixos" then "firefox.desktop" else "com.google.Chrome.desktop";
-            in
-            {
-              "inode/directory" = "pcmanfm.desktop";
-              "x-scheme-handler/file" = "pcmanfm.desktop";
-            }
-            // mimeDefaults browser lib;
-        };
+      # Defaults for D-Bus / xdg-open / portal callers. The browser default
+      # differs per target: Firefox on NixOS, Chrome on standalone HM.
+      xdg.mimeApps = {
+        enable = true;
+        defaultApplications =
+          let
+            browser =
+              if config.host.platform == "nixos" then "firefox.desktop" else "com.google.Chrome.desktop";
+          in
+          {
+            "inode/directory" = "pcmanfm.desktop";
+            "x-scheme-handler/file" = "pcmanfm.desktop";
+          }
+          // mimeDefaults browser lib;
       };
 
       # Nix's appimageTools wrappers (Electron/AppImage packages) build their
@@ -368,7 +369,7 @@ in
 
             sudo systemctl daemon-reload
             if command -v udevadm >/dev/null 2>&1; then
-              sudo udevadm control --reload-rules
+              sudo udevadm control --reload-rules || true
             fi
             sudo systemctl enable --now udisks2.service
           '';

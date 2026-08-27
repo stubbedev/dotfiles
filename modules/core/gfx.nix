@@ -18,7 +18,7 @@ _: {
     }:
     let
       onNixOS = config.host.platform == "nixos";
-      inherit (pkgs.stubbe) mkGLWrapper mkDriverWrapper;
+      inherit (pkgs.stubbe) mkGLWrapper;
 
       # A bare `bin/<name>` symlink to an existing binary. Used on NixOS where
       # the only thing a "wrapper" still has to do is rename.
@@ -45,8 +45,6 @@ _: {
             exe = lib.getExe program;
           in
           mkGLWrapper (baseNameOf exe) exe;
-
-      wrapDirect = name: program: if onNixOS then program else mkDriverWrapper name (lib.getExe program);
 
       # Make a non-GL tool able to dlopen the GPU vendor libraries it probes
       # (btop loading libnvidia-ml.so for NVIDIA stats). Unlike the wrappers
@@ -156,9 +154,6 @@ _: {
           wrapExe = fn2 // {
             description = "`wrapExe <exe> <pkg>`: wrap one named binary from a package, not its mainProgram.";
           };
-          wrapDirect = fn2 // {
-            description = "`wrapDirect <name> <pkg>`: inject driver search paths WITHOUT nixGL, for DRM/KMS callers needing the host EGL.";
-          };
           withDriverLibs = fn // {
             description = "Let a non-GL tool dlopen the GPU vendor libraries it probes. Not a no-op on NixOS.";
           };
@@ -172,7 +167,6 @@ _: {
           wrap
           wrapAs
           wrapExe
-          wrapDirect
           withDriverLibs
           bundle
           ;

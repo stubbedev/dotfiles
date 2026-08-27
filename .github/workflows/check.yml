@@ -49,7 +49,7 @@ jobs:
       # an uncached runner — run `nix flake check --impure` locally for the
       # full set.
       #
-      # --impure is required because modules/nixos/graphics.nix reads /proc
+      # --impure is required because modules/graphics.nix reads /proc
       # for GPU detection and throws under pure eval. The runner has no
       # NVIDIA driver, so detection resolves to the non-NVIDIA path.
       - name: Build lint and eval checks

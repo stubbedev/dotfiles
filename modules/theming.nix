@@ -70,31 +70,33 @@ _: {
     }:
     let
       theme = pkgs.stubbe.theme;
+      ini = pkgs.formats.ini { };
 
       # qt5ct and qt6ct share one ini format. Render once, write to both.
-      qtCtConf = ''
-        [Appearance]
-        color_scheme_path=
-        custom_palette=false
-        icon_theme=${theme.icon}
-        standard_dialogs=default
-        style=kvantum
-
-        [Interface]
-        activate_item_on_single_click=1
-        buttonbox_layout=0
-        cursor_flash_time=1000
-        dialog_buttons_have_icons=1
-        double_click_interval=400
-        gui_effects=@Invalid()
-        keyboard_scheme=2
-        menus_have_icons=true
-        show_shortcuts_in_context_menus=true
-        stylesheets=@Invalid()
-        toolbutton_style=4
-        underline_shortcut=1
-        wheel_scroll_lines=3
-      '';
+      qtCtConf = ini.generate "qtct.conf" {
+        Appearance = {
+          color_scheme_path = "";
+          custom_palette = false;
+          icon_theme = theme.icon;
+          standard_dialogs = "default";
+          style = "kvantum";
+        };
+        Interface = {
+          activate_item_on_single_click = 1;
+          buttonbox_layout = 0;
+          cursor_flash_time = 1000;
+          dialog_buttons_have_icons = 1;
+          double_click_interval = 400;
+          gui_effects = "@Invalid()";
+          keyboard_scheme = 2;
+          menus_have_icons = true;
+          show_shortcuts_in_context_menus = true;
+          stylesheets = "@Invalid()";
+          toolbutton_style = 4;
+          underline_shortcut = 1;
+          wheel_scroll_lines = 3;
+        };
+      };
     in
     lib.mkIf config.features.theming {
       gtk = {
@@ -150,13 +152,9 @@ _: {
           vimix-icon-theme
           hicolor-icon-theme
           gnome-themes-extra # includes the Adwaita-dark GTK theme
-          gtk4-layer-shell
 
-          adwaita-qt
-          adwaita-qt6
           libsForQt5.qt5ct
           kdePackages.qt6ct
-          libsForQt5.qtstyleplugins
           # Kvantum style engine, both Qt majors.
           libsForQt5.qtstyleplugin-kvantum
           kdePackages.qtstyleplugin-kvantum
@@ -171,7 +169,7 @@ _: {
 
           # Flatpak dark-mode overrides. Qt/KDE flatpaks may still have poor
           # contrast: they use the Breeze theme from their own runtime.
-          ".local/share/flatpak/overrides/global".source = (pkgs.formats.ini { }).generate "flatpak-global" {
+          ".local/share/flatpak/overrides/global".source = ini.generate "flatpak-global" {
             Context.filesystems = "xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro";
             Environment = {
               GTK_THEME = "Adwaita-dark";
@@ -184,7 +182,7 @@ _: {
           # Steam: X11/GLX support under Wayland, plus XDG_RUNTIME_DIR access
           # for XAUTHORITY and Discord RPC.
           ".local/share/flatpak/overrides/com.valvesoftware.Steam" = {
-            source = (pkgs.formats.ini { }).generate "flatpak-steam" {
+            source = ini.generate "flatpak-steam" {
               Context.filesystems = "/run/user/1000";
             };
             force = true;
@@ -195,16 +193,15 @@ _: {
       xdg.configFile = {
         # The Catppuccin-Mocha-Mauve theme files come from catppuccin-kvantum,
         # a system package on NixOS.
-        "Kvantum/kvantum.kvconfig".text = ''
-          [General]
-          theme=${theme.kvantum}
-        '';
+        "Kvantum/kvantum.kvconfig".source = ini.generate "kvantum.kvconfig" {
+          General.theme = theme.kvantum;
+        };
 
         # QT_QPA_PLATFORMTHEME=qt5ct — set system-wide by the NixOS qt module,
         # and per-session by hyprland.lua — makes Qt apps read these. Qt6 apps
         # consult qt6ct/qt6ct.conf with the same format.
-        "qt5ct/qt5ct.conf".text = qtCtConf;
-        "qt6ct/qt6ct.conf".text = qtCtConf;
+        "qt5ct/qt5ct.conf".source = qtCtConf;
+        "qt6ct/qt6ct.conf".source = qtCtConf;
       };
 
       # kdeglobals must be a real file, not a store symlink: Flatpak sandboxes
@@ -228,7 +225,7 @@ _: {
               ForegroundVisited = "155,89,182";
             };
           in
-          (pkgs.formats.ini { }).generate "kdeglobals" {
+          ini.generate "kdeglobals" {
             General = {
               ColorScheme = "BreezeDark";
               Name = "Breeze Dark";

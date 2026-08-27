@@ -46,7 +46,7 @@ _: {
           description = ''
             Set true on hosts that target real, post-install hardware (e.g.
             `stubbe-nixos`). Activates the real btrfs layout in
-            modules/filesystems.nix and inhibits any stub fileSystems that
+            modules/storage.nix and inhibits any stub fileSystems that
             exist purely to keep a fresh checkout `nix build`-evaluable. The
             installer ISO leaves this at the default so the live image keeps
             using the installation media's own root mount.

@@ -113,8 +113,7 @@ _: {
       composer = phpPackage.packages.composer.override { inherit php; };
     in
     lib.mkIf config.features.php {
-      # php-fpm's pool config. Left as a file: it is pure php-fpm syntax with
-      # no Nix-derived values, and there is no schema to validate it against.
+      # php-fpm's pool config.
       xdg.configFile."php/php-fpm.conf".source = (pkgs.formats.ini { }).generate "php-fpm.conf" {
         global = {
           pid = "/tmp/php-fpm.pid";

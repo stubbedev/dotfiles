@@ -37,7 +37,7 @@ in
           efi.canTouchEfiVariables = true;
         };
 
-        # Post-install target, so modules/filesystems.nix supplies the real
+        # Post-install target, so modules/storage.nix supplies the real
         # btrfs layout. The installer ISO leaves this false and uses the
         # installation media's own root mount.
         host.installed = true;

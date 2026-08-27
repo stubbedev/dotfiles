@@ -315,10 +315,11 @@ _: {
           (https://start.local, served by srv), and force-installs the managed
           extensions (SurfingKeys, Bitwarden, React DevTools, …).
         '';
-        script = pkgs.stubbe.installText {
-          name = "stubbedev-newtab.json";
+        script = pkgs.stubbe.installFile {
+          source = (pkgs.formats.json { }).generate "stubbedev-newtab.json" (
+            pkgs.stubbe.chromePolicy pkgs.stubbe.newtabUrl
+          );
           target = "/etc/opt/chrome/policies/managed/stubbedev-newtab.json";
-          text = builtins.toJSON (pkgs.stubbe.chromePolicy pkgs.stubbe.newtabUrl) + "\n";
         };
       };
     };
