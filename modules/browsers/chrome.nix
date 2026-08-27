@@ -173,7 +173,11 @@ _: {
         // Tridactyl. ("bottom" flips it: input at the bottom, results above.)
         settings.omnibarPosition = "middle";
         settings.showModeStatus = true;      // always-on mode indicator
-        settings.theme = ${builtins.toJSON (pkgs.stubbe.text "src/browsers/surfingkeys-theme.css")};
+        settings.theme = ${
+          builtins.toJSON (
+            builtins.readFile (pkgs.stubbe.renderPalette "src/browsers/surfingkeys-theme.css" { })
+          )
+        };
       '';
 
       # Ubuntu 24.04+ restricts unprivileged user namespaces — which the

@@ -203,10 +203,10 @@
         # Render config.toml — the single file, NOT the whole ~/.config/wayle
         # directory: wayle writes into that directory at runtime, so symlinking
         # the directory makes home-manager fail with "cannot overwrite
-        # directory". @BATTERY@ becomes the battery module only where there is
-        # one.
+        # directory". The palette comes from pkgs.stubbe.colors, and @BATTERY@
+        # becomes the battery module only where there is one.
         xdg.configFile."wayle/config.toml" = {
-          source = pkgs.stubbe.render "src/wayle/config.toml" {
+          source = pkgs.stubbe.renderPalette "src/wayle/config.toml" {
             BATTERY = if hasBattery then "\"battery\"," else "";
           };
           force = true;

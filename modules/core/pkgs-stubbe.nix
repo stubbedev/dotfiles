@@ -68,6 +68,23 @@
         withHash = lib.mapAttrs (_: hex: "#${hex}") flakeLib.colors;
         withArgb = lib.mapAttrs (_: hex: "0xff${hex}") flakeLib.colors;
 
+        # `render` for a themed file: substitutes @MAUVE@, @BASE@ … (the
+        # upper-cased palette names) as `#rrggbb`, alongside any extra vars.
+        #
+        # Only the colours the file actually mentions are passed, because
+        # replaceVars fails the build on a replacement that matched nothing —
+        # which is the property that makes a renamed marker an error rather
+        # than a silently unstyled config.
+        renderPalette =
+          relPath: extraVars:
+          let
+            text = final.stubbe.text relPath;
+            colourVars = lib.filterAttrs (name: _: lib.hasInfix "@${name}@" text) (
+              lib.mapAttrs' (name: hex: lib.nameValuePair (lib.toUpper name) "#${hex}") flakeLib.colors
+            );
+          in
+          final.stubbe.render relPath (colourVars // extraVars);
+
         # ── Secrets ─────────────────────────────────────────────────────
         # Declare a binary-mode sops secret backed by <repo>/secrets/<name>,
         # decrypted to `path` at activation. The value is what

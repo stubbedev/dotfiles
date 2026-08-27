@@ -13,38 +13,38 @@
 
   Applied via settings.theme — see modules/packages/chrome/surfingkeys.nix.
 
-  Catppuccin Mocha: base #1e1e2e  mantle #181825  crust #11111b
-    text #cdd6f4  subtext0 #a6adc8  overlay0 #6c7086
-    surface0 #313244  surface1 #45475a
-    lavender #b4befe  blue #89b4fa  green #a6e3a1
-    peach #fab387  pink #f5c2e7  mauve #cba6f7
+  Catppuccin Mocha: base @BASE@  mantle @MANTLE@  crust @CRUST@
+    text @TEXT@  subtext0 @SUBTEXT0@  overlay0 @OVERLAY0@
+    surface0 @SURFACE0@  surface1 @SURFACE1@
+    lavender @LAVENDER@  blue @BLUE@  green @GREEN@
+    peach @PEACH@  pink @PINK@  mauve @MAUVE@
 */
 
 .sk_theme {
   /* Tridactyl --font (themes/catppuccin-mocha.css). */
   font-family: "Monaspace Krypton", "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
-  background: #1e1e2e;
-  color: #cdd6f4;
+  background: @BASE@;
+  color: @TEXT@;
 }
 
-.sk_theme input { color: #cdd6f4; }
-.sk_theme .url { color: #a6e3a1; }              /* Tridactyl --completions-url (green) */
-.sk_theme .annotation { color: #a6adc8; }
-.sk_theme .omnibar_highlight { color: #cba6f7; } /* search match (mauve) */
+.sk_theme input { color: @TEXT@; }
+.sk_theme .url { color: @GREEN@; }              /* Tridactyl --completions-url (green) */
+.sk_theme .annotation { color: @SUBTEXT0@; }
+.sk_theme .omnibar_highlight { color: @MAUVE@; } /* search match (mauve) */
 .sk_theme .omnibar_folder,
 .sk_theme .omnibar_timestamp,
-.sk_theme .omnibar_visitcount { color: #6c7086; }
+.sk_theme .omnibar_visitcount { color: @OVERLAY0@; }
 .sk_theme .feature_name,
-.sk_theme .feature_name span { color: #fab387; } /* Tridactyl section header (peach) */
+.sk_theme .feature_name span { color: @PEACH@; } /* Tridactyl section header (peach) */
 .sk_theme .separator { display: none; } /* hide the ➤ prompt arrow */
 .sk_theme .prompt,
-.sk_theme .resultPage { color: #b4befe; }
+.sk_theme .resultPage { color: @LAVENDER@; }
 
 /* Omnibar — Tridactyl's command line: flat dark, 2px lavender border. */
 #sk_omnibar {
-  background: #1e1e2e;
-  border: 2px solid #b4befe;
-  box-shadow: 0 0 20px #11111b;
+  background: @BASE@;
+  border: 2px solid @LAVENDER@;
+  box-shadow: 0 0 20px @CRUST@;
 }
 /* Exact Tridactyl placement: its #cmdline_iframe is top:25% left:10%
    width:80%. SurfingKeys' #sk_omnibar is already left:10% width:80%;
@@ -54,12 +54,12 @@
   top: 25%;
 }
 #sk_omnibarSearchArea {
-  border-bottom: 1px solid #313244;
+  border-bottom: 1px solid @SURFACE0@;
 }
 #sk_omnibarSearchArea input,
 #sk_omnibarSearchArea > input {
   background: transparent;
-  color: #cdd6f4;
+  color: @TEXT@;
   font-size: 1.5rem;          /* Tridactyl #tridactyl-input */
 }
 
@@ -68,18 +68,18 @@
 #sk_omnibarSearchResult .icon { display: none !important; }
 #sk_omnibarSearchResult > ul > li,
 .sk_theme #sk_omnibarSearchResult > ul > li:nth-child(odd) {
-  background: #1e1e2e;
-  color: #cdd6f4;
+  background: @BASE@;
+  color: @TEXT@;
   font-size: 0.8rem;
 }
-#sk_omnibarSearchResult .title { color: #89b4fa; }   /* Tridactyl --completions-title (blue) */
-#sk_omnibarSearchResult .url { color: #a6e3a1; }
+#sk_omnibarSearchResult .title { color: @BLUE@; }   /* Tridactyl --completions-title (blue) */
+#sk_omnibarSearchResult .url { color: @GREEN@; }
 .sk_theme #sk_omnibarSearchResult > ul > li.focused {
-  background: #181825;                                /* Tridactyl --currentline (mantle) */
+  background: @MANTLE@;                                /* Tridactyl --currentline (mantle) */
   font-weight: bold;
 }
-#sk_omnibarSearchResult > ul > li.focused .title { color: #f5c2e7; } /* focused title (pink) */
-#sk_omnibarSearchResult > ul > li.focused .url { color: #a6e3a1; }
+#sk_omnibarSearchResult > ul > li.focused .title { color: @PINK@; } /* focused title (pink) */
+#sk_omnibarSearchResult > ul > li.focused .url { color: @GREEN@; }
 
 /* Mode indicator — bottom-right box, mirroring Tridactyl's status
    indicator. settings.showModeStatus keeps it always visible. */
@@ -88,9 +88,9 @@
   bottom: 0 !important;
   right: 0 !important;
   left: auto !important;
-  background: #1e1e2e;
-  color: #cdd6f4;
-  border: 1px solid #b4befe;
+  background: @BASE@;
+  color: @TEXT@;
+  border: 1px solid @LAVENDER@;
   font-size: 12pt;
   padding: 0.3em 0.8em;
 }
@@ -98,13 +98,13 @@
 /* which-key (pending-key candidates) — full-width bar across the bottom
    with larger text, instead of the stock small bottom-right box. */
 #sk_keystroke {
-  background: #1e1e2e;
-  color: #cdd6f4;
+  background: @BASE@;
+  color: @TEXT@;
   left: 0;
   right: 0;
   width: 100%;
   float: none;
-  border-top: 2px solid #b4befe;
+  border-top: 2px solid @LAVENDER@;
   font-size: 14pt;
   padding: 0.6em 1em;
 }
@@ -114,11 +114,11 @@
 #sk_usage,
 #sk_popup,
 #sk_editor {
-  background: #1e1e2e;
-  color: #cdd6f4;
+  background: @BASE@;
+  color: @TEXT@;
 }
 .sk_theme kbd {
-  background: #313244;
-  color: #cdd6f4;
-  border-color: #45475a;
+  background: @SURFACE0@;
+  color: @TEXT@;
+  border-color: @SURFACE1@;
 }

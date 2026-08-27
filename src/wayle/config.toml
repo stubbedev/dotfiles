@@ -17,16 +17,16 @@ rounding = "sm"
 
 [styling.palette]
 # bg=base, surface=mantle (the waybar bar color), elevated=surface0 (pills).
-bg = "#1e1e2e"
-surface = "#181825"
-elevated = "#313244"
-fg = "#cdd6f4"
-fg-muted = "#a6adc8"
-primary = "#cba6f7"
-red = "#f38ba8"
-yellow = "#f9e2af"
-green = "#a6e3a1"
-blue = "#89b4fa"
+bg = "@BASE@"
+surface = "@MANTLE@"
+elevated = "@SURFACE0@"
+fg = "@TEXT@"
+fg-muted = "@SUBTEXT0@"
+primary = "@MAUVE@"
+red = "@RED@"
+yellow = "@YELLOW@"
+green = "@GREEN@"
+blue = "@BLUE@"
 
 # --- Session lock (replaces hyprlock) --------------------------------------
 # Wayle locks natively via ext-session-lock-v1, in response to `wayle lock`,
@@ -37,15 +37,15 @@ blue = "#89b4fa"
 # setup-wayle-lock-pam activation script) and point the unlock at it.
 [lock]
 pam-service = "wayle"
-# Login is greetd autologin with no password at boot (modules/hyprland.nix,
-# modules/hyprland.nix), so the shell self-locks on
+# Login is greetd autologin with no password at boot (modules/hyprland.nix owns
+# both halves of greetd), so the shell self-locks on
 # start — the session comes up locked and gates on the password. Replaces the
 # racy `wayle-lock` autostart in src/hyprland/hyprland.lua (that poked the shell's
 # lock IPC before the shell itself was up).
 lock-on-start = true
 # Solid Catppuccin base, matching the old hyprlock background.
 background-mode = "color"
-background-color = "#1e1e2e"
+background-color = "@BASE@"
 date-format = "%A, %d %B %Y"
 
 [bar]
@@ -127,7 +127,7 @@ display-mode = "label"
 label-size = "14px"
 
 [modules.hyprland-workspaces.workspace-map]
-1 = { color = "#89b4fa" }
+1 = { color = "@BLUE@" }
 2 = { color = "#f0c6c6" }
 3 = { color = "#ddb6f2" }
 4 = { color = "#f5bde6" }

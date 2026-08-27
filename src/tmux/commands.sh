@@ -355,7 +355,7 @@ pending_animation() {
   local win_id="$2"
   local scope="$3" # "pane" or "window"
   local duration_us=300000
-  local fill_style="#[bg=#f38ba8,fg=#1e1e2e,bold]"
+  local fill_style="#[bg=@RED@,fg=@BASE@,bold]"
 
   local flag_scope flag_target flag_name
   case "$scope" in

@@ -18,7 +18,7 @@ _: {
       home.packages = [ pkgs.lazy-tmux ];
 
       home.file.".config/tmux/scripts/commands.sh" = {
-        source = pkgs.stubbe.file "src/tmux/commands.sh";
+        source = pkgs.stubbe.renderPalette "src/tmux/commands.sh" { };
         executable = true;
       };
 
@@ -39,7 +39,7 @@ _: {
         enable = true;
         sensibleOnTop = true;
         plugins = [ pkgs.tmuxPlugins.yank ];
-        extraConfig = pkgs.stubbe.text "src/tmux/tmux.conf" + ''
+        extraConfig = builtins.readFile (pkgs.stubbe.renderPalette "src/tmux/tmux.conf" { }) + ''
 
           # ==============================================
           # lazy-tmux autosave daemon
