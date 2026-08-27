@@ -23,7 +23,7 @@
     final: _prev:
     let
       inherit (final) lib;
-      flakeLib = config.flake.lib;
+      flakeLib = config.stubbe.lib;
 
       # Content-addressed copy of one path inside this repo.
       #
@@ -52,7 +52,15 @@
         # build on an unsubstituted marker or a replacement that matched
         # nothing, so a renamed placeholder is a build error instead of a
         # silently broken config.
-        render = relPath: vars: final.replaceVars (repoPath relPath) vars;
+        render =
+          relPath: vars:
+          final.replaceVarsWith {
+            # Name it after the file, not after the content-addressed input —
+            # otherwise the output carries both hashes in its store name.
+            name = baseNameOf relPath;
+            src = repoPath relPath;
+            replacements = vars;
+          };
 
         # Colour palette in the shapes consumers actually want. `colors` is
         # bare hex; these are the renderers, so no themed file ever hardcodes
@@ -306,6 +314,9 @@
             replacements = vars;
             dir = "bin";
             isExecutable = true;
+            # So `lib.getExe` resolves without the "assuming the main program
+            # has the same name" deprecation warning.
+            meta.mainProgram = name;
           };
 
         # ── Graphics wrapper primitives ─────────────────────────────────

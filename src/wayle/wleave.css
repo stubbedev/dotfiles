@@ -1,0 +1,54 @@
+window {
+    background-color: rgba(12, 12, 12, 0.8);
+}
+
+button {
+    color: oklab(from var(--view-fg-color) var(--standalone-color-oklab));
+    background-color: var(--view-bg-color);
+    border: none;
+    padding: 10px;
+}
+
+/* Icon-only: collapse the text label. wleave always builds it from the
+   button's `text`, and a vertical box packs children from the top, so a
+   visible label pushes the icon up. Zeroing it leaves the picture as the
+   only space-taking child → it fills the button and ScaleDown centres
+   the glyph vertically. */
+button label.action-name {
+    font-size: 0;
+    min-height: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+button label.keybind {
+    font-size: 11px;
+    font-family: monospace;
+}
+
+button:hover label.keybind, button:focus label.keybind {
+    opacity: 1;
+}
+
+button:focus,
+button:hover {
+    background-color: color-mix(in srgb, var(--accent-bg-color), var(--view-bg-color));
+}
+
+button:active {
+    color: var(--accent-fg-color);
+    background-color: var(--accent-bg-color);
+}
+
+button#shutdown { --view-fg-color: #ff8d8d; }
+button#hibernate { --view-fg-color: #a8c0ff; }
+button#reboot { --view-fg-color: #84ffaa; }
+button#lock { --view-fg-color: #ffe8b6; }
+button#logout { --view-fg-color: #ffcca8; }
+button#suspend { --view-fg-color: #caaff9; }
+
+/* Shrink the icons: margin reduces the picture's allocation. */
+.icon-dropshadow {
+    margin: 10px;
+}

@@ -24,7 +24,7 @@ in
       # Read from the flake level, NOT from `pkgs.stubbe`: `pkgs` is built FROM
       # these values, so reaching through it here is an infinite recursion.
       nixpkgs = {
-        config = flakeConfig.flake.lib.nixpkgsConfig;
+        config = flakeConfig.stubbe.lib.nixpkgsConfig;
         overlays = builtins.attrValues flakeConfig.flake.overlays;
       };
 
@@ -195,12 +195,19 @@ in
       # which is by far the biggest source of store bloat on a host that
       # rebuilds many times a day. Trim to "current + 1 previous" on every
       # switch, so a switch cleans up after itself.
-      stubbe.setup.pruneNixGenerations.script = lib.concatMapStrings (profile: ''
-        if [ -e ${lib.escapeShellArg "${profilesDir}/${profile}"} ]; then
-          $DRY_RUN_CMD ${lib.getExe' pkgs.nix "nix-env"} \
-            --profile ${lib.escapeShellArg "${profilesDir}/${profile}"} --delete-generations +2 || true
-        fi
-      '') [ "home-manager" "profile" "channels" ];
+      stubbe.setup.pruneNixGenerations.script =
+        lib.concatMapStrings
+          (profile: ''
+            if [ -e ${lib.escapeShellArg "${profilesDir}/${profile}"} ]; then
+              $DRY_RUN_CMD ${lib.getExe' pkgs.nix "nix-env"} \
+                --profile ${lib.escapeShellArg "${profilesDir}/${profile}"} --delete-generations +2 || true
+            fi
+          '')
+          [
+            "home-manager"
+            "profile"
+            "channels"
+          ];
 
       # Actually free the store paths whose last GC root the prune above
       # removed. Non-NixOS only: on NixOS the system nix-gc.service collects.

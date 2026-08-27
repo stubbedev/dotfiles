@@ -27,7 +27,7 @@ vim.filetype.add({
 })
 
 -- GUI font (read by neovide, ignored by terminal nvim). Mirrors
--- src/alacritty/alacritty.toml so neovide and alacritty render the same.
+-- modules/terminal.nix so neovide and alacritty render the same.
 vim.o.guifont = "JetBrainsMono Nerd Font:h12"
 
 if vim.g.neovide then
@@ -41,7 +41,7 @@ end
 -- :terminal ANSI palette. catppuccin ships term_colors = false, so without
 -- this nvim's builtin terminal falls back to the default ANSI colors -- fine
 -- under alacritty (its own palette wins), wrong under neovide. Values are
--- src/alacritty/catppuccin-mocha.toml verbatim; catppuccin-nvim's own mapping
+-- modules/terminal.nix verbatim; catppuccin-nvim's own mapping
 -- picks different shades for 0/6/7/8/15.
 for i, color in ipairs({
   "#45475a", "#f38ba8", "#a6e3a1", "#f9e2af", -- black red green yellow

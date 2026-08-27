@@ -106,7 +106,7 @@
     # notmuch-mcp (stubbedev): search/read/tag mail over the local notmuch
     # index (Go). Joins the `proxied` set in lib/mcp-servers.nix, gated on
     # features.desktop — it shells out to the `notmuch` binary and reads the
-    # ~/.notmuch-config + maildir that modules/files/mail.nix only wires on a
+    # ~/.notmuch-config + maildir that modules/mail.nix only wires on a
     # desktop host. Master + tags are pushed to nix.stubbe.dev/default built
     # against its OWN flake.lock nixpkgs — don't follow ours or the store paths
     # miss the cache.
@@ -160,14 +160,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Signed bootloader for UEFI Secure Boot. Activated only when
-    # host.secureBoot = true; see modules/nixos/lanzaboote.nix.
+    # host.secureBoot = true; see modules/secure-boot.nix.
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v0.4.2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Declarative bind-mounts + tmpfs root for stateless systems.
     # Activated only when host.impermanent = true; see
-    # modules/nixos/impermanence.nix.
+    # modules/impermanence.nix.
     impermanence = {
       url = "github:nix-community/impermanence";
       # Pure NixOS module, no build artifacts — follow ours to drop a
@@ -176,7 +176,7 @@
     };
     # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
     # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
-    # modules/activation/non-privileged/setup-nvim.nix; lazy.nvim handles
+    # modules/nvim.nix; lazy.nvim handles
     # plugin downloads from GitHub at runtime.
     wrappers = {
       url = "github:BirdeeHub/nix-wrapper-modules";

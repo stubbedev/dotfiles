@@ -2,7 +2,7 @@
 # Personal home-manager / nixos-rebuild front-end.
 # Source lives in the dotfiles repo; the installed copy under
 # config.home.profileDirectory/bin is built by mkScriptBin from
-# modules/home/scripts.nix with @KEY@ markers substituted at build time.
+# modules/scripts.nix with `@…@` markers substituted at build time.
 set -euo pipefail
 
 hm_flake_dir="${HM_FLAKE_DIR:-@FLAKE_DIR@}"
@@ -33,7 +33,7 @@ nixos_attr() {
 # --- nh delegation -------------------------------------------------------
 # nh (nix-community/nh) wraps nixos-rebuild / home-manager with a version
 # diff (nvd) and nix-output-monitor progress. It ships unconditionally
-# alongside this script (modules/home/scripts.nix), so the build/activate
+# alongside this script (modules/scripts.nix), so the build/activate
 # verbs always route through it; the verbs nh doesn't cover (dry-*,
 # build-vm*, news, instantiate) stay on the raw path below. nh self-elevates
 # on NixOS, so these calls carry no sudo prefix.

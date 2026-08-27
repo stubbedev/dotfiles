@@ -1,15 +1,35 @@
-# `flake.lib` — the repo's single source of truth for pure data and pure
-# functions. Nothing here touches `pkgs` or a module `config`, so it is safe
-# to read from any class (nixos, homeManager) and from flake-level code
-# (checks, the installer ISO).
+# `config.stubbe.lib` — the repo's single source of truth for pure data and
+# pure functions. Nothing here touches `pkgs` or a module `config`, so it is
+# safe to read from any class (nixos, homeManager) and from flake-level code
+# (the checks, the installer ISO).
 #
-# Modules do NOT read this directly: modules/core/overlays.nix re-exports the
+# Modules do NOT read this directly: modules/core/pkgs-stubbe.nix re-exports the
 # whole thing as `pkgs.stubbe`, alongside the builders that do need `pkgs`.
 # Inside a module, reach for `pkgs.stubbe.<x>`; at flake-parts level, for
-# `config.flake.lib.<x>`. There is no third way, and no `specialArgs`.
-{ self, ... }:
+# `config.stubbe.lib.<x>`. There is no third way, and no `specialArgs`.
+#
+# Why a plain flake-parts option rather than `flake.lib` alone: `flake.lib` is a
+# freeform flake output, and reading a freeform attr forces the whole `flake`
+# submodule — including the transposed perSystem outputs, which need `pkgs`,
+# which is built from the overlays that read this. That is an infinite
+# recursion. A declared top-level option has no such dependency, so it is what
+# the overlay reads; `flake.lib` below is only the outward-facing mirror.
 {
-  flake.lib = {
+  config,
+  self,
+  lib,
+  ...
+}:
+{
+  options.stubbe.lib = lib.mkOption {
+    type = lib.types.lazyAttrsOf lib.types.raw;
+    default = { };
+    description = "Pure data and pure functions shared across every class. Re-exported as `pkgs.stubbe`.";
+  };
+
+  config.flake.lib = config.stubbe.lib;
+
+  config.stubbe.lib = {
     # Repo source root. Baked here so no module needs `self` injected.
     src = self;
 

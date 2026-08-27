@@ -1,0 +1,22 @@
+---@meta
+
+---@class HL.PluginNamespace
+---@field hy3 HY3.API
+
+---@class HY3.API
+---@field make_group fun(kind: "h"|"v"|"tab"|"opposite", opts?: { toggle?: boolean, ephemeral?: boolean|"force" }): HL.Dispatcher
+---@field change_group fun(kind: "h"|"v"|"tab"|"untab"|"toggletab"|"opposite"): HL.Dispatcher
+---@field set_ephemeral fun(value: boolean|"true"|"false"): HL.Dispatcher
+---@field move_focus fun(dir: "l"|"r"|"u"|"d"|"left"|"right"|"up"|"down", opts?: { visible?: boolean, warp?: boolean }): HL.Dispatcher
+---@field toggle_focus_layer fun(opts?: { warp?: boolean }): HL.Dispatcher
+---@field warp_cursor fun(): HL.Dispatcher
+---@field move_window fun(dir: "l"|"r"|"u"|"d"|"left"|"right"|"up"|"down", opts?: { once?: boolean, visible?: boolean }): HL.Dispatcher
+---@field move_to_workspace fun(workspace: string, opts?: { follow?: boolean, warp?: boolean }): HL.Dispatcher
+---@field change_focus fun(arg: "top"|"bottom"|"raise"|"lower"|"tab"|"tabnode"): HL.Dispatcher
+---@field focus_tab fun(opts: { direction?: "l"|"r"|"left"|"right", index?: integer, mouse?: "ignore"|"prioritize_hovered"|"require_hovered", wrap?: boolean }): HL.Dispatcher
+---@field set_swallow fun(value: boolean|"true"|"false"|"toggle"): HL.Dispatcher
+---@field kill_active fun(): HL.Dispatcher
+---@field expand fun(arg: "expand"|"shrink"|"base"|"maximize"|"fullscreen", opts?: { fullscreen?: string }): HL.Dispatcher
+---@field lock_tab fun(arg?: ""|"toggle"|"lock"|"unlock"): HL.Dispatcher
+---@field equalize fun(opts?: { scope?: ""|"group"|"workspace", workspace?: boolean, recursive?: boolean }): HL.Dispatcher
+---@field debug_nodes fun(): HL.Dispatcher

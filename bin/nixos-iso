@@ -2,7 +2,7 @@
 # Wrapper around `nix build .#installer-iso` + utilities for writing
 # the result to a USB stick. Source lives in the dotfiles repo; the
 # installed copy under config.home.profileDirectory/bin is built by
-# mkScriptBin with @KEY@ markers substituted at build time.
+# mkScriptBin with `@…@` markers substituted at build time.
 set -euo pipefail
 
 flake_dir="${NIXOS_FLAKE_DIR:-@FLAKE_DIR@}"

@@ -29,11 +29,12 @@ _: {
           ln -s ${exe} $out/bin/${name}
         '';
 
-      wrapAs = name: program: if onNixOS then linkAs name (lib.getExe program) else mkGLWrapper name (lib.getExe program);
+      wrapAs =
+        name: program:
+        if onNixOS then linkAs name (lib.getExe program) else mkGLWrapper name (lib.getExe program);
 
       wrapExe =
-        exeName: program:
-        if onNixOS then program else mkGLWrapper exeName (lib.getExe' program exeName);
+        exeName: program: if onNixOS then program else mkGLWrapper exeName (lib.getExe' program exeName);
 
       wrap =
         program:
@@ -45,9 +46,7 @@ _: {
           in
           mkGLWrapper (baseNameOf exe) exe;
 
-      wrapDirect =
-        name: program:
-        if onNixOS then program else mkDriverWrapper name (lib.getExe program);
+      wrapDirect = name: program: if onNixOS then program else mkDriverWrapper name (lib.getExe program);
 
       # Make a non-GL tool able to dlopen the GPU vendor libraries it probes
       # (btop loading libnvidia-ml.so for NVIDIA stats). Unlike the wrappers

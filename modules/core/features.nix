@@ -1,125 +1,81 @@
-_: {
-  # Feature-flag contract:
-  #
-  #   features.desktop      Interactive workstation: GUI + the tools needed
-  #                         to drive one (rofi, alacritty, mail TUI, theming,
-  #                         clipboard, …). Baseline CLI tools (git, tmux,
-  #                         jq, ripgrep) are NOT gated on this — they ship
-  #                         unconditionally via modules/cli.nix.
-  #
-  #   features.development  Extra language toolchains beyond the baseline
-  #                         (nodejs/bun/pnpm, go, neovide, jetbrains-toolbox,
-  #                         the nixd/nh/nil tooling pack, direnv).
-  #                         Independent of `desktop`: a remote build box can
-  #                         have development=true, desktop=false.
-  #
-  # Other flags below are toggles for individual subsystems (docker, hyprland,
-  # k8s, php, slack, …). All default true on stubbe's machines; flip
-  # them off per-host where appropriate.
+# `features.*` — the per-host on/off contract every aspect gates on.
+#
+# Two flags are broad:
+#
+#   desktop      Interactive workstation: GUI plus the tools needed to drive
+#                one (rofi, alacritty, the mail TUI, theming, clipboard, …).
+#                Baseline CLI tools (git, tmux, jq, ripgrep) are NOT gated on
+#                this — they ship unconditionally from modules/cli.nix, because
+#                a headless host without them is unusable.
+#
+#   development  Language toolchains beyond that baseline (node/bun/pnpm, go,
+#                rust via fenix, the nixd/nh/nil pack, direnv). Independent of
+#                `desktop`: a remote build box can have development = true,
+#                desktop = false.
+#
+# The rest are per-subsystem toggles. All default true on stubbe's machines;
+# flip them off per host.
+#
+# The flag TABLE below is the single source of truth: the home-manager options
+# are generated from it, and so is the NixOS-side mirror at the bottom — which
+# is what lets a NixOS aspect ask "did this host enable features.docker?"
+# without every module repeating `config.home-manager.users.<user>.features or { }`.
+_:
+let
+  flags = {
+    desktop = "Interactive workstation UI (GUI apps, compositor support, theming). Does NOT control baseline CLI tools.";
+    development = "Language toolchains beyond the CLI baseline (node, go, rust via fenix, jetbrains-toolbox).";
+    docker = "Docker. On NixOS this drives virtualisation.docker; elsewhere a privileged activation installs it via the host package manager and adds the user to the docker group.";
+    avahi = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
+    openssh = "Accept inbound ssh. On NixOS via services.openssh; elsewhere openssh-server from the host package manager.";
+    hyprland = "The Hyprland compositor, its session, and login (greetd autologin).";
+    wayle = "The wayle desktop shell — bar, notifications, OSD, wallpaper, lock, portal. The default and only shell; disabling leaves no bar.";
+    theming = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, Plymouth).";
+    media = "Image, video and audio tooling, plus the office suite.";
+    vpn = "The openconnect VPN scripts, their secrets, and the passwordless pkexec rule.";
+    rust = "The rust toolchain (fenix stable).";
+    srv = "The srv local-site server and the mkcert CA trust that goes with it.";
+    treeman = "treeman per-worktree DB orchestrator plus the treemand user daemon.";
+    php = "PHP: one build serving the CLI, php-fpm and FrankenPHP.";
+    k8s = "Kubernetes tools (kubectl, minikube).";
+    claudeCode = "Claude Code CLI, its managed settings, and the MCP inventory.";
+    codex = "Codex CLI, wired to the same MCP inventory.";
+    opencode = "opencode CLI.";
+    browsers = "Web browsers (Firefox, Google Chrome) and their managed policies.";
+    slack = "Slack desktop client.";
+  };
+in
+{
   flake.modules.homeManager.features =
     { lib, ... }:
     {
-      options.features = {
-        desktop = lib.mkOption {
+      options.features = lib.mapAttrs (
+        _: description:
+        lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable interactive workstation UI (GUI apps, compositor support, theming). Does NOT control baseline CLI tools.";
-        };
-        development = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable extra language toolchains beyond the CLI baseline (node, go, rust via fenix, jetbrains-toolbox).";
-        };
-        docker = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Install Docker via the host package manager and add the user to the docker group. On NixOS, set virtualisation.docker.enable instead.";
-        };
-        avahi = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Install avahi-daemon + libnss-mdns via the host package manager so `*.local` mDNS resolution works. On NixOS, the system module handles this.";
-        };
-        openssh = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Install openssh-server via the host package manager and enable sshd so this machine accepts inbound ssh. On NixOS, services.openssh handles this.";
-        };
-        hyprland = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable Hyprland-specific packages and configuration.";
-        };
-        wayle = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable the wayle desktop shell (bar + notifications + OSD + wallpaper). The default and only shell; disabling leaves no bar.";
-        };
-        theming = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable theme packages and settings.";
-        };
-        media = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable media-related packages and config.";
-        };
-        vpn = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable VPN scripts and configuration.";
-        };
-        rust = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable rust toolchain installation";
-        };
-        srv = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable srv site management tool.";
-        };
-        treeman = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable treeman per-worktree DB orchestrator + treemand systemd user daemon.";
-        };
-        php = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable php installation.";
-        };
-        k8s = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable Kubernetes tools (kubectl, minikube).";
-        };
-        claudeCode = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable claude-code CLI from nixpkgs unstable.";
-        };
-        codex = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable codex CLI from nixpkgs unstable.";
-        };
-        opencode = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable opencode CLI from nixpkgs unstable.";
-        };
-        browsers = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable web browsers (Firefox, Google Chrome).";
-        };
-        slack = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable Slack desktop client.";
-        };
+          inherit description;
+        }
+      ) flags;
+    };
+
+  # The NixOS mirror. A NixOS aspect gates on `config.stubbe.userFeatures.<x>`,
+  # resolved ONCE here from the primary user's home-manager config.
+  #
+  # The fallback matters: the installer ISO imports every NixOS aspect but
+  # declares no home-manager user, so there is nothing to read. Everything off
+  # is the right answer there — the ISO wants a bootable installer, not a
+  # workstation.
+  flake.modules.nixos.features =
+    { config, lib, ... }:
+    {
+      options.stubbe.userFeatures = lib.mkOption {
+        type = lib.types.attrsOf lib.types.bool;
+        internal = true;
+        description = "The primary user's `features.*` flags, for NixOS aspects to gate on.";
       };
+
+      config.stubbe.userFeatures =
+        config.home-manager.users.${config.host.primaryUser}.features or (lib.mapAttrs (_: _: false) flags);
     };
 }

@@ -1,5 +1,5 @@
 # wayle desktop shell config. Catppuccin Mocha; palette mirrors
-# modules/home/xdg/hypr.nix:30-57 (manual sync). Full schema: wayle docs under
+# modules/hyprland.nix (manual sync). Full schema: wayle docs under
 # docs/config/ in the upstream source, or https://wayle.app/config/.
 
 [general]
@@ -33,14 +33,14 @@ blue = "#89b4fa"
 # the logind Lock signal (loginctl lock-session), or the shell IPC. enabled
 # defaults true, so the only thing that must be set is pam-service: the config
 # default `system-auth` doesn't exist on NixOS. We provision /etc/pam.d/wayle
-# (NixOS: programs.wayle.lock in modules/nixos/wayle.nix; non-NixOS: the
+# (NixOS: programs.wayle.lock in modules/wayle.nix; non-NixOS: the
 # setup-wayle-lock-pam activation script) and point the unlock at it.
 [lock]
 pam-service = "wayle"
-# Login is greetd autologin with no password at boot (modules/nixos/greetd.nix,
-# modules/activation/_privileged/setup-greetd.nix), so the shell self-locks on
+# Login is greetd autologin with no password at boot (modules/hyprland.nix,
+# modules/hyprland.nix), so the shell self-locks on
 # start — the session comes up locked and gates on the password. Replaces the
-# racy `wayle-lock` autostart in src/hypr/hyprland.lua (that poked the shell's
+# racy `wayle-lock` autostart in src/hyprland/hyprland.lua (that poked the shell's
 # lock IPC before the shell itself was up).
 lock-on-start = true
 # Solid Catppuccin base, matching the old hyprlock background.
@@ -142,7 +142,7 @@ label-size = "14px"
 # Same image on every monitor. config's [[wallpaper.monitors]] only does
 # per-connector overrides (no wildcard), so the all-monitor wallpaper is
 # applied at startup via `wayle wallpaper set <path>` (no --monitor = all
-# monitors) — see src/_shared/scripts/wayle.launch.sh.
+# monitors) — see src/wayle/launch.sh.
 [wallpaper]
 engine-enabled = true
 # Animate wallpaper changes (and the startup set) with a bezier fade.
@@ -200,7 +200,7 @@ middle-click = "wayle audio input-mute"
 
 # Brightness: scroll to adjust backlight (left-click still opens the dropdown).
 # wayle has no brightness CLI (unlike audio), so scroll shells out to
-# brightnessctl (declared in modules/home/wayle.nix). -n keeps a 1-unit floor so
+# brightnessctl (declared in modules/wayle.nix). -n keeps a 1-unit floor so
 # scrolling down never blacks the screen out completely.
 [modules.brightness]
 scroll-up = "brightnessctl set 5%+"
@@ -215,7 +215,7 @@ units = "metric"
 # wayle's power module is a bare button with NO built-in menu (despite the
 # docs) — every click action defaults to "" (no-op), which is why a click did
 # nothing. Bind it to wleave, the GTK4 power menu installed + configured in
-# modules/packages/wayland/tools.nix.
+# modules/wayle.nix.
 [modules.power]
 left-click = "wleave"
 
@@ -239,7 +239,7 @@ label-show = false
 # --- Custom modules --------------------------------------------------------
 # All four status scripts emit waybar JSON ({text,tooltip,class}); wayle's
 # custom module parses that natively, so they are reused unchanged. The
-# scripts are on PATH as bins (see modules/home/scripts.nix).
+# scripts are on PATH as bins (see modules/scripts.nix).
 
 # Submap indicator (icon-only). The hl Lua resize_mode isn't a native Hyprland
 # submap, so hyprland.lua writes/removes a tmpfs marker on enter/exit and this
@@ -255,7 +255,7 @@ hide-if-empty = true
 
 # Built-in mail module — fully replaces mail-status.sh. notmuch count +
 # inotify maildir watch (event-driven, no poll). `accounts` gives the
-# per-account unread breakdown (kontainer + gmail; see modules/files/mail.nix)
+# per-account unread breakdown (kontainer + gmail; see modules/mail.nix)
 # in the native dropdown with brand icons; the bar count is their sum (top-level
 # `query` is then ignored). Native `notify` fires one notify-send per newly
 # arrived message (wayle pulls sender + subject from notmuch). Placeholders for
