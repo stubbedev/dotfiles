@@ -105,6 +105,11 @@ _: {
           default = true;
           description = "Enable codex CLI from nixpkgs unstable.";
         };
+        opencode = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable opencode CLI from nixpkgs unstable.";
+        };
         browsers = lib.mkOption {
           type = lib.types.bool;
           default = true;
