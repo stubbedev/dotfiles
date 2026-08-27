@@ -47,10 +47,7 @@ rec {
       after ? [ ],
     }:
     {
-      config,
       lib,
-      pkgs,
-      homeLib,
       ...
     }@margs:
     let
