@@ -9,7 +9,6 @@ _: {
       ...
     }:
     lib.mkIf config.features.browsers (
-
       let
         # Firefox add-ons force-installed via the Extensions policy, keyed
         # by AMO id -> AMO slug. install_url uses AMO's `latest` redirect so
@@ -23,6 +22,38 @@ _: {
           "uBlock0@raymondhill.net" = "ublock-origin";
           "{7719f622-a980-4a30-ba6a-1a5ad11b677c}" = "pin-unpin-tab";
         };
+
+        # Vendored Tridactyl theme, pinned by content hash so the build is
+        # reproducible and works offline (no fetch at browser startup).
+        # To update: bump the commit in the URL and refresh the hash with
+        #   nix store prefetch-file --json <url> | jq -r .hash
+        catppuccinMocha = pkgs.fetchurl {
+          url = "https://raw.githubusercontent.com/devnullvoid/tridactyl/9de4bee31e4687e90b25e57e927114533863d775/themes/catppuccin-mocha.css";
+          hash = "sha256-X6R9FKpOv1W904AvLTdtz3mdqLohcNWjXNNufIs5HNU=";
+        };
+
+        # Explicit CSS selector for `hint -c`. Replacing Tridactyl's default
+        # element detection (which also hints anything with cursor:pointer,
+        # a bare [tabindex], etc. — far too much on modern SPAs) with this
+        # list keeps hints to genuinely interactive elements.
+        hintSelector = builtins.concatStringsSep ", " [
+          "a"
+          "area"
+          "button"
+          "input:not([disabled]):not([type=hidden])"
+          "select"
+          "textarea"
+          "summary"
+          "details"
+          "iframe"
+          "[role=link]"
+          "[role=button]"
+          "[role=tab]"
+          "[role=checkbox]"
+          "[role=menuitem]"
+          "[onclick]"
+          "[contenteditable=true]"
+        ];
       in
       {
         # Wrap firefox in nixGL, then strip MOZ_LEGACY_PROFILES so the binary
@@ -129,57 +160,11 @@ _: {
             unset = [ "MOZ_LEGACY_PROFILES" ];
             prefix.LD_LIBRARY_PATH = "${pkgs.libpng.out}/lib";
           })
+          # Tridactyl's native messenger. Tridactyl can only read its rc file,
+          # discover local themes and run `:source` when this host program is
+          # both installed and registered with Firefox.
+          pkgs.tridactyl-native
         ];
-      }
-    );
-
-  flake.modules.homeManager.tridactyl =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
-    lib.mkIf config.features.browsers (
-
-      let
-        # Vendored Tridactyl theme, pinned by content hash so the build is
-        # reproducible and works offline (no fetch at browser startup).
-        # To update: bump the commit in the URL and refresh the hash with
-        #   nix store prefetch-file --json <url> | jq -r .hash
-        catppuccinMocha = pkgs.fetchurl {
-          url = "https://raw.githubusercontent.com/devnullvoid/tridactyl/9de4bee31e4687e90b25e57e927114533863d775/themes/catppuccin-mocha.css";
-          hash = "sha256-X6R9FKpOv1W904AvLTdtz3mdqLohcNWjXNNufIs5HNU=";
-        };
-
-        # Explicit CSS selector for `hint -c`. Replacing Tridactyl's default
-        # element detection (which also hints anything with cursor:pointer,
-        # a bare [tabindex], etc. — far too much on modern SPAs) with this
-        # list keeps hints to genuinely interactive elements.
-        hintSelector = builtins.concatStringsSep ", " [
-          "a"
-          "area"
-          "button"
-          "input:not([disabled]):not([type=hidden])"
-          "select"
-          "textarea"
-          "summary"
-          "details"
-          "iframe"
-          "[role=link]"
-          "[role=button]"
-          "[role=tab]"
-          "[role=checkbox]"
-          "[role=menuitem]"
-          "[onclick]"
-          "[contenteditable=true]"
-        ];
-      in
-      {
-        # Native messenger. Tridactyl can only read its rc file, discover
-        # local themes, and run `:source` when this host program is both
-        # installed and registered with Firefox.
-        home.packages = [ pkgs.tridactyl-native ];
 
         home.file =
           let

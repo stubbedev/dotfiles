@@ -60,7 +60,6 @@ _: {
       };
     in
     lib.mkIf config.features.browsers {
-
       home.packages = [
         (config.stubbe.gfx.bundle {
           # Chrome keeps only the LAST --enable-features occurrence, and
