@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.xdgHypr =
+  flake.modules.homeManager.homeXdgHypr =
     {
       config,
       constants,

@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesFirefoxTridactyl =
+  flake.modules.homeManager.packagesFirefoxTridactyl =
     {
       pkgs,
       homeLib,

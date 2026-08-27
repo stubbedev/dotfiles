@@ -6,7 +6,8 @@ _: {
   # this module only ships the package and symlinks the config.
   #
   # linuxOnly: GTK4 GL needs the nixGL wrap, same as waybar.
-  linuxOnlyHomeModules.wayle =
+  # (homeLib.gfx is a no-op on NixOS hosts; see lib/gfx.nix.)
+  flake.modules.homeManager.homeWayle =
     {
       pkgs,
       homeLib,

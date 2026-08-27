@@ -3,7 +3,7 @@ _: {
   # this, `cd ~/git/work` after a fresh install fails until manually
   # mkdir'd. tmpfiles re-runs each boot but `d` is idempotent and
   # never touches existing contents.
-  flake.modules.nixos.user-dirs =
+  flake.modules.nixos.userDirs =
     { config, ... }:
     let
       user = config.host.primaryUser;

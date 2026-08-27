@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.programsGo =
+  flake.modules.homeManager.programsGolang =
     {
       lib,
       config,

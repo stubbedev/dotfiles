@@ -22,7 +22,7 @@ _: {
   #
   # Weekly, low priority (Nice + idle IO) so it never competes with
   # interactive work. Docker steps are gated on features.docker.
-  flake.modules.homeManager.devCleanup =
+  flake.modules.homeManager.homeDevCleanup =
     {
       config,
       lib,

@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.k8s =
+  flake.modules.homeManager.packagesK8s =
     {
       pkgs,
       lib,

@@ -1,6 +1,6 @@
 # Syntax highlighting daemon for zsh (replaces fast-syntax-highlighting).
 # The shell-side hook script is generated at switch time by the
-# setup-zsh-patina activation (modules/activation/_non-privileged/) and
+# setup-zsh-patina activation (modules/activation/non-privileged/) and
 # sourced from ~/.cache — but that script never starts the daemon (the
 # side effect lives in `zsh-patina activate`), so after a reboot
 # highlighting would silently do nothing. This service owns the daemon
@@ -8,7 +8,7 @@
 # ExecStart store path changes — daemon and script stay version-synced
 # because both regenerate from the same binary on switch.
 _: {
-  flake.modules.homeManager.zshPatina =
+  flake.modules.homeManager.homeZshPatina =
     { pkgs, ... }:
     {
       systemd.user.services.zsh-patina = {

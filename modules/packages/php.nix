@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.phpDevelopment =
+  flake.modules.homeManager.packagesPhp =
     {
       pkgs,
       lib,

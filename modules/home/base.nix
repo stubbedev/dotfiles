@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.base = { lib, config, ... }: {
+  flake.modules.homeManager.homeBase = { lib, config, ... }: {
     home = {
       username = lib.mkDefault "stubbe";
       # mkDefault so the HM-NixOS bridge can set this from

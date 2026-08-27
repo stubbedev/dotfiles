@@ -127,7 +127,7 @@
     };
     # Zsh plugins consumed as pinned sources (no runtime git clones).
     # zcompiled into the stubbe-zsh-plugins derivation by
-    # modules/home/zsh/_packages.nix; refreshed via `nix flake update`,
+    # lib/zsh-packages.nix; refreshed via `nix flake update`,
     # which replaced the daily zsh-plugin-update timer.
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
@@ -176,7 +176,7 @@
     };
     # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
     # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
-    # modules/activation/_non-privileged/setup-nvim.nix; lazy.nvim handles
+    # modules/activation/non-privileged/setup-nvim.nix; lazy.nvim handles
     # plugin downloads from GitHub at runtime.
     wrappers = {
       url = "github:BirdeeHub/nix-wrapper-modules";

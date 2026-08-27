@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesChromeSurfingkeys =
+  flake.modules.homeManager.packagesChromeSurfingkeys =
     {
       homeLib,
       lib,

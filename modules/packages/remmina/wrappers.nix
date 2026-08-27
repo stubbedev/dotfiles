@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesRemminaWrappers =
+  flake.modules.homeManager.packagesRemminaWrappers =
     {
       pkgs,
       homeLib,

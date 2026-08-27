@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesMedia =
+  flake.modules.homeManager.packagesMedia =
     {
       pkgs,
       homeLib,

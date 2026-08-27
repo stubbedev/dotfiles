@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesHyprlandWrappers =
+  flake.modules.homeManager.packagesHyprlandWrappers =
     {
       pkgs,
       homeLib,

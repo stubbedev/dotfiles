@@ -14,7 +14,7 @@ _: {
   #      to actually free the store paths whose last GC root we just
   #      removed. Gated on non-NixOS hosts: on NixOS the system-level
   #      nix-gc.service (modules/nixos/nix-gc.nix) handles collection.
-  flake.modules.homeManager.nixGc =
+  flake.modules.homeManager.homeNixGc =
     {
       config,
       lib,

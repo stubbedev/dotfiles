@@ -8,7 +8,7 @@
       ...
     }:
     let
-      # Shared with modules/activation/_privileged/setup-plymouth-theme.nix.
+      # Shared with modules/activation/privileged/setup-plymouth-theme.nix.
       inherit (import (self + "/lib/plymouth.nix") { inherit pkgs; })
         catppuccinMochaPlymouth
         ;

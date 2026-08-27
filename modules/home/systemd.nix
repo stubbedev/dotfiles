@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.systemd =
+  flake.modules.homeManager.homeSystemd =
     {
       pkgs,
       lib,

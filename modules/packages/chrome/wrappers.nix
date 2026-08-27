@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesChromeWrappers =
+  flake.modules.homeManager.packagesChromeWrappers =
     {
       pkgs,
       homeLib,

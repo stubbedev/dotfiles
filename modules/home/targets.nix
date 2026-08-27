@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.targets =
+  flake.modules.homeManager.homeTargets =
     {
       pkgs,
       config,

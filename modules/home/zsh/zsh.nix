@@ -1,11 +1,11 @@
 # Fully Nix-managed zsh: programs.zsh owns .zshrc/.zshenv, all config
 # files/plugins/completions/init scripts/zcompdump are store paths built
-# and zcompiled at nix build time (./_packages.nix). Load-order contract
+# and zcompiled at nix build time (../../../lib/zsh-packages.nix). Load-order contract
 # (pre-files → compinit → aliases → plugins → settings → generated inits
 # → patina) is preserved via mkOrder slots: pre=500 < completionInit=550
 # < post=1000.
 _: {
-  flake.modules.homeManager.zsh =
+  flake.modules.homeManager.homeZsh =
     {
       config,
       lib,
@@ -21,8 +21,8 @@ _: {
     let
       # Args are named in the pattern because the module system only
       # injects _module.args entries NAMED there; the inherit forwards
-      # exactly what _packages.nix declares.
-      z = import ./_packages.nix {
+      # exactly what lib/zsh-packages.nix declares.
+      z = import ../../../lib/zsh-packages.nix {
         inherit
           config
           lib

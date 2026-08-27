@@ -82,7 +82,7 @@ in
       # input's HEAD against it and exhausts that in one run, falling back
       # to stale cached revs. An authenticated token lifts the cap to
       # 5000 req/hr. (Non-NixOS hosts get the same via the privileged
-      # activation in modules/activation/_privileged/setup-nix-github-token.nix.)
+      # activation in modules/activation/privileged/setup-nix-github-token.nix.)
       #
       # sops-nix decrypts the token into /run and the template renders the
       # nix.conf line there — so the token never lands in the world-readable

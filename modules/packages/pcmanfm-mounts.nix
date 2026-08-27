@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.pcmanfmMounts =
+  flake.modules.homeManager.packagesPcmanfmMounts =
     {
       pkgs,
       lib,

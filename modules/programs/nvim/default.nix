@@ -11,7 +11,7 @@
       let
         nvim = inputs.wrappers.lib.evalPackage [
           { inherit pkgs; }
-          (import ./_wrapper.nix)
+          (import ../../../lib/nvim-wrapper-module.nix)
         ];
       in
       {

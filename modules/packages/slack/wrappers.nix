@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesSlackWrappers =
+  flake.modules.homeManager.packagesSlackWrappers =
     {
       pkgs,
       homeLib,

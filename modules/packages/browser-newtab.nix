@@ -1,6 +1,6 @@
 { self, ... }:
 {
-  flake.modules.homeManager.browserNewtab =
+  flake.modules.homeManager.packagesBrowserNewtab =
     {
       pkgs,
       homeLib,

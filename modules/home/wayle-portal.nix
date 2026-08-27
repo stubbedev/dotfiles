@@ -10,7 +10,7 @@
   # the backend twice. The upstream module is imported unconditionally (imports
   # can't be gated on config), but every effect lives behind `enable`, which is
   # off here on NixOS — so it stays inert there.
-  flake.modules.homeManager.waylePortal =
+  flake.modules.homeManager.homeWaylePortal =
     {
       config,
       lib,

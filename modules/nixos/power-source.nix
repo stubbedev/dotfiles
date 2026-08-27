@@ -8,7 +8,7 @@
       # See src/_shared/scripts/power-source.sh for what it decides and why.
       #
       # Non-NixOS counterpart:
-      # modules/activation/_privileged/setup-power-source.nix.
+      # modules/activation/privileged/setup-power-source.nix.
 
       # 0775 root:users so `battery-full` can drop the override flag without
       # sudo — the .path unit below turns that into an immediate run.

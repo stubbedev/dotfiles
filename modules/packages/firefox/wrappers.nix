@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesFirefoxWrappers =
+  flake.modules.homeManager.packagesFirefoxWrappers =
     {
       pkgs,
       homeLib,

@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.xdgKde =
+  flake.modules.homeManager.homeXdgKde =
     {
       config,
       lib,

@@ -1,5 +1,5 @@
 _: {
-  linuxOnlyHomeModules.packagesHyprlandTools =
+  flake.modules.homeManager.packagesHyprlandTools =
     {
       pkgs,
       homeLib,

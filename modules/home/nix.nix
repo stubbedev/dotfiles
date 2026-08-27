@@ -1,6 +1,6 @@
 { self, ... }:
 {
-  flake.modules.homeManager.nix =
+  flake.modules.homeManager.homeNix =
     {
       pkgs,
       lib,

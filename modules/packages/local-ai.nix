@@ -13,7 +13,7 @@ let
   };
 in
 {
-  flake.modules.nixos.localAi =
+  flake.modules.nixos.packagesLocalAi =
     { pkgs, ... }:
     {
       # The NixOS module adds the selected package to systemPackages, owns the
@@ -26,7 +26,7 @@ in
       };
     };
 
-  flake.modules.homeManager.localAi =
+  flake.modules.homeManager.packagesLocalAi =
     {
       pkgs,
       lib,

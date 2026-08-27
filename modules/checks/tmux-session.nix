@@ -17,7 +17,7 @@
   perSystem =
     { pkgs, ... }:
     let
-      lazy-tmux = pkgs.callPackage (self + "/modules/packages/_lazy-tmux.nix") { };
+      lazy-tmux = pkgs.callPackage (self + "/lib/lazy-tmux.nix") { };
 
       # The config home-manager actually deploys, not a stand-in: this is what
       # carries the daemon launch, the M-i picker binding and the hook wiring.

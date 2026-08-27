@@ -33,7 +33,7 @@ _: {
       };
 
       # Replaces the user-group-add step from the non-NixOS
-      # modules/activation/_privileged/setup-docker.nix activation script.
+      # modules/activation/privileged/setup-docker.nix activation script.
       users.users.${config.host.primaryUser}.extraGroups = [ "docker" ];
     };
 }

@@ -1,6 +1,6 @@
 { inputs, self, ... }:
 {
-  flake.modules.homeManager.context =
+  flake.modules.homeManager.homeContext =
     {
       config,
       lib,
@@ -35,7 +35,7 @@
           ;
         "hyprland-guiutils" = inputs."hyprland-guiutils";
         # Pinned zsh plugin sources (flake = false) consumed by
-        # modules/home/zsh/_packages.nix.
+        # lib/zsh-packages.nix.
         inherit (inputs)
           zsh-vim-mode
           zsh-fzf-artisan

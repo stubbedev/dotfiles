@@ -1,6 +1,6 @@
 { inputs, ... }:
 {
-  flake.modules.homeManager.sessionVariables =
+  flake.modules.homeManager.homeSessionVariables =
     {
       config,
       constants,

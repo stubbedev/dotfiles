@@ -15,9 +15,9 @@ _: {
       # restores the pane as `claude --resume <id>`, so Alt+f on a repo brings
       # the conversation back instead of a fresh one.
       #
-      # The pin lives in _lazy-tmux.nix so modules/checks/tmux-session.nix can
+      # The pin lives in lib/lazy-tmux.nix so modules/checks/tmux-session.nix can
       # test against the same binary this installs.
-      lazy-tmux = pkgs.callPackage (self + "/modules/packages/_lazy-tmux.nix") { };
+      lazy-tmux = pkgs.callPackage (self + "/lib/lazy-tmux.nix") { };
     in
     lib.mkIf config.features.desktop {
       home.file.".config/tmux/scripts/commands.sh" = {

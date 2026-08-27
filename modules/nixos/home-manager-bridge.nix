@@ -4,7 +4,7 @@
   ...
 }:
 {
-  flake.modules.nixos.home-manager-bridge =
+  flake.modules.nixos.homeManagerBridge =
     { ... }:
     {
       imports = [ inputs.home-manager.nixosModules.home-manager ];

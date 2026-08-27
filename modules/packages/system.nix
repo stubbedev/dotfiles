@@ -1,6 +1,6 @@
 # System services and utilities
 _: {
-  linuxOnlyHomeModules.packagesSystem =
+  flake.modules.homeManager.packagesSystem =
     {
       pkgs,
       homeLib,

@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.xdgAudio =
+  flake.modules.homeManager.homeXdgAudio =
     {
       homeLib,
       lib,

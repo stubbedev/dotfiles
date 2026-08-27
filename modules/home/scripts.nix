@@ -1,6 +1,6 @@
 { self, ... }:
 {
-  flake.modules.homeManager.scripts =
+  flake.modules.homeManager.homeScripts =
     {
       config,
       lib,

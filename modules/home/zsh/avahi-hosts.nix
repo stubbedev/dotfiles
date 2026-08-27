@@ -4,7 +4,7 @@
 # timer maintains. The service-type filter excludes Sonos boxes,
 # printers, etc. so only ssh-able machines show up.
 _: {
-  flake.modules.homeManager.zshAvahiHosts =
+  flake.modules.homeManager.homeZshAvahiHosts =
     {
       config,
       lib,

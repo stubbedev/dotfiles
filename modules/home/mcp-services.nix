@@ -24,7 +24,7 @@
   # lazily (first request to its route) and retires it on its own idle clock, so
   # nothing runs until a window connects and the heavy browser can drop while a
   # DB stays warm — all in one process. See the unit-building block below.
-  flake.modules.homeManager.mcpServices =
+  flake.modules.homeManager.homeMcpServices =
     {
       pkgs,
       lib,

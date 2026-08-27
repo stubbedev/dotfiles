@@ -1,5 +1,5 @@
 _: {
-  flake.modules.homeManager.xdgBase =
+  flake.modules.homeManager.homeXdgBase =
     {
       homeLib,
       lib,

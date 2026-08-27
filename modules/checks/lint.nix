@@ -27,16 +27,10 @@
         # Scoped to tracked files, which is exactly what ends up in the flake
         # source the checks run against. Walking `.` instead would follow the
         # result/ and .direnv symlinks into the read-only store.
-        #
-        # _helpers.nix is filtered out here rather than passed to deadnix
-        # --exclude: that flag only prunes directory traversal, so with an
-        # explicit file list deadnix would strip the very arguments the check
-        # below excludes it to protect.
         text = ''
           cd "$(git rev-parse --show-toplevel)"
           statix fix .
           git ls-files -z '*.nix' \
-            | grep -zv '^modules/activation/_helpers\.nix$' \
             | xargs -0 deadnix --edit --
           git ls-files -z '*.nix' | xargs -0 nixfmt
         '';
@@ -50,13 +44,13 @@
           touch "$out"
         '';
 
-        # _helpers.nix is excluded: its module lambdas name config/pkgs/
-        # homeLib without referencing them directly, because the module
-        # system only injects args NAMED in the pattern — `...`/@moduleArgs
-        # does not pull in undeclared ones, and `args moduleArgs` needs
-        # them downstream. deadnix has no inline skip directive.
+        # lib/activation-setups.nix is excluded: its factory lambdas name
+        # config/pkgs/homeLib (and pass the FULL moduleArgs on to metadata
+        # thunks) without referencing every named binding directly — home-
+        # manager materialises injected _module.args based on the lambda's
+        # pattern, so those names must stay. deadnix has no inline skip.
         lint-deadnix = pkgs.runCommand "lint-deadnix" { nativeBuildInputs = [ pkgs.deadnix ]; } ''
-          deadnix --fail --exclude ${self}/modules/activation/_helpers.nix -- ${self}
+          deadnix --fail --exclude ${self}/lib/activation-setups.nix -- ${self}
           touch "$out"
         '';
 

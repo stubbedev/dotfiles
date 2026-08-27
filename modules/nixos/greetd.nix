@@ -14,7 +14,7 @@
   # (src/hypr/hyprland.lua) — the session boots to a locked screen.
   #
   # Kept in sync with the standalone-HM path in
-  # modules/activation/_privileged/setup-greetd.nix (same launcher, same shape).
+  # modules/activation/privileged/setup-greetd.nix (same launcher, same shape).
   flake.modules.nixos.greetd =
     {
       config,

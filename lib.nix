@@ -1,3 +1,14 @@
+# Shared home-manager helper library, aggregated from domain files under
+# lib/.
+#
+# Conventions:
+#   * Each domain file takes its dependencies as explicit arguments — no
+#     implicit closures over this file's bindings.
+#   * Callers may import lib.nix WITHOUT pkgs (NixOS modules do), so any
+#     builder that needs pkgs guards lazily inside its own body via a
+#     local `requirePkgs` that throws only when the builder is called.
+#   * Everything exported here stays flat under homeLib.*; domain files
+#     never leak their internal structure to callers.
 {
   lib,
   pkgs ? null,
@@ -7,12 +18,19 @@
   ...
 }:
 let
-  requirePkgs = name: if pkgs == null then throw "homeLib.${name}: pkgs is required" else pkgs;
-in
-rec {
-  # ============================================================
-  # GFX wrappers (nixGL)
-  # ============================================================
+  templates = import ./lib/templates.nix { inherit lib; };
+  xdgConfigs = import ./lib/xdg-configs.nix {
+    inherit lib self;
+  };
+  secrets = import ./lib/secrets.nix { inherit self; };
+  systemInstall = import ./lib/system-install.nix { inherit lib; };
+  scriptBins = import ./lib/script-bins.nix {
+    inherit self pkgs substituteFile;
+  };
+  jsonPatches = import ./lib/json-patches.nix { inherit pkgs; };
+  liveLinks = import ./lib/live-links.nix { };
+  sudoPrompts = import ./lib/sudo-prompts.nix { inherit lib; };
+  sessionPaths = import ./lib/session-paths.nix { inherit lib; };
 
   gfxLib = import ./lib/gfx.nix {
     inherit
@@ -22,6 +40,18 @@ rec {
       isNixOS
       ;
   };
+  wrappedPackages = import ./lib/wrapped-packages.nix {
+    inherit lib pkgs;
+    inherit (gfxLib) gfxName gfxExe;
+  };
+
+  inherit (templates) substituteFile;
+in
+rec {
+  # ============================================================
+  # GFX wrappers (nixGL) — see lib/gfx.nix
+  # ============================================================
+
   inherit (gfxLib)
     gfx
     gfxName
@@ -38,254 +68,50 @@ rec {
   catppuccinMocha = import ./lib/colors.nix;
 
   # ============================================================
-  # XDG config sources
+  # XDG config sources — see lib/xdg-configs.nix
   # ============================================================
 
-  # Map a path under src/<path> to an entry in xdg.configFile. `extra`
-  # is merged into the file attrset (e.g. onChange hooks). `target` lets
-  # the path under ~/.config differ from the source path under src/, for
-  # tools that hardcode a flat config path (e.g. cship reads ~/.config/cship.toml).
-  xdgSource =
-    path:
-    {
-      target ? path,
-      ...
-    }@extra:
-    {
-      "${target}" = {
-        source = self + "/src/${path}";
-        force = true;
-      }
-      // (removeAttrs extra [ "target" ]);
-    };
-
-  # Bulk variant: map a list of paths with no extra args.
-  xdgSources = paths: lib.foldl' (acc: p: acc // xdgSource p { }) { } paths;
-
-  # Read raw text of a file under src/ at evaluation time. Pair with
-  # builtins.fromJSON / fromTOML when you need parsed data.
-  xdgContent = path: builtins.readFile (self + "/src/${path}");
+  inherit (xdgConfigs)
+    xdgSource
+    xdgSources
+    xdgContent
+    ;
 
   # ============================================================
-  # SOPS secrets
+  # SOPS secrets — see lib/secrets.nix
   # ============================================================
 
-  # Declare a binary-mode sops secret that lives at <repo>/secrets/<name>
-  # and decrypts to `path` at activation. Returns the value for
-  # sops.secrets.<key>; the caller picks the attrset key.
-  #
-  #   sops.secrets.foo = homeLib.mkBinarySecret {
-  #     name = "foo";   # secrets/foo
-  #     path = "${config.home.homeDirectory}/.config/foo";
-  #   };
-  mkBinarySecret =
-    { name, path }:
-    {
-      sopsFile = self + "/secrets/${name}";
-      format = "binary";
-      inherit path;
-    };
+  inherit (secrets) mkBinarySecret;
 
   # ============================================================
-  # Template substitution
+  # Template substitution — see lib/templates.nix
   # ============================================================
 
-  # Read `file` and replace each @KEY@ marker with the corresponding
-  # value from `vars`. Used for files whose content depends on the
-  # user's home directory / username and which are baked at eval time.
-  substituteFile =
-    { file, vars }:
-    builtins.replaceStrings (map (k: "@${k}@") (lib.attrNames vars)) (lib.attrValues vars) (
-      builtins.readFile file
-    );
+  inherit substituteFile;
 
   # ============================================================
-  # System file installation (privileged activations)
+  # System file installation (privileged activations) — see
+  # lib/system-install.nix
   # ============================================================
 
-  # Render a shell snippet that materialises `content` into `target`
-  # via sudo install + chown. Caller decides what to run after (e.g.
-  # apparmor_parser, systemctl reload).
-  #
-  # Uses a unique heredoc sentinel so embedded $VARS in `content` aren't
-  # expanded by the parent shell. The temp file is cleaned up on success;
-  # set -e ensures we abort early on failure (and mktemp's /tmp file gets
-  # GC'd by the OS in that case).
-  installSystemFile =
-    {
-      content,
-      target,
-      mode ? "0644",
-      owner ? "root",
-      group ? "root",
-    }:
-    ''
-      _stb_tmp=$(mktemp)
-      cat > "$_stb_tmp" << '__STB_INSTALL_EOF__'
-      ${content}__STB_INSTALL_EOF__
-      sudo install -m ${mode} "$_stb_tmp" "${target}"
-      sudo chown ${owner}:${group} "${target}"
-      rm -f "$_stb_tmp"
-    '';
-
-  # Render a shell snippet that installs host-OS packages via the first
-  # available package manager when `detect` (a binary in PATH) is
-  # absent. Aborts with `exit 1` on unsupported distros. Each branch
-  # takes its own distro-native package list.
-  #
-  #   ${homeLib.installHostPackage {
-  #     detect = "avahi-daemon";
-  #     apt    = [ "avahi-daemon" "libnss-mdns" ];
-  #     dnf    = [ "avahi" "nss-mdns" ];
-  #     pacman = [ "avahi" "nss-mdns" ];
-  #   }}
-  installHostPackage =
-    {
-      detect,
-      apt,
-      dnf,
-      pacman,
-    }:
-    ''
-      if ! command -v ${detect} >/dev/null 2>&1; then
-        if command -v apt-get >/dev/null 2>&1; then
-          # --no-install-recommends: many Debian/Ubuntu packages
-          # (sddm → plasma-desktop, plymouth → snapd, …) recommend
-          # entire desktop environments. Activation is opinionated
-          # about what gets installed, so suppress recommends and
-          # let each module list explicit deps.
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ${lib.escapeShellArgs apt}
-        elif command -v dnf >/dev/null 2>&1; then
-          # --setopt=install_weak_deps=False mirrors the apt behavior.
-          sudo dnf install -y --setopt=install_weak_deps=False ${lib.escapeShellArgs dnf}
-        elif command -v pacman >/dev/null 2>&1; then
-          # pacman has no Recommends concept; optional deps stay opt-in.
-          sudo pacman -S --needed --noconfirm ${lib.escapeShellArgs pacman}
-        else
-          echo "No supported package manager (apt-get/dnf/pacman) found." >&2
-          exit 1
-        fi
-      fi
-    '';
-
-  # Install a polkit rule and reload the polkit service. Polkit rules
-  # want root:polkitd ownership when the polkitd group exists (newer
-  # distros), root:root otherwise.
-  installPolkitRule =
-    { content, target }:
-    ''
-      ${installSystemFile { inherit content target; }}
-      if getent group polkitd >/dev/null 2>&1; then
-        sudo chown root:polkitd "${target}"
-      fi
-      if command -v systemctl >/dev/null 2>&1; then
-        sudo systemctl restart polkit.service >/dev/null 2>&1 || true
-      fi
-    '';
-
-  # Install an AppArmor profile under /etc/apparmor.d/ and reload it.
-  # The preCheck pattern (skip if apparmor is absent) is the caller's
-  # responsibility — this assumes apparmor_parser exists.
-  installApparmorProfile =
-    { name, content }:
-    let
-      target = "/etc/apparmor.d/${name}";
-    in
-    ''
-      ${installSystemFile { inherit content target; }}
-      sudo apparmor_parser -r "${target}"
-    '';
-
-  # Activation preCheck building blocks. These render shell snippets
-  # suitable for a sudoPromptScript preCheck: the activation exits 0
-  # (skipping the rest, including the sudo prompt) when the requested
-  # precondition isn't met. PATH is restored to a sane default because
-  # activations run with a stripped PATH and many tools (apparmor_status,
-  # update-grub, …) live under /sbin or /usr/sbin.
-  requireCommand = cmd: ''
-    PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-    if ! command -v ${cmd} >/dev/null 2>&1; then
-      exit 0
-    fi
-  '';
-
-  requirePath = path: ''
-    if [ ! -e "${path}" ]; then
-      exit 0
-    fi
-  '';
-
-  # Build the prompt args for an AppArmor profile setup. Returns the
-  # attrset that mkSudoSetupModule expects. Distros like Ubuntu 24.04+
-  # require a matching AppArmor profile for unprivileged user namespaces
-  # used by Chromium-based sandboxes; Nix-store paths aren't covered by
-  # the stock profiles, so we install one per app keyed on its store
-  # path glob.
-  mkAppArmorSetup =
-    {
-      appName, # human label, e.g. "Chrome"
-      profileName, # /etc/apparmor.d/<profileName>
-      programGlob, # path glob the profile applies to
-      managedBy, # marker comment for the profile body
-    }:
-    {
-      preCheck = requireCommand "apparmor_status";
-      promptTitle = "Installing AppArmor profile for Nix-installed ${appName}";
-      promptBody = ''
-        Ubuntu 24.04 restricts unprivileged user namespaces (required by
-        Chromium-based sandboxes) to binaries with a matching AppArmor
-        profile. Nix-store paths aren't covered by Ubuntu's stock profiles,
-        so ${appName} aborts on launch with "No usable sandbox!".
-
-        This installs an AppArmor profile that whitelists the Nix-store
-        ${appName} binary (and its sandbox helper) for unprivileged userns.
-      '';
-      actionScript = installApparmorProfile {
-        name = profileName;
-        content = ''
-          # managed-by: ${managedBy}
-          abi <abi/4.0>,
-          include <tunables/global>
-          profile ${profileName} ${programGlob} flags=(unconfined) {
-            userns,
-            @{exec_path} mr,
-            include if exists <local/${profileName}>
-          }
-        '';
-      };
-    };
+  inherit (systemInstall)
+    installSystemFile
+    installHostPackage
+    installPolkitRule
+    installApparmorProfile
+    requireCommand
+    requirePath
+    mkAppArmorSetup
+    ;
 
   # ============================================================
-  # Script binaries (live in config.home.profileDirectory/bin/)
+  # Script binaries (live in config.home.profileDirectory/bin/) — see
+  # lib/script-bins.nix
   # ============================================================
 
-  # Read a script at <repo-root>/<source>, apply @KEY@ substitutions, and
-  # build it as an executable Nix derivation that lands under
-  # config.home.profileDirectory/bin/<name>. Preserves the script's own shebang
-  # (so zsh stays zsh, bash stays bash). Use this instead of writing
-  # things to home.file.".local/bin/x" — keeps scripts on PATH and
-  # owned by the Nix profile.
-  mkScriptBin =
-    {
-      name,
-      source, # path relative to repo root, e.g. "src/aerc/scripts/x.sh" or "bin/y"
-      vars ? { },
-    }:
-    (requirePkgs "mkScriptBin").writeTextFile {
-      inherit name;
-      text = substituteFile {
-        file = self + "/${source}";
-        inherit vars;
-      };
-      executable = true;
-      destination = "/bin/${name}";
-    };
+  inherit (scriptBins) mkScriptBin;
 
   # ============================================================
-  # Live symlinks (point ~/.config/<x> at ~/.stubbe/src/<y>)
-  # ============================================================
-
   # Canonical URL of the local new-tab / new-window page. `srv` serves it
   # as a static site at https://start.local (registered once with
   # `srv add` — see the README). A file:// page can't be used: Tridactyl's
@@ -293,346 +119,47 @@ rec {
   # https also gives one URL that works for both Firefox and Chrome.
   # Shared so tridactylrc, the Firefox Homepage policy and the Chrome
   # enterprise policy all agree.
+  # ============================================================
+
   browserNewtabUrl = "https://start.local/";
 
-  # Render an idempotent symlink-replacement snippet. Used in non-
-  # privileged activations to point a config dir at the live src/ tree
-  # in the dotfiles checkout, so edits are reflected without re-running
-  # home-manager. mkdir -p covers the parent; rm -rf covers both stale
-  # symlinks and previously-materialised directories.
-  mkLiveSymlink =
-    {
-      config,
-      src, # subpath under ~/.stubbe/src/
-      target, # path under $HOME (no leading slash)
-    }:
-    let
-      sourcePath = "${config.home.homeDirectory}/.stubbe/src/${src}";
-      targetPath = "${config.home.homeDirectory}/${target}";
-    in
-    ''
-      mkdir -p "$(dirname "${targetPath}")"
-      rm -rf "${targetPath}"
-      ln -s "${sourcePath}" "${targetPath}"
-    '';
-
-  # Copy a file from the live src/ tree to a target under $HOME. Use this
-  # for config files that the owning app rewrites at runtime (btop.conf,
-  # lazygit state.yml, …) — a symlink would be modified in place inside
-  # the dotfiles checkout, which we don't want. The activation runs on
-  # every switch, so the dotfiles version is authoritative on switch.
-  mkLiveCopy =
-    {
-      config,
-      src, # subpath under ~/.stubbe/src/
-      target, # path under $HOME (no leading slash)
-    }:
-    let
-      sourcePath = "${config.home.homeDirectory}/.stubbe/src/${src}";
-      targetPath = "${config.home.homeDirectory}/${target}";
-    in
-    ''
-      mkdir -p "$(dirname "${targetPath}")"
-      cat "${sourcePath}" > "${targetPath}"
-    '';
-
-  # Recursively merge `patch` (a Nix attrset) onto whatever JSON is
-  # currently at `target`, writing the result back atomically.
-  #
-  # Use this for state files the owning app rewrites at runtime
-  # (claude-code's ~/.claude.json, ~/.claude/settings.json, …). Doing
-  # the merge at *activation* time — instead of `recursiveUpdate`-ing
-  # against `builtins.readFile` at eval time — preserves every byte
-  # the app wrote between evaluation and activation. The eval-time
-  # approach silently drops anything written in that window.
-  #
-  # name    — basename for the rendered patch derivation in /nix/store.
-  # target  — absolute path to the live JSON file.
-  # patch   — attrset to merge in (right-side wins on conflicts, same
-  #           semantics as lib.recursiveUpdate / jq's `*`).
-  # mode    — file mode used only when target doesn't yet exist
-  #           (default 0600 — most app state files want this).
-  #
-  # cmp-before-mv: skip the rename when the merged result is already
-  # byte-identical to the live file. Avoids racing against the app's
-  # own writes once the patch is in place (steady-state behaviour).
-  mergeJsonPatch =
-    {
-      name,
-      target,
-      patch,
-      mode ? "0600",
-    }:
-    let
-      p = requirePkgs "mergeJsonPatch";
-      patchFile = p.writeText "${name}.json" (builtins.toJSON patch);
-    in
-    ''
-      mkdir -p "$(dirname "${target}")"
-      if [ -f "${target}" ]; then
-        ${p.jq}/bin/jq -s '(.[0] // {}) * .[1]' "${target}" "${patchFile}" \
-          > "${target}.hm-tmp"
-        if cmp -s "${target}.hm-tmp" "${target}"; then
-          rm -f "${target}.hm-tmp"
-        else
-          mv "${target}.hm-tmp" "${target}"
-        fi
-      else
-        install -m ${mode} "${patchFile}" "${target}"
-      fi
-    '';
-
-  # Authoritatively set a single top-level key in a JSON file, leaving every
-  # other key untouched. Unlike mergeJsonPatch (deep `*` merge, additive-only),
-  # this REPLACES the key's value wholesale, so entries removed from `value`
-  # actually disappear from the target. Use for a managed subtree that lives
-  # inside an otherwise stateful, externally-owned file (e.g. mcpServers in
-  # ~/.claude.json) where merging would leave stale entries behind.
-  setJsonKey =
-    {
-      name,
-      target,
-      key,
-      value,
-      mode ? "0600",
-    }:
-    let
-      p = requirePkgs "setJsonKey";
-      valueFile = p.writeText "${name}.json" (builtins.toJSON value);
-    in
-    ''
-      mkdir -p "$(dirname "${target}")"
-      if [ -f "${target}" ]; then
-        ${p.jq}/bin/jq --slurpfile v "${valueFile}" '.["${key}"] = $v[0]' "${target}" \
-          > "${target}.hm-tmp"
-        if cmp -s "${target}.hm-tmp" "${target}"; then
-          rm -f "${target}.hm-tmp"
-        else
-          mv "${target}.hm-tmp" "${target}"
-        fi
-      else
-        ${p.jq}/bin/jq -n --slurpfile v "${valueFile}" '{ "${key}": $v[0] }' > "${target}"
-        chmod ${mode} "${target}"
-      fi
-    '';
-
   # ============================================================
-  # Sudo-prompt scaffolding (consistent "Install X" / "Install X?")
+  # Live symlinks/copies (point $HOME paths at ~/.stubbe/src/<y>) — see
+  # lib/live-links.nix
   # ============================================================
 
-  # Build the prompt fields from a single `subject`, then merge any
-  # extra fields the caller supplies (preCheck, actionScript, body, …).
-  # Title follows the "Installing <subject>" form, matching the most
-  # common sudo-prompt setups.
-  mkInstallPrompt =
-    {
-      subject,
-      body,
-      ...
-    }@extra:
-    removeAttrs extra [
-      "subject"
-      "body"
-    ]
-    // {
-      promptTitle = "Installing ${subject}";
-      promptBody = body;
-    };
+  inherit (liveLinks)
+    mkLiveSymlink
+    mkLiveCopy
+    ;
 
   # ============================================================
-  # Compositor session-path resolution
+  # JSON state-file mutators — see lib/json-patches.nix
   # ============================================================
 
-  # Resolve config.home.sessionPath / sessionVariables.XDG_DATA_DIRS into
-  # ":"-joined absolute strings, suitable for makeWrapper --prefix. $HOME
-  # placeholders get expanded against config.home.homeDirectory; the
-  # literal $XDG_DATA_DIRS placeholder (which the home-manager schema
-  # injects) is dropped.
-  resolveSessionPaths =
-    config:
-    let
-      homeDir = config.home.homeDirectory;
-      replaceHome = path: lib.replaceStrings [ "$HOME" ] [ homeDir ] path;
-      isPlaceholder = v: v == "$XDG_DATA_DIRS" || v == "\${XDG_DATA_DIRS}";
-
-      paths = map replaceHome config.home.sessionPath;
-      rawDataDirs = lib.splitString ":" (config.home.sessionVariables.XDG_DATA_DIRS or "");
-      dataDirs = map replaceHome (builtins.filter (v: v != "" && !isPlaceholder v) rawDataDirs);
-    in
-    {
-      pathPrefix = lib.concatStringsSep ":" paths;
-      dataDirsPrefix = lib.concatStringsSep ":" dataDirs;
-    };
+  inherit (jsonPatches)
+    mergeJsonPatch
+    setJsonKey
+    ;
 
   # ============================================================
-  # Wrapped-package bundling
+  # Sudo prompt scaffolding — see lib/sudo-prompts.nix
   # ============================================================
 
-  # Wrap a package's binaries with nixGL + makeWrapper, then bundle the
-  # result back together with the upstream paths via symlinkJoin. This
-  # collapses the gfx-wrap → makeWrapper → symlinkJoin pattern that
-  # repeats for chrome / slack / firefox / remmina.
-  #
-  # exes:           binaries to wrap. The first uses lib.getExe (the
-  #                 package's mainProgram); subsequent entries use
-  #                 lib.getExe' to look up by name.
-  # gfx:            wrap with nixGL. Default true.
-  # flags:          --add-flags entries.
-  # env:            { K = "v"; } → --set K v.
-  # unset:          [ "K" ] → --unset K.
-  # prefix:         { K = "v"; } → --prefix K : v.
-  # includeUpstream: include the upstream package in the symlinkJoin
-  #                 (so its share/ is exposed). Default true; set false
-  #                 when supplying a replacement desktop item via
-  #                 extraPaths and you want to suppress upstream's.
-  # extraPaths:     extra derivations to merge in (desktop items, etc.).
-  # mainProgram:    meta.mainProgram on the resulting bundle.
-  mkWrappedPackage =
-    {
-      pkg,
-      exes ? null,
-      gfx ? true,
-      flags ? [ ],
-      env ? { },
-      unset ? [ ],
-      prefix ? { },
-      includeUpstream ? true,
-      extraPaths ? [ ],
-      mainProgram ? null,
-    }:
-    let
-      p = requirePkgs "mkWrappedPackage";
-      defaultExe = baseNameOf (lib.getExe pkg);
-      exeList = if exes == null then [ defaultExe ] else exes;
-      mainExe = builtins.head exeList;
-
-      gfxOf =
-        exe:
-        # First exe uses gfxName (lib.getExe); rest use gfxExe (lib.getExe').
-        if exe == mainExe then gfxName exe pkg else gfxExe exe pkg;
-
-      sourceFor = exe: if gfx then "${gfxOf exe}/bin/${exe}" else "${pkg}/bin/${exe}";
-
-      flagArgs = lib.concatMapStringsSep " " (f: "--add-flags ${lib.escapeShellArg f}") flags;
-      envArgs = lib.concatStringsSep " " (
-        lib.mapAttrsToList (k: v: "--set ${k} ${lib.escapeShellArg v}") env
-      );
-      unsetArgs = lib.concatMapStringsSep " " (k: "--unset ${k}") unset;
-      prefixArgs = lib.concatStringsSep " " (
-        lib.mapAttrsToList (k: v: "--prefix ${k} : ${lib.escapeShellArg v}") prefix
-      );
-
-      hasWrapperWork = flags != [ ] || env != { } || unset != [ ] || prefix != { };
-
-      wrapOne =
-        exe:
-        if hasWrapperWork then
-          p.runCommand "${exe}-wrapped" { nativeBuildInputs = [ p.makeWrapper ]; } ''
-            makeWrapper ${sourceFor exe} $out/bin/${exe} \
-              ${flagArgs} ${envArgs} ${unsetArgs} ${prefixArgs}
-          ''
-        else if gfx then
-          gfxOf exe
-        else
-          p.runCommand "${exe}-bin" { } ''
-            mkdir -p $out/bin
-            ln -s ${pkg}/bin/${exe} $out/bin/${exe}
-          '';
-
-      wrappedExes = map wrapOne exeList;
-    in
-    p.symlinkJoin {
-      name = "${lib.getName pkg}-${pkg.version or "wrapped"}";
-      paths = wrappedExes ++ extraPaths ++ lib.optional includeUpstream pkg;
-      meta = (pkg.meta or { }) // {
-        mainProgram = if mainProgram == null then mainExe else mainProgram;
-        # symlinkJoin produces a single `out` that already merges every joined
-        # path (bin, share/man, …). Inheriting pkg's multi-output
-        # outputsToInstall (e.g. mpv's [ "out" "man" ]) would make buildEnv try
-        # to install a `man` output this derivation doesn't have → eval error.
-        outputsToInstall = [ "out" ];
-      };
-    };
+  inherit (sudoPrompts)
+    sudoPromptScript
+    mkInstallPrompt
+    ;
 
   # ============================================================
-  # Sudo prompt scaffolding (used by mkSudoSetupModule)
+  # Compositor session-path resolution — see lib/session-paths.nix
   # ============================================================
 
-  sudoPromptScript =
-    {
-      pkgs,
-      name,
-      preCheck ? "",
-      promptTitle,
-      promptBody,
-      actionScript,
-      stateInputs ? [ ],
-    }:
-    let
-      actionHash = builtins.hashString "sha256" actionScript;
-      statePathsArg = lib.escapeShellArgs stateInputs;
-    in
-    pkgs.writeShellScript name ''
-      set -e
+  inherit (sessionPaths) resolveSessionPaths;
 
-      # nh pipes (and hides) activation output, so a switch sitting in a slow
-      # action (update-initramfs, mkcert -install, …) looks hung. Write our
-      # progress straight to the terminal when there is one. `[ -w /dev/tty ]`
-      # is not enough: without a controlling terminal the node exists and
-      # tests writable, but opening it fails ("No such device or address")
-      # and set -e would abort the whole activation — so probe with a real
-      # open in a subshell.
-      if (exec >/dev/tty) 2>/dev/null; then
-        exec >/dev/tty 2>&1
-      fi
+  # ============================================================
+  # Wrapped-package bundling — see lib/wrapped-packages.nix
+  # ============================================================
 
-      SUDO=""
-      for path in /bin/sudo /usr/bin/sudo /usr/local/bin/sudo; do
-        if [ -x "$path" ]; then
-          SUDO="$path"
-          break
-        fi
-      done
-
-      # We return if no sudo is found
-      if [ -z "$SUDO" ]; then
-        return 0
-      fi
-
-      sudo() { "$SUDO" "$@"; }
-
-      # Fingerprint world-readable paths the script depends on so the lock
-      # invalidates when those paths appear/disappear (e.g. a new display
-      # manager getting installed after the script first ran).
-      stateHash=$(
-        for p in ${statePathsArg}; do
-          if [ -e "$p" ]; then printf '%s:1\n' "$p"; else printf '%s:0\n' "$p"; fi
-        done | sha256sum | cut -d' ' -f1
-      )
-      combinedHash="${actionHash}:$stateHash"
-
-      lockFile="$HOME/.local/state/nix/home-manager/${name}.lock.sum"
-      if [ -f "$lockFile" ] && [ "$(cat "$lockFile")" = "$combinedHash" ]; then
-        exit 0
-      fi
-
-      ${preCheck}
-
-      echo ""
-      echo "--------------------------------------------------------------------"
-      printf '%s\n' ${lib.escapeShellArg promptTitle}
-      echo "--------------------------------------------------------------------"
-      echo ""
-      printf '%s\n' ${lib.escapeShellArg promptBody}
-
-      # No confirmation prompt: activation runs behind nh, which pipes our
-      # stdout/stderr, so a `read -p` blocks invisibly and the switch looks
-      # hung. sudo itself still authenticates on /dev/tty when the timestamp
-      # has expired, so the privilege gate stays interactive where it must be.
-      ${actionScript}
-      mkdir -p "$HOME/.local/state/nix/home-manager"
-      echo -n "$combinedHash" > "$lockFile"
-      echo ""
-    '';
-
+  inherit (wrappedPackages) mkWrappedPackage;
 }
