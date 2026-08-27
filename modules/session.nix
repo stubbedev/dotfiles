@@ -103,10 +103,21 @@
         FZF_CTRL_R_OPTS = "";
         FZF_ALT_C_COMMAND = "";
 
-        # Starship
-        STARSHIP_CONFIG = "${config.stubbe.paths.dotfiles}/src/shell/starship.toml";
+        # Starship (config below, at its default XDG path)
         STARSHIP_LOG = "error";
         GTK_THEME_VARIANT = "dark";
+      };
+
+      xdg.configFile."starship.toml".source = (pkgs.formats.toml { }).generate "starship.toml" {
+        command_timeout = 100;
+
+        format = "\${custom.vpn}$all";
+
+        custom.vpn = {
+          when = ''ls -A $HOME | grep -q ".vpn_active-*"'';
+          style = "green";
+          format = "[\\[vpn\\] ]($style)";
+        };
       };
     };
 }

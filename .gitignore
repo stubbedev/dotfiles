@@ -1,12 +1,5 @@
-bin/nvim
 src/nvim/lazy-lock.json
 src/nvim/lazyvim.json
-src/btop/btop.log
-src/btop/btop.conf
-src/neomutt/accounts/*/*/cache/bodies/*
-src/neomutt/accounts/*/*/cache/headers/*
-src/neomutt/accounts/*/*/cert/*
-src/vpn/*/config
 
 # All files under secrets/ are sops-encrypted (binary mode) and tracked.
 # Plaintext drafts that escape into secrets/ at edit time stay in the

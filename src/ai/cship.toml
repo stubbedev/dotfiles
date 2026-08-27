@@ -1,9 +1,0 @@
-[cship]
-lines = [
-  "$directory$git_branch$git_status $cship.usage_limits $cship.model.id"
-]
-
-[cship.usage_limits]
-seven_day_format = ""
-separator        = ""
-five_hour_format = "{remaining}%"

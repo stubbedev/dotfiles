@@ -9,6 +9,124 @@ _: {
       ...
     }:
     let
+      c = pkgs.stubbe.withHash;
+
+      # SurfingKeys theme — mirrors the Tridactyl Catppuccin Mocha command line
+      # (devnullvoid/tridactyl → themes/catppuccin-mocha.css).
+      #
+      # Tridactyl and SurfingKeys have different DOMs, so the Tridactyl rules
+      # are re-expressed against SurfingKeys' omnibar elements:
+      #   Tridactyl #command-line-holder / #completions  → #sk_omnibar
+      #   Tridactyl #tridactyl-input                     → #sk_omnibarSearchArea input
+      #   Tridactyl .option (completion row)             → #sk_omnibarSearchResult li
+      #   Tridactyl .option.focused                      → li.focused
+      #   Tridactyl td.icon { display:none }             → .icon { display:none }
+      #   Tridactyl .TridactylStatusIndicator            → #sk_status
+      surfingkeysTheme = ''
+        .sk_theme {
+          /* Tridactyl --font (themes/catppuccin-mocha.css). */
+          font-family: "Monaspace Krypton", "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+          background: ${c.base};
+          color: ${c.text};
+        }
+
+        .sk_theme input { color: ${c.text}; }
+        .sk_theme .url { color: ${c.green}; }              /* Tridactyl --completions-url (green) */
+        .sk_theme .annotation { color: ${c.subtext0}; }
+        .sk_theme .omnibar_highlight { color: ${c.mauve}; } /* search match (mauve) */
+        .sk_theme .omnibar_folder,
+        .sk_theme .omnibar_timestamp,
+        .sk_theme .omnibar_visitcount { color: ${c.overlay0}; }
+        .sk_theme .feature_name,
+        .sk_theme .feature_name span { color: ${c.peach}; } /* Tridactyl section header (peach) */
+        .sk_theme .separator { display: none; } /* hide the ➤ prompt arrow */
+        .sk_theme .prompt,
+        .sk_theme .resultPage { color: ${c.lavender}; }
+
+        /* Omnibar — Tridactyl's command line: flat dark, 2px lavender border. */
+        #sk_omnibar {
+          background: ${c.base};
+          border: 2px solid ${c.lavender};
+          box-shadow: 0 0 20px ${c.crust};
+        }
+        /* Exact Tridactyl placement: its #cmdline_iframe is top:25% left:10%
+           width:80%. SurfingKeys' #sk_omnibar is already left:10% width:80%;
+           only the vertical offset differs (.sk_omnibar_middle defaults to
+           top:10%), so pin it to 25%. ID+class outranks the stock class. */
+        #sk_omnibar.sk_omnibar_middle {
+          top: 25%;
+        }
+        #sk_omnibarSearchArea {
+          border-bottom: 1px solid ${c.surface0};
+        }
+        #sk_omnibarSearchArea input,
+        #sk_omnibarSearchArea > input {
+          background: transparent;
+          color: ${c.text};
+          font-size: 1.5rem;          /* Tridactyl #tridactyl-input */
+        }
+
+        /* Result rows — flat list, no favicon icons (Tridactyl hides td.icon).
+           0.8rem matches Tridactyl's #completions table (smaller than the input). */
+        #sk_omnibarSearchResult .icon { display: none !important; }
+        #sk_omnibarSearchResult > ul > li,
+        .sk_theme #sk_omnibarSearchResult > ul > li:nth-child(odd) {
+          background: ${c.base};
+          color: ${c.text};
+          font-size: 0.8rem;
+        }
+        #sk_omnibarSearchResult .title { color: ${c.blue}; }   /* Tridactyl --completions-title (blue) */
+        #sk_omnibarSearchResult .url { color: ${c.green}; }
+        .sk_theme #sk_omnibarSearchResult > ul > li.focused {
+          background: ${c.mantle};                                /* Tridactyl --currentline (mantle) */
+          font-weight: bold;
+        }
+        #sk_omnibarSearchResult > ul > li.focused .title { color: ${c.pink}; } /* focused title (pink) */
+        #sk_omnibarSearchResult > ul > li.focused .url { color: ${c.green}; }
+
+        /* Mode indicator — bottom-right box, mirroring Tridactyl's status
+           indicator. settings.showModeStatus keeps it always visible. */
+        #sk_status {
+          position: fixed !important;
+          bottom: 0 !important;
+          right: 0 !important;
+          left: auto !important;
+          background: ${c.base};
+          color: ${c.text};
+          border: 1px solid ${c.lavender};
+          font-size: 12pt;
+          padding: 0.3em 0.8em;
+        }
+
+        /* which-key (pending-key candidates) — full-width bar across the bottom
+           with larger text, instead of the stock small bottom-right box. */
+        #sk_keystroke {
+          background: ${c.base};
+          color: ${c.text};
+          left: 0;
+          right: 0;
+          width: 100%;
+          float: none;
+          border-top: 2px solid ${c.lavender};
+          font-size: 14pt;
+          padding: 0.6em 1em;
+        }
+        #sk_keystroke kbd { font-size: 1em; }
+
+        /* usage / help / editor popups */
+        #sk_usage,
+        #sk_popup,
+        #sk_editor {
+          background: ${c.base};
+          color: ${c.text};
+        }
+        .sk_theme kbd {
+          background: ${c.surface0};
+          color: ${c.text};
+          border-color: ${c.surface1};
+        }
+      '';
+
       # SUID sandbox can't work from /nix/store (read-only, no setuid). Point
       # CHROME_DEVEL_SANDBOX at /dev/null so Chrome rejects it as a SUID
       # candidate and falls back to the userns sandbox; the matching AppArmor
@@ -121,9 +239,9 @@ _: {
       #      file://<homeDir>/.config/surfingkeys/config.js
       # See the README (SURFINGKEYS (CHROME) SETUP).
       #
-      # The theme (src/browsers/surfingkeys-theme.css) re-expresses the
-      # Tridactyl Catppuccin Mocha command-line styling against SurfingKeys'
-      # omnibar DOM. builtins.toJSON makes it a safe JS string literal.
+      # The theme (surfingkeysTheme above) re-expresses the Tridactyl
+      # Catppuccin Mocha command-line styling against SurfingKeys' omnibar
+      # DOM. builtins.toJSON makes it a safe JS string literal.
       xdg.configFile."surfingkeys/config.js".text = ''
         // Managed by home-manager — modules/browsers/chrome.nix
         //
@@ -172,11 +290,7 @@ _: {
         // Tridactyl. ("bottom" flips it: input at the bottom, results above.)
         settings.omnibarPosition = "middle";
         settings.showModeStatus = true;      // always-on mode indicator
-        settings.theme = ${
-          builtins.toJSON (
-            builtins.readFile (pkgs.stubbe.renderPalette "src/browsers/surfingkeys-theme.css" { })
-          )
-        };
+        settings.theme = ${builtins.toJSON surfingkeysTheme};
       '';
 
       # Ubuntu 24.04+ restricts unprivileged user namespaces — which the

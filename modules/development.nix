@@ -77,7 +77,7 @@
           enable = true;
           package = pkgs.go;
           # Relocate the default ~/go to ~/.go so $HOME stays clean. GOBIN is
-          # left unset so it defaults to $GOPATH/bin, which src/shell/zsh/paths
+          # left unset so it defaults to $GOPATH/bin, which the zsh paths file (modules/shell.nix)
           # deliberately keeps OFF PATH — `go install` must not shadow
           # nix-pinned tooling.
           env.GOPATH = "${config.home.homeDirectory}/.go";

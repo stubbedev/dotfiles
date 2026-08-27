@@ -190,7 +190,36 @@ in
 
       programs.vifm = {
         enable = true;
-        extraConfig = pkgs.stubbe.text "src/desktop/vifm.vifm";
+        extraConfig = ''
+          " palenight color scheme for vifm
+
+          " Reset all styles first
+          highlight clear
+
+          highlight Border	cterm=none	ctermfg=default	ctermbg=default
+
+          highlight TopLine	cterm=none	ctermfg=002	ctermbg=default
+          highlight TopLineSel	cterm=bold	ctermfg=002	ctermbg=default
+
+          highlight Win		cterm=none	ctermfg=251	ctermbg=default
+          highlight Directory	cterm=bold	ctermfg=004	ctermbg=default
+          highlight CurrLine	cterm=bold,inverse	ctermfg=default	ctermbg=default
+          highlight OtherLine	cterm=bold	ctermfg=default	ctermbg=default
+          highlight Selected	cterm=none	ctermfg=003	ctermbg=008
+
+          highlight JobLine	cterm=bold	ctermfg=251	ctermbg=008
+          highlight StatusLine	cterm=none	ctermfg=008	ctermbg=default
+          highlight ErrorMsg	cterm=bold	ctermfg=001	ctermbg=default
+          highlight WildMenu	cterm=bold	ctermfg=015	ctermbg=008
+          highlight CmdLine	cterm=none	ctermfg=007	ctermbg=default
+
+          highlight Executable	cterm=bold	ctermfg=002	ctermbg=default
+          highlight Link		cterm=bold	ctermfg=006	ctermbg=default
+          highlight BrokenLink	cterm=bold	ctermfg=001	ctermbg=default
+          highlight Device	cterm=bold,standout	ctermfg=000	ctermbg=011
+          highlight Fifo		cterm=none	ctermfg=003	ctermbg=default
+          highlight Socket	cterm=bold	ctermfg=005	ctermbg=default
+        '';
       };
 
       xdg = {
@@ -229,7 +258,34 @@ in
           };
         };
 
-        configFile."pcmanfm/default/pcmanfm.conf".source = pkgs.stubbe.file "src/desktop/pcmanfm.conf";
+        configFile."pcmanfm/default/pcmanfm.conf".source = (pkgs.formats.ini { }).generate "pcmanfm.conf" {
+          config.bm_open_method = 0;
+          volume = {
+            mount_on_startup = 1;
+            mount_removable = 1;
+            autorun = 1;
+          };
+          ui = {
+            always_show_tabs = 0;
+            max_tab_chars = 32;
+            win_width = 640;
+            win_height = 480;
+            maximized = 1;
+            splitter_pos = 150;
+            media_in_new_tab = 0;
+            desktop_folder_new_win = 0;
+            change_tab_on_drop = 1;
+            close_on_unmount = 1;
+            focus_previous = 0;
+            side_pane_mode = "places";
+            view_mode = "list";
+            show_hidden = 1;
+            sort = "name;ascending;";
+            toolbar = "newtab;navigation;home;";
+            show_statusbar = 1;
+            pathbar_mode_buttons = 0;
+          };
+        };
 
         # Defaults for D-Bus / xdg-open / portal callers. The browser default
         # differs per target: Firefox on NixOS, Chrome on standalone HM.

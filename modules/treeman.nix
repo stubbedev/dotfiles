@@ -50,9 +50,12 @@
         # module parses waybar-style JSON natively (text/tooltip/class), so the
         # script is reused as-is — registered here so the module can call it by
         # name on PATH.
-        (pkgs.stubbe.scriptBin {
+        (pkgs.stubbe.bashApp {
           name = "treeman-status";
-          source = "src/treeman/status.sh";
+          text = ''
+            # `treeman status --format waybar` emits {text,tooltip,class} directly.
+            command -v treeman >/dev/null 2>&1 && treeman status --format waybar 2>/dev/null
+          '';
         })
       ];
 
@@ -60,7 +63,30 @@
       # state + DB live elsewhere). force overrides the pre-existing hand-edited
       # file on first switch.
       xdg.configFile."treeman/config.yaml" = {
-        source = pkgs.stubbe.file "src/treeman/config.yaml";
+        source = (pkgs.formats.yaml { }).generate "treeman-config.yaml" {
+          notifications = {
+            enabled = true;
+            events = [
+              "stable"
+              "failed"
+            ];
+          };
+
+          snapshots.cap_per_repo = 50;
+
+          auto_fetch = {
+            enabled = true;
+            interval_minutes = 30;
+          };
+
+          # Bar status line. `treeman status --format waybar` builds its `text` from
+          # the `icon` format, so overriding status.formats.icon makes the wayle bar
+          # widget minimal: one compact "{glyph} {count}" pair per bucket
+          # (stable/up/down/failed), no word labels. The wayle treeman module passes
+          # this through unchanged and draws no icon of its own — see the wayle
+          # config + widget script in modules/wayle.nix.
+          status.formats.icon = "{icon_stable} {stable}  {icon_up} {up}  {icon_down} {down}  {icon_failed} {failed}";
+        };
         force = true;
       };
 

@@ -1,8 +1,0 @@
-.worktrees
-.gwt-*
-.treeman.yaml
-.treeman.local.yaml
-.treeman/
-.treeman-hooks/
-.envrc
-.direnv/

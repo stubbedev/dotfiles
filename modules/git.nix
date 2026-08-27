@@ -105,7 +105,16 @@ _: {
         settings = lazygitSettings;
       };
 
-      xdg.configFile."git/ignore".source = pkgs.stubbe.file "src/git/ignore";
+      xdg.configFile."git/ignore".text = ''
+        .worktrees
+        .gwt-*
+        .treeman.yaml
+        .treeman.local.yaml
+        .treeman/
+        .treeman-hooks/
+        .envrc
+        .direnv/
+      '';
 
       # lazygit rewrites state.yml as you use it, so it cannot be a store
       # symlink. `lastversion` pins the current package version so lazygit's

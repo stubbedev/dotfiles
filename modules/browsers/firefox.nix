@@ -122,7 +122,7 @@ _: {
                 // and Tridactyl's `set newtab` redirect (-> https://start.local,
                 // pkgs.stubbe.newtabUrl) can't pull focus back: content JS
                 // cannot steal focus from browser chrome, so the focus() in
-                // src/browsers/newtab.html loses the race. Do it from chrome
+                // the newtab page (modules/browsers/newtab.nix) loses the race. Do it from chrome
                 // instead — this autoconfig snippet runs privileged. Hook each
                 // browser window and refocus the selected <browser> shortly
                 // after the window loads or a tab opens. See tridactyl#4967.

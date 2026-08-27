@@ -24,14 +24,17 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   ├── dev/               # flake checks, lint, `nix fmt`
 │   ├── ai/, browsers/     # aspects big enough to want a directory
 │   └── <aspect>.nix       # mail, shell, hyprland, wayle, power, storage, …
-├── bin/                   # shell scripts built into Nix-managed binaries
-├── src/                   # app config files, one directory per aspect
+├── bin/                   # ONLY the pre-Nix bootstraps (stb-install*)
+├── src/                   # the few real files: nvim + hyprland live-edit
+│                          # trees, aerc stylesets, wallpapers, the claude
+│                          # plugin marketplace dir
 └── secrets/               # sops-encrypted, keyed per machine in .sops.yaml
 ```
 
-`bin/` scripts are built into the Nix profile's `bin/` by home-manager.
-`stb-install` is the only one that runs from the checkout — it bootstraps Nix
-and home-manager on a fresh host.
+Every config file and script is inline Nix inside its aspect module. Scripts
+become PATH bins through `pkgs.stubbe.bashApp` (build-time shellcheck) or
+`pkgs.stubbe.zshApp` (build-time `zsh -n`). `bin/stb-install` runs from the
+checkout — it bootstraps Nix and home-manager on a fresh host.
 
 ## CONVENTIONS
 
@@ -50,7 +53,7 @@ and home-manager on a fresh host.
 3. **Two ways to reach shared code, and no third.**
    - `pkgs.stubbe.*` — an overlay (`modules/core/pkgs-stubbe.nix`) carrying the
      pure data (`colors`, `theme`, `newtabUrl`, `cache`) and every builder that
-     needs `pkgs` (`file`, `render`, `secret`, `scriptBin`, `install*`, `json*`).
+     needs `pkgs` (`file`, `secret`, `bashApp`, `zshApp`, `install*`, `json*`).
      Reachable from any module of any class, because it rides on `pkgs`.
    - `config.stubbe.*` — options for anything derived from the configuration:
      `paths`, `gfx`, `setup`, `mutable`, `mcp`.
@@ -79,12 +82,13 @@ and home-manager on a fresh host.
    edit needs no rebuild), `copy` (the app rewrites the file, so re-assert ours
    each switch) and `seed` (write only if absent).
 
-7. **Generate config from Nix where Nix owns a value.** Anything carrying a
-   colour, a path or a store reference is generated — so the Catppuccin palette
-   exists once, in `modules/core/lib.nix`, and flows into alacritty's TOML,
-   btop's theme, lazygit's YAML, rofi's rasi, the hyprtoolkit conf, the fzf
-   options and the new-tab page. Files under `src/` are the ones with no
-   Nix-derived content and no schema to validate against; they stay verbatim.
+7. **Everything is Nix.** Config is structured Nix data rendered through
+   `lib.generators` / `pkgs.formats` where a format exists (INI, TOML, YAML,
+   JSON), and inline strings where none does — so the Catppuccin palette
+   exists once, in `modules/core/lib.nix`, and flows into every themed
+   surface by interpolation. The only real files left under `src/` are the
+   ones that must be files: the nvim and hyprland live-edit trees
+   (`stubbe.mutable` link), binary wallpapers, and the sops secrets.
 
 ## INSTALLATION
 

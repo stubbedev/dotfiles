@@ -9,12 +9,12 @@
 # None of that exists here.
 #
 # Contents:
-#   * everything in `flake.lib` (pure data — colours, URLs, caches)
-#   * `file`/`text`   content-addressed access to files in this repo
+#   * everything in `flake.lib` (pure data — colours, URLs, caches, scripts)
+#   * `file`          content-addressed access to the few remaining repo files
 #   * `secret`        sops secret declarations
 #   * `install*`      privileged-activation shell builders
 #   * `json*`         activation-time JSON state mutators
-#   * `scriptBin`     repo shell scripts as Nix bins
+#   * `bashApp`/`zshApp`  inline scripts as checked Nix bins
 #   * `nixGL`/`mk*Wrapper`  graphics-wrapper primitives (policy lives in
 #                     modules/core/gfx.nix, which knows the target platform)
 { config, ... }:
@@ -44,46 +44,15 @@
     {
       stubbe = flakeLib // {
         # ── Repo files ──────────────────────────────────────────────────
+        # For the few things that remain real files (the live-edit hyprland
+        # tree, wallpapers, encrypted secrets); everything else is inline nix.
         file = repoPath;
-        text = relPath: builtins.readFile (flakeLib.src + "/${relPath}");
-
-        # `@NAME@` substitution over a repo file, via nixpkgs' own
-        # `replaceVars` (not a hand-rolled `replaceStrings`): it fails the
-        # build on an unsubstituted marker or a replacement that matched
-        # nothing, so a renamed placeholder is a build error instead of a
-        # silently broken config.
-        render =
-          relPath: vars:
-          final.replaceVarsWith {
-            # Name it after the file, not after the content-addressed input —
-            # otherwise the output carries both hashes in its store name.
-            name = baseNameOf relPath;
-            src = repoPath relPath;
-            replacements = vars;
-          };
 
         # Colour palette in the shapes consumers actually want. `colors` is
-        # bare hex; these are the renderers, so no themed file ever hardcodes
-        # a Catppuccin value.
+        # bare hex; these are the renderers, so no themed config ever
+        # hardcodes a Catppuccin value.
         withHash = lib.mapAttrs (_: hex: "#${hex}") flakeLib.colors;
         withArgb = lib.mapAttrs (_: hex: "0xff${hex}") flakeLib.colors;
-
-        # `render` for a themed file: substitutes @MAUVE@, @BASE@ … (the
-        # upper-cased palette names) as `#rrggbb`, alongside any extra vars.
-        #
-        # Only the colours the file actually mentions are passed, because
-        # replaceVars fails the build on a replacement that matched nothing —
-        # which is the property that makes a renamed marker an error rather
-        # than a silently unstyled config.
-        renderPalette =
-          relPath: extraVars:
-          let
-            text = final.stubbe.text relPath;
-            colourVars = lib.filterAttrs (name: _: lib.hasInfix "@${name}@" text) (
-              lib.mapAttrs' (name: hex: lib.nameValuePair (lib.toUpper name) "#${hex}") flakeLib.colors
-            );
-          in
-          final.stubbe.render relPath (colourVars // extraVars);
 
         # ── Secrets ─────────────────────────────────────────────────────
         # Declare a binary-mode sops secret backed by <repo>/secrets/<name>,
@@ -314,25 +283,45 @@
             fi
           '';
 
-        # ── Repo scripts as Nix bins ────────────────────────────────────
+        # ── Inline scripts as Nix bins ──────────────────────────────────
         # Land under config.home.profileDirectory/bin (~/.nix-profile/bin, or
         # /etc/profiles/per-user/$USER/bin on NixOS) so they are on PATH and
-        # owned by the Nix profile. The script's own shebang is preserved, so
-        # zsh stays zsh. `vars` are `@NAME@` markers, validated by replaceVars.
-        scriptBin =
+        # owned by the Nix profile.
+
+        # `writeShellApplication`, but shellchecked at the same `-S warning`
+        # severity the repo's CI gate has always used — the default style
+        # severity would fail builds on cosmetic findings.
+        bashApp =
           {
             name,
-            source,
-            vars ? { },
+            text,
+            runtimeInputs ? [ ],
           }:
-          final.replaceVarsWith {
+          final.writeShellApplication {
+            inherit name text runtimeInputs;
+            checkPhase = ''
+              runHook preCheck
+              ${final.stdenv.shellDryRun} "$target"
+              ${lib.getExe final.shellcheck} -S warning "$target"
+              runHook postCheck
+            '';
+          };
+
+        # The zsh analogue of `writeShellApplication`: an executable
+        # bin/<name> with a zsh shebang, parse-checked (`zsh -n`) at build
+        # time so a syntax error is a build failure, not a broken PATH bin.
+        zshApp =
+          { name, text }:
+          final.writeTextFile {
             inherit name;
-            src = repoPath source;
-            replacements = vars;
-            dir = "bin";
-            isExecutable = true;
-            # So `lib.getExe` resolves without the "assuming the main program
-            # has the same name" deprecation warning.
+            executable = true;
+            destination = "/bin/${name}";
+            text = ''
+              #!${lib.getExe final.zsh}
+              ${text}'';
+            checkPhase = ''
+              ${lib.getExe final.zsh} -n "$target"
+            '';
             meta.mainProgram = name;
           };
 

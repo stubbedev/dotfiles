@@ -33,6 +33,9 @@ _: {
         "xml" # statically compiled into PHP base; loading as shared ext warns
         "snuffleupagus" # security hardening; needs a config to be useful
         "memprof" # ZTS not supported (memprof.c #error)
+        # configure: "bufferevent_openssl_get_ssl not found in event_openssl"
+        # against current nixpkgs libevent/openssl; drop until upstream fixes.
+        "event"
       ];
 
       extraIni = ''
@@ -112,7 +115,21 @@ _: {
     lib.mkIf config.features.php {
       # php-fpm's pool config. Left as a file: it is pure php-fpm syntax with
       # no Nix-derived values, and there is no schema to validate it against.
-      xdg.configFile."php/php-fpm.conf".source = pkgs.stubbe.file "src/php/php-fpm.conf";
+      xdg.configFile."php/php-fpm.conf".source = (pkgs.formats.ini { }).generate "php-fpm.conf" {
+        global = {
+          pid = "/tmp/php-fpm.pid";
+          error_log = "/tmp/php-fpm.log";
+          daemonize = "no";
+        };
+        www = {
+          listen = "127.0.0.1:9000";
+          pm = "dynamic";
+          "pm.max_children" = 5;
+          "pm.start_servers" = 2;
+          "pm.min_spare_servers" = 1;
+          "pm.max_spare_servers" = 3;
+        };
+      };
 
       home.packages = with pkgs; [
         # `php` on PATH is literally frankenphp's embedded interpreter — same

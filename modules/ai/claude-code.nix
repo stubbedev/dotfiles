@@ -48,7 +48,16 @@ _: {
         ];
 
         # cship reads a flat ~/.config/cship.toml, not a subdirectory.
-        xdg.configFile."cship.toml".source = pkgs.stubbe.file "src/ai/cship.toml";
+        xdg.configFile."cship.toml".source = (pkgs.formats.toml { }).generate "cship.toml" {
+          cship = {
+            lines = [ "$directory$git_branch$git_status $cship.usage_limits $cship.model.id" ];
+            usage_limits = {
+              seven_day_format = "";
+              separator = "";
+              five_hour_format = "{remaining}%";
+            };
+          };
+        };
 
         stubbe.setup.claudeCode.script = ''
           ${pkgs.stubbe.jsonMerge {

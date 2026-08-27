@@ -126,7 +126,7 @@
       #
       # path: (recursive) and folder: (exact) rather than regex — regex
       # delimiters cannot contain spaces, which breaks on `[Gmail]/All Mail`.
-      mailSync = pkgs.writeShellApplication {
+      mailSync = pkgs.stubbe.bashApp {
         name = "mail-sync";
         runtimeInputs = with pkgs; [
           isync
@@ -238,6 +238,227 @@
           Sent  = folder:"gmail/[Gmail]/Sent Mail"
         '';
       };
+
+      # Focus an existing aerc window if one is open, otherwise spawn a new
+      # alacritty for it. The window is launched with --class so we can
+      # match by app-id/class, which (unlike the title) stays stable as
+      # aerc updates the displayed folder/count.
+      mailOpen = pkgs.stubbe.bashApp {
+        name = "mail-open";
+        text = ''
+          APP_ID="aerc-mail"
+
+          spawn_term() {
+            # aerc ignores SIGHUP, so closing its window leaves the process orphaned and
+            # window-less forever, still owning $XDG_RUNTIME_DIR/aerc.sock — every later
+            # `aerc :<cmd>` IPC call (see binds.conf) then lands in that ghost instead of
+            # the live instance. We only get here when no aerc window matched, so any
+            # aerc still running is a ghost. SIGTERM shuts it down cleanly.
+            pkill -TERM -f '/bin/aerc$' || true
+            ${config.stubbe.paths.terminal} --class "$APP_ID" -e aerc
+          }
+
+          if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
+            addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
+            if [[ -n "$addr" ]]; then
+              ws=$(hyprctl -j activeworkspace | jq -r '.id')
+              # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua config
+              # (parsed as hl.dispatch(<args>) Lua), and there is no by-address
+              # move-to-workspace dispatcher. Reproduce `movetoworkspace ws,address:addr`
+              # by focusing the window (hy3 moves the *focused* window) then moving it to
+              # the captured workspace with follow — same end state: aerc on the current
+              # workspace, focused.
+              hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })"
+              hyprctl dispatch "hl.plugin.hy3.move_to_workspace('$ws', { follow = true })"
+            else
+              spawn_term
+            fi
+          elif [[ "$XDG_CURRENT_DESKTOP" == "niri" ]] && command -v niri &> /dev/null; then
+            id=$(niri msg --json windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
+            if [[ -n "$id" ]]; then
+              ws=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .idx')
+              niri msg action move-window-to-workspace --window-id "$id" "$ws"
+              niri msg action focus-window --id "$id"
+            else
+              spawn_term
+            fi
+          else
+            spawn_term
+          fi
+        '';
+      };
+
+      # Extract and process List-Unsubscribe from email — bypasses DKIM
+      # validation issues in aerc. Reads the message on stdin.
+      mailUnsubscribe = pkgs.stubbe.bashApp {
+        name = "mail-unsubscribe";
+        text = ''
+          # Absent headers make the greps below fail legitimately; the script
+          # branches on empty results instead of aborting.
+          set +e +o pipefail
+
+          email=$(cat)
+
+          # Extract List-Unsubscribe header
+          unsub_header=$(echo "$email" | grep -i "^List-Unsubscribe:" | head -1)
+
+          if [ -z "$unsub_header" ]; then
+            echo "Error: No List-Unsubscribe header found"
+            exit 1
+          fi
+
+          # Extract URL (handles both <URL> and plain URL formats)
+          url=$(echo "$unsub_header" | grep -oP 'https?://[^>,\s]+' | head -1)
+
+          if [ -z "$url" ]; then
+            # Try extracting mailto link
+            mailto=$(echo "$unsub_header" | grep -oP 'mailto:[^>,\s]+' | head -1)
+            if [ -n "$mailto" ]; then
+              echo "Found mailto unsubscribe: $mailto"
+              echo "Opening in aerc compose..."
+              aerc "$mailto"
+              exit 0
+            fi
+            echo "Error: No valid unsubscribe URL or mailto found"
+            exit 1
+          fi
+
+          # Check for List-Unsubscribe-Post header (RFC 8058 - one-click unsubscribe)
+          unsub_post=$(echo "$email" | grep -i "^List-Unsubscribe-Post:" | head -1)
+
+          if [ -n "$unsub_post" ]; then
+            # RFC 8058: POST with List-Unsubscribe=One-Click
+            echo "Processing one-click unsubscribe..."
+            response=$(curl -sS -X POST -d "List-Unsubscribe=One-Click" "$url" -w "\n%{http_code}" -o /dev/null)
+            http_code=$(echo "$response" | tail -n1)
+
+            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+              echo "✓ Successfully unsubscribed"
+              exit 0
+            else
+              echo "Warning: Unsubscribe request returned HTTP $http_code"
+              echo "URL: $url"
+              exit 1
+            fi
+          else
+            # Standard GET-based unsubscribe
+            echo "Processing unsubscribe request..."
+            response=$(curl -sS -L "$url" -w "\n%{http_code}" -o /dev/null)
+            http_code=$(echo "$response" | tail -n1)
+
+            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
+              echo "✓ Successfully unsubscribed"
+              exit 0
+            else
+              echo "Warning: Unsubscribe request returned HTTP $http_code"
+              echo "URL: $url"
+              exit 1
+            fi
+          fi
+        '';
+      };
+
+      # Sourced by mail-pager for text/html parts. conceallevel=2 hides link
+      # destinations so the body reads as prose; the destination is shown in a
+      # float instead (overlay layer, so nothing in the rendered message moves).
+      # Injections must be followed explicitly: without ignore_injections=false
+      # the node chain stops at `inline` (markdown), never reaching the
+      # markdown_inline nodes that actually carry the URL.
+      mailPagerLua = pkgs.writeText "mail-pager.lua" ''
+        local function url_at_cursor()
+          local ok, node = pcall(vim.treesitter.get_node, { ignore_injections = false })
+          if not ok or not node then
+            return nil
+          end
+          while node do
+            local kind = node:type()
+            if kind == "uri_autolink" then
+              -- <https://example.com> -- strip the angle brackets the syntax requires.
+              return vim.treesitter.get_node_text(node, 0):match("^<(.*)>$")
+            elseif kind == "inline_link" or kind == "image" then
+              for child in node:iter_children() do
+                if child:type() == "link_destination" then
+                  return vim.treesitter.get_node_text(child, 0)
+                end
+              end
+            end
+            node = node:parent()
+          end
+          return nil
+        end
+
+        -- open_floating_preview closes itself on the next CursorMoved and reuses its
+        -- own window, so moving between two links swaps the contents rather than
+        -- stacking floats.
+        vim.api.nvim_create_autocmd("CursorMoved", {
+          buffer = 0,
+          callback = function()
+            local url = url_at_cursor()
+            if url then
+              vim.lsp.util.open_floating_preview({ url }, "", {
+                focusable = false,
+                border = "rounded",
+              })
+            end
+          end,
+        })
+      '';
+
+      # Aerc viewer pager: read the (already-filtered) message body in nvim.
+      # Minimal nvim, same shape as the [compose] editor: no plugins, no swap, no
+      # shada — the buffer is throwaway. Everything that would pollute a mouse
+      # drag-select is off (gutter, statusline, ruler); `mouse=` leaves selection to
+      # the terminal, and clipboard=unnamedplus makes a plain `y` land in wl-copy.
+      # nvim always paints from the top, so no bottom-parked first screen.
+      # Closing the viewer is aerc's job: q is bound in [view].
+      mailPager = pkgs.stubbe.bashApp {
+        name = "mail-pager";
+        text = ''
+          # aerc exports AERC_MIME_TYPE to the pager, not only to the filters the
+          # manual documents (verified against 0.22). The part type decides how to
+          # read it.
+          case "''${AERC_MIME_TYPE:-}" in
+          image/*)
+            # chafa emits ANSI art, which nvim would show as literal escape codes.
+            exec less -Rc
+            ;;
+          text/html)
+            # Already through html-to-md, so it really is markdown. Colours come from
+            # treesitter rather than `syntax on`: the markdown and markdown_inline
+            # parsers ship inside the neovim derivation, so this holds under -u NONE
+            # with no plugins, and the default colourscheme defines the @markup.* groups.
+            # conceallevel hides the markup itself; mailPagerLua puts the hidden link
+            # destination in a float so revealing one never reflows the line. Sourced
+            # with `silent!` so a missing Lua half costs you the float and nothing else
+            # — bare `-S` raises a modal E484 that blocks reading the message at all.
+            syntax=(
+              -c 'set filetype=markdown conceallevel=2 concealcursor=nvic'
+              -c 'lua pcall(vim.treesitter.start, 0, "markdown")'
+              -c 'silent! source ${mailPagerLua}'
+            )
+            ;;
+          *)
+            # Prose the sender typed by hand. Markdown conceal here would swallow
+            # literal **, ` and (…) that were never markup. ft=mail is nvim's own
+            # syntax for this: quote depth, headers, signatures.
+            syntax=(
+              -c 'syntax enable'
+              -c 'set filetype=mail'
+            )
+            ;;
+          esac
+
+          # Normal is cleared last so aerc's styleset background shows through instead
+          # of nvim's — `syntax enable` would otherwise reset it.
+          exec nvim -u NONE -U NONE --noplugin -n -i NONE -M \
+            -c 'set mouse= clipboard=unnamedplus' \
+            -c 'set nonumber norelativenumber signcolumn=no nolist laststatus=0 noruler noshowcmd' \
+            -c 'set linebreak termguicolors' \
+            "''${syntax[@]}" \
+            -c 'hi Normal guibg=NONE ctermbg=NONE' \
+            -
+        '';
+      };
     in
     lib.mkIf config.features.desktop {
       sops.secrets = {
@@ -259,23 +480,9 @@
           # strips MSO/Word noise, then renders Markdown via htmd. Single
           # static binary — github:stubbedev/html-to-md.
           inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
-          (pkgs.stubbe.scriptBin {
-            name = "mail-open";
-            source = "src/mail/open-mail";
-            vars.TERM = config.stubbe.paths.terminal;
-          })
-          (pkgs.stubbe.scriptBin {
-            name = "mail-unsubscribe";
-            source = "src/mail/unsubscribe";
-          })
-          (pkgs.stubbe.scriptBin {
-            name = "mail-pager";
-            source = "src/mail/mail-pager";
-            # scriptBin emits a lone bin/mail-pager, so the pager's Lua half
-            # has no sibling to find at runtime — point at it in the store
-            # instead of resolving relative to $0.
-            vars.PAGER_LUA = pkgs.stubbe.file "src/mail/mail-pager.lua";
-          })
+          mailOpen
+          mailUnsubscribe
+          mailPager
         ]
         ++ (with pkgs; [
           # The client itself, and the address-book/calendar tooling beside it.
@@ -284,7 +491,6 @@
           vdirsyncer
           mailutils
           msmtp
-          w3m
           pandoc
           lynx
           chafa
@@ -311,8 +517,170 @@
       };
 
       xdg.configFile = {
-        "aerc/aerc.conf".source = pkgs.stubbe.file "src/mail/aerc.conf";
-        "aerc/binds.conf".source = pkgs.stubbe.file "src/mail/binds.conf";
+        "aerc/aerc.conf".text = ''
+          [general]
+          default-save-path=~/Downloads
+          # accounts.conf contains no passwords (cred-cmds reference sops-decrypted
+          # files at mode 0400). Skip aerc's 0600 check since the file is symlinked
+          # from /nix/store and is therefore world-readable by design.
+          unsafe-accounts-conf=true
+          # Default 10s is too short for kontainer's Exchange server: its broken IMAP
+          # pipelining forces mbsync to PipelineDepth=1 (one command at a time), and
+          # even an incremental sync of a few hundred messages overruns 10s. The next
+          # tick fires only after the current one completes, so a longer ceiling
+          # doesn't pile up overlapping runs.
+          check-mail-timeout=2m
+
+          [compose]
+          editor=nvim -u NONE -U NONE --noplugin \
+            -c 'set notermguicolors' \
+            -c 'set t_Co=0' \
+            -c 'syntax off' \
+            -c 'hi Normal ctermbg=NONE guibg=NONE'
+          header-layout=To,Subject
+          edit-headers=false
+
+          [viewer]
+          pager=mail-pager
+          alternatives=text/html,text/plain
+
+          [filters]
+          text/html=html-to-md
+          text/plain=cat
+          text/calendar=calendar
+          image/*=chafa --format symbols
+
+          [ui]
+          border-char-vertical="│"
+          border-char-horizontal="─"
+          styleset-name=catppuccin-macchiato
+          # Default true. Stays explicit because the whole local-cache pipeline
+          # (mbsync + notmuch synchronize_flags) hinges on the `unread` flag being
+          # stripped exactly once, when the user opens the message viewer — not
+          # while browsing the message list, syncing IMAP, or indexing the maildir.
+          auto-mark-read=true
+        '';
+        "aerc/binds.conf".text = ''
+          # LazyVim-inspired keybinds for aerc
+          # Leader key is <Space>
+
+          [messages]
+          j = :next<Enter> # Next message
+          k = :prev<Enter> # Previous message
+          h = :prev-tab<Enter> # Previous tab
+          l = :next-tab<Enter> # Next tab
+          gg = :select 0<Enter> # Jump to first message
+          G = :select -1<Enter> # Jump to last message
+          <C-u> = :prev 10<Enter> # Scroll up 10
+          <C-d> = :next 10<Enter> # Scroll down 10
+          <PgUp> = :prev 100%<Enter> # Page up
+          <PgDn> = :next 100%<Enter> # Page down
+          <C-h> = :prev-tab<Enter> # Previous tab
+          <C-l> = :next-tab<Enter> # Next tab
+          <C-j> = :next-folder<Enter> # Next folder
+          <C-k> = :prev-folder<Enter> # Previous folder
+          <Up> = :prev<Enter> # Previous message
+          <Down> = :next<Enter> # Next message
+          <Left> = :prev-tab<Enter> # Previous tab
+          <Right> = :next-tab<Enter> # Next tab
+          <Space>r = :reply<Enter> # Reply
+          <Space>R = :reply -a<Enter> # Reply all
+          <Space>c = :compose<Enter>:prev-field<Enter> # Compose new, focus To
+          <Space>F = :forward<Enter> # Forward
+          q = :quit<Enter> # Quit
+          <Space>m = :mark -t<Enter> # Mark as todo
+          <Space>d = :delete<Enter> # Delete
+          <Space>a = :archive<Enter> # Archive
+          <Space><Tab> = :next-tab<Enter> # Next tab
+          <Space><S-Tab> = :prev-tab<Enter> # Previous tab
+          <Space>j = :next-folder<Enter> # Next folder
+          <Space>k = :prev-folder<Enter> # Previous folder
+          # Telescope/FZF-style search and filter
+          <Space>ff = :filter<space> # Filter (live search)
+          <Space>fs = :search<space>  # Search (persistent)
+          <Space>fc = :clear<Enter> # Clear filter/search
+          / = :filter<space> # Quick filter (like fzf)
+          ? = :search<space>  # Quick search
+          <Space>fh = :help keys<Enter> # Show key help
+          <Space>? = :help keys<Enter> # Show key help
+          <Space>fk = :help keys<Enter> # Show key help
+          <Space>sd = :sort date<Enter> # Sort by date
+          <Space>sD = :sort -r date<Enter> # Sort by date reverse
+          <Space>sf = :sort from<Enter> # Sort by from
+          <Space>sF = :sort -r from<Enter> # Sort by from reverse
+          <Space>ss = :sort subject<Enter> # Sort by subject
+          <Space>sS = :sort -r subject<Enter> # Sort by subject reverse
+          <Space>tf = :flag -t<Enter> # Toggle important flag
+          <Space>tr = :read -t<Enter> # Toggle read
+          <Space>tu = :read -t<Enter> # Toggle read/unread (same as tr)
+          <Space>mr = :read<Enter> # Mark as read
+          <Space>mu = :unread<Enter> # Mark as unread
+          <Space>mR = :pipe -m aerc :read<Enter> # Mark all marked as read
+          <Space>mU = :pipe -m aerc :unread<Enter> # Mark all marked as unread
+          <Enter> = :view<Enter> # View message
+          # Bulk selection and operations
+          v = :mark -t<Enter>:next<Enter> # Toggle mark and move to next
+          V = :mark -v<Enter> # Visual mode - toggle all
+          <Space>v = :mark -a<Enter> # Mark all
+          <Space>V = :unmark -a<Enter> # Unmark all
+          <Space>x = :pipe -m -b /bin/sh -c 'aerc :delete'<Enter> # Delete marked
+          <Space>X = :pipe -m -b /bin/sh -c 'aerc :read'<Enter> # Mark marked as read
+          d = :delete<Enter> # Quick delete current
+          D = :pipe -m aerc :delete<Enter> # Delete marked emails
+
+          [view]
+          # aerc grabs these before the nvim pager sees them; :close tears the pager
+          # terminal down with the viewer. IPC (`aerc :close` from a script) cannot do
+          # this: IPC only resolves global-context commands, never view-context ones.
+          # <Esc> is deliberately NOT bound: aerc decides before nvim ever sees a key, so
+          # a bind here would steal <Esc> in every nvim mode, not just normal. Closing on
+          # <Esc> is not worth losing visual/insert-mode exit inside the pager — `q`
+          # closes. aerc also will not close the viewer when the pager exits on its own
+          # (verified: `pager=cat` leaves the dead pane up), so nvim cannot do it either.
+          q = :close<Enter> # Close
+          J = :next<Enter> # Next message
+          K = :prev<Enter> # Previous message
+          <C-j> = :next-part<Enter> # Next part
+          <C-k> = :prev-part<Enter> # Previous part
+          <C-h> = :prev-tab<Enter> # Previous tab
+          <C-l> = :next-tab<Enter> # Next tab
+          <Space>r = :reply<Enter> # Reply
+          <Space>R = :reply -a<Enter> # Reply all
+          <Space>F = :forward<Enter> # Forward
+          <Space>c = :close<Enter> # Close
+          <Space>y = :accept<Enter> # Accept
+          <Space>n = :decline<Enter> # Decline
+          <Space>u = :pipe -m mail-unsubscribe<Enter>
+          # parse-http-links (default on) collects the message's URLs; both commands
+          # tab-complete over that list, which beats hunting for the link in the body.
+          <Space>l = :open-link<space> # Open link
+          <Space>L = :copy-link<space> # Copy link
+          <Space>? = :help keys<Enter> # Show key help
+
+          [compose]
+          # Navigate between header fields
+          <Tab> = :next-field<Enter> # Next field
+          <S-Tab> = :prev-field<Enter> # Previous field
+          <C-j> = :next-field<Enter> # Next field
+          <C-k> = :prev-field<Enter> # Previous field
+
+          [compose::editor]
+          # Navigation in compose editor (before neovim opens for body)
+          $noinherit = true
+          $ex = <C-x>
+          <Tab> = :next-field<Enter> # Next field
+          <S-Tab> = :prev-field<Enter> # Previous field
+          <C-j> = :next-field<Enter> # Next field
+          <C-k> = :prev-field<Enter> # Previous field
+
+          [compose::review]
+          # When reviewing before sending
+          y = :send<Enter> # Send email
+          n = :abort<Enter> # Abort sending
+          e = :edit<Enter> # Edit again
+          p = :postpone<Enter> # Save as draft
+          q = :abort<Enter> # Quit compose
+        '';
         "aerc/accounts.conf".text = accountsConf;
         "aerc/queries-kontainer".text = queries.kontainer;
         "aerc/queries-gmail".text = queries.gmail;
@@ -322,13 +690,6 @@
         # aerc rewrites nothing here, but stylesets are the thing you iterate
         # on by eye — link the checkout so an edit shows on the next launch.
         ".config/aerc/stylesets".src = "mail/stylesets";
-        # w3m writes bookmarks, cookies and history into ~/.w3m, so the
-        # directory itself cannot be a store symlink; install just our config
-        # file and leave the rest of the directory to w3m.
-        ".w3m/config" = {
-          src = "mail/w3m-config";
-          method = "copy";
-        };
       };
 
       # aerc reads via notmuch://, which fails with "No database found" when

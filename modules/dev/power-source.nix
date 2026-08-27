@@ -1,5 +1,4 @@
-{ self, ... }:
-{
+_: {
   # The power-source decisions are exactly the kind of logic that fails
   # silently: get the prediction wrong and the machine quietly holds at 80%
   # forever, or quietly sits at 100% forever, and either way nothing errors.
@@ -63,7 +62,7 @@
 
             # $1 = "dow hh mm", $2 = expected start/end, $3 = what it proves
             run() {
-              POWER_SOURCE_NOW="$1" bash ${self}/src/power/power-source.sh
+              POWER_SOURCE_NOW="$1" bash ${pkgs.writeText "power-source.sh" pkgs.stubbe.powerSourceScript}
               got="$(caps)"
               [ "$got" = "$2" ] || fail "$3 — expected $2, got $got"
               echo "ok: $3"

@@ -171,11 +171,22 @@ _: {
 
           # Flatpak dark-mode overrides. Qt/KDE flatpaks may still have poor
           # contrast: they use the Breeze theme from their own runtime.
-          ".local/share/flatpak/overrides/global".source = pkgs.stubbe.file "src/theming/flatpak-global";
+          ".local/share/flatpak/overrides/global".source = (pkgs.formats.ini { }).generate "flatpak-global" {
+            Context.filesystems = "xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro";
+            Environment = {
+              GTK_THEME = "Adwaita-dark";
+              QT_QPA_PLATFORMTHEME = "kde";
+              QT_STYLE = "breeze";
+              COLOR_SCHEME = "prefer-dark";
+              GDK_BACKEND = "wayland,x11";
+            };
+          };
           # Steam: X11/GLX support under Wayland, plus XDG_RUNTIME_DIR access
           # for XAUTHORITY and Discord RPC.
           ".local/share/flatpak/overrides/com.valvesoftware.Steam" = {
-            source = pkgs.stubbe.file "src/theming/flatpak-steam";
+            source = (pkgs.formats.ini { }).generate "flatpak-steam" {
+              Context.filesystems = "/run/user/1000";
+            };
             force = true;
           };
         };
@@ -201,7 +212,97 @@ _: {
       # so a symlinked kdeglobals leaves every Qt flatpak unthemed.
       stubbe.mutable.".config/kdeglobals" = {
         method = "copy";
-        source = pkgs.stubbe.file "src/theming/kdeglobals";
+        source =
+          let
+            # Breeze Dark accents shared by every Colors:* section.
+            breezeColors = {
+              DecorationFocus = "61,174,233";
+              DecorationHover = "61,174,233";
+              ForegroundActive = "61,174,233";
+              ForegroundInactive = "161,169,177";
+              ForegroundLink = "29,153,243";
+              ForegroundNegative = "218,68,83";
+              ForegroundNeutral = "246,116,0";
+              ForegroundNormal = "252,252,252";
+              ForegroundPositive = "39,174,96";
+              ForegroundVisited = "155,89,182";
+            };
+          in
+          (pkgs.formats.ini { }).generate "kdeglobals" {
+            General = {
+              ColorScheme = "BreezeDark";
+              Name = "Breeze Dark";
+            };
+
+            "ColorEffects:Disabled" = {
+              Color = "56,56,56";
+              ColorAmount = 0;
+              ColorEffect = 0;
+              ContrastAmount = 0.65;
+              ContrastEffect = 1;
+              IntensityAmount = 0.1;
+              IntensityEffect = 2;
+            };
+
+            "ColorEffects:Inactive" = {
+              ChangeSelectionColor = true;
+              Color = "112,111,110";
+              ColorAmount = 0.025;
+              ColorEffect = 2;
+              ContrastAmount = 0.1;
+              ContrastEffect = 2;
+              Enable = false;
+              IntensityAmount = 0;
+              IntensityEffect = 0;
+            };
+
+            "Colors:Button" = breezeColors // {
+              BackgroundAlternate = "30,87,116";
+              BackgroundNormal = "49,54,59";
+            };
+
+            "Colors:Selection" = breezeColors // {
+              BackgroundAlternate = "30,87,116";
+              BackgroundNormal = "61,174,233";
+              ForegroundActive = "252,252,252";
+              ForegroundLink = "253,188,75";
+              ForegroundNegative = "176,55,69";
+              ForegroundNeutral = "198,92,0";
+              ForegroundPositive = "23,104,57";
+            };
+
+            "Colors:Tooltip" = breezeColors // {
+              BackgroundAlternate = "49,54,59";
+              BackgroundNormal = "49,54,59";
+            };
+
+            "Colors:View" = breezeColors // {
+              BackgroundAlternate = "35,38,41";
+              BackgroundNormal = "27,30,32";
+            };
+
+            "Colors:Window" = breezeColors // {
+              BackgroundAlternate = "49,54,59";
+              BackgroundNormal = "42,46,50";
+            };
+
+            Icons.Theme = "breeze-dark";
+
+            KDE = {
+              ColorScheme = "BreezeDark";
+              LookAndFeelPackage = "org.kde.breezedark.desktop";
+              widgetStyle = "Breeze";
+            };
+
+            WM = {
+              activeBackground = "49,54,59";
+              activeBlend = "252,252,252";
+              activeForeground = "252,252,252";
+              inactiveBackground = "42,46,50";
+              inactiveBlend = "161,169,177";
+              inactiveForeground = "161,169,177";
+            };
+          };
       };
 
       # Snap apps can only see themes installed under /var/lib/snapd/desktop.

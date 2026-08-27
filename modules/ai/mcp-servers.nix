@@ -1,5 +1,5 @@
 # The canonical MCP server inventory, published as `config.stubbe.mcp.servers`
-# so every agent (Claude Code, Codex, Crush) and the systemd units in
+# so every agent (Claude Code, Codex) and the systemd units in
 # modules/ai/mcp-services.nix read ONE definition instead of each importing a
 # library and re-resolving the binaries.
 { inputs, ... }:

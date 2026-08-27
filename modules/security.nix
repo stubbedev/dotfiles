@@ -52,32 +52,56 @@ _: {
     };
 
   flake.modules.nixos.polkit =
-    { config, pkgs, ... }:
+    { config, ... }:
     let
       username = config.host.primaryUser;
-      # NixOS with useUserPackages places the home-manager profile at
-      # /etc/profiles/per-user/<user>; this mirrors config.stubbe.paths.nixBin's
-      # parent, which the standalone-HM activation in modules/vpn.nix uses.
-      profileDir = "/etc/profiles/per-user/${username}";
     in
     {
       security.polkit.enable = true;
 
       # Rule files are parsed in lexical order; the names match what the
-      # non-NixOS activations install under /etc/polkit-1/rules.d/.
+      # non-NixOS activations install under /etc/polkit-1/rules.d/. The VPN
+      # rule (49-openconnect.rules) lives with its aspect in modules/vpn.nix.
       environment.etc = {
-        "polkit-1/rules.d/49-openconnect.rules".source =
-          pkgs.stubbe.render "src/polkit/49-openconnect.rules"
-            {
-              USERNAME = username;
-              PROFILE_DIR = profileDir;
+        "polkit-1/rules.d/52-power-management.rules".text = ''
+          polkit.addRule(function(action, subject) {
+            if (action.id.indexOf("org.freedesktop.login1.") !== 0) {
+              return;
+            }
+
+            var allowed = {
+              "org.freedesktop.login1.reboot": true,
+              "org.freedesktop.login1.reboot-multiple-sessions": true,
+              "org.freedesktop.login1.reboot-ignore-inhibit": true,
+              "org.freedesktop.login1.power-off": true,
+              "org.freedesktop.login1.power-off-multiple-sessions": true,
+              "org.freedesktop.login1.power-off-ignore-inhibit": true,
+              "org.freedesktop.login1.halt": true,
+              "org.freedesktop.login1.halt-multiple-sessions": true,
+              "org.freedesktop.login1.halt-ignore-inhibit": true,
+              "org.freedesktop.login1.suspend": true,
+              "org.freedesktop.login1.suspend-multiple-sessions": true,
+              "org.freedesktop.login1.suspend-ignore-inhibit": true,
+              "org.freedesktop.login1.hibernate": true,
+              "org.freedesktop.login1.hibernate-multiple-sessions": true,
+              "org.freedesktop.login1.hibernate-ignore-inhibit": true,
+              "org.freedesktop.login1.hybrid-sleep": true,
+              "org.freedesktop.login1.hybrid-sleep-multiple-sessions": true,
+              "org.freedesktop.login1.suspend-then-hibernate": true,
+              "org.freedesktop.login1.suspend-then-hibernate-multiple-sessions": true
             };
 
-        "polkit-1/rules.d/52-power-management.rules".source =
-          pkgs.stubbe.render "src/polkit/52-power-management.rules"
-            {
-              USERNAME = username;
-            };
+            if (!allowed[action.id]) {
+              return;
+            }
+
+            if (subject.user !== "${username}" || !subject.local || !subject.active) {
+              return;
+            }
+
+            return polkit.Result.YES;
+          });
+        '';
       };
     };
 

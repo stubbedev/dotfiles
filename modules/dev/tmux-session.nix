@@ -15,13 +15,26 @@
   # client-attached hook never fires — hence save_pins/restore_pins are driven
   # directly here, with the hook wiring asserted separately in section 1.
   perSystem =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     let
       inherit (pkgs) lazy-tmux;
 
       # The config home-manager actually deploys, not a stand-in: this is what
       # carries the daemon launch, the M-i picker binding and the hook wiring.
-      tmuxConf = self.homeConfigurations.stubbe.config.xdg.configFile."tmux/tmux.conf".source;
+      deployedFiles = self.homeConfigurations.stubbe.config.xdg.configFile;
+      tmuxConf = deployedFiles."tmux/tmux.conf".source;
+      commandsSh =
+        self.homeConfigurations.stubbe.config.home.file.".config/tmux/scripts/commands.sh".source;
+
+      # The launchers under test, built from the same `stubbe.lib` sources the
+      # installed bins use (modules/scripts.nix).
+      launcherBins = map (
+        name:
+        pkgs.stubbe.zshApp {
+          inherit name;
+          text = pkgs.stubbe.tmuxLaunchers.${name};
+        }
+      ) (builtins.attrNames pkgs.stubbe.tmuxLaunchers);
     in
     {
       checks.tmux-session =
@@ -45,20 +58,14 @@
             export LAZY_TMUX_DATA_DIR="$HOME/snapshots"
             mkdir -p "$HOME/.config/tmux/scripts" "$LAZY_TMUX_DATA_DIR"
 
-            # The sandbox has /bin/sh but no /usr/bin/env, so the scripts'
-            # `#!/usr/bin/env bash|zsh` shebangs cannot exec. Copy them out and
-            # let patchShebangs rewrite the interpreters to store paths — this
-            # keeps them running as scripts (PATH lookup, shebang and all)
-            # instead of being fed to an explicit interpreter the real system
-            # never uses.
+            # commands.sh carries the deployed `#!/usr/bin/env bash` shebang,
+            # and the sandbox has /bin/sh but no /usr/bin/env — patchShebangs
+            # rewrites it to a store path so it still runs as a script. The
+            # launcher bins already carry store-zsh shebangs (zshApp).
             commands="$HOME/.config/tmux/scripts/commands.sh"
-            install -m755 ${self}/src/tmux/commands.sh "$commands"
+            install -m755 ${commandsSh} "$commands"
             mkdir -p "$HOME/bin"
-            install -m755 \
-              ${self}/bin/tmux-pick-session \
-              ${self}/bin/tmux-pick-project \
-              ${self}/bin/tmux-new-session \
-              "$HOME/bin/"
+            install -m755 ${lib.concatMapStringsSep " " (b: "${b}/bin/*") launcherBins} "$HOME/bin/"
 
             # tmux-pick-project shells out to the interactive fzf picker; stub it
             # with a fixed answer so the rest of the Alt+f path is exercised.

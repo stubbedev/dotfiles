@@ -4,6 +4,45 @@
 # The desktop SHELL — bar, notifications, OSD, wallpaper, lock — is wayle, in
 # modules/wayle.nix. This file is only the compositor and its session.
 { inputs, ... }:
+let
+  # greetd autologin session launcher — shared by the NixOS half (a store
+  # writeShellScript) and standalone home-manager (installed to
+  # /etc/greetd/hyprland-session.sh, a real file so login survives GC).
+  #
+  # A display manager's wayland-session wrapper normally sources the user's
+  # login environment before starting the compositor. greetd's initial_session
+  # (autologin) execs its command directly with only the PAM environment, so we
+  # reproduce that here: pull in the Home-Manager session vars (PATH,
+  # XDG_DATA_DIRS, XCURSOR_*, MOZ_ENABLE_WAYLAND, ...) from whichever profile
+  # location this host uses, then hand off to the Hyprland launch wrapper.
+  #
+  # greetd sets HOME/USER for the session, but the profile lookups below are
+  # useless without them — derive from the passwd db if either is missing so a
+  # thin session env can't silently strand us (no profile sourced →
+  # start-hyprland not on PATH → exit → text tty).
+  greetdSessionScript = ''
+    [ -n "''${USER:-}" ] || USER="$(id -un)"
+    [ -n "''${HOME:-}" ] || HOME="$(getent passwd "$USER" | cut -d: -f6)"
+    export USER HOME
+
+    # Both profile paths are probed so one script works on both platforms:
+    #   ~/.nix-profile               — standalone home-manager (Ubuntu, ...)
+    #   /etc/profiles/per-user/$USER — home-manager as a NixOS module
+    for prof in "$HOME/.nix-profile" "/etc/profiles/per-user/$USER"; do
+      if [ -r "$prof/etc/profile.d/hm-session-vars.sh" ]; then
+        # shellcheck disable=SC1091  # runtime-only file, absent at lint time
+        . "$prof/etc/profile.d/hm-session-vars.sh"
+      fi
+      case ":$PATH:" in
+        *":$prof/bin:"*) ;;
+        *) PATH="$prof/bin:$PATH" ;;
+      esac
+    done
+    export PATH
+
+    exec start-hyprland
+  '';
+in
 {
   flake.modules.nixos.hyprland =
     {
@@ -14,10 +53,8 @@
     }:
     let
       # The shared launcher: load the user's HM session env, then exec
-      # start-hyprland. Same file the non-NixOS activation installs to /etc.
-      launcher = pkgs.writeShellScript "hyprland-greetd-session" (
-        pkgs.stubbe.text "src/hyprland/greetd-session.sh"
-      );
+      # start-hyprland. Same text the non-NixOS activation installs to /etc.
+      launcher = pkgs.writeShellScript "hyprland-greetd-session" greetdSessionScript;
     in
     lib.mkIf config.stubbe.userFeatures.hyprland {
       # `package` defaults to pkgs.hyprland — the same one the HM wrappers wrap,
@@ -188,11 +225,11 @@
         # and kiosk-style apps without locking the host session.
         (gfx.wrap pkgs.cage)
         # Brightness helper, also bound to XF86MonBrightness* in hyprland.lua
-        # (which calls the script in the live checkout directly).
-        (pkgs.stubbe.scriptBin {
-          name = "monitor-brightness";
-          source = "src/hyprland/scripts/monitor.brightness.sh";
-        })
+        # (which calls the script in the live checkout directly — the file
+        # stays in src/hyprland/scripts/ with the rest of the live lua tree).
+        (pkgs.runCommandLocal "monitor-brightness" { } ''
+          install -Dm755 ${pkgs.stubbe.file "src/hyprland/scripts/monitor.brightness.sh"} $out/bin/monitor-brightness
+        '')
       ]
       ++ (with pkgs; [
         # Idle daemon (ext-idle-notify-v1); the unit is below.
@@ -350,9 +387,8 @@
           # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
           # entry — so home-manager's bin-only linking cannot surface it and
           # `systemctl --user start hyprpolkitagent` (called from hyprland.lua)
-          # finds no unit. Defining it here also gives pkexec something to talk
-          # to when the openconnect polkit rule does not match (nmcli,
-          # brightness, anything escalating outside the VPN scripts).
+          # finds no unit. Defining it here also gives pkexec something to
+          # talk to (nmcli, brightness, anything escalating interactively).
           hyprpolkitagent = {
             Unit = {
               Description = "Hyprland polkit authentication agent";
@@ -380,15 +416,84 @@
         # multiple monitors re-evaluates monitor rules and re-attaches
         # workspaces, which shifts focus. Doing it here lets us capture the
         # focused workspace first and dispatch back to it after.
-        hyprlandReload.script = lib.getExe (
-          pkgs.stubbe.scriptBin {
-            name = "hyprland-reload";
-            source = "src/hyprland/reload.sh";
+        hyprlandReload.script =
+          let
             # HM activation runs with a stripped PATH that excludes the user
             # profile, so hyprctl has to be named by absolute path.
-            vars.HYPRCTL = "${config.stubbe.paths.nixBin}/hyprctl";
-          }
-        );
+            hyprctl = "${config.stubbe.paths.nixBin}/hyprctl";
+          in
+          lib.getExe (
+            pkgs.stubbe.bashApp {
+              name = "hyprland-reload";
+              text = ''
+                (
+                  uid="''${UID:-$(id -u)}"
+                  hypr_root="/run/user/$uid/hypr"
+
+                  [ -d "$hypr_root" ] || exit 0
+
+                  target_instance=""
+                  if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && \
+                     [ -S "$hypr_root/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" ]; then
+                    target_instance="$HYPRLAND_INSTANCE_SIGNATURE"
+                  else
+                    newest_mtime=0
+                    for sock in "$hypr_root"/*/.socket.sock; do
+                      [ -S "$sock" ] || continue
+                      instance_dir="''${sock%/.socket.sock}"
+                      instance="''${instance_dir##*/}"
+                      mtime=$(stat -c %Y "$sock" 2>/dev/null || echo 0)
+                      if [ "$mtime" -gt "$newest_mtime" ]; then
+                        newest_mtime="$mtime"
+                        target_instance="$instance"
+                      fi
+                    done
+                  fi
+
+                  [ -n "$target_instance" ] || exit 0
+
+                  export HYPRLAND_INSTANCE_SIGNATURE="$target_instance"
+
+                  # Capture (workspace, monitor) for every monitor + the globally focused
+                  # workspace, reload, then restore so multi-monitor reloads don't shift
+                  # focus.
+                  before=$(${hyprctl} monitors -j 2>/dev/null) || exit 0
+                  focused_ws=$(printf '%s' "$before" \
+                    | jq -r 'map(select(.focused == true))[0].activeWorkspace.id // empty')
+                  per_monitor=$(printf '%s' "$before" \
+                    | jq -r '.[] | "\(.name) \(.activeWorkspace.id)"')
+
+                  ${hyprctl} reload >/dev/null 2>&1 || exit 0
+
+                  # Reload re-enables eDP-1 from monitors.conf and auto-positions the
+                  # externals to its right; re-apply the lid-closed layout before
+                  # workspace restore so workspaces don't migrate back. reflow_monitors
+                  # disables eDP and re-packs the externals from 0,0 in one pass, so the
+                  # external is not left stranded at a half-screen offset. (`hyprctl
+                  # keyword` is rejected under the Lua config — "keyword can't work with
+                  # non-legacy parsers. Use eval." — so drive it through the exposed Lua
+                  # reflow_monitors instead.)
+                  if grep -qi closed /proc/acpi/button/lid/*/state 2>/dev/null; then
+                    ${hyprctl} eval "reflow_monitors(true)" >/dev/null 2>&1 || true
+                  fi
+
+                  # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua
+                  # config (it is parsed as hl.dispatch(<args>) Lua); pass a Lua
+                  # dispatcher expression instead. focusmonitor/workspace both map to
+                  # hl.dsp.focus{ monitor = ... } / hl.dsp.focus{ workspace = ... }.
+                  while IFS=' ' read -r mon ws; do
+                    [ -n "$mon" ] && [ -n "$ws" ] || continue
+                    ${hyprctl} dispatch "hl.dsp.focus({ monitor = '$mon' })" >/dev/null 2>&1 || true
+                    ${hyprctl} dispatch "hl.dsp.focus({ workspace = $ws })" >/dev/null 2>&1 || true
+                  done <<<"$per_monitor"
+
+                  if [ -n "$focused_ws" ]; then
+                    ${hyprctl} dispatch "hl.dsp.focus({ workspace = $focused_ws })" >/dev/null 2>&1 || true
+                  fi
+                ) || true
+              '';
+            }
+          );
 
         # Non-NixOS login: same launcher, same autologin + agreety-fallback
         # shape as services.greetd in the NixOS half.
@@ -438,10 +543,13 @@
                   --groups video,input greeter 2>/dev/null || true
               fi
 
-              ${pkgs.stubbe.installFile {
-                source = pkgs.stubbe.file "src/hyprland/greetd-session.sh";
+              ${pkgs.stubbe.installText {
+                name = "hyprland-session.sh";
                 target = launcher;
                 mode = "0755";
+                # Host /bin/sh, not a store path: this copy is what login runs,
+                # and it must survive a nix-collect-garbage.
+                text = "#!/bin/sh\n" + greetdSessionScript;
               }}
 
               ${pkgs.stubbe.installText {

@@ -1,8 +1,0 @@
-#!/usr/bin/env zsh
-
-if ! command -v lazydocker &>/dev/null; then
-  exit 0
-fi
-
-lazydocker
-[[ -n "$TMUX" ]] && { tmux kill-pane || exit 0; }

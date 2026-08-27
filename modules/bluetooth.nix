@@ -39,7 +39,7 @@ _: {
         # Without the .policy file, polkitd rejects blueman's four actions as
         # unregistered and the Bluetooth toggle fails — the Nix package ships
         # neither upstream's org.blueman.policy nor Debian's grant rule, so both
-        # are vendored under src/bluetooth/.
+        # are vendored inline below.
         script =
           let
             links = [
@@ -63,13 +63,77 @@ _: {
               sudo ln -sfT "${l.src}" "${l.dst}"
             '') links}
 
-            ${pkgs.stubbe.installFile {
-              source = pkgs.stubbe.file "src/bluetooth/org.blueman.policy";
+            ${pkgs.stubbe.installText {
+              name = "org.blueman.policy";
               target = "/usr/share/polkit-1/actions/org.blueman.policy";
+              text = ''
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+                <policyconfig>
+                  <vendor>The Blueman Project</vendor>
+                  <vendor_url>https://github.com/blueman-project/blueman</vendor_url>
+                  <icon_name>blueman</icon_name>
+                  <action id="org.blueman.network.setup">
+                    <description>Configure Bluetooth Network</description>
+                    <message>Configuring networking requires privileges</message>
+                    <defaults>
+                      <allow_inactive>no</allow_inactive>
+                      <allow_active>auth_admin_keep</allow_active>
+                    </defaults>
+                  </action>
+                  <action id="org.blueman.dhcp.client">
+                    <description>Launch DHCP client</description>
+                    <message>Launching DHCP client requires privileges</message>
+                    <defaults>
+                      <allow_inactive>no</allow_inactive>
+                      <allow_active>auth_admin_keep</allow_active>
+                    </defaults>
+                  </action>
+                  <action id="org.blueman.pppd.pppconnect">
+                    <description>Launch PPP daemon</description>
+                    <message>Launching PPP daemon requires privileges</message>
+                    <defaults>
+                      <allow_inactive>no</allow_inactive>
+                      <allow_active>auth_admin_keep</allow_active>
+                    </defaults>
+                  </action>
+                  <action id="org.blueman.rfkill.setstate">
+                    <description>Set RfKill State</description>
+                    <message>Setting RfKill State requires privileges</message>
+                    <defaults>
+                      <allow_inactive>no</allow_inactive>
+                      <allow_active>auth_admin_keep</allow_active>
+                    </defaults>
+                  </action>
+                </policyconfig>
+              '';
             }}
 
             ${pkgs.stubbe.installPolkitRule {
-              source = pkgs.stubbe.file "src/bluetooth/51-blueman.rules";
+              source = pkgs.writeText "51-blueman.rules" ''
+                // blueman's privileged half (blueman-mechanism) guards rfkill, PAN setup,
+                // the DHCP client and pppd behind polkit. Upstream defaults all four to
+                // auth_admin_keep, which means a password prompt every time the Bluetooth
+                // toggle is flipped. Debian ships a rule granting them to sudo/netdev; the
+                // Nix package ships no polkit files at all, so this is the replacement for
+                // both.
+                //
+                // Same trust boundary Debian used: a local, active session belonging to
+                // someone who is already in sudo. Nothing here grants anything to a remote
+                // or inactive session.
+                polkit.addRule(function (action, subject) {
+                  var allowed = {
+                    "org.blueman.network.setup": true,
+                    "org.blueman.dhcp.client": true,
+                    "org.blueman.rfkill.setstate": true,
+                    "org.blueman.pppd.pppconnect": true,
+                  };
+
+                  if (allowed[action.id] && subject.local && subject.active && subject.isInGroup("sudo")) {
+                    return polkit.Result.YES;
+                  }
+                });
+              '';
               target = "/etc/polkit-1/rules.d/51-blueman.rules";
             }}
 
