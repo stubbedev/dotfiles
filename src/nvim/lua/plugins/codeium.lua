@@ -9,6 +9,10 @@ return {
   {
     "Exafunction/windsurf.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
+    -- The :Codeium command is registered inside the plugin's own setup(), so
+    -- InsertEnter alone leaves no way to authenticate from a fresh session.
+    -- `cmd` makes lazy.nvim stub it and load on first use.
+    cmd = "Codeium",
     event = "InsertEnter",
     opts = {
       -- Pin the server to the nixpkgs binary. Without this the plugin
