@@ -16,6 +16,14 @@ _: {
         daemon.settings = {
           features.containerd-snapshotter = true;
           insecure-registries = [ "localhost:5000" ];
+
+          # Unrotated json-file logs are unbounded: a single chatty container
+          # once left a 21G log behind. Cap them.
+          log-driver = "json-file";
+          log-opts = {
+            max-size = "50m";
+            max-file = "3";
+          };
         };
       };
 
@@ -50,7 +58,7 @@ _: {
           enable the docker.service systemd unit, add ${config.home.username}
           to the docker group so non-root containers work without sudo,
           merge required keys into /etc/docker/daemon.json
-          (features.containerd-snapshotter, insecure-registries for
+          (features.containerd-snapshotter, log rotation, insecure-registries for
           localhost:5000; drops legacy storage-driver), and start a local
           registry:2 container on :5000 backed by the registry-data volume.
         '';
@@ -91,13 +99,18 @@ _: {
           fi
 
           # Merge required keys into /etc/docker/daemon.json without clobbering
-          # anything added by hand (DNS, log-opts, …). storage-driver is
+          # anything added by hand (DNS, registry-mirrors, …). storage-driver is
           # stripped because it conflicts with containerd-snapshotter. Same
           # settings as virtualisation.docker.daemon.settings above.
           _stb_patch=${
             (pkgs.formats.json { }).generate "docker-daemon-patch.json" {
               features.containerd-snapshotter = true;
               insecure-registries = [ "localhost:5000" ];
+              log-driver = "json-file";
+              log-opts = {
+                max-size = "50m";
+                max-file = "3";
+              };
             }
           }
 
