@@ -103,7 +103,12 @@
                 # before_init callback that picks the right nixos/home config.
                 nix
 
-                # JS runtime for plugins that need node (copilot, blade ls, …).
+                # AI completion server for windsurf.nvim
+                # (src/nvim/lua/plugins/codeium.lua). A prebuilt native
+                # binary, unlike copilot.lua's Node server it replaces.
+                codeium
+
+                # JS runtime for plugins that need node (blade ls, …).
                 nodejs
 
                 # ── DAP backends ────────────────────────────────────────

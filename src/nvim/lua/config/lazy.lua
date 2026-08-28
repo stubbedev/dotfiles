@@ -34,7 +34,8 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.editor.illuminate" },
     { import = "lazyvim.plugins.extras.coding.mini-surround" },
     { import = "lazyvim.plugins.extras.ui.treesitter-context" },
-    { import = "lazyvim.plugins.extras.ai.copilot" },
+    -- No ai.copilot extra: AI completion is windsurf.nvim + the native
+    -- codeium server, wired in plugins/codeium.lua.
     { import = "plugins" },
   },
   rocks = { enabled = false },

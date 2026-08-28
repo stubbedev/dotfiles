@@ -30,18 +30,30 @@ return {
       },
       fuzzy = {
         sorts = {
+          -- Float AI completions to the top. Keyed on source_id rather than
+          -- client_name: blink sets source_id for every provider, but
+          -- client_name only for LSP-backed ones, and codeium is a plain
+          -- module provider.
           function(a, b)
-            if (a.client_name == nil or b.client_name == nil) or (a.client_name == b.client_name) then
+            if (a.source_id == nil or b.source_id == nil) or (a.source_id == b.source_id) then
               return
             end
-            return a.client_name == 'copilot'
+            return a.source_id == 'codeium'
           end,
           'score',
           'sort_text'
         }
       },
       sources = {
-        default = { "lsp", "buffer", "snippets", "path" },
+        default = { "lsp", "buffer", "snippets", "path", "codeium" },
+        providers = {
+          codeium = {
+            name = "codeium",
+            module = "codeium.blink",
+            score_offset = 100,
+            async = true,
+          },
+        },
       },
     },
   }
