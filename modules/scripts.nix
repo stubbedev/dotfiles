@@ -100,7 +100,7 @@ _: {
 
       SELECTED=$(print -r -- "$LINES_OUT" |
         fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
-          --header='ctrl-x: forget snapshot' \
+          --header='ctrl-x: forget snapshot   tab: copy name' \
           --bind "ctrl-x:execute-silent(lazy-tmux forget --session {1} 2>/dev/null)+reload($SELF --lines)")
 
       SESSION=''${SELECTED%%$'\t'*}
@@ -338,6 +338,106 @@ _: {
       };
 
       launcherBins = lib.mapAttrsToList (name: text: pkgs.stubbe.zshApp { inherit name text; }) launchers;
+
+      # Clipboard writer for every context this config runs in — the fzf
+      # pickers' ctrl-y binding (modules/session.nix) is its main caller.
+      clip = pkgs.stubbe.bashApp {
+        name = "clip";
+        runtimeInputs = [ pkgs.coreutils ];
+        text = ''
+          # Copy stdin (or the arguments) to the system clipboard from wherever
+          # this shell happens to be: a local Wayland or X11 session, macOS,
+          # inside tmux, or over SSH on a box with no display at all.
+          #
+          # The sink order matters more than the sink list. Over SSH a $DISPLAY
+          # or $WAYLAND_DISPLAY inherited from the *remote* box's own session is
+          # a trap: writing there copies to a machine nobody is looking at, and
+          # reports success. So on a remote host the terminal-side sinks (tmux,
+          # OSC 52) go first and the display sinks are the last resort; on a
+          # local host it is the other way round.
+
+          data=$(if [ "$#" -gt 0 ]; then printf '%s' "$*"; else cat; fi)
+          [ -n "$data" ] || exit 0
+
+          # tmux's own paste buffer is not one of the sinks below: it is free, it
+          # cannot fail, and it makes `prefix ]` work whichever sink ends up
+          # winning. -w is deliberately absent here — that is sink_tmux's job.
+          if [ -n "''${TMUX:-}" ]; then
+            printf '%s' "$data" | tmux load-buffer - 2>/dev/null || true
+          fi
+
+          sink_wayland() {
+            [ -n "''${WAYLAND_DISPLAY:-}" ] || return 1
+            command -v wl-copy >/dev/null 2>&1 || return 1
+            printf '%s' "$data" | wl-copy
+          }
+
+          sink_x11() {
+            [ -n "''${DISPLAY:-}" ] || return 1
+            if command -v xclip >/dev/null 2>&1; then
+              printf '%s' "$data" | xclip -selection clipboard
+            elif command -v xsel >/dev/null 2>&1; then
+              printf '%s' "$data" | xsel --clipboard --input
+            else
+              return 1
+            fi
+          }
+
+          sink_macos() {
+            command -v pbcopy >/dev/null 2>&1 || return 1
+            printf '%s' "$data" | pbcopy
+          }
+
+          # tmux >= 3.2: -w forwards the buffer to the *outer* terminal as an
+          # OSC 52 write, which is what carries the copy back across an SSH hop.
+          # Older tmux has no -w and fails here; sink_osc52 then does it by hand.
+          sink_tmux() {
+            [ -n "''${TMUX:-}" ] || return 1
+            printf '%s' "$data" | tmux load-buffer -w - 2>/dev/null
+          }
+
+          # The only sink that needs nothing but a terminal: ask the emulator
+          # itself to set the clipboard. Survives any number of SSH hops because
+          # the escape rides the same stream as the text.
+          sink_osc52() {
+            # 100 KiB is xterm's default selection limit and far past anything a
+            # path picker produces. Truncating would copy a corrupt value that
+            # still looks plausible, so refuse and let another sink answer.
+            [ "''${#data}" -le 102400 ] || return 1
+            local b64 seq
+            b64=$(printf '%s' "$data" | base64 | tr -d '\n')
+            seq="\033]52;c;$b64\a"
+            if [ -n "''${TMUX:-}" ]; then
+              # DCS passthrough (needs `allow-passthrough on`, set in
+              # modules/tmux.nix): tmux hands the inner sequence to the outer
+              # terminal. Every ESC inside the wrapper has to be doubled, hence
+              # the \033\033 after `tmux;`.
+              seq="\033Ptmux;\033$seq\033\\"
+            fi
+            # /dev/tty exists and stats as writable even with no controlling
+            # terminal (cron, a systemd unit, a detached pipeline) — it is the
+            # *open* that fails, with ENXIO. So probe it by opening, and put the
+            # stderr redirect first so the failed open is silent rather than a
+            # stray shell message on an otherwise clean fallback.
+            printf '%b' "$seq" 2>/dev/null >/dev/tty
+          }
+
+          if [ -n "''${SSH_CONNECTION:-}" ] || [ -n "''${SSH_TTY:-}" ]; then
+            sinks=(sink_tmux sink_osc52 sink_wayland sink_x11 sink_macos)
+          else
+            sinks=(sink_wayland sink_x11 sink_macos sink_tmux sink_osc52)
+          fi
+
+          for sink in "''${sinks[@]}"; do
+            if "$sink"; then
+              exit 0
+            fi
+          done
+
+          echo "clip: no clipboard reachable (no Wayland/X11/pbcopy, no tmux, no writable /dev/tty)" >&2
+          exit 1
+        '';
+      };
 
       # hm and nixos-iso are templated against absolute store paths for
       # sops/age/ssh-to-age/xilo, so the wrapper never depends on whatever
@@ -1332,6 +1432,7 @@ _: {
     in
     {
       home.packages = [
+        clip
         hm
         nixosIso
         # `hm` shells out to nh for build/activate/gc, so nh ships wherever hm

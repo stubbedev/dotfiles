@@ -356,8 +356,20 @@
           alias mv='mv -i'
 
           # INFO: Conditional Aliases
-          if is_binary xclip; then
+          # pbcopy routes through `clip` (modules/scripts.nix) so a copy works the
+          # same over SSH and in a bare tty as it does on the Wayland session.
+          # pbpaste has no such fallback — OSC 52 reads are refused by every
+          # terminal worth using — so it stays on whatever local selection
+          # tool exists.
+          if is_binary clip; then
+            alias pbcopy='clip'
+          elif is_binary xclip; then
             alias pbcopy='xclip -selection clipboard'
+          fi
+
+          if is_binary wl-paste; then
+            alias pbpaste='wl-paste --no-newline'
+          elif is_binary xclip; then
             alias pbpaste='xclip -selection clipboard -o'
           fi
 

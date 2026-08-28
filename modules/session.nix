@@ -87,6 +87,18 @@
         # FZF
         # Generated from pkgs.stubbe.colors, like every other themed surface.
         # bg/bg+ are -1 (terminal default) so the picker stays transparent.
+        #
+        # This is a shell-word string, not a config file: `#` is not a comment
+        # here, it is an argument fzf will reject. Keep the commentary out here.
+        #
+        # tab copies the highlighted row (field 1, so the session picker's
+        # "<name>\t<label>" rows yield the name) via `clip`, then aborts, so no
+        # cd / session switch fires behind the copy. It is bound here rather than
+        # per-picker so it works in every fzf surface at once. That costs tab its
+        # default multi-select toggle, which moves to ctrl-space. Shell
+        # completion is unaffected: fzf-tab blanks FZF_DEFAULT_OPTS for its own
+        # invocation unless `use-fzf-default-opts` is set to yes, and it is not
+        # (modules/shell.nix), so tab there stays the completion accept key.
         FZF_DEFAULT_OPTS = ''
           --color=bg+:-1,bg:-1,spinner:${c.rosewater},hl:${c.red}
           --color=fg:${c.text},header:${c.red},info:${c.mauve},pointer:${c.rosewater}
@@ -94,6 +106,8 @@
           --color=selected-bg:-1,selected-fg:${c.lavender}
           --color=current-fg:${c.mauve}
           --multi
+          --bind 'tab:execute-silent(printf %s {} | cut -f1 | clip)+abort'
+          --bind 'ctrl-space:toggle'
         '';
         FZF_CTRL_T_OPTS = ''
           --walker-skip .git,node_modules,target
