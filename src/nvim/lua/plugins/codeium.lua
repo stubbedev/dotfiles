@@ -8,6 +8,10 @@
 return {
   {
     "Exafunction/windsurf.nvim",
+    -- The repo is windsurf.nvim but the Lua module kept the old name, so
+    -- lazy.nvim's name-derived require("windsurf") misses and it refuses to
+    -- apply opts. Point it at the real module.
+    main = "codeium",
     dependencies = { "nvim-lua/plenary.nvim" },
     -- The :Codeium command is registered inside the plugin's own setup(), so
     -- InsertEnter alone leaves no way to authenticate from a fresh session.
