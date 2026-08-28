@@ -276,8 +276,7 @@ _: {
             claude --dangerously-skip-permissions "$@"
           else
             tmux renamew "claude"
-            claude --dangerously-skip-permissions "$@"
-            tmux kill-pane || exit 0
+            exec claude --dangerously-skip-permissions "$@"
           fi
         '';
         "tmux-lazy-docker" = ''
@@ -286,8 +285,7 @@ _: {
             exit 0
           fi
 
-          lazydocker
-          [[ -n "$TMUX" ]] && { tmux kill-pane || exit 0; }
+          exec lazydocker
         '';
         "tmux-lazy-git" = ''
 
@@ -305,8 +303,7 @@ _: {
             exit 0
           fi
 
-          "$bin"
-          [[ -n "$TMUX" ]] && { tmux kill-pane || exit 0; }
+          exec "$bin"
         '';
         "tmux-pick-directory" = ''
 
@@ -332,8 +329,12 @@ _: {
             exit 0
           fi
 
-          "$monitor"
-          [[ -n "$TMUX" ]] && { tmux kill-pane || exit 0; }
+          # exec so the TUI owns the pane. As a child of this wrapper it shares
+          # the wrapper's process group, so #{pane_current_command} reads "zsh"
+          # — which makes tmux's toggle_window think the pane fell back to a
+          # bare shell and respawn it, restarting btop and losing its graphs.
+          # remain-on-exit is off, so the pane still closes when the TUI quits.
+          exec "$monitor"
         '';
       };
 
