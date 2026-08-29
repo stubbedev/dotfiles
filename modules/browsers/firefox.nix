@@ -1,6 +1,7 @@
 # Firefox: the nixGL wrapper, the policies that force-install the managed
 # add-ons, and Tridactyl (the native messenger, its rc file and its theme).
-_: {
+{ inputs, ... }:
+{
   flake.modules.homeManager.firefox =
     {
       config,
@@ -23,14 +24,11 @@ _: {
           "{7719f622-a980-4a30-ba6a-1a5ad11b677c}" = "pin-unpin-tab";
         };
 
-        # Vendored Tridactyl theme, pinned by content hash so the build is
-        # reproducible and works offline (no fetch at browser startup).
-        # To update: bump the commit in the URL and refresh the hash with
-        #   nix store prefetch-file --json <url> | jq -r .hash
-        catppuccinMocha = pkgs.fetchurl {
-          url = "https://raw.githubusercontent.com/devnullvoid/tridactyl/9de4bee31e4687e90b25e57e927114533863d775/themes/catppuccin-mocha.css";
-          hash = "sha256-X6R9FKpOv1W904AvLTdtz3mdqLohcNWjXNNufIs5HNU=";
-        };
+        # Vendored Tridactyl theme, so the build is reproducible and works
+        # offline (no fetch at browser startup). The revision and hash live in
+        # flake.lock via the `tridactyl-theme-src` input; `nix flake update`
+        # is what moves it.
+        catppuccinMocha = "${inputs.tridactyl-theme-src}/themes/catppuccin-mocha.css";
 
         # Explicit CSS selector for `hint -c`. Replacing Tridactyl's default
         # element detection (which also hints anything with cursor:pointer,

@@ -174,10 +174,39 @@
       # redundant nixpkgs from the lock.
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Sources we build ourselves. `flake = false` means these are plain
+    # checkouts, and the point of routing them through inputs is that their
+    # revisions and hashes live in flake.lock -- nothing in-tree is pinned to a
+    # commit hash, and `nix flake update` is the only way any of them move.
+    #
+    # Where a URL carries a tag or version, that is deliberate: the version is
+    # a decision, the hash is not.
+    ghostscript-src = {
+      # Newer `gs` CLI than nixpkgs ships (modules/media.nix).
+      url = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz";
+      type = "tarball";
+      flake = false;
+    };
+    imagemagick-src = {
+      # Matches the version running in production (modules/media.nix).
+      url = "github:ImageMagick/ImageMagick/7.1.2-25";
+      flake = false;
+    };
+    libembroidery-src = {
+      # No tagged release yet (v1.0 still pre-release), so this tracks main.
+      url = "github:Embroidermodder/libembroidery";
+      flake = false;
+    };
+    tridactyl-theme-src = {
+      # Catppuccin Mocha theme for Tridactyl (modules/browsers/firefox.nix).
+      url = "github:devnullvoid/tridactyl";
+      flake = false;
+    };
+
     # Wraps Neovim with a lua config dir + nixpkgs-supplied LSPs/tools.
     # Lua tree lives at src/nvim/, symlinked into ~/.config/nvim by
-    # modules/nvim.nix; lazy.nvim handles
-    # plugin downloads from GitHub at runtime.
+    # modules/nvim.nix; nvim's built-in vim.pack handles plugin downloads
+    # from GitHub at runtime.
     wrappers = {
       url = "github:BirdeeHub/nix-wrapper-modules";
       inputs.nixpkgs.follows = "nixpkgs";

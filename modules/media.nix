@@ -1,5 +1,6 @@
 # Media: image, video and audio tooling, plus the office suite.
-_: {
+{ inputs, ... }:
+{
   flake.modules.homeManager.media =
     {
       config,
@@ -28,28 +29,24 @@ _: {
       # Bump ghostscript to 10.07.0 just for the user-facing `gs` CLI.
       # Done at the use site (not via overlay) so reverse deps like libreoffice
       # and imagemagick keep using cached pkgs.ghostscript.
-      ghostscript-latest = pkgs.ghostscript.overrideAttrs (_old: rec {
+      #
+      # Source comes from the `ghostscript-src` flake input, so the tarball
+      # hash lives in flake.lock rather than here. Bumping the version means
+      # editing the URL in flake.nix and running `nix flake update`.
+      ghostscript-latest = pkgs.ghostscript.overrideAttrs (_old: {
         version = "10.07.0";
-        src = pkgs.fetchurl {
-          url = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${
-            lib.replaceStrings [ "." ] [ "" ] version
-          }/ghostscript-${version}.tar.xz";
-          hash = "sha256-3azk4XIflnpVA5uv9WSEAiXguqHU9UMiR8oczRRzt8E=";
-        };
+        src = inputs.ghostscript-src;
       });
 
       # Pin ImageMagick to the exact release prod runs (remi `ImageMagick7` on
       # EL9, currently 7.1.2-25). Clip-path and alpha handling is version
       # sensitive, so matching the patch release is required to reproduce and
       # verify the KON-12723 download-template blanking locally.
-      imagemagick-prod = pkgs.imagemagick.overrideAttrs (_old: rec {
+      # Version is pinned to what production runs; the hash for it is in
+      # flake.lock via the `imagemagick-src` input.
+      imagemagick-prod = pkgs.imagemagick.overrideAttrs (_old: {
         version = "7.1.2-25";
-        src = pkgs.fetchFromGitHub {
-          owner = "ImageMagick";
-          repo = "ImageMagick";
-          rev = version;
-          hash = "sha256-7z1oIKXZcumsESLrFRvU6z0M8JVsogG7yDWwF62jPwo=";
-        };
+        src = inputs.imagemagick-src;
       });
 
       # libembroidery ships the `sew` CLI for converting/inspecting machine
@@ -57,13 +54,9 @@ _: {
       # there are no tagged releases yet (v1.0 still pre-release).
       libembroidery = pkgs.stdenv.mkDerivation {
         pname = "libembroidery";
-        version = "unstable-2026-04-21";
-        src = pkgs.fetchFromGitHub {
-          owner = "Embroidermodder";
-          repo = "libembroidery";
-          rev = "58d1d71ac100a1b83024023548289799a52f9f73";
-          hash = "sha256-ha8xxmUxbz6BcnHNq1mGp+yT7mnSFNcIafEluQ6EgHU=";
-        };
+        # Revision tracked by the `libembroidery-src` flake input.
+        version = "unstable";
+        src = inputs.libembroidery-src;
         nativeBuildInputs = [ pkgs.cmake ];
         # Upstream tests have a -Wformat-security issue and arc_test fails on
         # pre-1.0 main; the `sew` CLI itself builds and runs fine.

@@ -409,6 +409,19 @@
         "type": "github"
       }
     },
+    "ghostscript-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773656479,
+        "narHash": "sha256-KxFUHhpfp7mMdV13iz0nGqGUPQfFBtn+BX10+p93Z6I=",
+        "type": "tarball",
+        "url": "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz"
+      }
+    },
     "gitignore": {
       "inputs": {
         "nixpkgs": [
@@ -674,6 +687,23 @@
         "type": "github"
       }
     },
+    "imagemagick-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780612020,
+        "narHash": "sha256-7z1oIKXZcumsESLrFRvU6z0M8JVsogG7yDWwF62jPwo=",
+        "owner": "ImageMagick",
+        "repo": "ImageMagick",
+        "rev": "04a04eaaa22f721f204c4bf4c6b24b08b1afe5c5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ImageMagick",
+        "ref": "7.1.2-25",
+        "repo": "ImageMagick",
+        "type": "github"
+      }
+    },
     "impermanence": {
       "inputs": {
         "home-manager": "home-manager_2",
@@ -754,6 +784,22 @@
         "owner": "nix-community",
         "ref": "v0.4.2",
         "repo": "lanzaboote",
+        "type": "github"
+      }
+    },
+    "libembroidery-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783200610,
+        "narHash": "sha256-2l5fZcZda2+mQPfDddgE9llO5cdp/BHMehjaFsnMRck=",
+        "owner": "Embroidermodder",
+        "repo": "libembroidery",
+        "rev": "1138e043b811f891d2bf88fce5b2e414dac92391",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Embroidermodder",
+        "repo": "libembroidery",
         "type": "github"
       }
     },
@@ -1059,13 +1105,16 @@
         "ds-mcp": "ds-mcp",
         "fenix": "fenix",
         "flake-parts": "flake-parts",
+        "ghostscript-src": "ghostscript-src",
         "home-manager": "home-manager",
         "html-to-md": "html-to-md",
         "hyprland-guiutils": "hyprland-guiutils",
+        "imagemagick-src": "imagemagick-src",
         "impermanence": "impermanence",
         "import-tree": "import-tree",
         "jenkins-mcp": "jenkins-mcp",
         "lanzaboote": "lanzaboote",
+        "libembroidery-src": "libembroidery-src",
         "nix-mcp": "nix-mcp",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_3",
@@ -1077,6 +1126,7 @@
         "sops-nix": "sops-nix",
         "srv": "srv",
         "treeman": "treeman",
+        "tridactyl-theme-src": "tridactyl-theme-src",
         "wayle": "wayle",
         "wrappers": "wrappers",
         "xilo": "xilo",
@@ -1380,6 +1430,22 @@
       "original": {
         "owner": "stubbedev",
         "repo": "treeman",
+        "type": "github"
+      }
+    },
+    "tridactyl-theme-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780750713,
+        "narHash": "sha256-YGleO6ZGUi8r6HhPbIjjr9hVh1M80qxqAdOcKU7yuvo=",
+        "owner": "devnullvoid",
+        "repo": "tridactyl",
+        "rev": "5066fe2b1cfe5abb7eb9fd3a58512a75a51221c9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "devnullvoid",
+        "repo": "tridactyl",
         "type": "github"
       }
     },
