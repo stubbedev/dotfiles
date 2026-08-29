@@ -42,7 +42,6 @@
                 taplo
                 yaml-language-server
                 marksman
-                dot-language-server
 
                 # Web / JS / TS
                 vtsls # LazyVim's default TS LSP (vim.g.lazyvim_ts_lsp = "vtsls")
@@ -50,7 +49,6 @@
                 oxlint
                 oxfmt
                 vue-language-server
-                tailwindcss-language-server
 
                 # Backend / domain
                 phpantom_lsp
@@ -58,7 +56,6 @@
                 basedpyright
                 ruff
                 rust-analyzer
-                sqls
                 gopls
                 golangci-lint-langserver
 
@@ -99,14 +96,14 @@
                 fd
                 git
 
+                # setpriv(1), for the PR_SET_PDEATHSIG wrapper that
+                # src/nvim/lua/plugins/lsp.lua puts in front of every language
+                # server so none of them survives an unclean nvim exit.
+                util-linux
+
                 # The `nix` CLI: needed by nixd (flake eval) and by lsp.lua's
                 # before_init callback that picks the right nixos/home config.
                 nix
-
-                # AI completion server for windsurf.nvim
-                # (src/nvim/lua/plugins/codeium.lua). A prebuilt native
-                # binary, unlike copilot.lua's Node server it replaces.
-                codeium
 
                 # JS runtime for plugins that need node (blade ls, …).
                 nodejs

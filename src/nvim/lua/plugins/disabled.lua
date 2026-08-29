@@ -6,6 +6,11 @@ return {
   { "mason-org/mason-lspconfig.nvim",  enabled = false },
   { "jay-babu/mason-nvim-dap.nvim",    enabled = false },
 
+  -- Browser preview of markdown, and it pulls a node build step. The rest of
+  -- the lang.markdown extra stays: render-markdown draws it in the buffer and
+  -- marksman is the LSP.
+  { "iamcco/markdown-preview.nvim",    enabled = false },
+
   { "nvim-mini/mini.indentscope",      enabled = false },
   { "goolord/alpha-nvim",              enabled = false },
   { "akinsho/bufferline.nvim",         enabled = false },

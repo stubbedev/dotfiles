@@ -85,10 +85,22 @@ return {
             }
           end
 
+          -- lualine.setup() is a full re-init (~3ms), so only run it when the
+          -- tabline actually has to appear or disappear -- i.e. when the
+          -- listed-buffer count crosses the 2-buffer threshold get_tabline()
+          -- keys on. Opening a picker adds buffers in bursts; without this
+          -- guard each one paid for a re-init that rendered the same tabline.
+          local tabline_shown = nil
           local function update_lualine_tabline()
             local lualine = require("lualine")
+            local tabline = get_tabline()
+            local shown = tabline ~= nil
+            if shown == tabline_shown then
+              return
+            end
+            tabline_shown = shown
             local config = lualine.get_config()
-            config.tabline = get_tabline()
+            config.tabline = tabline
             lualine.setup(config)
           end
 
@@ -137,7 +149,7 @@ return {
       require("lualine").setup({
         options = {
           theme = "catppuccin-mocha",
-          extensions = { "lazy", "mason", "oil", "nvim-dap", "overseer", "trouble" },
+          extensions = { "lazy", "oil", "nvim-dap", "trouble" },
         },
       })
     end,

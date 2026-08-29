@@ -121,6 +121,29 @@ end
 return {
   {
     "neovim/nvim-lspconfig",
+    init = function()
+      -- Language servers outlive nvim whenever it dies without a clean :qa --
+      -- a closed terminal, a killed tmux pane, SIGTERM, a crash. nvim only
+      -- sends the LSP shutdown/exit handshake on a clean exit, and servers are
+      -- supposed to watch the `processId` they get in initialize and quit when
+      -- it disappears. phpantom_lsp doesn't, and it idles at ~850MB RSS, so
+      -- every unclean exit in a PHP repo leaks that much until reboot.
+      --
+      -- setpriv(1) sets PR_SET_PDEATHSIG on the server before exec, so the
+      -- kernel signals it the moment nvim's process dies -- no cooperation
+      -- from the server, and it still fires when nvim is SIGKILLed. Patch
+      -- vim.lsp.rpc.start rather than each `cmd`: client.lua derives a
+      -- server's default name from cmd[1], which would become "setpriv".
+      if vim.fn.has("linux") == 1 and vim.fn.executable("setpriv") == 1 then
+        local rpc_start = vim.lsp.rpc.start
+        vim.lsp.rpc.start = function(cmd, dispatchers, extra)
+          if type(cmd) == "table" and cmd[1] ~= "setpriv" then
+            cmd = vim.list_extend({ "setpriv", "--pdeathsig=TERM", "--" }, vim.deepcopy(cmd))
+          end
+          return rpc_start(cmd, dispatchers, extra)
+        end
+      end
+    end,
     opts = {
       inlay_hints = { enabled = false },
       servers = {
@@ -157,6 +180,11 @@ return {
             )
           end,
         },
+        -- css/scss had no language server at all: LazyVim ships no css extra,
+        -- so oxfmt (format-only) and nothing else attached. cssls comes from
+        -- the vscode-langservers-extracted already in modules/nvim.nix and
+        -- brings diagnostics, completion and go-to-definition to both.
+        cssls = {},
         oxlint = {
           filetypes = {
             "javascript",

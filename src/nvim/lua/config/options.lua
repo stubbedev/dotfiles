@@ -4,6 +4,19 @@ vim.g.maplocalleader = vim.g.mapleader
 
 -- Enable LazyVim auto format
 vim.g.autoformat = false
+
+-- LazyVim's lualine spec calls trouble.statusline() for a document-symbols
+-- component. That eagerly loads trouble.nvim at startup and registers a
+-- CursorMoved handler that re-queries LSP document symbols on every cursor
+-- move (~0.5ms/move, 68% of this config's total CursorMoved cost) -- for a
+-- component our own lualine setup (plugins/lualine.lua) never renders.
+vim.g.trouble_lualine = false
+
+-- LazyVim's python extra defaults to `pyright`, but modules/nvim.nix installs
+-- basedpyright. The result was that no python language server started at all:
+-- the extra enabled pyright, whose binary isn't on PATH, and python buffers
+-- got ruff alone -- lint and format, but no types, completion or go-to-def.
+vim.g.lazyvim_python_lsp = "basedpyright"
 vim.opt.mouse = ""
 
 -- Load project-local .nvim.lua/.nvimrc/.exrc from nvim's launch dir for
