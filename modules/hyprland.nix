@@ -581,6 +581,25 @@ in
                 '';
               }}
 
+              # Boot VT race. Debian's greetd.service orders only after
+              # plymouth-quit-*wait*.service, which Ubuntu does not pull into
+              # the boot transaction — so `plymouth quit` runs *concurrently*
+              # with greetd, and its VT restore yanks the console back to tty1
+              # after greetd has already switched to tty7. greetd then sits
+              # waiting for its VT to go active, so autologin never fires and
+              # you land on the getty@tty1 prompt. Ordering after the quit
+              # itself makes greetd the last thing to touch the console.
+              ${pkgs.stubbe.installText {
+                name = "greetd-plymouth-order.conf";
+                target = "/etc/systemd/system/greetd.service.d/plymouth-order.conf";
+                text = ''
+                  # Managed by stubbe — modules/hyprland.nix
+                  [Unit]
+                  After=plymouth-quit.service plymouth-quit-wait.service
+                '';
+              }}
+              sudo systemctl daemon-reload
+
               # Display-manager swap. Disable competing DMs FIRST so their
               # `[Install] Alias=display-manager.service` symlinks come down.
               current_dm=""
