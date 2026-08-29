@@ -66,7 +66,6 @@
           # .desktop entry and icons on XDG_DATA_DIRS so they show up in rofi on
           # non-NixOS, where a bare nixGL wrap emits only bin/.
           (gfx.bundle { pkg = pkgs.neovide; })
-          (gfx.bundle { pkg = pkgs.jetbrains-toolbox; })
         ]
         ++
           lib.optional config.features.rust
@@ -75,7 +74,7 @@
       programs = {
         go = {
           enable = true;
-          package = pkgs.go;
+          package = pkgs.go_latest;
           # Relocate the default ~/go to ~/.go so $HOME stays clean. GOBIN is
           # left unset so it defaults to $GOPATH/bin, which the zsh paths file (modules/shell.nix)
           # deliberately keeps OFF PATH — `go install` must not shadow
@@ -102,7 +101,7 @@
         };
       };
 
-      home.sessionVariables.GOROOT = "${pkgs.go}/share/go";
+      home.sessionVariables.GOROOT = "${config.programs.go.package}/share/go";
 
       # Pin pnpm's store dir. pnpm reads this rc itself, so no env var is
       # needed — and deliberately NOT npm_config_store_dir as a session var:
@@ -145,7 +144,7 @@
         }:$PATH"
 
         bundle="${config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
-        bundle_dir="${builtins.dirOf config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
+        bundle_dir="${dirOf config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
         tmp="$bundle.tmp"
 
         mkdir -p "$bundle_dir"

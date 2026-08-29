@@ -24,7 +24,7 @@ _:
 let
   flags = {
     desktop = "Interactive workstation UI (GUI apps, compositor support, theming). Does NOT control baseline CLI tools.";
-    development = "Language toolchains beyond the CLI baseline (node, go, rust via fenix, jetbrains-toolbox).";
+    development = "Language toolchains beyond the CLI baseline (node, go, rust via fenix).";
     docker = "Docker. On NixOS this drives virtualisation.docker; elsewhere a privileged activation installs it via the host package manager and adds the user to the docker group.";
     avahi = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
     openssh = "Accept inbound ssh. On NixOS via services.openssh; elsewhere openssh-server from the host package manager.";

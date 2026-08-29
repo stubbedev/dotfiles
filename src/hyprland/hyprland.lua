@@ -396,47 +396,8 @@ end
 ------------------------------------------------------------- WINDOW RULES
 -- Floating, horizontally centered near the top, focused on activate. `extra`
 -- merges in any additional rule fields (e.g. stay_focused).
-local function float_centered(name, match, w, h, extra)
-    local rule = {
-        name = name,
-        match = match,
-        float = true,
-        focus_on_activate = true,
-        size = w .. " " .. h,
-        move = "monitor_w/2-" .. math.floor(w / 2) .. " 30",
-    }
-    for k, v in pairs(extra or {}) do
-        rule[k] = v
-    end
-    hl.window_rule(rule)
-end
 
 local function setup_window_rules()
-    float_centered("vpn-prompt", { class = "vpn-prompt" }, 640, 240, { stay_focused = true })
-
-    -- JetBrains IDEs: keep focus on popups/dialogs.
-    hl.window_rule({
-        name = "jetbrains-focus",
-        match = { class = "^jetbrains-" },
-        focus_on_activate = true,
-    })
-    hl.window_rule({
-        name = "jetbrains-stay-focused",
-        match = { class = "^jetbrains-", float = true },
-        stay_focused = true,
-    })
-
-    -- JetBrains Toolbox (top-right corner).
-    hl.window_rule({
-        name = "jetbrains-toolbox",
-        match = { class = "jetbrains-toolbox" },
-        float = true,
-        move = "monitor_w-window_w-1 30",
-        focus_on_activate = true,
-        stay_focused = true,
-    })
-
-    -- Steam: float by default, but tile the main window and friends list.
     hl.window_rule({ name = "steam-float", match = { class = "steam" }, float = true })
     hl.window_rule({ name = "steam-main-tile", match = { class = "steam", title = "^Steam$" }, tile = true })
     hl.window_rule({ name = "steam-friends-tile", match = { class = "steam", title = "^Friends List$" }, tile = true, size = "400 900" })
