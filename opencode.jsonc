@@ -1,0 +1,27 @@
+// Project-level opencode config: the repo-scoped half of .mcp.json.
+//
+// The global inventory (modules/ai/mcp-clients.nix -> ~/.config/opencode/
+// opencode.jsonc) deliberately omits the `repoScoped = true` servers, so each
+// repo that wants them names their proxy URLs itself -- exactly what .mcp.json
+// does for Claude. opencode walks up from cwd for opencode.json/.jsonc and
+// deep-merges it over the global file, so `mcp` gains these two rather than
+// replacing the six.
+//
+// `{env:PWD}` is opencode's config-load substitution, the equivalent of
+// Claude's `${PWD}` and Codex's env_http_headers: proxy-mcp reads X-Repo-Root
+// to gate backends per workspace.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "nix-mcp": {
+      "type": "remote",
+      "url": "http://127.0.0.1:39105/nix-mcp/mcp",
+      "headers": { "X-Repo-Root": "{env:PWD}" }
+    },
+    "pty-mcp": {
+      "type": "remote",
+      "url": "http://127.0.0.1:39105/pty-mcp/mcp",
+      "headers": { "X-Repo-Root": "{env:PWD}" }
+    }
+  }
+}

@@ -164,9 +164,12 @@
       #               the proxy route are built exactly as usual, but
       #               modules/ai/mcp-clients.nix drops the entry, so no agent loads
       #               it everywhere. A repo that wants it names the URL below in its
-      #               own .mcp.json. For servers whose tools are noise in most repos
+      #               own project-level config -- this repo carries all three:
+      #               .mcp.json (Claude), opencode.jsonc (opencode) and
+      #               .codex/config.toml (Codex, `[mcp_servers.<name>]`). For
+      #               servers whose tools are noise in most repos
       #               (nix-mcp outside a Nix repo, pty-mcp outside one you trust with
-      #               a real terminal) — see that file for the exact JSON.
+      #               a real terminal) -- see those files for the exact syntax.
       # chrome-devtools gated on enableChrome (features.browsers): it drives the
       # user's real Chrome over CDP, useless on a host with no browser installed.
       # It is ALSO repo-gated (repoWhitelist, see its entry below) to the three web

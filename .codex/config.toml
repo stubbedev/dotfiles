@@ -1,0 +1,19 @@
+# Project-level Codex config: the repo-scoped half of the MCP inventory, the
+# same two servers .mcp.json names for Claude and opencode.jsonc names for
+# opencode.
+#
+# The global inventory (modules/ai/mcp-clients.nix, passed to Codex as `-c`
+# flags on the wrapper) deliberately omits the `repoScoped = true` servers, so
+# each repo that wants them names their proxy URLs itself.
+#
+# `env_http_headers` maps a header to the NAME of an environment variable, so
+# the value here is the literal string PWD -- Codex reads $PWD at request time.
+# proxy-mcp gates backends per workspace off X-Repo-Root.
+
+[mcp_servers.nix-mcp]
+url = "http://127.0.0.1:39105/nix-mcp/mcp"
+env_http_headers = { "X-Repo-Root" = "PWD" }
+
+[mcp_servers.pty-mcp]
+url = "http://127.0.0.1:39105/pty-mcp/mcp"
+env_http_headers = { "X-Repo-Root" = "PWD" }

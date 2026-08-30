@@ -80,6 +80,25 @@ _: {
           }
           // lib.optionalAttrs (server ? env) { inherit (server) env; };
 
+      # opencode rewrites `{env:VAR}` from its own environment while reading the
+      # config file, so this header lands on the same per-window repo root as
+      # Claude's ${PWD} and Codex's env_http_headers.
+      toOpencode =
+        _: server:
+        if server.transport == "http" then
+          {
+            type = "remote";
+            inherit (server) url;
+            headers."X-Repo-Root" = "{env:PWD}";
+          }
+        else
+          {
+            type = "local";
+            # One flat argv here, unlike Claude/Codex's command + args pair.
+            command = [ server.command ] ++ server.args;
+          }
+          // lib.optionalAttrs (server ? env) { environment = server.env; };
+
       toCodex = name: server: [
         "-c"
         (lib.escapeShellArg "mcp_servers.${name}=${tomlInlineTable (toCodexTable server)}")
@@ -89,11 +108,12 @@ _: {
       options.stubbe.mcp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Per-agent renderings of the MCP inventory: `claude` (JSON) and `codexFlags` (argv).";
+        description = "Per-agent renderings of the MCP inventory: `claude` and `opencode` (JSON) and `codexFlags` (argv).";
       };
 
       config.stubbe.mcp.clients = {
         claude = lib.mapAttrs toClaude clientServers;
+        opencode = lib.mapAttrs toOpencode clientServers;
         codexFlags = lib.concatLists (lib.mapAttrsToList toCodex clientServers);
       };
     };
