@@ -1,10 +1,5 @@
-# Claude Code: the wrapped CLI, and the settings/state files that live outside
-# Nix because the tool rewrites them itself.
-#
-# Every settings write goes through `pkgs.stubbe.jsonMerge`/`jsonSet`, which
-# patch the LIVE file with jq at activation time. Merging at eval time against
-# `builtins.readFile` would silently drop anything Claude Code wrote between
-# evaluation and activation.
+# Settings are patched into the LIVE file with jq at activation time: merging
+# at eval time would drop anything Claude Code wrote in between.
 _: {
   flake.modules.homeManager.claudeCode =
     {
@@ -15,46 +10,16 @@ _: {
     }:
     lib.mkIf config.features.claudeCode (
       let
-        # PreToolUse hook: strip shell aliases from every agent-run command.
-        #
-        # Claude Code snapshots the user's zsh (aliases AND functions) into
-        # ~/.claude/shell-snapshots/ and sources it before every Bash call, so the
-        # agent inherits `cp -i` / `mv -i` / `rm -i` (which block on a y/n prompt
-        # nobody can answer) and TUI/pager substitutes like `ls`→eza. The hook
-        # rewrites tool_input.command via hookSpecificOutput.updatedInput, putting
-        # `unalias -a` on its OWN LINE ahead of the command: zsh expands aliases
-        # while parsing a line, so a `;`-joined `unalias -a` would come too late —
-        # the alias on that same line is already expanded.
-        #
-        # Aliases only. Shell FUNCTIONS survive on purpose: the useful CLI
-        # entrypoints here (hm, treeman, gwt, …) are functions, and killing those
-        # would break the commands the agent is supposed to run.
-        #
-        # No permissionDecision is emitted — updatedInput alone is honored, and
-        # returning "allow" here would auto-approve every Bash call.
+        # Claude Code sources the user's zsh before every Bash call, so the agent
+        # inherits interactive aliases that block on prompts nobody can answer.
+        # The unalias must be on its OWN LINE: zsh expands aliases while parsing
+        # a line, so a `;`-joined one comes too late.
+        # Functions survive on purpose: hm, treeman and gwt are functions.
+        # No permissionDecision: "allow" here would auto-approve every Bash call.
         noAliasesHook = pkgs.writeShellScript "claude-hook-no-aliases" ''
           exec ${lib.getExe pkgs.jq} -c '{hookSpecificOutput:{hookEventName:"PreToolUse",updatedInput:(.tool_input+{command:("unalias -a 2>/dev/null\n"+.tool_input.command)})}}'
         '';
 
-        # ── Language servers ────────────────────────────────────────────
-        # Claude Code speaks LSP itself. A plugin manifest's `lspServers` makes
-        # it spawn the matching server for any file it reads or edits, and it
-        # subscribes to textDocument/publishDiagnostics -- what comes back is
-        # attached to the Edit/Write that caused it. That is the whole "the
-        # agent sees its own type errors" story; an MCP LSP *bridge* is a
-        # second process tree re-implementing a client this one already has.
-        #
-        # `command` is an absolute store path, so none of these land on PATH.
-        # They are the same attrs modules/nvim.nix puts in the nvim wrapper, so
-        # this adds no closure, and a server starts only when a file with its
-        # extension is actually touched -- editing nix costs nixd, nothing else.
-        #
-        # Deliberately a SUBSET of src/nvim/lua/lsp.lua: Claude Code binds one
-        # server per extension and drops the rest ("extension .go already
-        # handled by gopls"), so where nvim stacks a type-checker and a linter
-        # the type-checker wins -- ty over ruff, tsgo over oxlint, gopls over
-        # golangci-lint. Servers whose value is formatting or completion
-        # (oxfmt, html, marksman) are left out: only diagnostics reach Claude.
         lspServers =
           let
             vscodeLs = bin: "${pkgs.vscode-langservers-extracted}/bin/${bin}";
@@ -63,19 +28,12 @@ _: {
             nixd = {
               command = lib.getExe' pkgs.nixd "nixd";
               extensionToLanguage.".nix" = "nix";
-              # ponytail: static nixpkgs eval only. src/nvim/lua/nixd.lua also
-              # feeds nixd this flake's nixos/home-manager option sets, which is
-              # what makes *option name* diagnostics work -- resolving those
-              # needs the host, and there is no before_init hook here to do it
-              # lazily. Undefined variables, arity and type errors still land.
-              #
               # No diagnostic.suppress: nixf 2.9 has no "sema-escaping-with"
               # sname any more, and nixd logs "unknown" for it on every publish.
               # (src/nvim/lua/lsp.lua still passes it -- same dead setting.)
               settings.nixd.nixpkgs.expr = "import <nixpkgs> { }";
             };
 
-            # One Go binary; no node, no tsserver. Same reasoning as nvim.
             tsgo = {
               command = lib.getExe' pkgs.typescript-go "tsgo";
               args = [
@@ -106,8 +64,7 @@ _: {
               extensionToLanguage.".svelte" = "svelte";
             };
 
-            # phpantom already carries the Blade directive table, and .blade.php
-            # matches on its trailing .php, so one entry covers both.
+            # .blade.php matches on its trailing .php, so this covers Blade too.
             phpantom = {
               command = lib.getExe' pkgs.phpantom_lsp "phpantom_lsp";
               extensionToLanguage.".php" = "php";
@@ -215,10 +172,9 @@ _: {
             };
           };
 
-        # Servers reach Claude Code only through a plugin, and a marketplace is
-        # a directory on disk -- so render one into the store rather than
-        # hand-maintain the JSON under src/. A `directory` marketplace is only
-        # ever read, so a read-only store path is fine.
+        # lspServers is only reachable through a plugin, and a marketplace is a
+        # directory on disk. Read-only is fine: a directory marketplace is never
+        # written to.
         lspMarketplace =
           let
             manifest = {
@@ -239,15 +195,12 @@ _: {
                   // {
                     source = "./plugins/lsp";
                     category = "development";
-                    # The plugin ships no commands/agents/skills directories.
                     strict = false;
                   }
                 )
               ];
             };
             "plugins/lsp/.claude-plugin/plugin.json" = json "plugin.json" manifest;
-            # Claude Code reads the servers from `.lsp.json` in the plugin root
-            # (equivalently `lspServers` inline in plugin.json).
             "plugins/lsp/.lsp.json" = json "lsp.json" lspServers;
           };
       in
@@ -258,11 +211,9 @@ _: {
             gfx = false;
             flags = [ "--dangerously-skip-permissions" ];
           })
-          # cship renders the status line configured below.
           pkgs.cship
         ];
 
-        # cship reads a flat ~/.config/cship.toml, not a subdirectory.
         xdg.configFile."cship.toml".source = (pkgs.formats.toml { }).generate "cship.toml" {
           cship = {
             lines = [ "$directory$git_branch$git_status $cship.usage_limits $cship.model.id" ];

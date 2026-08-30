@@ -1,29 +1,5 @@
 { inputs, ... }:
 {
-  # Long-lived MCP servers run as shared systemd user services: each serves
-  # streamable HTTP on a loopback port, started once at login. Opening N agent
-  # windows then costs no extra processes — every window is just an HTTP
-  # client (modules/ai/mcp-clients.nix wires the matching entries), so each loads
-  # once for the whole session.
-  #
-  # The login-time httpServices are safe to share as ONE process because none
-  # depends on the service's working directory: atlassian/jenkins/sentry
-  # resolve the caller's repo from the per-request X-Repo-Root header
-  # (the shared client config sets it to each window's launch dir), falling back
-  # to per-session MCP roots for clients that don't send it. That per-request
-  # isolation is why they are native HTTP rather than bridged through a
-  # stdio→HTTP proxy (which would collapse all windows onto one upstream
-  # session and lose roots).
-  #
-  # The `proxied` set (chrome-devtools + the readonly DB servers, plus nix-mcp
-  # which is stateless and just folds its port onto the shared one) is the
-  # deliberate inverse for browser/DBs: we WANT one shared upstream per backend so there
-  # is exactly one browser / one DB connection. The WHOLE set is bridged through a
-  # single proxy-mcp (stdio→streamable-HTTP), socket-activated on one shared
-  # port, serving each backend at /<name>/mcp. proxy-mcp connects each backend
-  # lazily (first request to its route) and retires it on its own idle clock, so
-  # nothing runs until a window connects and the heavy browser can drop while a
-  # DB stays warm — all in one process. See the unit-building block below.
   flake.modules.homeManager.mcpServices =
     {
       config,
@@ -34,18 +10,12 @@
     lib.mkIf (config.features.claudeCode || config.features.codex) (
       let
         system = pkgs.stdenv.hostPlatform.system;
-        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE /
-        # KONTAINER_CMS_REMOTE / KONTAINER_SITE_REMOTE / KONFORM_HOST), fed to
-        # mcp-proxy as an EnvironmentFile so the gated repo remote never lands
-        # in this public repo or the world-readable store. proxy-mcp expands the
-        # placeholders in repoWhitelist at runtime via --expand-env.
+        # Kept out of this public repo and the world-readable store; proxy-mcp
+        # expands the placeholders in repoWhitelist at runtime.
         # Edit: hm secret edit mcp-proxy-env.
         proxyEnvPath = "${config.home.homeDirectory}/.config/mcp-proxy/proxy.env";
         inherit (config.stubbe.mcp) servers;
 
-        # Shared service PATH. The work servers shell out to `git` (repo
-        # detection from the X-Repo-Root header / MCP roots); the server
-        # binaries themselves are absolute store paths and need nothing.
         pathEnv = "PATH=${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
         mkService = name: s: {
@@ -63,40 +33,18 @@
           };
         };
 
-        # On-demand stdio servers (modules/ai/mcp-servers.nix `proxied`) — the
-        # WHOLE set behind ONE proxy-mcp, so TWO units total rather than two per
-        # backend. proxy-mcp adopts the activation socket ($LISTEN_FDS) instead
-        # of binding, and serves every backend at /<name>/mcp.
-        #
-        # Each backend is connected lazily on the first request to its route and
-        # torn down after its own options.idleTimeout of route silence, so the
-        # heavy browser retires while a DB stays warm. The process itself exits
-        # after --idle-timeout of total silence, re-arming the socket; the next
-        # connection re-activates it and re-connects only the backend hit.
-        #
-        # Type=notify: proxy-mcp signals READY=1 only once every route is
-        # registered (lazy routes register immediately), holding off Accept on
-        # the activation socket until then — so the activating connection waits
-        # in the backlog rather than racing route registration.
         mcpProxy = "${inputs.proxy-mcp.packages.${system}.proxy-mcp}/bin/proxy-mcp";
-        # proxy-mcp spawns `npx`, which needs node on PATH; the npx-fetched
-        # chrome-devtools-mcp child inherits it.
+        # proxy-mcp spawns `npx`, which needs node on PATH.
         backendPath = "PATH=${pkgs.nodejs}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
-        # Taking the head is safe: every proxied entry carries the same
-        # host/port, only `path` differs.
+        # Safe: every proxied entry carries the same host/port, only `path` differs.
         proxyHost = (lib.head (lib.attrValues servers.proxied)).host;
         proxyPort = (lib.head (lib.attrValues servers.proxied)).port;
-        # Process idle-exit floor: the longest per-upstream idle, so the process
-        # outlives the last backend it might still be retiring.
+        # The process must outlive the last backend it might still be retiring.
         procIdleSec = lib.foldl' lib.max 0 (map (p: p.idleSec) (lib.attrValues servers.proxied));
 
-        # Backends are keyed by name so each is served at /<name>/mcp. mode
-        # "shared" multiplexes every window onto one upstream session (one stdio
-        # child); idleTimeout makes that backend lazy and self-retiring.
-        # `type` must be set explicitly — proxy-mcp defaults to SSE otherwise.
-        # `addr` is ignored under socket activation (the adopted fd wins) but
-        # kept valid for config validation.
+        # `type` must be explicit or proxy-mcp defaults to SSE. `addr` is ignored
+        # under socket activation but has to stay valid for config validation.
         proxyConfig = (pkgs.formats.json { }).generate "mcp-proxy.json" {
           mcpProxy = {
             baseURL = "http://${proxyHost}:${toString proxyPort}";
@@ -106,10 +54,6 @@
             type = "streamable-http";
             options.logEnabled = true;
           };
-          # The url/transportType shape fronts the jenkins/sentry HTTP services
-          # behind a repoWhitelist gate. mode "perSession" is for a backend that
-          # needs per-window roots relayed; repoWhitelist gates tool visibility
-          # to matching repos.
           mcpServers = lib.mapAttrs (
             _: p:
             (
@@ -144,27 +88,20 @@
             Unit.Description = "MCP proxy (proxy-mcp → ${toString (lib.attrNames servers.proxied)}, socket-activated)";
             # No [Install]: started on demand by mcp-proxy.socket.
             Service = {
+              # notify holds off Accept until every route is registered, so the
+              # activating connection waits in the backlog instead of racing it.
               Type = "notify";
               Environment = [ backendPath ];
-              # sops-decrypted repo-gate values (KONTAINER*_REMOTE + KONFORM_HOST),
-              # read at service start (kept out
-              # of the store — unlike Environment=, which HM bakes into the unit).
-              # Leading `-`: a missing/failed secret must NOT stop the whole proxy
-              # (pty/nix share it, ungated) — instead the gate values stay unset, so
-              # every gated backend's repoWhitelist expands to "" and fails closed
-              # (tools hidden), while the ungated backends keep serving.
+              # Leading `-` so a missing secret leaves the gate values unset and
+              # every gated backend fails closed, rather than stopping the proxy
+              # the ungated backends also depend on.
               EnvironmentFile = "-${proxyEnvPath}";
-              # --idle-timeout: exit after procIdleSec of NO requests to any
-              # route; the socket re-activates on the next connection. Per-backend
-              # teardown is driven by each entry's options.idleTimeout in the
-              # config. --expand-env=true: expand ${KONTAINER_REMOTE}/${KONFORM_HOST} in the
-              # repoWhitelist. No other config value contains a literal `$`, so
-              # global expansion is safe; keep it that way when adding backends.
+              # --expand-env is global: no other config value may contain a
+              # literal `$`.
               ExecStart = "${mcpProxy} --config ${proxyConfig} --expand-env=true --idle-timeout=${toString procIdleSec}s";
-              # Cold `npx` fetch of a backend can be slow on first run; allow
-              # readiness up to 120s before systemd fails the start job.
+              # A cold `npx` fetch on first run can take this long.
               TimeoutStartSec = 120;
-              # Idle-exit is a clean exit (0); only restart on actual failure.
+              # Idle-exit is a clean exit, so only failures should restart.
               Restart = "on-failure";
               RestartSec = 2;
             };
@@ -172,9 +109,6 @@
         };
       in
       {
-        # Each secret is the raw JSON config (URLs + tokens) its server reads at
-        # startup, at the path that httpService passes via --config. Edit with
-        # `hm secret edit <provider>-mcp`.
         sops.secrets = {
           mcp-proxy-env = pkgs.stubbe.secret {
             name = "mcp-proxy-env";
@@ -196,9 +130,6 @@
               "atlassian"
               "jenkins"
               "sentry"
-              # The readonly DB server (ds-mcp). Same shape: it reads
-              # ~/.config/ds-mcp/config.json (MySQL + MongoDB sources, live +
-              # staging, readonly:true).
               "ds"
             ]
         );
@@ -206,32 +137,11 @@
         systemd.user.services = lib.mapAttrs mkService servers.httpServices // proxiedServices;
         systemd.user.sockets = proxiedSockets;
 
-        # Re-sync httpServices on every `hm switch` so a changed server set /
-        # store path is picked up even when sd-switch sees an identical unit
-        # (mirrors the treemand pattern in modules/treeman.nix).
-        #
-        # httpServices are always-on (WantedBy=default.target): use `restart`,
-        # which also STARTS a stopped unit. `try-restart` is wrong here — it is a
-        # no-op on a stopped unit, so when sd-switch stops a changed unit to swap
-        # store paths and leaves it down, try-restart can't bring it back and the
-        # server stays dead until the next login.
-        #
-        # mcp-proxy is socket-activated with idle-exit, so it takes the OPPOSITE
-        # verb — `try-restart`, which restarts it only if it is currently warm and
-        # is a no-op when idle:
-        #   - idle (stopped): no-op; the next connection cold-starts it on the new
-        #     store paths + EnvironmentFile. Nothing to do.
-        #   - warm (an open agent window holds live sessions): restart so config
-        #     changes (backend set, repoWhitelist, the gate env values) take effect
-        #     now, at the cost of dropping those live sessions.
-        # The restart is NOT optional: the proxy is kept perpetually warm by the
-        # always-polling backends (ds/nix/pty/chrome-devtools clients GET every ~20s),
-        # so it never idle-exits on its own. Without this, a unit change — e.g.
-        # adding the repoWhitelist gate + EnvironmentFile — never reaches the
-        # running process, and jenkins/sentry fail closed (empty tools) even on
-        # whitelisted repos until the next login. `restart` would be wrong here:
-        # it would cold-START an idle proxy on every switch, defeating socket
-        # activation.
+        # sd-switch can leave a changed unit stopped, and `try-restart` is a
+        # no-op on a stopped unit, so the always-on httpServices need `restart`
+        # or they stay dead until the next login. mcp-proxy takes the opposite
+        # verb: `restart` would cold-start an idle proxy on every switch and
+        # defeat socket activation.
         stubbe.setup.restartMcpServices = {
           after = [ "reloadSystemd" ];
           script = ''
