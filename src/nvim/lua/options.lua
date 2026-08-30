@@ -52,6 +52,9 @@ o.splitbelow = true
 o.splitright = true
 o.splitkeep = "screen"
 o.laststatus = 3 -- one global statusline, not one per window
+-- The command line is an empty row under the statusline whenever it isn't
+-- being typed into. Neovim reclaims it on demand, so nothing is lost.
+o.cmdheight = 0
 o.showtabline = 1 -- tabline only when lua/statusline.lua says there's something to show
 o.shortmess:append({ W = true, I = true, c = true, C = true })
 o.timeoutlen = 300

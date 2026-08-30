@@ -48,12 +48,16 @@ end
 -- nixd attaches per-flake. Feeding it `nixosConfigurations.<host>.options` and
 -- `homeConfigurations.<user>.options` is what makes completion able to index
 -- into the right host/user. Discovering the right names needs `nix eval`,
--- 2-3s on a cold flake -- enough to visibly hang the first .nix file of the
--- day -- so the picked names are cached to ~/.cache/nvim/nixd-roots.json,
--- keyed by flake root. Only the very first open per repo pays.
+-- which takes ~3s on a cold flake.
+--
+-- That work never blocks the editor. `before_init` reads the on-disk cache and
+-- returns immediately, so the file is on screen and nixd is already answering
+-- for plain nixpkgs; if the flake isn't cached yet the eval runs in the
+-- background and the extra options are pushed to the running server with
+-- didChangeConfiguration when they land. Opening a .nix file in a new flake
+-- used to block for 2.9s -- that was the single slowest thing in this config.
 
 local cache_path = vim.fn.stdpath("cache") .. "/nixd-roots.json"
-local nixd_eval_cache = {}
 
 local function load_disk_cache()
   if vim.fn.filereadable(cache_path) == 0 then
@@ -78,35 +82,69 @@ local function save_disk_cache()
   vim.fn.writefile({ encoded }, cache_path)
 end
 
-local function nixd_eval(root, attr, apply)
-  local key = root .. "::" .. attr .. "::" .. (apply or "")
-  if nixd_eval_cache[key] ~= nil then
-    return nixd_eval_cache[key]
+local function nixpkgs_settings(root)
+  return {
+    nixpkgs = {
+      expr = string.format('(builtins.getFlake "%s").inputs.nixpkgs.legacyPackages.${builtins.currentSystem}', root),
+    },
+    formatting = { command = { "nixfmt" } },
+    options = {},
+  }
+end
+
+-- Options settings for whatever this root already has cached. Never evaluates.
+local function cached_options(root)
+  local entry = disk_cache[root]
+  if type(entry) ~= "table" then
+    return nil
   end
+  local options = {}
+  if type(entry.nixos) == "string" then
+    options.nixos = {
+      expr = string.format('(builtins.getFlake "%s").nixosConfigurations."%s".options', root, entry.nixos),
+    }
+  end
+  if type(entry.hm) == "string" then
+    options.home_manager = {
+      expr = string.format('(builtins.getFlake "%s").homeConfigurations."%s".options', root, entry.hm),
+    }
+  end
+  return options
+end
+
+---Run `nix eval` off the main loop. `cb` gets the decoded JSON, or nil.
+---
+---The callback is scheduled onto the main loop rather than run where
+---vim.system leaves it: that is a |fast-event| context, and touching vim.env or
+---any vim.fn from there throws, which silently kills the chain mid-way.
+local function nix_eval_async(root, attr, apply, cb)
   local cmd = { "nix", "eval", "--json", "--no-warn-dirty", root .. "#" .. attr }
   if apply then
     table.insert(cmd, "--apply")
     table.insert(cmd, apply)
   end
-  local out = vim.fn.system(cmd)
-  local result = nil
-  if vim.v.shell_error == 0 then
-    local ok, parsed = pcall(vim.json.decode, out)
-    if ok then
-      result = parsed
-    end
-  end
-  nixd_eval_cache[key] = result
-  return result
+  vim.system(
+    cmd,
+    { text = true },
+    vim.schedule_wrap(function(res)
+      if res.code ~= 0 then
+        return cb(nil)
+      end
+      local ok, parsed = pcall(vim.json.decode, res.stdout)
+      cb(ok and parsed or nil)
+    end)
+  )
 end
 
-local function nixd_pick(root, attr, identity_attr)
-  local names = nixd_eval(root, attr, "builtins.attrNames")
+local function looks_disposable(name)
+  return name:match("[Ii]nstaller") or name:match("[Ii]so") or name:match("[Ll]ive")
+end
+
+---Pick the configuration matching this host/user, else the only plausible one.
+local function pick(names, map)
   if type(names) ~= "table" or #names == 0 then
     return nil
   end
-
-  local map = nixd_eval(root, attr, "cs: builtins.mapAttrs (_: c: c." .. identity_attr .. ") cs")
   if type(map) == "table" then
     local hostname = vim.uv.os_gethostname()
     local user = vim.env.USER or ""
@@ -118,15 +156,11 @@ local function nixd_pick(root, attr, identity_attr)
       end
     end
   end
-
-  local function looks_disposable(name)
-    return name:match("[Ii]nstaller") or name:match("[Ii]so") or name:match("[Ll]ive")
-  end
   local fallback
   for _, name in ipairs(names) do
     if not looks_disposable(name) then
       if fallback then
-        return nil
+        return nil -- ambiguous: better to offer nothing than the wrong host
       end
       fallback = name
     end
@@ -134,42 +168,57 @@ local function nixd_pick(root, attr, identity_attr)
   return fallback
 end
 
-local function pick_with_cache(root, kind, attr, identity_attr)
-  disk_cache[root] = disk_cache[root] or {}
-  local cached = disk_cache[root][kind]
-  if cached ~= nil then
-    return cached
-  end
-  local picked = nixd_pick(root, attr, identity_attr)
-  disk_cache[root][kind] = picked or vim.NIL
-  save_disk_cache()
-  return picked
+local function pick_async(root, attr, identity_attr, cb)
+  nix_eval_async(root, attr, "builtins.attrNames", function(names)
+    if type(names) ~= "table" or #names == 0 then
+      return cb(nil)
+    end
+    nix_eval_async(root, attr, "cs: builtins.mapAttrs (_: c: c." .. identity_attr .. ") cs", function(map)
+      cb(pick(names, map))
+    end)
+  end)
 end
 
-local function nixd_settings_for_root(root)
-  local settings = {
-    nixpkgs = {
-      expr = string.format('(builtins.getFlake "%s").inputs.nixpkgs.legacyPackages.${builtins.currentSystem}', root),
-    },
-    formatting = { command = { "nixfmt" } },
-    options = {},
-  }
+local warming = {}
 
-  local nixos = pick_with_cache(root, "nixos", "nixosConfigurations", "config.networking.hostName")
-  if nixos and nixos ~= vim.NIL then
-    settings.options.nixos = {
-      expr = string.format('(builtins.getFlake "%s").nixosConfigurations."%s".options', root, nixos),
-    }
+---Resolve a flake's nixos/home-manager configuration names in the background,
+---then hand them to the already-running client.
+local function warm_nixd(root, client)
+  if warming[root] or disk_cache[root] then
+    return
+  end
+  warming[root] = true
+
+  local pending, entry = 2, {}
+  local function done()
+    pending = pending - 1
+    if pending > 0 then
+      return
+    end
+    disk_cache[root] = entry
+    do
+      save_disk_cache()
+      if client:is_stopped() then
+        return
+      end
+      local settings = vim.tbl_deep_extend("force", client.settings or {}, {
+        nixd = vim.tbl_deep_extend("force", nixpkgs_settings(root), {
+          options = cached_options(root) or {},
+        }),
+      })
+      client.settings = settings
+      client:notify("workspace/didChangeConfiguration", { settings = settings })
+    end
   end
 
-  local hm = pick_with_cache(root, "hm", "homeConfigurations", "config.home.username")
-  if hm and hm ~= vim.NIL then
-    settings.options.home_manager = {
-      expr = string.format('(builtins.getFlake "%s").homeConfigurations."%s".options', root, hm),
-    }
-  end
-
-  return settings
+  pick_async(root, "nixosConfigurations", "config.networking.hostName", function(name)
+    entry.nixos = name or false
+    done()
+  end)
+  pick_async(root, "homeConfigurations", "config.home.username", function(name)
+    entry.hm = name or false
+    done()
+  end)
 end
 
 -- Servers -------------------------------------------------------------------
@@ -189,6 +238,9 @@ local servers = {
         diagnostic = { suppress = { "sema-escaping-with" } },
       },
     },
+    -- Reads the cache only -- no `nix eval` on this path, so opening a .nix
+    -- file never waits. Anything not cached is filled in by warm_nixd() from
+    -- the LspAttach handler below.
     before_init = function(params, config)
       local root
       if params.workspaceFolders and params.workspaceFolders[1] then
@@ -202,7 +254,10 @@ local servers = {
       -- Mutate config.settings in place: vim.lsp.Client captures a reference at
       -- create() time, so reassigning the table here would be ignored.
       config.settings = config.settings or {}
-      config.settings.nixd = vim.tbl_deep_extend("force", config.settings.nixd or {}, nixd_settings_for_root(root))
+      config.settings.nixd = vim.tbl_deep_extend("force", config.settings.nixd or {}, nixpkgs_settings(root), {
+        options = cached_options(root) or {},
+      })
+      config.settings.nixd_root = root
     end,
   },
 
@@ -432,6 +487,17 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.keymap.set(mode, lhs, rhs, { buffer = buf, desc = desc })
     end
 
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+
+    -- nixd: if this flake's configuration names weren't cached, resolve them
+    -- in the background and push them to the running server. Never blocks.
+    if client and client.name == "nixd" then
+      local root = (client.settings or {}).nixd_root
+      if root then
+        warm_nixd(root, client)
+      end
+    end
+
     map("n", "grn", vim.lsp.buf.rename, "Rename symbol")
     map({ "n", "x" }, "gra", vim.lsp.buf.code_action, "Code action")
     map("n", "grr", vim.lsp.buf.references, "References")
@@ -452,7 +518,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
     -- Highlight the symbol under the cursor. This is what vim-illuminate did,
     -- except it's a built-in LSP request and costs nothing when idle.
-    local client = vim.lsp.get_client_by_id(args.data.client_id)
     if client and client:supports_method("textDocument/documentHighlight") then
       local group = vim.api.nvim_create_augroup("lsp_highlight_" .. buf, { clear = true })
       vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {

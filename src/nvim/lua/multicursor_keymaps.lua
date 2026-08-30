@@ -6,16 +6,22 @@ local map = vim.keymap.set
 local mc = require("multicursor-nvim")
 
 -- Add or skip a cursor above/below the main one.
-map({ "n", "x" }, "<up>", function()
+--
+-- On Alt, not the bare arrow keys. Under LazyVim this plugin was declared with
+-- no `keys`/`event`/`cmd` and `defaults.lazy = true`, so it had no load trigger
+-- and never actually loaded -- these mappings never existed and the arrows just
+-- moved the cursor. Binding them globally broke plain arrow movement
+-- everywhere, oil included.
+map({ "n", "x" }, "<M-Up>", function()
   mc.lineAddCursor(-1)
 end, { desc = "Multicursor: add cursor above" })
-map({ "n", "x" }, "<down>", function()
+map({ "n", "x" }, "<M-Down>", function()
   mc.lineAddCursor(1)
 end, { desc = "Multicursor: add cursor below" })
-map({ "n", "x" }, "<leader><up>", function()
+map({ "n", "x" }, "<leader><Up>", function()
   mc.lineSkipCursor(-1)
 end, { desc = "Multicursor: skip cursor above" })
-map({ "n", "x" }, "<leader><down>", function()
+map({ "n", "x" }, "<leader><Down>", function()
   mc.lineSkipCursor(1)
 end, { desc = "Multicursor: skip cursor below" })
 
@@ -43,8 +49,8 @@ map({ "n", "x" }, "<c-q>", mc.toggleCursor, { desc = "Multicursor: toggle cursor
 -- These only apply while multiple cursors exist, so they can overlap with
 -- normal mappings.
 mc.addKeymapLayer(function(layer)
-  layer({ "n", "x" }, "<left>", mc.prevCursor, { desc = "Multicursor: previous cursor" })
-  layer({ "n", "x" }, "<right>", mc.nextCursor, { desc = "Multicursor: next cursor" })
+  layer({ "n", "x" }, "<M-Left>", mc.prevCursor, { desc = "Multicursor: previous cursor" })
+  layer({ "n", "x" }, "<M-Right>", mc.nextCursor, { desc = "Multicursor: next cursor" })
   layer({ "n", "x" }, "<leader>mx", mc.deleteCursor, { desc = "Multicursor: delete cursor" })
   layer("n", "<esc>", function()
     if not mc.cursorsEnabled() then

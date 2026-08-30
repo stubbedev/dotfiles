@@ -91,15 +91,20 @@ local function macros()
     return reg == "" and "" or ("%#StRecord# REC @" .. reg .. " ")
   end
   local status = recorder.recordingStatus()
-  local slots = recorder.displaySlots()
-  local out = {}
   if status ~= "" then
-    table.insert(out, "%#StRecord# " .. status .. " ")
+    return "%#StRecord# " .. status .. " "
   end
-  if slots ~= "" then
-    table.insert(out, "%#StFill# " .. slots .. " ")
+
+  -- nvim-recorder deliberately returns "" when the only thing to show is an
+  -- empty active slot (`if output == "[ ]" then return "" end`), so the
+  -- indicator vanishes until a macro exists. Keep the slot on screen instead;
+  -- which slot is active isn't exported by the plugin, so an all-empty set
+  -- shows as an empty pair of brackets.
+  local slots = recorder.displaySlots()
+  if slots == "" then
+    slots = "\u{f00cd} [ ]"
   end
-  return table.concat(out)
+  return "%#StFill# " .. slots .. " "
 end
 
 local function branch()
@@ -108,6 +113,25 @@ local function branch()
     return ""
   end
   return "%#StBranch# \u{e0a0} " .. head .. " "
+end
+
+-- What to show in the file segment. Special buffers have no useful path -- a
+-- picker would otherwise print `term://~/git/dotfiles//2104962:/usr/bin/sh` --
+-- so name them by what they are.
+local function location()
+  if vim.bo.buftype == "terminal" then
+    return "terminal"
+  end
+  local ft = vim.bo.filetype
+  if ft == "oil" then
+    local ok, oil = pcall(require, "oil")
+    local dir = ok and oil.get_current_dir()
+    return dir and vim.fn.fnamemodify(dir, ":~") or "oil"
+  end
+  if vim.bo.buftype ~= "" then
+    return ft ~= "" and ft or "[scratch]"
+  end
+  return "%f%m%r"
 end
 
 function M.render()
@@ -120,7 +144,7 @@ function M.render()
     "%#StFill# ",
     diagnostics(),
     "%=", -- right-align everything after this
-    "%#StFile# %f%m%r ",
+    "%#StFile# " .. location() .. " ",
     "%#StFill# " .. (vim.bo.filetype ~= "" and vim.bo.filetype or "none") .. " ",
     macros(),
     "%#StMode# %l:%c  %P ",

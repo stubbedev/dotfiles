@@ -69,6 +69,55 @@ vim.cmd.colorscheme("catppuccin-mocha")
 
 -- Files ---------------------------------------------------------------------
 
+-- Set of git-ignored names per directory, resolved with one `git check-ignore
+-- --stdin` call for the whole directory. See is_always_hidden below.
+local ignore_cache = {}
+
+local function ignored_in(dir)
+  local cached = ignore_cache[dir]
+  if cached then
+    return cached
+  end
+
+  local set = {}
+  ignore_cache[dir] = set
+  if vim.fn.executable("git") == 0 then
+    return set
+  end
+
+  local names, scan = {}, vim.uv.fs_scandir(dir)
+  if scan then
+    while true do
+      local name = vim.uv.fs_scandir_next(scan)
+      if not name then
+        break
+      end
+      names[#names + 1] = name
+    end
+  end
+  if #names == 0 then
+    return set
+  end
+
+  -- check-ignore exits 1 when nothing matches, which is not an error here.
+  local res = vim
+    .system({ "git", "-C", dir, "check-ignore", "--stdin" }, { stdin = table.concat(names, "\n") .. "\n", text = true })
+    :wait()
+  for line in (res.stdout or ""):gmatch("[^\r\n]+") do
+    set[line] = true
+  end
+  return set
+end
+
+-- oil edits files, so a rename or delete can change what is ignored.
+vim.api.nvim_create_autocmd("User", {
+  pattern = "OilActionsPost",
+  group = vim.api.nvim_create_augroup("oil_ignore_cache", { clear = true }),
+  callback = function()
+    ignore_cache = {}
+  end,
+})
+
 require("oil").setup({
   default_file_explorer = true,
   columns = { "icon" },
@@ -113,16 +162,18 @@ require("oil").setup({
       return vim.startswith(name, ".")
     end,
     -- Hide what git ignores, so build output and vendor/ don't bury the tree.
+    --
+    -- oil asks this once per entry, so the obvious implementation -- one
+    -- `git check-ignore` per name -- spawns a process per file. Measured on a
+    -- 136-entry directory that was 136 spawns and 1818ms of blocked UI.
+    -- Instead: scan the directory once (no process), ask git about every name
+    -- in a single `--stdin` call, and cache the answer per directory.
     is_always_hidden = function(name, bufnr)
-      if vim.fn.executable("git") == 0 then
-        return false
-      end
       local dir = require("oil").get_current_dir(bufnr)
       if not dir then
         return false
       end
-      local path = vim.fs.joinpath(dir, name)
-      return vim.system({ "git", "-C", dir, "check-ignore", "-q", path }):wait().code == 0
+      return (ignored_in(dir))[name] == true
     end,
     sort = { { "type", "asc" }, { "name", "asc" } },
   },
@@ -230,10 +281,35 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
       -- fzf-lua shells out to the fzf binary from nix, so matching is native
       -- and the plugin is only the UI around it.
-      require("fzf-lua").setup({
-        "default",
-        winopts = { preview = { default = "builtin" } },
-        files = { git_icons = true },
+      -- Telescope-ish: centred float, rounded border, preview on the right.
+      -- `cwd_prompt = false` is the one that matters day to day -- fzf-lua
+      -- otherwise puts the whole cwd in front of the prompt, so you type your
+      -- query after `~/g/w/k/.w/f/KON-13271-.../`.
+      local fzf = require("fzf-lua")
+      fzf.setup({
+        fzf_colors = true, -- take colours from the colorscheme, not fzf's defaults
+        winopts = {
+          height = 0.85,
+          width = 0.85,
+          row = 0.4,
+          border = "rounded",
+          backdrop = 100, -- no dimming; catppuccin is dark enough
+          preview = {
+            default = "builtin",
+            border = "rounded",
+            layout = "flex",
+            horizontal = "right:55%",
+            scrollbar = "float",
+          },
+        },
+        fzf_opts = { ["--info"] = "inline-right", ["--layout"] = "reverse" },
+        files = {
+          cwd_prompt = false,
+          prompt = "Files  ",
+          git_icons = true,
+        },
+        grep = { prompt = "Grep  " },
+        buffers = { prompt = "Buffers  " },
       })
 
       require("treesitter-context").setup({ max_lines = 3, mode = "cursor" })
