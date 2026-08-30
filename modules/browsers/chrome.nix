@@ -213,7 +213,7 @@ _: {
           # and IS hardware-accelerated on the iGPU. Leave it — do not add
           # --ozone-platform=x11 to "fix" Vulkan; Wayland is intentional.
           pkg = pkgs.google-chrome.override {
-            commandLineArgs = builtins.concatStringsSep " " [
+            commandLineArgs = lib.concatStringsSep " " [
               "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
               "--enable-zero-copy"
               "--ignore-gpu-blocklist"

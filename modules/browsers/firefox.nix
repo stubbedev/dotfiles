@@ -34,7 +34,7 @@
         # element detection (which also hints anything with cursor:pointer,
         # a bare [tabindex], etc. — far too much on modern SPAs) with this
         # list keeps hints to genuinely interactive elements.
-        hintSelector = builtins.concatStringsSep ", " [
+        hintSelector = lib.concatStringsSep ", " [
           "a"
           "area"
           "button"

@@ -47,7 +47,7 @@ in
       final: _prev:
       let
         src = inputs.cship;
-        cargoMeta = (builtins.fromTOML (builtins.readFile "${src}/Cargo.toml")).package;
+        cargoMeta = (fromTOML (builtins.readFile "${src}/Cargo.toml")).package;
       in
       {
         cship = final.rustPlatform.buildRustPackage {

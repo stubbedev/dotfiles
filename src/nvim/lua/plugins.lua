@@ -105,49 +105,18 @@ vim.api.nvim_create_autocmd("User", {
   end,
 })
 
+-- Only what differs from oil's defaults: its default keymaps, columns,
+-- buf_options, sort order and float/preview geometry are already what we want,
+-- and restating them just means silently drifting from upstream.
 require("oil").setup({
-  default_file_explorer = true,
-  columns = { "icon" },
-  buf_options = { buflisted = false, bufhidden = "hide" },
-  win_options = {
-    wrap = false,
-    signcolumn = "yes:2", -- room for oil-git-status
-    cursorcolumn = false,
-    foldcolumn = "0",
-    spell = false,
-    list = false,
-    conceallevel = 3,
-    concealcursor = "nvic",
-  },
-  delete_to_trash = false,
-  skip_confirm_for_simple_edits = false,
-  prompt_save_on_select_new_entry = true,
-  cleanup_delay_ms = 2000,
+  -- Room for oil-git-status, which puts two signs in the gutter.
+  win_options = { signcolumn = "yes:2" },
   keymaps = {
-    ["g?"] = "actions.show_help",
-    ["<CR>"] = "actions.select",
-    ["<C-s>"] = "actions.select_vsplit",
-    ["<C-h>"] = "actions.select_split",
-    ["<C-t>"] = "actions.select_tab",
-    ["<C-p>"] = "actions.preview",
     ["<leader>e"] = "actions.close",
-    ["<C-c>"] = "actions.close",
-    ["<C-l>"] = "actions.refresh",
-    ["-"] = "actions.parent",
-    ["_"] = "actions.open_cwd",
-    ["`"] = "actions.cd",
-    ["~"] = "actions.tcd",
-    ["gs"] = "actions.change_sort",
-    ["gx"] = "actions.open_external",
-    ["g."] = "actions.toggle_hidden",
-    ["g\\"] = "actions.toggle_trash",
+    ["~"] = { "actions.cd", opts = { scope = "tab" }, mode = "n" },
   },
-  use_default_keymaps = true,
   view_options = {
     show_hidden = true,
-    is_hidden_file = function(name)
-      return vim.startswith(name, ".")
-    end,
     -- Hide what git ignores, so build output and vendor/ don't bury the tree.
     --
     -- oil asks this once per entry, so the obvious implementation -- one
@@ -157,30 +126,8 @@ require("oil").setup({
     -- in a single `--stdin` call, and cache the answer per directory.
     is_always_hidden = function(name, bufnr)
       local dir = require("oil").get_current_dir(bufnr)
-      if not dir then
-        return false
-      end
-      return (ignored_in(dir))[name] == true
+      return dir ~= nil and ignored_in(dir)[name] == true
     end,
-    sort = { { "type", "asc" }, { "name", "asc" } },
-  },
-  float = { padding = 2, max_width = 0, max_height = 0, win_options = { winblend = 0 } },
-  preview = {
-    max_width = 0.9,
-    min_width = { 40, 0.4 },
-    max_height = 0.9,
-    min_height = { 5, 0.1 },
-    win_options = { winblend = 0 },
-    update_on_cursor_moved = true,
-  },
-  progress = {
-    max_width = 0.9,
-    min_width = { 40, 0.4 },
-    max_height = { 10, 0.9 },
-    min_height = { 5, 0.1 },
-    border = "rounded",
-    minimized_border = "none",
-    win_options = { winblend = 0 },
   },
 })
 require("oil-git-status").setup()
@@ -189,36 +136,14 @@ require("oil-git-status").setup()
 
 require("nvim-ts-autotag").setup()
 
+-- Only the differences from nvim-recorder's defaults. Its default mapping
+-- table, performanceOpts and log level are already what we want; the third
+-- slot, rotation and the breakpoint key are not.
 require("recorder").setup({
   slots = { "a", "b", "c" },
   dynamicSlots = "rotate",
-  mapping = {
-    startStopRecording = "q",
-    playMacro = "Q",
-    switchSlot = "<C-q>",
-    editMacro = "cq",
-    deleteAllMacros = "dq",
-    yankMacro = "yq",
-    addBreakPoint = "^^",
-  },
-  clear = false,
-  logLevel = vim.log.levels.INFO,
   lessNotifications = true,
-  useNerdfontIcons = true,
-  performanceOpts = {
-    countThreshold = 100,
-    lazyredraw = true,
-    noSystemClipboard = true,
-    autocmdEventsIgnore = {
-      "TextChangedI",
-      "TextChanged",
-      "InsertLeave",
-      "InsertEnter",
-      "InsertCharPre",
-    },
-  },
-  dapSharedKeymaps = false,
-  timeout = 300,
+  mapping = { addBreakPoint = "^^" },
 })
 
 -- Completion ----------------------------------------------------------------
@@ -268,7 +193,6 @@ vim.api.nvim_create_autocmd("UIEnter", {
       vim.pack.add({
         { src = "https://github.com/ibhagwan/fzf-lua" },
         { src = "https://github.com/jake-stewart/multicursor.nvim", version = "1.0" },
-        { src = "https://github.com/mbbill/undotree" },
         { src = "https://github.com/nvim-treesitter/nvim-treesitter-context" },
         { src = "https://github.com/stevearc/conform.nvim" },
         { src = "https://github.com/mfussenegger/nvim-lint" },

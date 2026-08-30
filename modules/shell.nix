@@ -48,6 +48,12 @@
     let
       system = pkgs.stdenv.hostPlatform.system;
 
+      # `_hm` completes what the wrapper in modules/scripts.nix actually
+      # implements, because both render from this one table
+      # (modules/core/lib.nix). Hand-maintained, the two drifted: the
+      # completion used to offer `hm cache zsh` and `hm search`.
+      hmSpec = pkgs.stubbe.hm;
+
       # The zsh config tree, inline. Values are the sourceable files; the
       # completions/ subdir goes on fpath. zcompiled below.
       zshFiles = {
@@ -602,49 +608,21 @@
 
             local -a commands
             commands=(
-              # Always available — wrapper-defined or platform-agnostic.
-              'upgrade:Update system packages, nix channels, and apply switch'
-              'update:Update system packages and nix channels'
-              'whoami:Print this machine'\'''s age recipient pubkey for sops'
-              'trust:Add an age recipient to .sops.yaml and re-wrap secrets/*'
-              'secret:Edit, set, or rotate an encrypted file under secrets/'
-              'cache:Wipe cached state (nvim|zsh|locks|all)'
-              'clean:Interactive TUI to scan/reclaim disk space (build dirs, caches, core dumps, nix gc)'
-              'iso:Build the NixOS installer ISO or burn it to a USB device'
-              'search:Search for nix packages'
-              'help:Print help message'
-              'switch:Build and activate configuration'
-              'build:Build configuration into result directory'
-              'generations:List system / home-manager generations'
-              'rollback:Roll back to the previous generation'
-              'gc:nix-collect-garbage (defaults to -d)'
+              # Works everywhere the wrapper does.
+              ${hmSpec.renderZsh "    " "all"}
             )
 
             if (( _hm_is_nixos )); then
               # NixOS-only — these all route through nixos-rebuild and have no
               # standalone home-manager equivalent.
               commands+=(
-                'boot:Build and set as next-boot only'
-                'test:Activate without making it the default'
-                'dry-build:Show what would build, do not fetch/build'
-                'dry-activate:Show what activate would do, do not activate'
-                'build-vm:Build a VM image of the configuration'
-                'build-vm-with-bootloader:Build a VM image including a bootloader'
-                'repl:Open a nix repl scoped to the configuration'
+                ${hmSpec.renderZsh "      " "nixos"}
               )
             else
               # Standalone home-manager only — the wrapper rejects these on NixOS
               # because the home-manager CLI isn't installed in submodule mode.
               commands+=(
-                'edit:Open the home configuration in $VISUAL or $EDITOR'
-                'option:Inspect configuration option'
-                'init:Initialize a configuration in the given directory'
-                'instantiate:Instantiate the configuration and print the resulting derivation'
-                'remove-generations:Remove indicated generations'
-                'expire-generations:Remove generations older than timestamp'
-                'packages:List all packages installed in home-manager-path'
-                'news:Show news entries in a pager'
-                'uninstall:Remove Home Manager'
+                ${hmSpec.renderZsh "      " "standalone"}
               )
             fi
 
@@ -691,9 +669,6 @@
                 ;;
               args)
                 case $words[1] in
-                  search)
-                    _message 'package name to search for'
-                    ;;
                   option)
                     _message 'configuration option name'
                     ;;
@@ -722,11 +697,7 @@
                   iso)
                     local -a iso_cmds
                     iso_cmds=(
-                      'build:Build the installer ISO'
-                      'path:Build the ISO and print its store path'
-                      'devices:List removable/block devices'
-                      'burn:Build the ISO and write it to a USB device (requires --yes)'
-                      'help:Show nixos-iso help'
+                      ${hmSpec.renderSubZsh "            " "iso"}
                     )
                     case $words[2] in
                       burn)
@@ -762,7 +733,7 @@
                     esac
                     return 0
                     ;;
-                  update|upgrade|help|edit|build|instantiate|switch|generations|packages|news|uninstall|whoami|boot|test|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|rollback)
+                  ${hmSpec.plainVerbs})
                     # These commands don't take meaningful tab-completable arguments here;
                     # extra flags fall through via the default _command_names branch.
                     return 0
@@ -792,9 +763,7 @@
                       2)
                         local -a actions
                         actions=(
-                          'edit:Open secrets/<name> in $EDITOR via sops (binary mode)'
-                          'set:Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)'
-                          'rotate:Re-roll the data key (recipients unchanged)'
+                          ${hmSpec.renderSubZsh "                " "secret"}
                         )
                         _describe -t actions 'secret action' actions
                         ;;
@@ -826,10 +795,7 @@
                       2)
                         local -a targets
                         targets=(
-                          'nvim:Clear ~/.local/{share,state}/nvim and ~/.cache/nvim'
-                          'zsh:Remove legacy pre-nix zsh state (plugins.d, fpaths.d, stale zcompdump/zwc)'
-                          'locks:Wipe ~/.local/state/nix/home-manager/*.lock.sum (re-prompts on next switch)'
-                          'all:nvim + zsh (does NOT touch locks)'
+                          ${hmSpec.renderSubZsh "                " "cache"}
                         )
                         _describe -t cache-targets 'cache target' targets
                         ;;

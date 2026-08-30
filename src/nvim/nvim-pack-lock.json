@@ -82,10 +82,6 @@
       "rev": "791ef71968d542e3764174fac5264da1eac0ccf7",
       "src": "https://github.com/mrcjkb/rustaceanvim"
     },
-    "undotree": {
-      "rev": "6fa6b57cda8459e1e4b2ca34df702f55242f4e4d",
-      "src": "https://github.com/mbbill/undotree"
-    },
     "which-key.nvim": {
       "rev": "3aab2147e74890957785941f0c1ad87d0a44c15a",
       "src": "https://github.com/folke/which-key.nvim"

@@ -48,27 +48,41 @@ _: {
           // lib.optionalAttrs (server ? env) { inherit (server) env; };
 
       # Codex has no managed-config include, so its wrapper supplies each complete
-      # server table as a dotted config override. JSON strings/arrays are valid TOML
-      # values here; inline tables need TOML's `=` separators. env_http_headers reads
-      # PWD from Codex's launch environment, giving HTTP servers the same per-window
-      # X-Repo-Root value as Claude.
+      # server table as a dotted config override. TOML inline tables are the one
+      # shape `pkgs.formats.toml` cannot emit (it only writes whole documents), so
+      # this is the serialiser: `{k=v,…}` with TOML's `=` separators, recursing on
+      # nested attrsets. Every leaf is a string, list or bool, for which JSON and
+      # TOML agree on the literal — hence toJSON for keys and scalars.
+      tomlValue = v: if builtins.isAttrs v then tomlInlineTable v else builtins.toJSON v;
+      # TOML bare keys are [A-Za-z0-9_-]; anything else has to be quoted, and a
+      # quoted TOML key is spelled the same as a JSON string.
+      tomlKey = k: if builtins.match "[A-Za-z0-9_-]+" k != null then k else builtins.toJSON k;
       tomlInlineTable =
         attrs:
         "{${
           lib.concatStringsSep "," (
-            lib.mapAttrsToList (key: value: "${builtins.toJSON key}=${builtins.toJSON value}") attrs
+            lib.mapAttrsToList (key: value: "${tomlKey key}=${tomlValue value}") attrs
           )
         }}";
+
+      # env_http_headers reads PWD from Codex's launch environment, giving HTTP
+      # servers the same per-window X-Repo-Root value as Claude.
+      toCodexTable =
+        server:
+        if server.transport == "http" then
+          {
+            inherit (server) url;
+            env_http_headers."X-Repo-Root" = "PWD";
+          }
+        else
+          {
+            inherit (server) command args;
+          }
+          // lib.optionalAttrs (server ? env) { inherit (server) env; };
+
       toCodex = name: server: [
         "-c"
-        (lib.escapeShellArg "mcp_servers.${name}=${
-          if server.transport == "http" then
-            ''{url=${builtins.toJSON server.url},env_http_headers={"X-Repo-Root"="PWD"}}''
-          else
-            "{command=${builtins.toJSON server.command},args=${builtins.toJSON server.args}${
-              lib.optionalString (server ? env) ",env=${tomlInlineTable server.env}"
-            }}"
-        }")
+        (lib.escapeShellArg "mcp_servers.${name}=${tomlInlineTable (toCodexTable server)}")
       ];
     in
     {

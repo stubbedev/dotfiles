@@ -198,6 +198,11 @@ _: {
       ...
     }:
     let
+      # The `hm` CLI surface as data — help rows, sub-command names, the
+      # NixOS verb list. Defined once in modules/core/lib.nix so the wrapper
+      # below and the zsh completion in modules/shell.nix cannot disagree.
+      hmSpec = pkgs.stubbe.hm;
+
       # Desktop-only zsh launchers (tmux/fzf pickers and pane toggles).
       launchers = pkgs.stubbe.tmuxLaunchers // {
         "fzf-pick-directory" = ''
@@ -527,7 +532,7 @@ _: {
                 dry-build|build-vm|build-vm-with-bootloader)
                   ;;
                 *)
-                  echo "hm $subcmd: unavailable on NixOS. Supported subcommands: switch, boot, test, build, dry-build, dry-activate, build-vm, build-vm-with-bootloader, repl, rollback, gc, generations." >&2
+                  echo "hm $subcmd: unavailable on NixOS. Supported subcommands: ${hmSpec.nixosVerbs}." >&2
                   return 1
                   ;;
               esac
@@ -804,45 +809,10 @@ _: {
           Usage: hm <command> [args]
 
           Commands:
-            update              Update system package managers and nix inputs
-            upgrade             Update system packages and apply switch (auto-prunes
-                                  old generations, keeping current + 1 previous)
-            whoami              Print "<hostname> <age-pubkey>" for this machine
-            trust [name] <key>  Add an age recipient to .sops.yaml and re-wrap secrets/*
-                                  - hm trust <name> <pubkey>
-                                  - hm trust <pubkey>           (auto-named)
-                                  - cmd | hm trust              (e.g. ssh other hm whoami | hm trust)
-            secret edit <name>  Open secrets/<name> in $EDITOR via sops, binary mode (creates if absent)
-            secret set <name>   Replace secrets/<name> with a new value (prompts on TTY, reads stdin otherwise)
-            secret rotate <name>  Re-roll the data key for secrets/<name>, recipients unchanged
-            cache <target>      Wipe cached state (target: nvim|locks|all)
-            clean [dir]         Interactive fzf TUI to scan/reclaim disk space: build
-                                  dirs (node_modules, target, .next, dist, vendor,
-                                  .venv), ~/.cache subdirs, ~/core dumps, and nix gc.
-                                  Scans [dir] (default $HOME). Nothing deleted without
-                                  confirmation.
-            iso build [args]    Build the NixOS installer ISO
-            iso path [args]     Build the ISO and print its store path
-            iso devices         List removable/block devices
-            iso burn <dev> --yes  Build the ISO and write it to a USB device
+          ${hmSpec.renderExpandedHelp "wrapper"}
 
-            switch              Build and activate (default boot entry on NixOS);
-                                  auto-prunes old generations to current + 1 previous
-            boot                Build and set as next-boot only (NixOS)
-            test                Activate without making it the default (NixOS)
-            build               Build without activating
-            dry-build           Show what would build, don't fetch/build
-            dry-activate        Show what activate would do, don't activate (NixOS)
-            build-vm            Build a VM image of the configuration (NixOS)
-            build-vm-with-bootloader  Same, including bootloader (NixOS)
-            repl                Open a nix repl scoped to the configuration (NixOS)
-            rollback            Roll back to the previous generation
-            generations         List system/home-manager generations
-            gc [args]           No args: nh clean (all profiles + gcroots + store gc).
-                                  With args: nix-collect-garbage <args>.
-            news                Read home-manager release notes (non-NixOS)
-            instantiate         home-manager instantiate (non-NixOS)
-            help                Show this help message
+          ${hmSpec.renderExpandedHelp "rebuild"}
+          ${hmSpec.renderHelp "meta"}
 
           switch/boot/test/build/repl, gc, generations, and rollback route through
           `nh` (version diff + progress output). The remaining verbs (dry-build,
@@ -1038,16 +1008,12 @@ _: {
           Usage: hm cache <target>
 
           Targets:
-            nvim         Clear ~/.local/{share,state}/nvim and ~/.cache/nvim.
-            locks        Wipe ~/.local/state/nix/home-manager/*.lock.sum so every
-                         privileged activation re-runs on next switch.
-            all          nvim. Does NOT touch locks — that's intentional
-                         (re-runs every gated activation; opt-in only).
+          ${hmSpec.renderSubHelp "cache"}
           EOF
                 [ -z "$target" ] && return 2 || return 0
                 ;;
               *)
-                echo "hm cache: unknown target '$target' (want nvim|locks|all)" >&2
+                echo "hm cache: unknown target '$target' (want ${hmSpec.subNames "cache"})" >&2
                 return 2
                 ;;
             esac
@@ -1111,7 +1077,7 @@ _: {
             local action="''${1:-}"
             local name="''${2:-}"
             if [ -z "$action" ] || [ -z "$name" ]; then
-              echo "Usage: hm secret {edit|set|rotate} <name>" >&2
+              echo "Usage: hm secret {${hmSpec.subNames "secret"}} <name>" >&2
               return 2
             fi
             # All secrets are binary-mode single-blob files under secrets/<name>.
@@ -1286,11 +1252,7 @@ _: {
           Usage: nixos-iso <command> [args]
 
           Commands:
-            build [args]          Build the installer ISO with --impure
-            path [args]           Build the ISO and print the output path
-            devices               List removable/block devices
-            burn <device> --yes   Build the ISO and write it to a USB device
-            help                  Show this help message
+          ${hmSpec.renderSubHelp "iso"}
 
           Environment:
             NIXOS_FLAKE_DIR       Override the flake directory (default: ~/.stubbe)

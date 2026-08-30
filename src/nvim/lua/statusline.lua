@@ -48,10 +48,6 @@ local function set_highlights()
   hl("StFile", c.text, c.surface0)
   hl("StFill", c.subtext, c.mantle)
   hl("StRecord", c.base, c.red, true)
-  hl("StError", c.red, c.mantle)
-  hl("StWarn", c.yellow, c.mantle)
-  hl("StHint", c.teal, c.mantle)
-  hl("StInfo", c.blue, c.mantle)
   -- Tabline
   hl("TabLineSel", c.base, c.blue, true)
   hl("TabLine", c.subtext, c.surface0)
@@ -64,22 +60,12 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = set_highlights,
 })
 
+-- vim.diagnostic.status() renders every severity with its count, already
+-- highlighted, using the sign text from vim.diagnostic.config() in
+-- lua/options.lua. It replaces ~20 lines that did the same by hand.
 local function diagnostics()
-  local counts = vim.diagnostic.count(0)
-  local parts = {}
-  local severities = {
-    { vim.diagnostic.severity.ERROR, "StError", "\u{f057} " },
-    { vim.diagnostic.severity.WARN, "StWarn", "\u{f071} " },
-    { vim.diagnostic.severity.INFO, "StInfo", "\u{f05a} " },
-    { vim.diagnostic.severity.HINT, "StHint", "\u{f0eb} " },
-  }
-  for _, s in ipairs(severities) do
-    local n = counts[s[1]] or 0
-    if n > 0 then
-      table.insert(parts, ("%%#%s#%s%d"):format(s[2], s[3], n))
-    end
-  end
-  return table.concat(parts, " ")
+  local status = vim.diagnostic.status()
+  return status == "" and "" or (" " .. status .. " ")
 end
 
 -- nvim-recorder's macro slots. Falls back to nvim's own reg_recording() if the

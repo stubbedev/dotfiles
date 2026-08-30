@@ -50,8 +50,7 @@ map({ "i", "x", "n", "s" }, "<C-s>", "<cmd>w<cr><esc>", { desc = "Save file" })
 
 map("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
 map("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })
-map("n", "[b", "<cmd>bprevious<cr>", { desc = "Prev buffer" })
-map("n", "]b", "<cmd>bnext<cr>", { desc = "Next buffer" })
+-- [b and ]b are Neovim 0.12 defaults.
 
 local function delete_buffers(keep_current)
   local current = vim.api.nvim_get_current_buf()
@@ -155,10 +154,12 @@ end, { desc = "Format buffer" })
 map("n", "<leader>ur", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
 map("n", "<esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })
-map("n", "gx", function()
-  vim.ui.open(vim.fn.expand("<cfile>"))
-end, { desc = "Open with system app" })
-map({ "n", "v" }, "<leader>z", "<cmd>UndotreeToggle<cr>", { desc = "Undotree" })
+-- Undo tree browser. Neovim 0.12 ships one as a bundled opt package, so this
+-- no longer needs mbbill/undotree.
+map({ "n", "v" }, "<leader>z", function()
+  vim.cmd.packadd("nvim.undotree")
+  vim.cmd.Undotree()
+end, { desc = "Undo tree" })
 map("n", "<leader>ll", function()
   vim.pack.update()
 end, { desc = "Update plugins" })

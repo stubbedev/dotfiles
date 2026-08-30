@@ -99,7 +99,7 @@ _: {
           sourceFor = exe: if gfx then "${gfxOf exe}/bin/${exe}" else "${pkg}/bin/${exe}";
 
           wrapperArgs = lib.concatStringsSep " " (
-            lib.concatMap (x: x) [
+            lib.concatLists [
               (map (f: "--add-flags ${lib.escapeShellArg f}") flags)
               (lib.mapAttrsToList (k: v: "--set ${k} ${lib.escapeShellArg v}") env)
               (map (k: "--unset ${k}") unset)

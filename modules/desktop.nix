@@ -334,36 +334,33 @@ in
           let
             links = [
               {
-                src = "${pkgs.udisks2}/etc/systemd/system/udisks2.service";
-                dst = "/etc/systemd/system/udisks2.service";
+                source = "${pkgs.udisks2}/etc/systemd/system/udisks2.service";
+                target = "/etc/systemd/system/udisks2.service";
               }
               {
-                src = "${pkgs.udisks2}/share/dbus-1/system.d/org.freedesktop.UDisks2.conf";
-                dst = "/etc/dbus-1/system.d/org.freedesktop.UDisks2.conf";
+                source = "${pkgs.udisks2}/share/dbus-1/system.d/org.freedesktop.UDisks2.conf";
+                target = "/etc/dbus-1/system.d/org.freedesktop.UDisks2.conf";
               }
               {
-                src = "${pkgs.udisks2}/share/dbus-1/system-services/org.freedesktop.UDisks2.service";
-                dst = "/usr/share/dbus-1/system-services/org.freedesktop.UDisks2.service";
+                source = "${pkgs.udisks2}/share/dbus-1/system-services/org.freedesktop.UDisks2.service";
+                target = "/usr/share/dbus-1/system-services/org.freedesktop.UDisks2.service";
               }
               {
-                src = "${pkgs.udisks2}/share/polkit-1/actions/org.freedesktop.UDisks2.policy";
-                dst = "/usr/share/polkit-1/actions/org.freedesktop.UDisks2.policy";
+                source = "${pkgs.udisks2}/share/polkit-1/actions/org.freedesktop.UDisks2.policy";
+                target = "/usr/share/polkit-1/actions/org.freedesktop.UDisks2.policy";
               }
               {
-                src = "${pkgs.udisks2}/lib/udev/rules.d/80-udisks2.rules";
-                dst = "/etc/udev/rules.d/80-udisks2.rules";
+                source = "${pkgs.udisks2}/lib/udev/rules.d/80-udisks2.rules";
+                target = "/etc/udev/rules.d/80-udisks2.rules";
               }
               {
-                src = "${pkgs.udisks2}/etc/udisks2/udisks2.conf";
-                dst = "/etc/udisks2/udisks2.conf";
+                source = "${pkgs.udisks2}/etc/udisks2/udisks2.conf";
+                target = "/etc/udisks2/udisks2.conf";
               }
             ];
           in
           ''
-            ${lib.concatMapStrings (l: ''
-              sudo install -d -m 0755 "$(dirname "${l.dst}")"
-              sudo ln -sfT "${l.src}" "${l.dst}"
-            '') links}
+            ${lib.concatMapStrings pkgs.stubbe.installLink links}
 
             sudo install -d -m 0755 /var/lib/udisks2
 

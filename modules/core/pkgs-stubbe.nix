@@ -92,6 +92,19 @@
             sudo install -D -m ${mode} -o ${owner} -g ${group} ${source} ${lib.escapeShellArg target}
           '';
 
+        # Symlink a store path into a root-owned system location, creating the
+        # parent directory. Unlike installFile this leaves no copy behind, so
+        # the target follows the store path a rebuild produces — right for
+        # files a host daemon reads but never rewrites (dbus service units,
+        # udisks2.conf). Takes the same `{ source, target }` shape as
+        # installFile so a list of links renders with concatMapStrings.
+        installLink =
+          { source, target }:
+          ''
+            sudo install -d -m 0755 ${lib.escapeShellArg (dirOf target)}
+            sudo ln -sfT ${source} ${lib.escapeShellArg target}
+          '';
+
         # Same, for content generated in Nix rather than kept as a repo file.
         installText =
           {

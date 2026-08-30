@@ -44,24 +44,21 @@ _: {
           let
             links = [
               {
-                src = "${pkgs.blueman}/lib/systemd/system/blueman-mechanism.service";
-                dst = "/etc/systemd/system/blueman-mechanism.service";
+                source = "${pkgs.blueman}/lib/systemd/system/blueman-mechanism.service";
+                target = "/etc/systemd/system/blueman-mechanism.service";
               }
               {
-                src = "${pkgs.blueman}/share/dbus-1/system.d/org.blueman.Mechanism.conf";
-                dst = "/etc/dbus-1/system.d/org.blueman.Mechanism.conf";
+                source = "${pkgs.blueman}/share/dbus-1/system.d/org.blueman.Mechanism.conf";
+                target = "/etc/dbus-1/system.d/org.blueman.Mechanism.conf";
               }
               {
-                src = "${pkgs.blueman}/share/dbus-1/system-services/org.blueman.Mechanism.service";
-                dst = "/usr/share/dbus-1/system-services/org.blueman.Mechanism.service";
+                source = "${pkgs.blueman}/share/dbus-1/system-services/org.blueman.Mechanism.service";
+                target = "/usr/share/dbus-1/system-services/org.blueman.Mechanism.service";
               }
             ];
           in
           ''
-            ${lib.concatMapStrings (l: ''
-              sudo install -d -m 0755 "$(dirname "${l.dst}")"
-              sudo ln -sfT "${l.src}" "${l.dst}"
-            '') links}
+            ${lib.concatMapStrings pkgs.stubbe.installLink links}
 
             ${pkgs.stubbe.installText {
               name = "org.blueman.policy";
