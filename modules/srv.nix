@@ -124,7 +124,8 @@
       # ExecStart at the flake-pinned binary tracks the current srv and
       # keeps it a GC root, so it never goes stale.
       #
-      # Migration is automatic — see migrateSrvDaemonUnit below.
+      # Migration off the imperative unit is automatic — see the `force`
+      # below.
       systemd.user.services.srv-daemon = {
         Unit = {
           Description = "srv daemon - Docker container network connector";
@@ -152,18 +153,18 @@
       };
 
       # Auto-migrate off any imperatively-installed daemon unit. `srv daemon
-      # install` writes a *real* file at this path; home-manager links its own
-      # unit there and would abort with "Existing file would be clobbered"
-      # (no backupFileExtension is set). Runs before checkLinkTargets so the
-      # path is clear when HM links. Only a real file is removed — an existing
-      # HM symlink is left untouched, so this is a no-op on already-migrated
-      # hosts and on macOS (no systemd user dir, the test just fails).
-      home.activation.migrateSrvDaemonUnit = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-        _srv_unit="${config.xdg.configHome}/systemd/user/srv-daemon.service"
-        if [ -e "$_srv_unit" ] && [ ! -L "$_srv_unit" ]; then
-          $DRY_RUN_CMD rm -f $VERBOSE_ARG "$_srv_unit"
-        fi
-      '';
+      # install` writes a *real* file at this path, which home-manager would
+      # refuse to replace ("Existing file would be clobbered" -- no
+      # backupFileExtension is set). `force` claims the path instead.
+      #
+      # This merges onto the unit home-manager's systemd module already
+      # generates: it renders every unit through `xdg.configFile` under
+      # exactly this name, setting `source`, and this adds `force`. Linux
+      # only -- on darwin that module is disabled, so there is no entry to
+      # attach to and defining one alone would be a file with no source.
+      xdg.configFile = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
+        "systemd/user/srv-daemon.service".force = true;
+      };
 
       stubbe.setup = {
         # Non-NixOS: `mkcert -install` trusts the CA in BOTH the system store
