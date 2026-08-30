@@ -5,10 +5,10 @@ set -euo pipefail
 #
 # Steps:
 #   1. Symlink ${HOME}/.stubbe to this repo (the rest of the config assumes it).
-#   2. Install lix (nix) if missing.
+#   2. Install nix if missing.
 #   3. Configure /etc/nix/nix.conf for flakes + this user as trusted.
-#   4. Bootstrap home-manager and run `home-manager switch` against the
-#      flake at ${HOME}/.stubbe#stubbe.
+#   4. Build the flake's activation package and run it; every switch after
+#      this one goes through the `home-manager` binary it installs.
 #
 # Everything else (fonts, docker, dev tools, IDE licenses, ...) is owned
 # by home-manager modules under modules/ — don't add it here.
@@ -47,23 +47,48 @@ main() {
   link_dotfiles
   install_nix
   configure_nix
-  install_home_manager
   switch_home_manager
 }
 
 link_dotfiles() {
-  if [ -L "$HOME/.stubbe" ] && [ "$(readlink -f "$HOME/.stubbe")" = "$PWD" ]; then
+  local target="$HOME/.stubbe"
+
+  # Covers both "already the right symlink" and "the repo IS ~/.stubbe",
+  # because readlink -f on a plain directory returns the directory. The
+  # second case used to fall through to the rm below, which deleted the
+  # repository out from under the running script.
+  if [ "$(readlink -f "$target" 2>/dev/null)" = "$PWD" ]; then
     return 0
   fi
-  rm -rf "$HOME/.stubbe"
-  ln -sf "$PWD" "$HOME/.stubbe"
+
+  # Anything else already sitting at ~/.stubbe is somebody's data, not ours
+  # to delete. Only a symlink pointing elsewhere gets replaced.
+  if [ -e "$target" ] && [ ! -L "$target" ]; then
+    echo "$target exists and is not a symlink. Move it aside and re-run." >&2
+    exit 1
+  fi
+
+  rm -f "$target"
+  ln -s "$PWD" "$target"
 }
 
 install_nix() {
-  # The lix installer is idempotent: a fresh run on an existing install
-  # upgrades it in place. Run unconditionally so every `stb-install` also
-  # picks up the latest lix.
-  curl -sSf -L https://install.lix.systems/lix | sh -s -- install
+  # Only bootstrap a *missing* nix. Unlike the lix installer this replaced,
+  # the Determinate installer is not an in-place upgrader: it refuses when it
+  # finds an existing install, which under `set -e` would abort every re-run
+  # of this script on an already-provisioned host.
+  #
+  # Determinate rather than lix or upstream, for the evaluator: nix's is
+  # single-threaded, and a full system eval of this flake is ~36s of one
+  # saturated core. Determinate's `eval-cores` splits it (3-4x measured). It
+  # has to come from the installer — nix-src cannot be built from nixpkgs
+  # (its boost coroutine patch rejects against boost 1.89) and its prebuilt
+  # binaries live behind an authenticated FlakeHub Cache, so there is no
+  # flake input that would let modules/nix.nix just set `nix.package`.
+  if [ -e /nix/var/nix/profiles/default/bin/nix ] || command -v nix >/dev/null 2>&1; then
+    return 0
+  fi
+  curl -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
 }
 
 configure_nix() {
@@ -98,21 +123,27 @@ configure_nix() {
   fi
 }
 
-install_home_manager() {
+switch_home_manager() {
+  local flake_path activation
+  flake_path=$(readlink -f "$HOME/.stubbe")
+
+  # --impure: modules/graphics.nix probes /proc for the GPU.
   if [ -x "$HOME/.nix-profile/bin/home-manager" ]; then
+    "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
     return 0
   fi
-  export NIXPKGS_ALLOW_UNFREE=1
-  /nix/var/nix/profiles/default/bin/nix-channel --add \
-    https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
-  /nix/var/nix/profiles/default/bin/nix-channel --update
-  /nix/var/nix/profiles/default/bin/nix-shell '<home-manager>' -A install
-}
 
-switch_home_manager() {
-  local flake_path
-  flake_path=$(readlink -f "$HOME/.stubbe")
-  "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
+  # First run: no `home-manager` binary yet. Build the activation package
+  # straight out of the flake and run it. This uses the home-manager pinned in
+  # our own flake.lock; the `nix-channel` + `nix-shell '<home-manager>' -A
+  # install` bootstrap it replaces pulled an unpinned master (free to drift
+  # from the one the config is written against) and left channel state behind
+  # that modules/nix.nix then has to prune. programs.home-manager.enable puts
+  # the real binary on PATH from here on.
+  activation=$(/nix/var/nix/profiles/default/bin/nix build --no-link --print-out-paths \
+    --extra-experimental-features 'nix-command flakes' --impure \
+    "$flake_path#homeConfigurations.stubbe.activationPackage")
+  "$activation/activate"
 }
 
 main "$@"
