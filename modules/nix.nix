@@ -50,6 +50,12 @@ in
           # re-check, which is cheap on a fast link to a close cache.
           narinfo-cache-negative-ttl = 0;
 
+          # 1 MiB (the nix default) stalls substitution: the NAR decompressor
+          # blocks the moment the buffer fills, so downloads run in lockstep
+          # with the writer ("warning: download buffer is full"). 128 MiB is
+          # RAM we have and keeps the stream moving.
+          download-buffer-size = 128 * 1024 * 1024;
+
           # Hardlink-dedupe identical files on every add, rather than waiting
           # for the weekly `nix.optimise` run. Cheap per build, and it keeps
           # store growth smooth between GC cycles.

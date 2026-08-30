@@ -57,7 +57,26 @@
       # here so user-mode `nix` calls hit the same caches.
       nix = lib.mkIf (config.host.platform != "nixos") {
         package = lib.mkDefault pkgs.nix;
-        settings = { inherit (pkgs.stubbe.cache) substituters trusted-public-keys; };
+        settings = {
+          inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
+
+          # nix's own default is max-jobs = 1 — every derivation builds
+          # serially. NixOS's module overrides it to "auto"; standalone HM does
+          # not, so a non-NixOS host silently builds one-at-a-time on an
+          # 8-core machine. cores = 2 caps each job's internal -j so
+          # `auto` jobs x cores does not oversubscribe into swap on a big
+          # C++/rust rebuild; raise it if builds are latency-bound, not
+          # throughput-bound.
+          max-jobs = "auto";
+          cores = 2;
+
+          # 1 MiB (the nix default) is smaller than a single NAR chunk for
+          # anything non-trivial: the decompressor blocks on a full buffer and
+          # the download stalls in lockstep with the writer ("warning: download
+          # buffer is full"). 128 MiB costs RAM we have and keeps substitution
+          # streaming.
+          download-buffer-size = 128 * 1024 * 1024;
+        };
       };
     };
 
