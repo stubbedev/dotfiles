@@ -75,7 +75,6 @@
       cursorSize = 24;
       gtk = "catppuccin-mocha-mauve-standard";
       kvantum = "Catppuccin-Mocha-Mauve";
-      sddm = "catppuccin-mocha-mauve";
       plymouth = "catppuccin-mocha";
     };
 

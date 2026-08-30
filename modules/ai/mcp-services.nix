@@ -34,13 +34,12 @@
     lib.mkIf (config.features.claudeCode || config.features.codex) (
       let
         system = pkgs.stdenv.hostPlatform.system;
-        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE / KONTAINER_CMS_REMOTE /
-        # KONTAINER_SITE_REMOTE / KONFORM_HOST),
-        # decrypted at
-        # activation. Fed to mcp-proxy as an EnvironmentFile so the gated repo
-        # remote never lands in this public repo or the world-readable store;
-        # proxy-mcp expands the ${KONTAINER_REMOTE}/${KONFORM_HOST} placeholders in its config
-        # (repoWhitelist) at runtime via --expand-env. Edit: hm secret edit mcp-proxy-env.
+        # sops-encrypted KEY=VALUE env-file (KONTAINER_REMOTE /
+        # KONTAINER_CMS_REMOTE / KONTAINER_SITE_REMOTE / KONFORM_HOST), fed to
+        # mcp-proxy as an EnvironmentFile so the gated repo remote never lands
+        # in this public repo or the world-readable store. proxy-mcp expands the
+        # placeholders in repoWhitelist at runtime via --expand-env.
+        # Edit: hm secret edit mcp-proxy-env.
         proxyEnvPath = "${config.home.homeDirectory}/.config/mcp-proxy/proxy.env";
         inherit (config.stubbe.mcp) servers;
 
@@ -64,26 +63,16 @@
           };
         };
 
-        # On-demand stdio servers (modules/ai/mcp-servers.nix `proxied`) — the WHOLE set
-        # behind ONE proxy-mcp, which does socket activation, per-upstream lazy
-        # connect, per-upstream idle teardown, and process idle-exit itself. Just
-        # TWO units total (not two per backend):
+        # On-demand stdio servers (modules/ai/mcp-servers.nix `proxied`) — the
+        # WHOLE set behind ONE proxy-mcp, so TWO units total rather than two per
+        # backend. proxy-mcp adopts the activation socket ($LISTEN_FDS) instead
+        # of binding, and serves every backend at /<name>/mcp.
         #
-        #   mcp-proxy.socket   loopback ListenStream on the one shared port; on
-        #                      the first connection systemd starts mcp-proxy,
-        #                      handing it the listening fd.
-        #   mcp-proxy.service  proxy-mcp. It adopts the activation socket
-        #                      ($LISTEN_FDS) instead of binding and serves every
-        #                      backend at /<name>/mcp. Each backend (mode
-        #                      "shared" → one stdio child shared across windows)
-        #                      is connected lazily on the first request to its
-        #                      route and torn down after its own options.idle
-        #                      Timeout of route silence, so the heavy browser
-        #                      retires while a DB stays warm. The process itself
-        #                      exits after --idle-timeout of total silence,
-        #                      re-arming the socket; the next connection
-        #                      re-activates it and re-connects only the backend
-        #                      hit.
+        # Each backend is connected lazily on the first request to its route and
+        # torn down after its own options.idleTimeout of route silence, so the
+        # heavy browser retires while a DB stays warm. The process itself exits
+        # after --idle-timeout of total silence, re-arming the socket; the next
+        # connection re-activates it and re-connects only the backend hit.
         #
         # Type=notify: proxy-mcp signals READY=1 only once every route is
         # registered (lazy routes register immediately), holding off Accept on
@@ -94,21 +83,20 @@
         # chrome-devtools-mcp child inherits it.
         backendPath = "PATH=${pkgs.nodejs}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
-        # One shared loopback addr for the whole proxied set (every entry carries
-        # the same host/port; only `path` differs).
+        # Taking the head is safe: every proxied entry carries the same
+        # host/port, only `path` differs.
         proxyHost = (lib.head (lib.attrValues servers.proxied)).host;
         proxyPort = (lib.head (lib.attrValues servers.proxied)).port;
         # Process idle-exit floor: the longest per-upstream idle, so the process
         # outlives the last backend it might still be retiring.
         procIdleSec = lib.foldl' lib.max 0 (map (p: p.idleSec) (lib.attrValues servers.proxied));
 
-        # ONE proxy-mcp config: the proxy server + every backend keyed by name so
-        # each is served at /<name>/mcp. Per entry, mode "shared" multiplexes
-        # every window onto one upstream session (one stdio child), and
-        # idleTimeout makes that backend lazy + self-retiring on its own clock.
-        # type must be set explicitly — proxy-mcp defaults to SSE otherwise. addr
-        # is ignored under socket activation (the adopted fd wins) but kept valid
-        # for config validation.
+        # Backends are keyed by name so each is served at /<name>/mcp. mode
+        # "shared" multiplexes every window onto one upstream session (one stdio
+        # child); idleTimeout makes that backend lazy and self-retiring.
+        # `type` must be set explicitly — proxy-mcp defaults to SSE otherwise.
+        # `addr` is ignored under socket activation (the adopted fd wins) but
+        # kept valid for config validation.
         proxyConfig = (pkgs.formats.json { }).generate "mcp-proxy.json" {
           mcpProxy = {
             baseURL = "http://${proxyHost}:${toString proxyPort}";
@@ -118,12 +106,10 @@
             type = "streamable-http";
             options.logEnabled = true;
           };
-          # A backend is either a spawned stdio command (command/args) or an
-          # existing HTTP upstream (url/transportType — used to front the
-          # jenkins/sentry HTTP services behind a repoWhitelist gate). Options
-          # default to mode "shared"; a backend that needs per-window roots
-          # relayed sets mode "perSession", and repoWhitelist (when present)
-          # gates tool visibility to matching repos.
+          # The url/transportType shape fronts the jenkins/sentry HTTP services
+          # behind a repoWhitelist gate. mode "perSession" is for a backend that
+          # needs per-window roots relayed; repoWhitelist gates tool visibility
+          # to matching repos.
           mcpServers = lib.mapAttrs (
             _: p:
             (
@@ -145,7 +131,6 @@
           ) servers.proxied;
         };
 
-        # Only build the units when at least one proxied backend exists.
         proxiedSockets = lib.optionalAttrs (servers.proxied != { }) {
           mcp-proxy = {
             Unit.Description = "MCP proxy socket (on-demand activation)";
@@ -187,10 +172,9 @@
         };
       in
       {
-        # secrets/<provider>-mcp is the raw JSON config that server reads at
-        # startup (URLs + tokens), decrypted to ~/.config/<provider>-mcp/
-        # config.json — the path each httpService passes via --config. Edit any
-        # of them with `hm secret edit <provider>-mcp`.
+        # Each secret is the raw JSON config (URLs + tokens) its server reads at
+        # startup, at the path that httpService passes via --config. Edit with
+        # `hm secret edit <provider>-mcp`.
         sops.secrets = {
           mcp-proxy-env = pkgs.stubbe.secret {
             name = "mcp-proxy-env";
