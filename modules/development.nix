@@ -14,13 +14,8 @@
       home.packages =
         with pkgs;
         [
-          # Pinned: the work monorepo sets engines.node 24.x and yarn 1 hard-fails
-          # on a mismatch, so yarn has to run under the same node.
           nodejs_24
-          bun
           pnpm
-          (yarn.override { nodejs = nodejs_24; })
-          deno
 
           prettier
           oxlint
@@ -37,7 +32,6 @@
           mongosh
           redis # provides redis-cli
 
-          c3c
           caddy
           freerdp
           openconnect
@@ -123,18 +117,6 @@
             xargs -0 -r cat >> "$tmp"
         }
 
-        add_valet_paths() {
-          for dir in \
-            "$HOME/.valet" \
-            "$HOME/.config/valet" \
-            "''${XDG_DATA_HOME:-$HOME/.local/share}/valet" \
-            "''${XDG_CONFIG_HOME:-$HOME/.config}/valet"; do
-            [ -d "$dir" ] || continue
-            add_dir "$dir/CA"
-            add_dir "$dir/Certificates"
-          done
-        }
-
         add_srv_paths() {
           add_file "''${XDG_DATA_HOME:-$HOME/.local/share}/mkcert/rootCA.pem"
           local sites_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/srv/sites"
@@ -154,7 +136,6 @@
           [ -n "$caroot" ] && add_file "$caroot/rootCA.pem"
         fi
 
-        add_valet_paths
         ${lib.optionalString config.features.srv "add_srv_paths"}
 
         awk '

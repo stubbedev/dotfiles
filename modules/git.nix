@@ -9,10 +9,6 @@ _: {
     let
       c = pkgs.stubbe.withHash;
 
-      stripClaudeCoauthors = pkgs.writeShellScript "git-hook-commit-msg-strip-claude-coauthors" ''
-        exec ${lib.getExe pkgs.gnused} -E -i '/^Co-authored-by:.*(Claude|Anthropic)/Id' "$1"
-      '';
-
       lazygitSettings = {
         os = {
           edit = "nvim {{filename}}";
@@ -61,10 +57,8 @@ _: {
     lib.mkIf config.features.desktop {
       programs.git = {
         enable = true;
-        hooks.commit-msg = stripClaudeCoauthors;
         ignores = [
           ".worktrees"
-          ".gwt-*"
           ".treeman.yaml"
           ".treeman.local.yaml"
           ".treeman/"

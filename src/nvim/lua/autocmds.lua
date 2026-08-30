@@ -89,3 +89,12 @@ vim.api.nvim_create_autocmd("VimResized", {
   group = augroup("resize"),
   command = "tabdo wincmd =",
 })
+
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = augroup("oil_start"),
+  callback = function()
+    if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" and vim.fn.line2byte(vim.fn.line("$")) == -1 then
+      require("oil").open()
+    end
+  end,
+})

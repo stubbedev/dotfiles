@@ -69,7 +69,7 @@ local function macros()
 
   local slots = recorder.displaySlots()
   if slots == "" then
-    slots = "\u{f00cd} [ ]"
+    slots = "\u{f00fd} [ ]"
   end
   return "%#StFill# " .. slots .. " "
 end

@@ -39,7 +39,7 @@ _: {
         zip
         unzip
         p7zip
-        rar # ships both rar and unrar
+        rar
 
         xsel
         less
@@ -58,7 +58,6 @@ _: {
 
         tabiew
         nushell
-        glow
         gum
         goaccess
       ];

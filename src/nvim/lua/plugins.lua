@@ -102,6 +102,9 @@ require("recorder").setup({
 
 
 require("blink.cmp").setup({
+  enabled = function()
+    return vim.bo.filetype ~= "grug-far"
+  end,
   completion = {
     documentation = { auto_show = true, auto_show_delay_ms = 500 },
   },
@@ -196,8 +199,27 @@ vim.api.nvim_create_autocmd("UIEnter", {
         session_lens = { load_on_setup = false },
       })
 
+      _G.GrugFarFloat = function()
+        local width = math.floor(vim.o.columns * 0.85)
+        local height = math.floor(vim.o.lines * 0.85)
+        local scratch = vim.api.nvim_create_buf(false, true)
+        vim.bo[scratch].bufhidden = "wipe"
+        vim.api.nvim_open_win(scratch, true, {
+          relative = "editor",
+          width = width,
+          height = height,
+          row = math.floor((vim.o.lines - height) * 0.4),
+          col = math.floor((vim.o.columns - width) / 2),
+          border = "rounded",
+          title = " search / replace ",
+          title_pos = "center",
+        })
+      end
+
       require("grug-far").setup({
         engines = { astgrep = { path = "ast-grep" } },
+        windowCreationCommand = "lua _G.GrugFarFloat()",
+        keymaps = { close = { n = "<esc>" } },
       })
     end)
   end,
