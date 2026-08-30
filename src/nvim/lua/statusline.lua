@@ -107,6 +107,18 @@ local function macros()
   return "%#StFill# " .. slots .. " "
 end
 
+-- Whatever a language server is currently busy with -- indexing, loading a
+-- workspace. Empty when nothing is running, so it costs a line only when there
+-- is something to say. Fed by the `Progress` event, so it covers anything that
+-- reports progress, not just LSP.
+local function progress()
+  local ok, status = pcall(vim.ui.progress_status)
+  if not ok or not status or status == "" then
+    return ""
+  end
+  return "%#StFill# " .. status:gsub("%%", "%%%%"):sub(1, 40) .. " "
+end
+
 local function branch()
   local head = vim.b.gitsigns_head
   if not head or head == "" then
@@ -143,6 +155,7 @@ function M.render()
     branch(),
     "%#StFill# ",
     diagnostics(),
+    progress(),
     "%=", -- right-align everything after this
     "%#StFile# " .. location() .. " ",
     "%#StFill# " .. (vim.bo.filetype ~= "" and vim.bo.filetype or "none") .. " ",

@@ -73,8 +73,29 @@ function _G.reflow_monitors(lid_closed)
     end
 end
 
+-- Lid position, read from the ACPI _LID method at config time.
+--
+-- Both halves of the closed-lid state — panel off and touchpad off — are
+-- derived from this, so a plain `hyprctl reload` puts the session in the right
+-- state on its own and there is no lid dispatch to keep in sync. That matters
+-- because the SW_LID input edge is not dependable here: after a Thunderbolt
+-- dock cycle the firmware stops reporting the transition (dmesg: "ACPI:
+-- button: The lid device is not compliant to SW_LID", newer kernels FW_BUG
+-- "Unexpected lid state reported by firmware"), so libinput never suspends the
+-- touchpad and nothing disables the panel. scripts/monitor.toggle.sh polls
+-- _LID for the same reason and reloads on every change it sees.
+local function lid_closed()
+    local f = io.popen("cat /proc/acpi/button/lid/*/state 2>/dev/null")
+    if not f then
+        return false
+    end
+    local out = f:read("*a") or ""
+    f:close()
+    return out:lower():find("closed") ~= nil
+end
+
 local function setup_monitors()
-    reflow_monitors(false)
+    reflow_monitors(lid_closed())
 end
 
 -------------------------------------------------------------------- CONFIG
@@ -173,6 +194,9 @@ local function setup_device()
     -- must be set here or libinput falls back to its own defaults.
     hl.device({
         name = "snsl0028:00-2c2f:0028-touchpad",
+        -- Off with the lid, the job libinput's SW_LID handling would do if the
+        -- lid switch were dependable on this machine (see lid_closed).
+        enabled = not lid_closed(),
         middle_button_emulation = true,
         clickfinger_behavior = true,
         drag_lock = true,

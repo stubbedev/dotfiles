@@ -331,9 +331,12 @@ local servers = {
   },
 
   -- Web
+  -- Not attached to plain `php`: the server is a 143MB node process, and in
+  -- this codebase 20 of 6588 non-blade .php files contain any HTML at all --
+  -- the templates are all .blade.php, which is still covered.
   html = {
     cmd = { "vscode-html-language-server", "--stdio" },
-    filetypes = { "html", "htm", "templ", "tmpl", "php", "blade", "twig" },
+    filetypes = { "html", "htm", "templ", "tmpl", "blade", "twig" },
     root_markers = { "package.json", ".git" },
     init_options = {
       provideFormatter = false, -- prettier does this
@@ -408,16 +411,14 @@ local servers = {
     settings = { templ = { enable_snippets = true } },
   },
 
-  -- Python
-  basedpyright = {
-    cmd = { "basedpyright-langserver", "--stdio" },
+  -- Python: ruff lints and formats, ty type-checks. Both are Astral's and both
+  -- are Rust, replacing basedpyright -- a 153MB node process -- with 14MB.
+  -- ty is pre-1.0; if its type checking ever disagrees with reality, swapping
+  -- back to basedpyright is this block plus one line in modules/nvim.nix.
+  ty = {
+    cmd = { "ty", "server" },
     filetypes = { "python" },
-    root_markers = { "pyproject.toml", "setup.py", "requirements.txt", ".git" },
-    settings = {
-      basedpyright = {
-        analysis = { typeCheckingMode = "standard", diagnosticMode = "openFilesOnly" },
-      },
-    },
+    root_markers = { "ty.toml", "pyproject.toml", "setup.py", "requirements.txt", ".git" },
   },
   ruff = {
     cmd = { "ruff", "server" },
@@ -431,15 +432,20 @@ local servers = {
     filetypes = { "sh", "bash", "zsh" },
     root_markers = { ".git" },
   },
-  dockerls = {
-    cmd = { "docker-langserver", "--stdio" },
-    filetypes = { "dockerfile" },
-    root_markers = { "Dockerfile", ".git" },
-  },
-  docker_compose_language_service = {
-    cmd = { "docker-compose-langserver", "--stdio" },
-    filetypes = { "yaml.docker-compose" },
-    root_markers = { "docker-compose.yaml", "docker-compose.yml", "compose.yaml", "compose.yml" },
+  -- Docker's own Go server, covering Dockerfile *and* compose. Replaces
+  -- dockerfile-language-server and docker-compose-language-service, which were
+  -- two separate node processes at 70MB and 71MB.
+  docker_language_server = {
+    cmd = { "docker-language-server", "start", "--stdio" },
+    filetypes = { "dockerfile", "yaml.docker-compose" },
+    root_markers = {
+      "Dockerfile",
+      "docker-compose.yaml",
+      "docker-compose.yml",
+      "compose.yaml",
+      "compose.yml",
+      ".git",
+    },
   },
   lua_ls = {
     cmd = { "lua-language-server" },
@@ -505,9 +511,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "grd", vim.lsp.buf.definition, "Go to definition")
     map("n", "grt", vim.lsp.buf.type_definition, "Go to type definition")
     map("n", "gO", vim.lsp.buf.document_symbol, "Document symbols")
-    map("n", "K", function()
-      vim.lsp.buf.hover({ border = "rounded" })
-    end, "Hover")
+    map("n", "K", vim.lsp.buf.hover, "Hover") -- border comes from 'winborder'
 
     -- Inlay hints off by default: they reflow the line as you type.
     -- <leader>uh toggles them per buffer.

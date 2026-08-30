@@ -4,6 +4,36 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
+-- Built-in plugins that are pure cost here. These have to be set before the
+-- plugin-loading pass, which is why they live at the top of the first module
+-- init.lua requires.
+--
+-- matchparen is the one that matters: it re-searches for the matching bracket
+-- on every CursorMoved/CursorMovedI/TextChanged, and measured at 27% of this
+-- config's total CursorMoved time. The rest are archive/browser plugins that
+-- register autocmds and never fire -- gzip alone installs 11 BufWritePost
+-- handlers. netrw is redundant with oil, which is the file explorer.
+for _, plugin in ipairs({
+  "gzip",
+  "matchit",
+  "matchparen",
+  "netrw",
+  "netrwPlugin",
+  "netrwSettings",
+  "netrwFileHandlers",
+  "tar",
+  "tarPlugin",
+  "zip",
+  "zipPlugin",
+  "2html_plugin",
+  "tutor_mode_plugin",
+  "rrhelper",
+  "vimball",
+  "vimballPlugin",
+}) do
+  vim.g["loaded_" .. plugin] = 1
+end
+
 local o = vim.opt
 
 -- Files and undo
@@ -45,6 +75,11 @@ o.showmode = false -- the statusline already says the mode
 o.ruler = false
 o.pumheight = 10
 o.pumblend = 10
+
+-- One border style for every floating window -- hover, signature help,
+-- diagnostic floats, plugin popups -- instead of passing `border` at each call
+-- site and missing the ones you do not own.
+o.winborder = "rounded"
 o.conceallevel = 2
 o.list = true
 o.fillchars = { foldopen = "▾", foldclose = "▸", fold = " ", eob = " ", diff = "╱" }
@@ -55,6 +90,19 @@ o.laststatus = 3 -- one global statusline, not one per window
 -- The command line is an empty row under the statusline whenever it isn't
 -- being typed into. Neovim reclaims it on demand, so nothing is lost.
 o.cmdheight = 0
+
+-- ui2 is Neovim 0.12's rewrite of the message and cmdline UI, and it is what
+-- makes cmdheight = 0 liveable: without it any message longer than the (zero
+-- height) cmdline raises a "Press ENTER or type command to continue" prompt.
+-- With it, short messages appear transiently and long ones go to a pager
+-- window that `q` dismisses -- which is most of what noice.nvim was here for.
+--
+-- Still experimental and still a private module, hence the pcall: if it is
+-- renamed in a future release the editor keeps starting, it just goes back to
+-- hit-enter prompts.
+pcall(function()
+  require("vim._core.ui2").enable()
+end)
 o.showtabline = 1 -- tabline only when lua/statusline.lua says there's something to show
 o.shortmess:append({ W = true, I = true, c = true, C = true })
 o.timeoutlen = 300
@@ -162,5 +210,5 @@ vim.diagnostic.config({
       [vim.diagnostic.severity.HINT] = "\u{f0eb} ",
     },
   },
-  float = { border = "rounded", source = "if_many" },
+  float = { source = "if_many" }, -- border comes from 'winborder'
 })

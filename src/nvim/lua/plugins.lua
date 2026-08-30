@@ -28,26 +28,13 @@ vim.pack.add({
   { src = "https://github.com/windwp/nvim-ts-autotag" },
 }, { confirm = false })
 
--- `load = false` puts these on the runtimepath (so `require` finds them) but
--- doesn't source their plugin/ files, which keeps them off the startup path.
--- They cost ~28ms between them -- fzf-lua alone is 20 -- and none is needed
--- before the UI is up.
-vim.pack.add({
-  { src = "https://github.com/ibhagwan/fzf-lua" },
-  { src = "https://github.com/jake-stewart/multicursor.nvim", version = "1.0" },
-  { src = "https://github.com/mbbill/undotree" },
-  { src = "https://github.com/nvim-treesitter/nvim-treesitter-context" },
-  { src = "https://github.com/stevearc/conform.nvim" },
-  { src = "https://github.com/mfussenegger/nvim-lint" },
-  { src = "https://github.com/mrcjkb/rustaceanvim" },
-  { src = "https://github.com/saecki/crates.nvim" },
-  { src = "https://github.com/lewis6991/gitsigns.nvim" },
-  { src = "https://github.com/folke/lazydev.nvim" }, -- lua_ls that knows the nvim API
-  { src = "https://github.com/folke/which-key.nvim" },
-  { src = "https://github.com/windwp/nvim-autopairs" },
-  { src = "https://github.com/rmagatti/auto-session" },
-  { src = "https://github.com/MagicDuck/grug-far.nvim" },
-}, { confirm = false, load = false })
+-- The rest are registered from the post-UI hook at the bottom of this file,
+-- not here. `vim.pack.add(..., { load = false })` is not enough on its own:
+-- it skips sourcing the plugin at that moment, but the directory still lands
+-- on the runtimepath, and Neovim's normal plugin pass then sources every
+-- plugin/*.lua it finds there. gitsigns and nvim-treesitter-context require
+-- their whole module from that file, so both were loading during startup
+-- despite being "deferred".
 
 -- Colorscheme ---------------------------------------------------------------
 
@@ -252,32 +239,48 @@ require("blink.cmp").setup({
   -- cost, measured). The Rust scorer ranks these sources fine on its own.
 })
 
+-- crates.nvim's setup() installs global CursorMoved/CursorMovedI/TextChanged/
+-- TextChangedI autocmds, which then run in every buffer -- a PHP file was
+-- paying for them. The plugin is registered with the others above so
+-- vim.pack.update() still sees it; only its setup is held back until there is
+-- a Cargo.toml to act on.
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+  pattern = "Cargo.toml",
+  once = true,
+  group = vim.api.nvim_create_augroup("crates_lazy", { clear = true }),
+  callback = function()
+    require("crates").setup({ completion = { crates = { enabled = true } } })
+  end,
+})
+
 -- Deferred plugins ----------------------------------------------------------
 --
--- Everything above is on the runtimepath but unsourced. Loading it one tick
--- after the UI appears keeps it out of the startup measurement *and* out of
--- the time before the first frame, which is the part that's actually felt.
+-- Everything registered below is loaded one tick after the UI appears, so it
+-- stays out of both the startup path and the time before the first frame,
+-- which is the part that is actually felt.
 vim.api.nvim_create_autocmd("UIEnter", {
   once = true,
   callback = function()
     vim.schedule(function()
-      for _, name in ipairs({
-        "fzf-lua",
-        "multicursor.nvim",
-        "undotree",
-        "nvim-treesitter-context",
-        "conform.nvim",
-        "nvim-lint",
-        "rustaceanvim",
-        "crates.nvim",
-        "gitsigns.nvim",
-        "which-key.nvim",
-        "nvim-autopairs",
-        "auto-session",
-        "grug-far.nvim",
-      }) do
-        pcall(vim.cmd.packadd, name)
-      end
+      -- Registered here rather than during init.lua: after startup vim.pack
+      -- defaults to loading what it adds, and nothing above has been on the
+      -- runtimepath until now, so none of it touched the startup path.
+      vim.pack.add({
+        { src = "https://github.com/ibhagwan/fzf-lua" },
+        { src = "https://github.com/jake-stewart/multicursor.nvim", version = "1.0" },
+        { src = "https://github.com/mbbill/undotree" },
+        { src = "https://github.com/nvim-treesitter/nvim-treesitter-context" },
+        { src = "https://github.com/stevearc/conform.nvim" },
+        { src = "https://github.com/mfussenegger/nvim-lint" },
+        { src = "https://github.com/mrcjkb/rustaceanvim" },
+        { src = "https://github.com/saecki/crates.nvim" },
+        { src = "https://github.com/lewis6991/gitsigns.nvim" },
+        { src = "https://github.com/folke/lazydev.nvim" }, -- lua_ls that knows the nvim API
+        { src = "https://github.com/folke/which-key.nvim" },
+        { src = "https://github.com/windwp/nvim-autopairs" },
+        { src = "https://github.com/rmagatti/auto-session" },
+        { src = "https://github.com/MagicDuck/grug-far.nvim" },
+      }, { confirm = false })
 
       -- fzf-lua shells out to the fzf binary from nix, so matching is native
       -- and the plugin is only the UI around it.
@@ -313,9 +316,14 @@ vim.api.nvim_create_autocmd("UIEnter", {
       })
 
       require("treesitter-context").setup({ max_lines = 3, mode = "cursor" })
-      require("crates").setup({ completion = { crates = { enabled = true } } })
       require("multicursor-nvim").setup()
       require("gitsigns").setup()
+
+      -- lazydev teaches lua_ls about the Neovim API. It has to be loaded
+      -- before lua_ls attaches to a Lua buffer, which UIEnter comfortably is.
+      require("lazydev").setup({
+        library = { { path = "${3rd}/luv/library", words = { "vim%.uv" } } },
+      })
       require("format").setup()
       require("multicursor_keymaps")
 
@@ -348,18 +356,5 @@ vim.api.nvim_create_autocmd("UIEnter", {
         engines = { astgrep = { path = "ast-grep" } },
       })
     end)
-  end,
-})
-
--- lazydev teaches lua_ls the Neovim API, so it only matters once a Lua buffer
--- exists -- and it must be loaded before lua_ls attaches to one.
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "lua",
-  once = true,
-  callback = function()
-    vim.cmd.packadd("lazydev.nvim")
-    require("lazydev").setup({
-      library = { { path = "${3rd}/luv/library", words = { "vim%.uv" } } },
-    })
   end,
 })

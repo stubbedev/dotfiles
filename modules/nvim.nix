@@ -142,8 +142,11 @@
                 # Backend / domain
                 phpantom_lsp
                 templ
-                basedpyright
+                # Python: ruff lints and formats, ty type-checks. Both are
+                # Astral's, both are Rust, and together they replace
+                # basedpyright -- a 153MB node process -- with 14MB.
                 ruff
+                ty
                 rust-analyzer
                 gopls
                 golangci-lint-langserver
@@ -153,9 +156,9 @@
                 sqruff
                 postgres-language-server # deeper postgres semantics when a project wants it
 
-                # Containers
-                dockerfile-language-server
-                docker-compose-language-service
+                # Containers. One Go binary covering Dockerfile *and* compose,
+                # replacing the two node servers (70MB + 71MB) it supersedes.
+                docker-language-server
 
                 # ── Formatters / linters ────────────────────────────────
                 stylua
