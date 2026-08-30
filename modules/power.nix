@@ -1,16 +1,6 @@
-# Power: what the machine does when the charger comes and goes, when the lid
-# closes, and how long the battery lasts.
-#
-# The reactive core is one shell script (`stubbe.lib.powerSourceScript` below)
-# deployed two ways — a NixOS service + udev rule, or the equivalent files
-# written into /etc by a privileged activation. Both halves are here, so the
-# unit shape and the script cannot drift apart. The script lives in
-# `stubbe.lib` so modules/dev/power-source.nix tests the exact deployed bytes.
 _: {
-  # No shebang and no strict mode: the NixOS half runs it via systemd `script`,
-  # and under `set -e` the "already at the wanted thresholds" guard
-  # (`[ a = b ] && [ c = d ] && exit 0`) would abort the script whenever it is
-  # false — which is the common path.
+  # No shebang and no strict mode: under `set -e` the "already at the wanted
+  # thresholds" guard aborts the script whenever it is false, the common path.
   stubbe.lib.powerSourceScript = ''
     # Everything this machine does in reaction to the power source: pick the
     # power-profiles-daemon profile, and decide how far to charge the battery.
@@ -199,44 +189,29 @@ _: {
       ...
     }:
     {
-      # Provides the system D-Bus service at /net/hadess/PowerProfiles, which
-      # wayle's power-profiles module reads (and sets on left-click ":cycle").
-      # Without it the module reads "unknown".
-      #
-      # PPD alone handles CPU scaling (platform_profile + EPP) since the Lunar
-      # Lake 400MHz firmware bug was fixed in BIOS 1.45 — the old
-      # power.profile.fix.sh layer and intel_pstate=passive are gone.
+      # wayle's power-profiles module reads "unknown" without this D-Bus service.
       services.power-profiles-daemon.enable = true;
 
-      # macOS-style lid behaviour: closing the lid suspends on battery and on
-      # AC, but the machine stays awake in clamshell mode when an external
-      # display is connected ("docked" counts connected non-eDP DRM
-      # connectors). Undocking with the lid already closed is handled by
-      # src/hyprland/scripts/monitor.toggle.sh — logind only acts on the lid
-      # switch edge (systemd#7690).
+      # Undocking with the lid already closed is handled in
+      # src/hyprland/scripts/monitor.toggle.sh instead: logind only acts on the
+      # lid switch edge (systemd#7690).
       services.logind.settings.Login = {
         HandleLidSwitch = "suspend";
         HandleLidSwitchExternalPower = "suspend";
         HandleLidSwitchDocked = "ignore";
       };
 
-      # 0775 root:users so `battery-full` can drop the override flag without
-      # sudo — the .path unit below turns that into an immediate run.
+      # root:users so `battery-full` can drop the flag without sudo.
       systemd.tmpfiles.rules = [ "d /run/battery-charge 0775 root users -" ];
 
       systemd.services.power-source = {
         description = "Apply power-source policy (profile + charge threshold)";
-        # Ordering only, no `wants`: the charging half still has work to do on
-        # a host where power-profiles-daemon is not running.
+        # Ordering only: the charging half still works without PPD running.
         after = [ "power-profiles-daemon.service" ];
         serviceConfig = {
           Type = "oneshot";
           StateDirectory = "power-source";
         };
-        # `script` rather than writeShellApplication: that wrapper forces
-        # `set -e`, under which the "already at the wanted thresholds" guard
-        # (`[ a = b ] && [ c = d ] && exit 0`) would abort the script whenever
-        # it is false — which is the common path.
         path = with pkgs; [
           coreutils
           gawk
@@ -245,11 +220,9 @@ _: {
         script = pkgs.stubbe.powerSourceScript;
       };
 
-      # Immediate reaction to plug/unplug — the timer alone would leave a
-      # performance profile draining the battery for up to five minutes. Both
-      # Mains and USB: with a USB-C-only charger the AC device may never fire
-      # an event. --no-block keeps the udev worker free while the unit runs,
-      # and this also fires on the boot coldplug, so no separate init unit.
+      # Both Mains and USB: a USB-C-only charger may never fire an AC event.
+      # --no-block keeps the udev worker free; the boot coldplug fires it too,
+      # so no separate init unit is needed.
       services.udev.extraRules =
         let
           run = "${lib.getExe' config.systemd.package "systemctl"} --no-block start power-source.service";
@@ -259,9 +232,6 @@ _: {
           SUBSYSTEM=="power_supply", ATTR{type}=="USB", RUN+="${run}"
         '';
 
-      # Catches the approach of the usual unplug time. A run costs nothing: on
-      # battery the script exits right after recording, and the profile half
-      # only acts on a change.
       systemd.timers.power-source = {
         description = "Re-evaluate power-source policy";
         wantedBy = [ "timers.target" ];
@@ -272,7 +242,6 @@ _: {
         };
       };
 
-      # Makes `battery-full` take effect at once instead of at the next tick.
       systemd.paths.power-source-full = {
         description = "Watch for a manual charge-to-full request";
         wantedBy = [ "paths.target" ];
@@ -291,11 +260,8 @@ _: {
       ...
     }:
     let
-      # Intel hybrid parts, by family — intel-lpmd only has a P/E-core topology
-      # to work with on these, and exits immediately anywhere else. The numbers
-      # are CPUID model IDs as /proc/cpuinfo reports them (list from omarchy).
-      # Keyed by family so a new generation is one named line rather than a
-      # digit appended to a bare run of numbers and a comment to keep in sync.
+      # CPUID model IDs as /proc/cpuinfo reports them. intel-lpmd needs a
+      # P/E-core topology and exits immediately anywhere else.
       intelHybridModels = {
         alder-lake = [
           151
@@ -315,12 +281,6 @@ _: {
       };
     in
     lib.mkIf config.features.desktop {
-      # "Charge to Full Now" — the button macOS puts next to Optimized Battery
-      # Charging. Lifts the 80% cap for the rest of this charging session;
-      # unplugging clears it and the cap comes straight back. Just drops a flag
-      # file: power-source-full.path is watching for it and starts
-      # power-source.service the moment it appears, so no sudo and no waiting
-      # for the next timer tick.
       home.packages = [
         (pkgs.stubbe.bashApp {
           name = "battery-full";
@@ -339,8 +299,6 @@ _: {
       ];
 
       stubbe.setup = {
-        # The non-NixOS half of the NixOS block above: same script, same unit
-        # shape, written into /etc with FHS paths.
         powerSource = {
           privileged = true;
           title = "Installing power-source policy (profile + adaptive charging)";
@@ -373,8 +331,8 @@ _: {
                 name = "power-source.sh";
                 target = scriptPath;
                 mode = "0755";
-                # env-resolved host bash: this copy lives in /usr/local and
-                # must survive a nix-collect-garbage.
+                # Host bash: this copy lives in /usr/local and must survive a
+                # nix-collect-garbage.
                 text = "#!/usr/bin/env bash\n" + pkgs.stubbe.powerSourceScript;
               }}
 
@@ -449,7 +407,6 @@ _: {
             '';
         };
 
-        # 80% charge cap, the single biggest lever on battery lifespan.
         batteryChargeThreshold = {
           privileged = true;
           title = "Installing battery charge threshold (80%)";
@@ -506,16 +463,11 @@ _: {
           '';
         };
 
-        # Host-package-level battery tuning, ported from omarchy's power
-        # scripts. Deliberately NOT ported, because none of it helps here:
-        #   - thermald: refuses to start on ThinkPads exposing
-        #     thinkpad_acpi/dytc_lapmode ("Thermald can't run on this
-        #     platform") — DYTC/platform_profile already owns thermal policy.
-        #   - wifi powersave toggling: NetworkManager already ships
-        #     wifi.powersave=3 (always on), which is the state omarchy's udev
-        #     rule aims for; its AC half turns it back off, a net loss.
-        #   - disabling USB autosuspend: costs battery, and is installed on
-        #     purpose (audio pops on the dock) — see modules/hardware.nix.
+        # Deliberately absent, each having been tried:
+        #   - thermald refuses to start where thinkpad_acpi/dytc_lapmode exists.
+        #   - wifi powersave toggling: NetworkManager already sets powersave=3,
+        #     and the AC half turns it back off for a net loss.
+        #   - USB autosuspend is disabled on purpose (modules/hardware.nix).
         batteryPower = {
           privileged = true;
           title = "Installing battery power tuning";
@@ -567,7 +519,6 @@ _: {
           '';
         };
 
-        # macOS-style lid behaviour; the NixOS half is services.logind above.
         logindLid = {
           privileged = true;
           title = "Installing systemd-logind lid switch handler";

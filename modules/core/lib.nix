@@ -1,19 +1,6 @@
-# `config.stubbe.lib` — the repo's single source of truth for pure data and
-# pure functions. Nothing here touches `pkgs` or a module `config`, so it is
-# safe to read from any class (nixos, homeManager) and from flake-level code
-# (the checks, the installer ISO).
-#
-# Modules do NOT read this directly: modules/core/pkgs-stubbe.nix re-exports the
-# whole thing as `pkgs.stubbe`, alongside the builders that do need `pkgs`.
-# Inside a module, reach for `pkgs.stubbe.<x>`; at flake-parts level, for
-# `config.stubbe.lib.<x>`. There is no third way, and no `specialArgs`.
-#
-# Why a plain flake-parts option rather than `flake.lib` alone: `flake.lib` is a
-# freeform flake output, and reading a freeform attr forces the whole `flake`
-# submodule — including the transposed perSystem outputs, which need `pkgs`,
-# which is built from the overlays that read this. That is an infinite
-# recursion. A declared top-level option has no such dependency, so it is what
-# the overlay reads; `flake.lib` below is only the outward-facing mirror.
+# A declared option, not `flake.lib` alone: reading a freeform flake attr forces
+# the whole `flake` submodule, including perSystem outputs that need `pkgs`,
+# which is built from the overlays that read this. `flake.lib` is only a mirror.
 {
   config,
   self,
@@ -30,13 +17,8 @@
   config.flake.lib = config.stubbe.lib;
 
   config.stubbe.lib = {
-    # Repo source root. Baked here so no module needs `self` injected.
     src = self;
 
-    # Catppuccin Mocha (hex, no leading #). Every themed surface derives its
-    # colours from this one attrset — see `toHex`/`toRgb`/`toArgb` below for
-    # the per-format renderers, so a palette swap never needs a hand-edit in
-    # a .theme / .rasi / .lua / .css file.
     colors = {
       rosewater = "f5e0dc";
       flamingo = "f2cdcd";
@@ -66,9 +48,6 @@
       crust = "11111b";
     };
 
-    # Theme names referenced across modules. Kept in lockstep with what
-    # modules/theming.nix actually selects; pure strings, so both classes read
-    # them the same way (`pkgs.stubbe.theme.<x>`).
     theme = {
       icon = "Tela-circle-purple-dark";
       cursor = "Vimix-cursors";
@@ -78,23 +57,12 @@
       plymouth = "catppuccin-mocha";
     };
 
-    # Canonical URL of the local new-tab / new-window page. `srv` serves it as
-    # a static site at https://start.local (registered once with `srv add` —
     # see the README). A file:// page can't be used: Tridactyl's `set newtab`
     # double-opens file:// URLs (tridactyl#530); serving over https also gives
     # one URL that works for both Firefox and Chrome. Shared so tridactylrc,
     # the Firefox Homepage policy and the Chrome enterprise policy all agree.
     newtabUrl = "https://start.local/";
 
-    # Binary caches, read by the NixOS daemon (modules/nix.nix) and by
-    # standalone-HM's user-mode nix on non-NixOS hosts.
-    #
-    # All first-party closures (stubbe HM + NixOS, plus wayle/treeman/srv/…)
-    # live in one xilo cache — `default` in the `default` namespace, hence
-    # /c/default/default. `hm switch` substitutes the heavy first-party builds
-    # from here instead of compiling locally; whichever machine compiles a
-    # path pushes it back (see the hm script in modules/scripts.nix). Everything is signed by the single
-    # `default:` key below.
     cache = {
       substituters = [
         "https://nix.stubbe.dev/c/default/default"
@@ -115,21 +83,8 @@
     # completion offered `hm cache zsh` and `hm search`, neither of which the
     # wrapper implements. Everything except the dispatch `case` now renders
     # from this one table, via the `hm.render*` helpers below.
-    #
-    # Per command:
-    #   platform  "all" | "nixos" | "standalone" — where the verb actually works.
-    #             Drives both the completion arrays and the NixOS error message.
-    #   group     "wrapper"  verbs this script implements itself
-    #             "rebuild"  verbs routed to nh / nixos-rebuild / home-manager
-    #             "meta"     help
-    #             "hidden"   proxied straight to the home-manager CLI; completed
-    #                        but deliberately absent from `hm help`
-    #   syntax    help-row left column; defaults to the name
-    #   extra     continuation lines under the help row
-    #   sub       second-level names, for completion and for the sub-command's
-    #             own usage text; `expand` gives each one its own help row
-    #   complete  "custom" when _hm has a hand-written branch for its arguments;
-    #             everything else takes no completable arguments
+    #   group  "hidden" is proxied straight to the home-manager CLI: completed
+    #          so the verbs are discoverable, but kept out of `hm help`.
     hm =
       let
         cmd =
@@ -159,7 +114,6 @@
               complete
               ;
           };
-        # Order is the order `hm help` prints; the completion does not care.
         commands = map cmd [
           {
             name = "update";
@@ -352,8 +306,7 @@
             desc = "Open a nix repl scoped to the configuration (NixOS)";
           }
           {
-            # Standalone home-manager has no rollback verb — run_rollback prints
-            # the `<gen>/activate` recipe and exits 2 — so it is not offered there.
+            # Standalone home-manager has no rollback verb.
             name = "rollback";
             platform = "nixos";
             group = "rebuild";
@@ -394,9 +347,6 @@
             desc = "Show this help message";
           }
 
-          # Reached only through the wrapper's `*` fallthrough, which proxies to
-          # the home-manager CLI. Completed so the verbs are discoverable, but
-          # kept out of `hm help`: they are home-manager's surface, not ours.
           {
             name = "edit";
             platform = "standalone";
@@ -449,9 +399,6 @@
           name: lib.findFirst (c: c.name == name) (throw "stubbe.lib.hm: no such command ${name}") commands;
         pad = n: lib.concatStrings (lib.genList (_: " ") n);
 
-        # `hm help` lays descriptions out in a column, with a two-space
-        # minimum gap for the handful of verbs wider than it
-        # (build-vm-with-bootloader is 24 characters on its own).
         descCol = 24;
         helpRow =
           syntax: desc: extra:
@@ -463,21 +410,16 @@
             ++ map (l: pad (descCol + 2) + l) extra
           );
 
-        # zsh `_describe` reads 'value:description' pairs from a single-quoted
-        # array, so an apostrophe in a description has to close and reopen the
-        # quote. "this machine's key" is the only one today, but the whole
-        # point of this table is that the next one cannot get it wrong.
+        # zsh `_describe` reads its pairs from a single-quoted array, so an
+        # apostrophe in a description must close and reopen the quote.
         zshQuote = s: "'" + lib.replaceStrings [ "'" ] [ "'\\''" ] s + "'";
-        # A completion menu gets one line per entry, so `desc` + `extra` — which
-        # exist to lay `hm help` out over several — are not usable there.
-        # `summary` defaults to `desc` and is set explicitly by the entries whose
-        # `desc` is only the first half of a sentence.
+        # A completion menu gets one line per entry, so `desc` + `extra` cannot
+        # be used there.
         zshRow = e: zshQuote "${e.name}:${e.summary or e.desc}";
       in
       {
         inherit commands;
 
-        # `hm help`, `nixos-iso help` — the Commands: block, rows only.
         renderHelp =
           group:
           lib.concatMapStringsSep "\n" (c: helpRow c.syntax c.desc c.extra) (
@@ -488,8 +430,6 @@
           lib.concatMapStringsSep "\n" (s: helpRow (s.syntax or s.name) s.desc (s.extra or [ ]))
             (byName name).sub;
 
-        # `hm secret` etc.: sub-commands expanded into their own help rows,
-        # prefixed by the parent verb.
         renderExpandedHelp =
           group:
           lib.concatMapStringsSep "\n" (
@@ -502,33 +442,25 @@
               helpRow c.syntax c.desc c.extra
           ) (lib.filter (c: c.group == group) commands);
 
-        # zsh completion arrays. `platform` selects one of the three blocks
-        # `_hm` assembles at runtime from /etc/os-release. `indent` is the
-        # generated file's own indentation at the call site — Nix strips the
-        # common indent of an `''` string's literal lines, but interpolated
-        # newlines come through at column zero, so each renderer re-applies it.
+        # Nix strips the common indent of an `''` string's literal lines, but
+        # interpolated newlines arrive at column zero, so each renderer has to
+        # re-apply `indent` itself.
         renderZsh =
           indent: platform:
           lib.concatMapStringsSep "\n${indent}" zshRow (lib.filter (c: c.platform == platform) commands);
         renderSubZsh = indent: name: lib.concatMapStringsSep "\n${indent}" zshRow (byName name).sub;
 
-        # `_hm`'s catch-all branch: every verb without a hand-written
-        # argument-completion branch, as a zsh case pattern.
         plainVerbs = lib.concatMapStringsSep "|" (c: c.name) (
           lib.filter (c: c.complete == null && c.sub == null) commands
         );
 
-        # "switch, boot, test, …" for the wrapper's NixOS error message, and
-        # "edit|set|rotate" / "nvim|locks|all" for the sub-command usages.
         nixosVerbs = lib.concatMapStringsSep ", " (c: c.name) (
           lib.filter (c: c.group == "rebuild" && c.platform != "standalone") commands
         );
         subNames = name: lib.concatMapStringsSep "|" (s: s.name) (byName name).sub;
       };
 
-    # nixpkgs instantiation args, shared verbatim by the standalone-HM pkgs
-    # (modules/core/flake.nix) and by NixOS's `nixpkgs.config`
-    # (modules/nix.nix) so both targets resolve packages identically.
+    # Shared verbatim by both targets so packages resolve identically.
     nixpkgsConfig = {
       allowUnfree = true;
       permittedInsecurePackages = [
