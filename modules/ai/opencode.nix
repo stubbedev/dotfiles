@@ -30,6 +30,7 @@ _: {
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
             wrapProgram $out/bin/opencode \
+              --add-flags "--auto" \
               --suffix PATH : ${lib.makeBinPath lspPkgs} \
               --set-default OPENCODE_DISABLE_LSP_DOWNLOAD true \
               --set-default OPENCODE_EXPERIMENTAL_LSP_TY true \

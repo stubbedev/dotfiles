@@ -1,5 +1,3 @@
-# Firefox: the nixGL wrapper, the policies that force-install the managed
-# add-ons, and Tridactyl (the native messenger, its rc file and its theme).
 { inputs, ... }:
 {
   flake.modules.homeManager.firefox =
@@ -11,11 +9,8 @@
     }:
     lib.mkIf config.features.browsers (
       let
-        # Firefox add-ons force-installed via the Extensions policy, keyed
-        # by AMO id -> AMO slug. install_url uses AMO's `latest` redirect so
-        # each tracks new releases automatically. Force-installed add-ons
-        # cannot be removed or disabled from within Firefox — drop an entry
-        # here to un-manage it.
+        # Force-installed add-ons cannot be removed or disabled from within
+        # Firefox; drop an entry here to un-manage it.
         firefoxAddons = {
           "tridactyl.vim@cmcaine.co.uk" = "tridactyl-vim";
           "jid1-xUfzOsOFlzSOXg@jetpack" = "reddit-enhancement-suite";
@@ -24,34 +19,24 @@
           "{7719f622-a980-4a30-ba6a-1a5ad11b677c}" = "pin-unpin-tab";
         };
 
-        # Prefs locked through the autoconfig file, as data rather than seven
-        # hand-written `lockPref(...)` calls: `builtins.toJSON` renders each
-        # value in its own JS literal form, so the int/bool/string distinction
-        # is the Nix value's, not something to get right by hand in quoting.
-        # Locked means locked: these cannot be changed from about:config.
+        # toJSON renders each value in its own JS literal form, so the
+        # int/bool/string distinction is the Nix value's rather than a quoting
+        # detail to get right by hand. Locked means unchangeable in about:config.
         lockedPrefs = {
-          # Titlebar off — tabs live in the GNOME/Hyprland titlebar strip.
           "browser.tabs.inTitlebar" = 0;
-          # Touchpad pinch-zoom and kinetic scrolling, off by default on Linux.
           "apz.allow_zooming" = true;
           "apz.gtk.touchpad_pinch.enabled" = true;
           "apz.gtk.kinetic_scroll.enabled" = true;
-          # Two-finger swipe back/forward, matching every other app here.
           "widget.disable-swipe-tracker" = false;
           "browser.gesture.swipe.left" = "Browser:BackOrBackDuplicate";
           "browser.gesture.swipe.right" = "Browser:ForwardOrForwardDuplicate";
         };
 
-        # Vendored Tridactyl theme, so the build is reproducible and works
-        # offline (no fetch at browser startup). The revision and hash live in
-        # flake.lock via the `tridactyl-theme-src` input; `nix flake update`
-        # is what moves it.
+        # Vendored so nothing is fetched at browser startup.
         catppuccinMocha = "${inputs.tridactyl-theme-src}/themes/catppuccin-mocha.css";
 
-        # Explicit CSS selector for `hint -c`. Replacing Tridactyl's default
-        # element detection (which also hints anything with cursor:pointer,
-        # a bare [tabindex], etc. — far too much on modern SPAs) with this
-        # list keeps hints to genuinely interactive elements.
+        # Tridactyl's default detection also hints anything with cursor:pointer
+        # or a bare [tabindex], which is far too much on a modern SPA.
         hintSelector = lib.concatStringsSep ", " [
           "a"
           "area"
@@ -72,45 +57,17 @@
         ];
       in
       {
-        # Wrap firefox in nixGL, then strip MOZ_LEGACY_PROFILES so the binary
-        # falls back to its built-in XDG-compliant default (Firefox 147+).
-        # nixpkgs hardcodes MOZ_LEGACY_PROFILES=1 in its wrapper to keep the
-        # historical ~/.mozilla/firefox path; we want ~/.config/mozilla/firefox
-        # to match the previous programs.firefox setup.
-        #
-        # libxul.so links against libpng-apng (animated PNG fork) which has
-        # png_get_next_frame_delay_num. nixpkgs' firefox wrapper doesn't put
-        # libpng-apng on LD_LIBRARY_PATH, and ld.so.cache happens to find
-        # /usr/lib/libpng16.so.16 (stock libpng, no APNG symbols) before
-        # libxul.so's RUNPATH is consulted. --prefix forces the right one.
-        #
-        # Upstream's firefox.desktop uses Exec=firefox (PATH-resolved), so
-        # bundling upstream alongside the wrapper picks up icons and the
-        # desktop entry while still routing the binary through our wrapper.
-        #
-        # extraPolicies bakes a distribution/policies.json into the Firefox
-        # package:
-        #   Homepage          — Firefox always opens the home page for a new
-        #                       window, so this covers new windows. The new
-        #                       *tab* page has no Firefox policy and is
-        #                       handled by Tridactyl's `set newtab`; both
-        #                       point at pkgs.stubbe.newtabUrl so the new
+        # nixpkgs hardcodes MOZ_LEGACY_PROFILES=1 to keep the historical
+        # ~/.mozilla/firefox path; stripping it gets the XDG default instead.
+        # libxul.so needs libpng-apng, which the nixpkgs wrapper leaves off
+        # LD_LIBRARY_PATH, so ld.so.cache finds the host's stock libpng first.
+        # firefox.desktop uses a PATH-resolved Exec, so bundling upstream gets
+        # its icons and desktop entry while the wrapper still wins.
+        # The new *tab* page has no Firefox policy and is handled by Tridactyl's
+        # `set newtab`; both point at pkgs.stubbe.newtabUrl so new tab and new
         #                       tab and new window load the same page.
-        #   ExtensionSettings — force-installs the managed add-ons from AMO.
-        #
-        # extraPrefs is an autoconfig (.cfg) snippet — unlike the Preferences
-        # policy it can set any pref. browser.tabs.inTitlebar = 0 forces the
-        # system title bar (what Customize > Title Bar toggles); lockPref so
-        # it can't be switched off.
-        #
-        # Touchpad: MOZ_ENABLE_WAYLAND routes Firefox through GTK's Wayland
-        # backend so libinput gesture events (two-finger scroll, pinch,
-        # horizontal swipe) reach the browser. Under XWayland those events
-        # are swallowed unless MOZ_USE_XINPUT2 is set, so set both for the
-        # X11-fallback path. apz.gtk.touchpad_pinch.enabled enables
-        # pinch-to-zoom on the GTK/Wayland path; browser.gesture.swipe.*
-        # binds horizontal swipes to history navigation (default values,
-        # re-asserted in case a profile overrode them).
+        # Under XWayland libinput gesture events are swallowed unless
+        # MOZ_USE_XINPUT2 is set, so both are set for the X11-fallback path. apz.gtk.touchpad_pinch.enabled enables
         home.packages = [
           (config.stubbe.gfx.bundle {
             pkg = pkgs.firefox.override {
@@ -174,34 +131,24 @@
             unset = [ "MOZ_LEGACY_PROFILES" ];
             prefix.LD_LIBRARY_PATH = "${pkgs.libpng.out}/lib";
           })
-          # Tridactyl's native messenger. Tridactyl can only read its rc file,
-          # discover local themes and run `:source` when this host program is
-          # both installed and registered with Firefox.
+          # Without the registered native messenger Tridactyl cannot read its rc
+          # file, discover local themes or run `:source`.
           pkgs.tridactyl-native
         ];
 
         home.file =
           let
-            # The manifest carries an absolute /nix/store path to the
-            # native_main binary, so symlinking it verbatim is enough.
+            # The manifest carries an absolute store path, so a symlink suffices.
             manifest = "${pkgs.tridactyl-native}/lib/mozilla/native-messaging-hosts/tridactyl.json";
           in
           {
-            # Firefox's pre-XDG per-user native-messaging-host directory.
             ".mozilla/native-messaging-hosts/tridactyl.json".source = manifest;
-            # Firefox 147+ XDG layout (this host strips MOZ_LEGACY_PROFILES
-            # in modules/browsers/firefox.nix, so the profile and
-            # this lookup move under ~/.config/mozilla). Both are listed so
-            # registration works regardless of which path Firefox uses.
+            # Both layouts are listed so registration works whichever path
+            # Firefox ends up using.
             ".config/mozilla/native-messaging-hosts/tridactyl.json".source = manifest;
           };
 
         xdg.configFile = {
-          # Auto-sourced by Tridactyl on every browser startup.
-          #
-          # Keymap is LazyVim-inspired: leader = <Space> (LazyVim's
-          # <leader>), <S-h>/<S-l> + [b/]b cycle tabs (LazyVim buffer
-          # nav), and / n N gg G stay as the shared vim defaults.
           "tridactyl/tridactylrc".text = ''
             " --- Search (vim / LazyVim) ---
             bind / fillcmdline find
@@ -255,8 +202,6 @@
             colourscheme catppuccin-mocha
           '';
 
-          # The native messenger scans this directory; any .css here becomes
-          # selectable via `:colourscheme` by its file name (no --url fetch).
           "tridactyl/themes/catppuccin-mocha.css".source = catppuccinMocha;
         };
       }

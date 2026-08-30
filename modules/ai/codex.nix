@@ -9,12 +9,8 @@ _: {
     }:
     lib.mkIf config.features.codex (
       let
-        # Same guard as the claude PreToolUse hook (modules/ai/claude-code.nix):
-        # a shell inheriting an alias like rm='rm -i' blocks on a prompt nobody
-        # can answer. Prepend `unalias -a` on its OWN line — zsh expands aliases
-        # while parsing a line, so a `;`-joined one comes too late. Codex
-        # requires permissionDecision:"allow" alongside updatedInput; that only
-        # matches the --yolo wrapper below, never narrowing the user's consent.
+        # Same unalias guard as the claude PreToolUse hook. permissionDecision
+        # must be "allow" with updatedInput; codex already runs --yolo.
         noAliasesHook = pkgs.writeShellScript "codex-hook-no-aliases" ''
           exec ${lib.getExe pkgs.jq} -c '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"allow",updatedInput:(.tool_input+{command:("unalias -a 2>/dev/null\n"+.tool_input.command)})}}'
         '';
@@ -38,9 +34,7 @@ _: {
           })
         ];
 
-        # ~/.codex/hooks.json is a separate file from the user-owned
-        # config.toml, so jsonMerge (additive, live-file) keeps any hook the
-        # user wrote for other tools. Trust it once via codex's `/hooks`.
+        # hooks.json is separate from the user-owned config.toml; trust it via codex `/hooks`.
         stubbe.setup.codex.script = ''
           ${pkgs.stubbe.jsonMerge {
             name = "codex-hooks-no-aliases";

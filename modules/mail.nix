@@ -1,6 +1,3 @@
-# Mail: aerc as the client, mbsync mirroring IMAP into a local maildir, and
-# notmuch indexing it. One file, so the maildir path is a single let-binding
-# instead of a value restated in four places with a "must match" comment.
 { inputs, ... }:
 {
   flake.modules.homeManager.mail =
@@ -14,9 +11,6 @@
       home = config.home.homeDirectory;
       maildir = "${home}/.local/share/mail";
 
-      # sops-decrypted IMAP/SMTP passwords. mbsync's PassCmd and aerc's
-      # outgoing-cred-cmd both `cat` these, so there is one copy of each
-      # credential on disk and one declaration of it here.
       passwords = {
         kontainer = "${home}/.config/aerc/passwords/kontainer";
         gmail = "${home}/.config/aerc/passwords/gmail";
@@ -92,11 +86,9 @@
         ExpireUnread no
       '';
 
-      # `new.tags = unread` is the contract between notmuch and aerc: aerc
-      # strips the tag when the user opens a message, notmuch's
-      # maildir.synchronize_flags (bidirectional flag↔tag sync) then renames
-      # the maildir file to add the `S` flag, and mbsync propagates that back
-      # to IMAP on the next run. Nothing else marks mail as read.
+      # The contract with aerc: aerc strips this tag on open,
+      # maildir.synchronize_flags renames the file to add `S`, and mbsync
+      # propagates that to IMAP. Nothing else marks mail as read.
       notmuchConfig = (pkgs.formats.ini { }).generate "notmuch-config" {
         database.path = maildir;
         user = {
@@ -112,14 +104,10 @@
         maildir.synchronize_flags = true;
       };
 
-      # Tagging used to live in a notmuch post-new hook, but the hook dir is
-      # inside ${maildir}/.notmuch/ which notmuch creates itself —
-      # home-manager refuses to symlink into a directory it does not own, so
-      # the hook never landed. Inlining here applies the tags on every sync
-      # regardless of how activation went.
-      #
-      # path: (recursive) and folder: (exact) rather than regex — regex
-      # delimiters cannot contain spaces, which breaks on `[Gmail]/All Mail`.
+      # Not a notmuch post-new hook: that hook dir lives inside .notmuch/, which
+      # notmuch creates itself and home-manager will not symlink into, so
+      # Not regex: its delimiters cannot contain spaces, which breaks on
+      # `[Gmail]/All Mail`.
       mailSync = pkgs.stubbe.bashApp {
         name = "mail-sync";
         runtimeInputs = with pkgs; [
@@ -177,14 +165,9 @@
         '';
       };
 
-      # maildir-account-path scopes each tab's dirlist (and the folder names
-      # used by copy-to/postpone/archive) to that account's subtree. Without
-      # it, aerc enumerates the shared maildir root and every tab shows both
-      # accounts' folders.
-      #
-      # aerc ≥0.22 deprecated maildir-store and explicit database paths in the
-      # source URL — both now come from the notmuch config, which aerc finds
-      # via NOTMUCH_CONFIG (set below).
+      # Without maildir-account-path aerc enumerates the shared maildir root and
+      # every tab shows both accounts' folders.
+      # aerc >=0.22 takes both from the notmuch config instead.
       accountsConf = (pkgs.formats.ini { }).generate "aerc-accounts.conf" {
         kontainer = {
           source = "notmuch://";
@@ -220,9 +203,6 @@
         };
       };
 
-      # Virtual folder name → notmuch query; aerc opens the named folder by
-      # running its query against the local index. Sent is virtualised so the
-      # gmail sidebar reads "Sent" instead of "[Gmail]/Sent Mail".
       queries = {
         kontainer = ''
           INBOX = tag:kontainer and tag:inbox
@@ -234,13 +214,9 @@
         '';
       };
 
-      # Focus an existing aerc window if one is open, otherwise spawn a new
-      # alacritty for it. The window is launched with --class so we can
-      # match by app-id/class, which (unlike the title) stays stable as
-      # aerc updates the displayed folder/count.
       mailOpen = pkgs.stubbe.bashApp {
         name = "mail-open";
-        # pkill/jq must not depend on the host providing them.
+        # Must not depend on the host providing pkill/jq.
         runtimeInputs = with pkgs; [
           procps
           jq
@@ -288,8 +264,6 @@
         '';
       };
 
-      # Extract and process List-Unsubscribe from email — bypasses DKIM
-      # validation issues in aerc. Reads the message on stdin.
       mailUnsubscribe = pkgs.stubbe.bashApp {
         name = "mail-unsubscribe";
         text = ''
@@ -358,12 +332,9 @@
         '';
       };
 
-      # Sourced by mail-pager for text/html parts. conceallevel=2 hides link
-      # destinations so the body reads as prose; the destination is shown in a
-      # float instead (overlay layer, so nothing in the rendered message moves).
       # Injections must be followed explicitly: without ignore_injections=false
-      # the node chain stops at `inline` (markdown), never reaching the
-      # markdown_inline nodes that actually carry the URL.
+      # the node chain stops at `inline` and never reaches the markdown_inline
+      # nodes that carry the URL.
       mailPagerLua = pkgs.writeText "mail-pager.lua" ''
         local function url_at_cursor()
           local ok, node = pcall(vim.treesitter.get_node, { ignore_injections = false })
@@ -404,13 +375,6 @@
         })
       '';
 
-      # Aerc viewer pager: read the (already-filtered) message body in nvim.
-      # Minimal nvim, same shape as the [compose] editor: no plugins, no swap, no
-      # shada — the buffer is throwaway. Everything that would pollute a mouse
-      # drag-select is off (gutter, statusline, ruler); `mouse=` leaves selection to
-      # the terminal, and clipboard=unnamedplus makes a plain `y` land in wl-copy.
-      # nvim always paints from the top, so no bottom-parked first screen.
-      # Closing the viewer is aerc's job: q is bound in [view].
       mailPager = pkgs.stubbe.bashApp {
         name = "mail-pager";
         text = ''
@@ -475,23 +439,14 @@
       home = {
         packages = [
           mailSync
-          # aerc's text/html filter: parses with html5ever (kuchikiki),
-          # flattens layout tables (a heuristic preserves real data tables),
-          # strips MSO/Word noise, then renders Markdown via htmd. Single
-          # static binary — github:stubbedev/html-to-md.
           inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
           mailOpen
           mailUnsubscribe
           mailPager
         ]
         ++ (with pkgs; [
-          # The client itself, and the address-book/calendar tooling beside it.
           aerc
-          # aerc's image/* filter (aerc.conf) renders through chafa.
           chafa
-          # IMAP → local maildir mirror, paired with notmuch indexing. aerc's
-          # `source=notmuch://` reads the indexed maildir rather than talking
-          # to IMAP per message; mbsync propagates flag/tag changes back.
           isync
           notmuch
         ]);
@@ -502,10 +457,9 @@
         sessionVariables.NOTMUCH_CONFIG = "${home}/.notmuch-config";
 
         file = {
-          # mbsync still reads ~/.mbsyncrc by default in nixpkgs' isync.
+          # nixpkgs' isync still reads ~/.mbsyncrc by default.
           ".mbsyncrc".text = mbsyncrc;
-          # notmuch reads ~/.notmuch-config (the legacy path) regardless of
-          # XDG when the file exists — keep it explicit.
+          # notmuch prefers this legacy path over XDG whenever it exists.
           ".notmuch-config".source = notmuchConfig;
         };
       };
@@ -681,18 +635,13 @@
       };
 
       stubbe.mutable = {
-        # aerc rewrites nothing here, but stylesets are the thing you iterate
-        # on by eye — link the checkout so an edit shows on the next launch.
+        # Linked, not copied, so a styleset edit shows on the next launch.
         ".config/aerc/stylesets".src = "mail/stylesets";
       };
 
-      # aerc reads via notmuch://, which fails with "No database found" when
-      # the maildir or its .notmuch index do not exist yet — and mbsync
-      # refuses to open a MaildirStore whose Path is missing ("Maildir error:
-      # cannot open store"), since it does not mkdir its own Path. The timer
-      # would hit that on every tick, so bootstrap the tree and an empty index
-      # here: aerc then opens immediately and mbsync's first run has somewhere
-      # to land.
+      # aerc fails with "No database found" and mbsync refuses a MaildirStore
+      # whose Path is missing -- it does not mkdir its own Path -- so the tree
+      # and an empty index have to exist before either runs.
       stubbe.setup.mail.script = ''
         mkdir -p ${lib.escapeShellArg "${maildir}/kontainer"} ${lib.escapeShellArg "${maildir}/gmail"}
         if [ ! -d ${lib.escapeShellArg "${maildir}/.notmuch"} ]; then
@@ -700,9 +649,8 @@
         fi
       '';
 
-      # Sync every 30s so notifications fire promptly. mbsync STATUS-only
-      # round-trips are cheap (~1-2s) when nothing changed, and mail-sync's own
-      # flock stops concurrent runs piling up.
+      # STATUS-only round-trips are cheap when nothing changed, and mail-sync's
+      # own flock stops concurrent runs piling up.
       systemd.user = {
         services.mail-sync = {
           Unit = {
