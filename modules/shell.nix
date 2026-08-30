@@ -1,39 +1,20 @@
 # zsh, fully Nix-managed.
-#
-# Everything the shell reads at startup is a store path built and zcompiled at
-# Nix build time: config files, plugins, generated completions, the
-# tool-init scripts, and the compinit dump. Nothing is cloned, cached or
-# compiled at runtime, and there is no writable ~/.zcompdump.
-#
-# zwc semantics this relies on: zsh ignores a .zwc only when the source is
-# STRICTLY newer, and store mtimes are all epoch-equal — so the adjacent .zwc
-# always wins, for both `source` and autoload.
-#
-# Load-order contract (pre-files → compinit → aliases → plugins → settings →
-# generated inits → patina) is held by mkOrder slots: pre=500 <
-# completionInit=550 < post=1000.
+# Relies on zsh ignoring a .zwc only when the source is STRICTLY newer: store
+# mtimes are epoch-equal, so the adjacent .zwc always wins.
 { inputs, ... }:
 {
   flake.modules.nixos.shell =
     { config, pkgs, ... }:
     {
       programs.zsh = {
-        # System-wide zsh registers /run/current-system/sw/bin/zsh in
-        # /etc/shells, sets up the bash-completion bridges, and makes zsh a
-        # valid login shell. Without it, chsh and login both reject zsh.
         enable = true;
-        # NixOS defaults both of these on, which injects `autoload -U compinit
-        # && compinit` into /etc/zshrc. That fires before ~/.zshrc with no -C
-        # flag and re-audits store fpath dirs whose mtimes change on every
-        # rebuild. The HM half runs its own `compinit -C` against a prebuilt
-        # store dump, so the global one is pure waste.
+        # NixOS defaults inject an unflagged `compinit` into /etc/zshrc, which
+        # re-audits store fpath dirs on every rebuild. The HM half already runs
+        # `compinit -C` against a prebuilt dump.
         enableGlobalCompInit = false;
         enableBashCompletion = false;
       };
 
-      # Login shell for the primary user, so greetd and tty login drop straight
-      # into it. .zshrc is owned by the HM half and sources only store paths,
-      # so shell startup does not depend on the ~/.stubbe checkout existing.
       users.users.${config.host.primaryUser}.shell = pkgs.zsh;
       environment.shells = [ pkgs.zsh ];
     };
@@ -48,14 +29,10 @@
     let
       system = pkgs.stdenv.hostPlatform.system;
 
-      # `_hm` completes what the wrapper in modules/scripts.nix actually
-      # implements, because both render from this one table
-      # (modules/core/lib.nix). Hand-maintained, the two drifted: the
-      # completion used to offer `hm cache zsh` and `hm search`.
+      # Rendered from the same table as the wrapper in modules/scripts.nix;
+      # hand-maintaining the two let them drift.
       hmSpec = pkgs.stubbe.hm;
 
-      # The zsh config tree, inline. Values are the sourceable files; the
-      # completions/ subdir goes on fpath. zcompiled below.
       zshFiles = {
         "paths" = ''
           # PATH initialisation for interactive zsh.
@@ -820,11 +797,9 @@
         '';
       };
 
-      # completions/ is autoloaded off fpath, never sourced, so it is neither
-      # zcompiled here nor listed in the .zshrc.
+      # Autoloaded off fpath, never sourced.
       sourceableZshFiles = lib.filter (n: !(lib.hasPrefix "completions/" n)) (lib.attrNames zshFiles);
 
-      # The inline tree materialised and zcompiled.
       zshConfig =
         pkgs.runCommandLocal "stubbe-zsh-config"
           {
@@ -844,7 +819,6 @@
             zsh -c 'for f in ${lib.concatStringsSep " " sourceableZshFiles}; do zcompile $out/$f; done'
           '';
 
-      # Source order matters and is preserved here.
       pluginSpecs = [
         {
           name = "fzf-tab";
@@ -873,8 +847,6 @@
         }
       ];
 
-      # Whole plugin dirs (fzf-tab lazy-sources its lib/*.zsh relative to the
-      # plugin file), entry files zcompiled.
       zshPlugins = pkgs.runCommandLocal "stubbe-zsh-plugins" { nativeBuildInputs = [ pkgs.zsh ]; } (
         lib.concatMapStrings (p: ''
           mkdir -p $out/${p.name}
@@ -884,9 +856,7 @@
         '') pluginSpecs
       );
 
-      # Only tools whose packages do NOT ship a zsh completion. Everything else
-      # (_gh, _uv, _kubectl, _minikube, _vultr-cli, …) arrives via
-      # ${config.home.path}/share/zsh/site-functions in the fpath below.
+      # Only tools whose packages ship no zsh completion of their own.
       zshCompletions = pkgs.runCommandLocal "stubbe-zsh-completions" { } ''
         dir=$out/share/zsh/site-functions
         mkdir -p $dir
@@ -901,25 +871,19 @@
           ${pkgs.wayle}/bin/wayle completions zsh > $dir/_wayle
         ''}
         ${lib.optionalString config.features.docker ''
-          # The host docker CLI is not in the closure; pkgs.docker's completion
-          # is protocol-stable across the minor version skew. Build-time-only
-          # dep — only this file lands in the runtime closure.
+          # The host docker CLI is not in the closure, and this completion is
+          # protocol-stable across the version skew.
           cp ${pkgs.docker}/share/zsh/site-functions/_docker $dir/_docker
         ''}
         ${lib.optionalString config.features.php ''
-          # FrankenPHP emits a Caddy-derived completion (it embeds Caddy);
-          # rename caddy → frankenphp so the directives register against the
-          # actual binary name.
+          # FrankenPHP embeds Caddy and emits a Caddy-named completion.
           ${pkgs.frankenphp}/bin/frankenphp completion zsh \
             | sed 's/caddy/frankenphp/g' > $dir/_frankenphp
         ''}
       '';
 
-      # Runtime fpath == dump-build fpath by construction: this one list is
-      # interpolated into both the .zshrc and the zcompdump builder.
-      # config.home.path (the HM profile derivation) carries every
-      # package-shipped completion on both targets, and forces a dump rebuild
-      # whenever packages change.
+      # Interpolated into both the .zshrc and the zcompdump builder, so runtime
+      # and dump-build fpath cannot diverge.
       fpathLine = "fpath=(${
         lib.concatStringsSep " " [
           "${zshConfig}/completions"
@@ -928,9 +892,8 @@
         ]
       } $fpath)";
 
-      # Generator-init scripts, zcompiled. The derivation output is a directory
-      # (zcompile writes the .zwc next to init.zsh, which must stay inside
-      # $out); this returns the sourceable file so call sites need no suffix.
+      # Output is a directory because zcompile writes the .zwc next to
+      # init.zsh, which must stay inside $out.
       mkInit =
         name: script:
         "${
@@ -941,9 +904,8 @@
           ''
         }/init.zsh";
 
-      # Strip fzf's `bindkey '^I'` (Tab) so fzf-tab keeps Tab, and its Alt-C
-      # bindkeys (the unused cd widget). The `zle -N fzf-cd-widget` line stays
-      # so the `if` block fzf wraps them in is not left empty.
+      # Frees Tab for fzf-tab. The `zle -N fzf-cd-widget` line has to stay or
+      # the `if` block fzf wraps these in is left empty.
       fzfInit = mkInit "fzf" ''
         ${lib.getExe pkgs.fzf} --zsh \
           | grep -Fv "bindkey '^I'" \
@@ -958,17 +920,12 @@
         ${lib.getExe pkgs.zoxide} init zsh > $out/init.zsh
       '';
 
-      # A plain zsh hook; the "loading/export" chatter is silenced by direnv's
-      # own log_filter (modules/development.nix), not a shell-side wrapper.
       direnvInit = mkInit "direnv" ''
         ${lib.getExe pkgs.direnv} hook zsh > $out/init.zsh
       '';
 
-      # compinit dump built against the pinned fpath, with the dynamic
-      # _git_shortcuts registrations appended. Runtime does `compinit -C -d
-      # <this>` — read-only, no ~/.zcompdump ever again. -u because the sandbox
-      # build user fails compaudit's ownership check, which is irrelevant at
-      # runtime.
+      # -u because the sandbox build user fails compaudit's ownership check,
+      # which is irrelevant at runtime.
       zcompdump = pkgs.runCommandLocal "stubbe-zcompdump" { nativeBuildInputs = [ pkgs.zsh ]; } ''
         mkdir -p $out
         export HOME=$TMPDIR
@@ -994,15 +951,12 @@
       programs.zsh = {
         enable = true;
         enableCompletion = true;
-        # Read-only store dump; never audits, never rewrites. The adjacent .zwc
-        # is what actually gets sourced (equal store mtimes ⇒ zwc wins).
         completionInit = ''
           autoload -Uz compinit
           compinit -C -d ${zcompdump}/zcompdump
         '';
-        # Ubuntu's /etc/zsh/zshrc runs compinit with the system-default fpath;
-        # sourced from .zshenv (before /etc/zshrc) this suppresses that global
-        # compinit so ours is the only one.
+        # Sourced from .zshenv, before Ubuntu's /etc/zsh/zshrc can run its own
+        # compinit against the system fpath.
         envExtra = "skip_global_compinit=1";
         history = {
           path = "${config.home.homeDirectory}/.zsh_history";
@@ -1014,8 +968,6 @@
           ignoreAllDups = true;
         };
         initContent = lib.mkMerge [
-          # Pre-compinit: helpers + fpath. The same fpath list the zcompdump
-          # derivation was built against — pinned by construction.
           (lib.mkOrder 500 ''
             source ${zshConfig}/paths
             source ${zshConfig}/apaths
@@ -1023,10 +975,8 @@
             source ${zshConfig}/funcs
             ${fpathLine}
           '')
-          # Post-compinit: fzf-tab must load right after compinit; patina last
-          # so its ZLE hooks wrap the final widget set. patina's init script is
-          # generated at switch time by the activation below, because
-          # `zsh-patina activate` is impure (daemon side effects).
+          # fzf-tab must load right after compinit and patina last, so its ZLE
+          # hooks wrap the final widget set.
           (lib.mkOrder 1000 ''
             source ${zshConfig}/aliases
             ${sourcePlugins}
@@ -1587,17 +1537,10 @@
         };
       };
 
-      # zsh-patina: the syntax-highlighting daemon that replaced
-      # fast-syntax-highlighting. Two halves that must stay version-synced:
-      #
-      #   * the shell-side hook script, generated at switch time below because
-      #     `zsh-patina activate` embeds $XDG_RUNTIME_DIR and starts the daemon,
-      #     so it cannot be a build product; and
-      #   * the daemon itself, owned by this service — the generated script
-      #     never starts it, so without the unit highlighting would silently do
-      #     nothing after a reboot.
-      #
-      # Both regenerate from the same binary on switch, so they cannot drift.
+      # The hook script is generated at switch time, not built: `zsh-patina
+      # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
+      # script never starts the daemon itself, so without this unit highlighting
+      # silently does nothing after a reboot.
       systemd.user.services.zsh-patina = {
         Unit.Description = "zsh-patina syntax highlighting daemon";
         Service = {
@@ -1625,11 +1568,8 @@
         unset _patina_cache
       '';
 
-      # Keep the avahi-discovered .local host cache warm for ssh-style
-      # completion. avahi-browse takes ~1.5s, so the shell never runs it —
-      # _avahi_ssh_hosts in the settings file above only reads this cache. The
-      # service-type filter excludes Sonos boxes, printers and the like, so
-      # only ssh-able machines show up.
+      # avahi-browse takes ~1.5s, far too slow to run from a completion, so the
+      # shell only ever reads this cache.
       systemd.user = {
         services.zsh-avahi-hosts = {
           Unit.Description = "Refresh avahi .local host cache for zsh completion";
@@ -1661,8 +1601,6 @@
         timers.zsh-avahi-hosts = {
           Unit.Description = "Periodic avahi host cache refresh";
           Timer = {
-            # The LAN host set is near-static, so a slow poll keeps the cache
-            # fresh enough for completion without waking every minute.
             OnBootSec = "30s";
             OnUnitActiveSec = "10min";
           };

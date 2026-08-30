@@ -1,19 +1,8 @@
-# The CLI scripts this repo ships, inlined as Nix strings — bash ones through
-# `pkgs.stubbe.bashApp` (shellcheck at build time), zsh ones through
-# `pkgs.stubbe.zshApp` (`zsh -n` at build time).
-#
-# Only the *generic* tools live here. App-specific scripts belong to their
-# aspect (mail helpers in modules/mail.nix, the wayle launcher in
-# modules/wayle.nix, brightness in modules/hyprland.nix, …) so that adding a
-# script to a feature never means editing a second file.
-#
-# The pre-Nix bootstraps stay real files: bin/stb-install runs from a bare
-# checkout before Nix exists, and bin/stb-install-nixos is read by
-# modules/installer.nix for the ISO.
+# bin/stb-install and bin/stb-install-nixos stay real files: they run from a
+# bare checkout before Nix exists.
 _: {
-  # The three launchers the tmux-session check drives end-to-end. Pure zsh
-  # sources (no config interpolation), exposed via `stubbe.lib` so the check
-  # and the installed bins are built from the same bytes.
+  # Exposed via `stubbe.lib` so the tmux-session check and the installed bins
+  # are built from the same bytes.
   stubbe.lib.tmuxLaunchers = {
     "tmux-pick-session" = ''
 
@@ -198,12 +187,10 @@ _: {
       ...
     }:
     let
-      # The `hm` CLI surface as data — help rows, sub-command names, the
-      # NixOS verb list. Defined once in modules/core/lib.nix so the wrapper
-      # below and the zsh completion in modules/shell.nix cannot disagree.
+      # Defined in modules/core/lib.nix so this wrapper and the zsh completion
+      # in modules/shell.nix cannot disagree.
       hmSpec = pkgs.stubbe.hm;
 
-      # Desktop-only zsh launchers (tmux/fzf pickers and pane toggles).
       launchers = pkgs.stubbe.tmuxLaunchers // {
         "fzf-pick-directory" = ''
 
@@ -345,8 +332,6 @@ _: {
 
       launcherBins = lib.mapAttrsToList (name: text: pkgs.stubbe.zshApp { inherit name text; }) launchers;
 
-      # Clipboard writer for every context this config runs in — the fzf
-      # pickers' ctrl-y binding (modules/session.nix) is its main caller.
       clip = pkgs.stubbe.bashApp {
         name = "clip";
         runtimeInputs = [ pkgs.coreutils ];
@@ -445,9 +430,7 @@ _: {
         '';
       };
 
-      # hm and nixos-iso are templated against absolute store paths for
-      # sops/age/ssh-to-age/xilo, so the wrapper never depends on whatever
-      # happens to be on PATH at invocation time.
+      # Absolute store paths so the wrapper never depends on PATH.
       hm = pkgs.stubbe.bashApp {
         name = "hm";
         text = ''
@@ -1398,8 +1381,6 @@ _: {
         clip
         hm
         nixosIso
-        # `hm` shells out to nh for build/activate/gc, so nh ships wherever hm
-        # does — which is every host.
         pkgs.nh
       ]
       ++ lib.optionals config.features.desktop launcherBins;

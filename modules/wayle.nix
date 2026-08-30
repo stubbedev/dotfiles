@@ -1,21 +1,5 @@
-# wayle — the desktop shell. One Rust/GTK4 daemon that replaced waybar +
-# swaync + hyprpaper, and is also the session lock, the xdg-desktop-portal
-# backend, and the blue-light scheduler.
-#
-# Consequences worth knowing before editing anything here:
-#   * Notifications are wayle's. Do not push notify-send from other modules;
-#     set the templates in config.toml instead.
-#   * The lock is wayle's native ext-session-lock-v1 implementation, which needs
-#     a PAM service named "wayle" (provisioned by the NixOS module, or by the
-#     activation below).
-#   * hyprsunset is wayle's to spawn and kill on its solar schedule, so it is
-#     only on PATH — never autostarted from hyprland.lua.
 { inputs, ... }:
 {
-  # wayle is the portal backend on NixOS. The upstream module registers the
-  # system-level xdg.portal and the D-Bus-activated
-  # xdg-desktop-portal-wayle user service; the SHELL itself still runs from the
-  # HM user service below, so systemd.enable stays off.
   flake.modules.nixos.wayle =
     {
       config,
@@ -24,10 +8,7 @@
       ...
     }:
     {
-      # imports must be top-level and unconditional — nesting them inside
-      # lib.mkIf makes the upstream module (and options.programs.wayle) vanish.
-      # The module is inert until programs.wayle.enable, which only the gated
-      # block below sets.
+      # Nesting this in lib.mkIf makes the upstream module and its options vanish.
       imports = [ inputs.wayle.nixosModules.default ];
 
       config =
@@ -37,29 +18,14 @@
         lib.mkIf enabled {
           programs.wayle = {
             enable = true;
-            # Native GL on NixOS, so the bare overlay package is right here —
-            # the HM-level nixGL wrap is a passthrough on NixOS anyway. This
-            # package backs the xdg-desktop-portal-wayle service.
             package = pkgs.wayle;
-            # The shell runs from the HM user service; do not let the module
-            # spawn a second `wayle shell`.
             systemd.enable = false;
             portal.enable = true;
-            # Provision /etc/pam.d/wayle so the native ext-session-lock unlock
-            # can authenticate (NixOS has no system-auth). config.toml sets
-            # lock.pam-service = "wayle" to match.
             lock.enable = true;
-            # No greeter: login is greetd autologin straight into Hyprland
-            # (modules/hyprland.nix).
           };
 
-          # Route every interface to wayle. programs.hyprland registers its own
-          # per-desktop portal section, and that section beats a plain
-          # common.default for the Hyprland session — mkForce replaces the whole
-          # attr, dropping the per-desktop section so every session falls
-          # through to this common block. wayle implements every impl.portal
-          # interface (Secret included), so no gnome-keyring carve-out is
-          # needed; gnome/gtk stay only as dormant fallbacks.
+          # programs.hyprland registers a per-desktop portal section that beats
+          # common.default, so mkForce is needed to drop it.
           xdg.portal.config = lib.mkForce {
             common.default = [
               "wayle"
@@ -81,13 +47,8 @@
       inherit (config.stubbe) gfx;
       enabled = config.features.wayle && config.features.hyprland;
 
-      # symlinkJoin the nixGL-wrapped binaries back with the upstream package so
-      # $out/share survives into the profile. That puts wayle's bundled icons
-      # (share/icons/hicolor/scalable/actions, 364 cm-*-symbolic SVGs) on
-      # XDG_DATA_DIRS where GTK's hicolor fallback resolves the
-      # from_icon_name() lookups — no hand-populated ~/.local/share/wayle/icons
-      # — and exposes the wayle-settings .desktop entry. Both GTK4 binaries get
-      # the GL wrap.
+      # Rejoined with the upstream package so $out/share reaches the profile:
+      # without it GTK cannot resolve wayle's bundled icon names.
       waylePackage = gfx.bundle {
         pkg = pkgs.wayle;
         exes = [
@@ -96,8 +57,6 @@
         ];
       };
 
-      # Does this machine have a battery? Read /sys impurely — the flake already
-      # runs --impure. Used to drop the battery module from the bar on desktops.
       hasBattery =
         let
           psu = /. + "/sys/class/power_supply";
@@ -105,18 +64,9 @@
         builtins.pathExists psu
         && lib.any (lib.hasPrefix "BAT") (builtins.attrNames (builtins.readDir psu));
 
-      # getExe' rather than getExe: the gfx symlinkJoin does not carry
-      # meta.mainProgram, so name the binary explicitly.
+      # The gfx symlinkJoin carries no meta.mainProgram.
       wayleBin = lib.getExe' waylePackage "wayle";
 
-      # Launch wayle with proper Wayland environment detection.
-      # Sets HYPRLAND_INSTANCE_SIGNATURE only when an active Hyprland socket is
-      # found; on niri (or any other Wayland compositor) we skip Hyprland
-      # detection and proceed — wayle's hyprland modules just stay inactive.
-      #
-      # Fork-minimal: globs instead of ls|grep, var expansion instead of
-      # dirname/basename, a single id -u. flock and sleep are the only forks
-      # left — they are the liveness primitive and the retry backoff.
       launcher = pkgs.stubbe.bashApp {
         name = "wayle-launch";
         text = ''
@@ -228,8 +178,6 @@
 
       sessionTarget = [ "hyprland-session.target" ];
 
-      # Bounce the bar when a service it reads from comes up late. Guarded on
-      # the session being live so it is a no-op outside a graphical login.
       restartBarIfSessionActive = pkgs.writeShellScript "restart-bar-if-session-active" ''
         if ${lib.getExe' pkgs.systemd "systemctl"} --user is-active --quiet ${lib.head sessionTarget}; then
           exec ${lib.getExe' pkgs.systemd "systemctl"} --user restart wayle.service
@@ -253,26 +201,14 @@
       };
     in
     {
-      # Same reasoning as the NixOS half: the upstream module has to be imported
-      # unconditionally, and every effect sits behind `enable`.
       imports = [ inputs.wayle.homeManagerModules.default ];
 
       config = lib.mkIf enabled {
-        # Standalone (non-NixOS) home-manager: register wayle as the portal
-        # backend at the USER level — the .portal interface declaration, the
-        # D-Bus activation file, a generic portals.conf routing every interface
-        # to wayle, and the xdg-desktop-portal-wayle user service. On NixOS the
-        # system module above owns the portal, so this is gated off there to
-        # avoid registering the backend twice.
         programs.wayle = lib.mkIf (config.host.platform != "nixos") {
           enable = true;
-          # GTK4 portal dialogs need the same nixGL wrap the shell uses.
-          # Identical derivation, so home-manager's profile dedupes the two
-          # references.
           package = waylePackage;
           systemd.enable = false;
-          # config.toml is rendered below; leave settings empty so the module
-          # does not also write it.
+          # Empty so the module does not also write config.toml.
           settings = { };
           portal.enable = true;
         };
@@ -280,21 +216,9 @@
         home.packages = [
           waylePackage
           launcher
-          # wayle's wallpaper engine shells out to awww (which ships awww +
-          # awww-daemon); without it `wayle wallpaper set` fails with "neither
-          # awww nor swww found in PATH".
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
-          # Graphical power menu (GTK4 layer-shell) backing wayle's power widget.
           (gfx.wrap pkgs.wleave)
-          # Reshapes the status scripts' JSON for wayle's custom modules: drops
-          # the nerd-font glyph (wayle shows icon-name instead), keeps the value.
-          #
-          # Every mode is event-driven (wayle `mode = "watch"`): emit the current
-          # line, then re-emit on each real state change — no polling. Sources:
-          #   treeman     `treeman logs tail --follow` event stream
-          #   vpn-watch   inotify on the openconnect marker files
-          #   submap      tmpfs marker written by the hl Lua resize submap
           (pkgs.stubbe.bashApp {
             name = "wayle-widget";
             text = ''
@@ -404,26 +328,14 @@
           })
         ]
         ++ (with pkgs; [
-          # Blue-light filter daemon. wayle's native hyprsunset module owns it —
-          # spawning `hyprsunset -t/-g` at night on its own solar schedule and
-          # killing it by day — so it only needs to be on PATH for the service.
           hyprsunset
-          # inotifywait — the event-driven VPN widget (wayle-widget vpn-watch)
-          # waits on the openconnect marker files instead of polling — and
-          # `ip monitor link` is its second event source.
           inotify-tools
           iproute2
-          # wayle has no brightness CLI, so the brightness module's scroll
-          # actions shell out to this.
           brightnessctl
         ]);
 
-        # Render config.toml — the single file, NOT the whole ~/.config/wayle
-        # directory: wayle writes into that directory at runtime, so symlinking
-        # the directory makes home-manager fail with "cannot overwrite
-        # directory". The palette comes from pkgs.stubbe.withHash, and the
-        # battery module joins the bar only where there is one. Full schema:
-        # wayle docs under docs/config/ upstream, or https://wayle.app/config/.
+        # The single file, never the directory: wayle writes into that directory
+        # at runtime and home-manager refuses to overwrite it.
         xdg.configFile."wayle/config.toml" = {
           source =
             let
@@ -431,19 +343,13 @@
             in
             (pkgs.formats.toml { }).generate "wayle-config.toml" {
               general = {
-                # waybar rendered everything in JetBrainsMono Nerd Font; match that
-                # for both UI text and mono so the bar reads identically.
                 font-sans = "JetBrainsMono Nerd Font";
                 font-mono = "JetBrainsMono Nerd Font";
               };
 
               styling = {
-                # Static palette (no wallpaper-derived theming) so colors stay
-                # Catppuccin. Rounded dropdowns/popovers/OSD/dialogs (the bar itself
-                # stays flat — bar.rounding/button-rounding = "none").
                 theme-provider = "wayle";
                 rounding = "sm";
-                # bg=base, surface=mantle (the waybar bar color), elevated=surface0.
                 palette = {
                   bg = c.base;
                   surface = c.mantle;
@@ -458,18 +364,11 @@
                 };
               };
 
-              # Session lock (replaces hyprlock). Wayle locks natively via
-              # ext-session-lock-v1, in response to `wayle lock`, the logind Lock
-              # signal, or the shell IPC. The config default pam-service
-              # `system-auth` doesn't exist on NixOS; /etc/pam.d/wayle is
-              # provisioned by programs.wayle.lock (NixOS) or the wayleLockPam
-              # setup below. Login is greetd autologin with no password at boot
-              # (modules/hyprland.nix), so the shell self-locks on start — the
-              # session comes up locked and gates on the password.
+              # The upstream default pam-service `system-auth` does not exist on
+              # NixOS, so a dedicated /etc/pam.d/wayle is provisioned instead.
               lock = {
                 pam-service = "wayle";
                 lock-on-start = true;
-                # Solid Catppuccin base, matching the old hyprlock background.
                 background-mode = "color";
                 background-color = c.base;
                 date-format = "%A, %d %B %Y";
@@ -478,26 +377,14 @@
               bar = {
                 location = "top";
                 exclusive = true;
-                # Flat bar — no border radius anywhere (bar, buttons, groups).
                 rounding = "none";
                 button-rounding = "none";
                 button-group-rounding = "none";
-                # "basic" = icon+label, minimal background (no colored pill).
                 button-variant = "basic";
-                # Bar flush to the screen edge (padding = padding-ends = 0), but
-                # widgets keep their INTERNAL padding — button-label-padding is the
-                # margin around each button's icon+label, NOT the bar-edge gap. px
-                # sizes are ABSOLUTE (bypass `scale`). With bar padding 0 the bar
-                # height is the tallest button = button-icon-size +
-                # 2*button-label-padding = 20 + 2*4 = 28. `scale` stays for
-                # HORIZONTAL inter-widget spacing only.
                 scale = 1.0;
                 button-icon-size = "20px";
                 button-label-size = "14px";
                 button-label-padding = "4px";
-                # Gap between a widget's icon and its label. Pinned in px — the
-                # lone scale default rendered as no visible gap. Auto-suppressed
-                # when a widget has no label.
                 button-gap = "4px";
                 padding = "0px";
                 padding-ends = "0px";
@@ -511,9 +398,6 @@
                       "hyprland-workspaces"
                       "custom-submap"
                     ];
-                    # Clock centered as the focal point; everything else right,
-                    # grouped by purpose: activity → audio/hardware →
-                    # connectivity → system → tray → vpn → notifications → power.
                     center = [ "clock" ];
                     right = [
                       "mail"
@@ -539,20 +423,13 @@
                 ];
               };
 
-              # Wallpaper (replaces hyprpaper + awww): same image on every
-              # monitor. [[wallpaper.monitors]] only does per-connector overrides,
-              # so the all-monitor wallpaper is applied at startup via
-              # `wayle wallpaper set <path>` in wayle-launch.
               wallpaper = {
                 engine-enabled = true;
-                # Animate wallpaper changes (and the startup set) with a fade.
                 transition-type = "fade";
                 transition-duration = 1.0;
                 transition-fps = 60;
               };
 
-              # Transient-surface animations. Global `transition` is the fallback
-              # (OSD + toasts fade); notifications bounce in and fade out.
               animations = {
                 transition = "fade";
                 notifications = {
@@ -561,18 +438,14 @@
                 };
               };
 
-              # OSD (waybar had no volume/brightness overlay). text-align centers
-              # the toast/toggle content (the keyboard-layout toast).
               osd = {
                 enabled = true;
                 text-align = "center";
               };
 
               modules = {
-                # waybar showed an ISO-ish date + 24h time.
                 clock.format = "%Y-%m-%d %H:%M";
 
-                # Short keyboard layout labels.
                 keyboard-input.layout-alias-map = {
                   "English (US)" = "EN";
                   "Danish" = "DA";
@@ -580,12 +453,8 @@
                   "Spanish (Spain)" = "ES";
                 };
 
-                # Show workspace NUMBERS (display-mode = "label"). The
-                # workspace-map sets only `color` per workspace — NOT `icon`: a map
-                # `icon` is "shown regardless" and would replace the number.
-                # `color` is the active-workspace background; the number itself is
-                # colored by the module's active/occupied/empty-color. Hyprland IDs
-                # are stable 1-10 so the map lands.
+                # No `icon` in the map: it is shown regardless and would replace
+                # the workspace number.
                 hyprland-workspaces = {
                   display-mode = "label";
                   label-size = "14px";
@@ -603,83 +472,53 @@
                   };
                 };
 
-                # Match the other modules' 20px icon content. Pinned in px;
-                # internal-padding is horizontal-only on a top bar, so the tray
-                # contributes only its icon height.
                 systray.icon-scale = "20px";
 
-                # Drop the "00" count label — the bell icon already conveys state
-                # (bell / bell-dot when unread / bell-off for DND).
                 notifications.label-show = false;
 
-                # Icon-only (the icon differs connected/disconnected); keeps the
-                # native dropdown. label-show is all-or-nothing, so a connected
-                # device name can't be shown without also showing "Disconnected".
+                # label-show is all-or-nothing: showing a connected device name
+                # would also show "Disconnected".
                 bluetooth.label-show = false;
 
-                # Scroll to adjust volume, middle-click to mute (left-click still
-                # opens the audio dropdown).
                 volume = {
                   scroll-up = "wayle audio output-volume +5";
                   scroll-down = "wayle audio output-volume -5";
                   middle-click = "wayle audio output-mute";
                 };
 
-                # Mic: scroll to adjust input level, middle-click to mute.
                 microphone = {
                   scroll-up = "wayle audio input-volume +5";
                   scroll-down = "wayle audio input-volume -5";
                   middle-click = "wayle audio input-mute";
                 };
 
-                # Brightness: scroll to adjust backlight. wayle has no brightness
-                # CLI (unlike audio), so scroll shells out to brightnessctl. -n
-                # keeps a 1-unit floor so scrolling down never blacks the screen.
+                # wayle has no brightness CLI. -n keeps a 1-unit floor so
+                # scrolling down never blacks the screen.
                 brightness = {
                   scroll-up = "brightnessctl set 5%+";
                   scroll-down = "brightnessctl set 5%- -n";
                 };
 
-                # Weather: powers the clock's right-click dropdown (no bar
-                # module). Coords are Copenhagen (kept in sync with hyprsunset);
-                # open-meteo needs no API key.
                 weather = {
                   location = "55.6,12.5";
                   units = "metric";
                 };
 
-                # wayle's power module is a bare button with NO built-in menu —
-                # every click action defaults to "" (no-op). Bind it to wleave,
-                # the GTK4 power menu installed + configured above.
+                # The power module has no built-in menu; every click action
+                # defaults to a no-op unless bound.
                 power.left-click = "wleave";
 
-                # Native GStreamer recorder. left-click toggles capture,
-                # right-click opens the options dropdown; SUPER+SHIFT+R also
-                # toggles it (hyprland.lua). button-variant = "basic" renders a
-                # transparent background, so the module's red bg defaults never
-                # paint; recording state shows via the icon swap. Colors are
-                # static per the schema, so the icon is a neutral fg-muted
-                # instead of the loud always-red default. Flip label-show = true
-                # for an elapsed timer while recording.
                 recorder = {
                   icon-color = "fg-muted";
                   label-show = false;
                 };
 
-                # Built-in mail module — notmuch count + inotify maildir watch
-                # (event-driven, no poll). `accounts` gives the per-account unread
-                # breakdown in the native dropdown with brand icons; the bar count
-                # is their sum. Native `notify` fires one notify-send per newly
-                # arrived message. Placeholders: {{ sender }}, {{ subject }},
-                # {{ count }}, {{ new }}.
                 mail = {
                   icon-name = "ld-mail-symbolic";
-                  # Collapse the slot at zero unread.
                   hide-when-zero = true;
                   notify = true;
                   notify-summary = "{{ sender }}";
                   notify-body = "{{ subject }}";
-                  # left-click opens the native per-account dropdown.
                   left-click = "dropdown:mail";
                   middle-click = "mail-open";
                   accounts = [
@@ -696,11 +535,6 @@
                   ];
                 };
 
-                # Blue-light filter — wayle's native module (Hyprland only). It
-                # owns the hyprsunset daemon and computes the sunrise/sunset
-                # schedule from the coords (GeoClue overrides when available). A
-                # click sets a manual override until the next solar boundary.
-                # Icon-only: moon while the filter is on, sun when off.
                 hyprsunset = {
                   temperature = 4500;
                   auto-schedule = true;
@@ -711,10 +545,6 @@
                   icon-off = "ld-sun-symbolic";
                 };
 
-                # Built-in power-profiles module: power-profiles-daemon D-Bus
-                # backend, per-profile icon + color, cycles profiles on
-                # left-click natively. saver=green, balanced=blue,
-                # performance=red. Icon-only to match the right cluster.
                 power-profiles = {
                   label-show = false;
                   left-click = ":cycle";
@@ -726,14 +556,7 @@
                   color-performance = "red";
                 };
 
-                # Custom modules: the status scripts emit waybar JSON
-                # ({text,tooltip,class}); wayle's custom module parses that
-                # natively. All are event-driven watchers (wayle-widget above).
                 custom = [
-                  # Submap indicator (icon-only). The hl Lua resize_mode isn't a
-                  # native Hyprland submap, so hyprland.lua writes/removes a tmpfs
-                  # marker on enter/exit and this watches it — shows only while in
-                  # a submap (e.g. SUPER+R), hidden otherwise.
                   {
                     id = "submap";
                     mode = "watch";
@@ -743,11 +566,6 @@
                     label-show = false;
                     hide-if-empty = true;
                   }
-                  # Event-driven: re-renders on each treeman daemon lifecycle
-                  # event. icon-show = false: treeman's text is a compact
-                  # per-bucket "{glyph} {count}" line, so the bucket glyphs carry
-                  # the icon; dropping icon-name alone still reserves a blank
-                  # icon slot.
                   {
                     id = "treeman";
                     mode = "watch";
@@ -755,14 +573,8 @@
                     command = "wayle-widget treeman-watch";
                     icon-show = false;
                     left-click = "treeman worktree list";
-                    # treeman emits nothing when idle → collapse the slot.
                     hide-if-empty = true;
                   }
-                  # VPN: one tri-state icon-only module. The watcher emits `alt` =
-                  # on/connecting/off; icon-map + color-map swap the icon AND its
-                  # colors per state. Old waybar look preserved: green lock
-                  # connected, yellow-bg refresh connecting, grey unplug
-                  # disconnected.
                   {
                     id = "vpn";
                     mode = "watch";
@@ -791,9 +603,6 @@
           force = true;
         };
 
-        # wleave: our own layout, because the bundled default locks with
-        # gtklock/swaylock (neither installed) and has no hyprland logout
-        # branch. Icons are reused from the wleave package's own share dir.
         xdg.configFile."wleave/layout.json".source =
           let
             icon = name: "${pkgs.wleave}/share/wleave/icons/${name}.svg";
@@ -857,23 +666,14 @@
                 }
               ''
             );
-            # wleave is a fullscreen layer-shell window whose buttons ALWAYS
-            # fill the inter-margin box (layout.rs maximises button area;
-            # aspect-ratio only changes their shape, not their size), so the
-            # only size lever is the margins — which accept a percentage of
-            # the viewport per axis, making this resolution-independent.
-            #
-            # One row of small square tiles, centred: "1/1" puts every button
-            # on one row, top/bottom 46% leaves ~8% of screen height (this is
-            # what makes them ~4x smaller — raise it to shrink further),
-            # left/right 15% just centres the row, aspect "1" squares them.
+            # Buttons always fill the inter-margin box, so margins are the only
+            # size lever. Raise top/bottom to shrink the tiles further.
             "buttons-per-row" = "1/1";
             margin = "15%";
             "margin-top" = "46%";
             "margin-bottom" = "46%";
             "button-aspect-ratio" = "1";
             "close-on-lost-focus" = true;
-            # Drop the "Wleave x.y. Missing or broken icons?" footer.
             "no-version-info" = true;
             buttons = [
               {
@@ -890,7 +690,6 @@
                     "$DESKTOP_SESSION" = "hyprland";
                     shell = "hyprctl dispatch exit";
                   }
-                  # Works on any systemd-logind session, as a fallback.
                   "loginctl terminate-user $USER"
                 ];
                 text = "Logout";
@@ -929,18 +728,13 @@
               After = sessionTarget ++ [ "power-profiles-daemon.service" ];
               Wants = [ "power-profiles-daemon.service" ];
               PartOf = sessionTarget;
-              # Bump the unit hash when the config store path moves, so
-              # sd-switch restarts wayle on a config edit.
+              # Moves the unit hash on a config edit so sd-switch restarts wayle.
               X-Restart-Triggers = [ (toString config.xdg.configFile."wayle/config.toml".source) ];
             };
             Install.WantedBy = sessionTarget;
             Service = {
-              # Type=simple, not dbus: wayle is a full shell, not solely a
-              # notification daemon. It claims
-              # org.freedesktop.Notifications during shell startup, and
-              # Type=dbus+BusName would make systemd block on that name and time
-              # the whole unit out if it is claimed late or notifications are
-              # disabled.
+              # Not Type=dbus: systemd would block on org.freedesktop.Notifications
+              # and time the unit out if wayle claims it late or not at all.
               Type = "simple";
               ExecStart = lib.getExe launcher;
               ExecStopPost = "-${lib.getExe pkgs.bash} -c '${lib.getExe' pkgs.procps "pkill"} -9 wayle || true; sleep 0.5'";
@@ -949,15 +743,10 @@
             };
           };
 
-          # Independent of the session target: these run under default.target
-          # and exist only to bounce the bar once their dependency is up.
           await-powerprofile = awaitUnit "Restart the bar when power-profiles-daemon starts" "power-profiles-daemon.service";
           await-bluetooth = awaitUnit "Restart the bar when bluetooth starts" "bluetooth.service";
         };
 
-        # Non-NixOS half of programs.wayle.lock.enable: wayle's native
-        # ext-session-lock unlock authenticates against this PAM service, and
-        # config.toml sets lock.pam-service = "wayle" to match.
         stubbe.setup.wayleLockPam = {
           privileged = true;
           title = "⚠️  Wayle lock PAM configuration missing";
@@ -968,13 +757,9 @@
           '';
           script =
             let
-              # Absolute nix path, never a bare module name: wayle is a nix
-              # binary, so its libpam resolves bare names against the nix store
-              # securedir (where only pam_unix et al. live), and the host
-              # distro's module can't dlopen anyway (host-only deps like
-              # libselinux aren't visible to nix's ld.so). The profile path is
-              # stable across upgrades and GC-rooted via gnome-keyring in
-              # home.packages.
+              # Absolute path, never a bare module name: nix libpam resolves bare
+              # names against the store securedir, and the host distro's module
+              # cannot dlopen under nix's ld.so anyway.
               pamGnomeKeyring = "${config.home.profileDirectory}/lib/security/pam_gnome_keyring.so";
             in
             pkgs.stubbe.installText {
