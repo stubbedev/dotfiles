@@ -820,6 +820,10 @@
         '';
       };
 
+      # completions/ is autoloaded off fpath, never sourced, so it is neither
+      # zcompiled here nor listed in the .zshrc.
+      sourceableZshFiles = lib.filter (n: !(lib.hasPrefix "completions/" n)) (lib.attrNames zshFiles);
+
       # The inline tree materialised and zcompiled.
       zshConfig =
         pkgs.runCommandLocal "stubbe-zsh-config"
@@ -833,8 +837,11 @@
                 cp ${pkgs.writeText (baseNameOf name) text} $out/${name}
               '') zshFiles
             )}
-            # zcompile is a zsh builtin, so run it inside zsh.
-            zsh -c 'for f in paths apaths sysfuncs funcs aliases settings; do zcompile $out/$f; done'
+            # zcompile is a zsh builtin, so run it inside zsh. The list is
+            # derived, not repeated: every zshFiles entry outside completions/
+            # is sourced at startup and wants a .zwc, and a hand-written list
+            # is one a new entry gets left out of.
+            zsh -c 'for f in ${lib.concatStringsSep " " sourceableZshFiles}; do zcompile $out/$f; done'
           '';
 
       # Source order matters and is preserved here.

@@ -87,6 +87,9 @@
         # FZF
         # Generated from pkgs.stubbe.colors, like every other themed surface.
         # bg/bg+ are -1 (terminal default) so the picker stays transparent.
+        # One attribute per fzf colour role rather than five hand-packed
+        # `--color=` lines: which roles are set is then legible at a glance,
+        # and adding one is not a question of which line has room.
         #
         # This is a shell-word string, not a config file: `#` is not a comment
         # here, it is an argument fzf will reject. Keep the commentary out here.
@@ -100,11 +103,27 @@
         # invocation unless `use-fzf-default-opts` is set to yes, and it is not
         # (modules/shell.nix), so tab there stays the completion accept key.
         FZF_DEFAULT_OPTS = ''
-          --color=bg+:-1,bg:-1,spinner:${c.rosewater},hl:${c.red}
-          --color=fg:${c.text},header:${c.red},info:${c.mauve},pointer:${c.rosewater}
-          --color=marker:${c.lavender},fg+:${c.text},prompt:${c.mauve},hl+:${c.red}
-          --color=selected-bg:-1,selected-fg:${c.lavender}
-          --color=current-fg:${c.mauve}
+          --color=${
+            lib.concatStringsSep "," (
+              lib.mapAttrsToList (role: colour: "${role}:${colour}") {
+                bg = "-1";
+                "bg+" = "-1";
+                fg = c.text;
+                "fg+" = c.text;
+                hl = c.red;
+                "hl+" = c.red;
+                header = c.red;
+                info = c.mauve;
+                marker = c.lavender;
+                pointer = c.rosewater;
+                prompt = c.mauve;
+                spinner = c.rosewater;
+                "selected-bg" = "-1";
+                "selected-fg" = c.lavender;
+                "current-fg" = c.mauve;
+              }
+            )
+          }
           --multi
           --bind 'tab:execute-silent(printf %s {} | cut -f1 | clip)+abort'
           --bind 'ctrl-space:toggle'

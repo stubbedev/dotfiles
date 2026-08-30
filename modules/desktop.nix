@@ -86,6 +86,49 @@ in
       ...
     }:
     let
+      # vifm's palenight highlight groups, as `group = "<cterm> <fg> <bg>"`.
+      # The literal block this replaces was aligned with hand-placed tabs, so
+      # the columns drifted with the length of the group name; here the
+      # renderer pads and the blank lines that group related entries are the
+      # `null` rows.
+      vifmHighlight = [
+        { Border = "none default default"; }
+        null
+        { TopLine = "none 002 default"; }
+        { TopLineSel = "bold 002 default"; }
+        null
+        { Win = "none 251 default"; }
+        { Directory = "bold 004 default"; }
+        { CurrLine = "bold,inverse default default"; }
+        { OtherLine = "bold default default"; }
+        { Selected = "none 003 008"; }
+        null
+        { JobLine = "bold 251 008"; }
+        { StatusLine = "none 008 default"; }
+        { ErrorMsg = "bold 001 default"; }
+        { WildMenu = "bold 015 008"; }
+        { CmdLine = "none 007 default"; }
+        null
+        { Executable = "bold 002 default"; }
+        { Link = "bold 006 default"; }
+        { BrokenLink = "bold 001 default"; }
+        { Device = "bold,standout 000 011"; }
+        { Fifo = "none 003 default"; }
+        { Socket = "bold 005 default"; }
+      ];
+      renderHighlight =
+        entry:
+        if entry == null then
+          ""
+        else
+          let
+            group = builtins.head (lib.attrNames entry);
+            parts = lib.splitString " " entry.${group};
+            pad = n: str: str + lib.concatStrings (lib.genList (_: " ") (lib.max 1 (n - lib.stringLength str)));
+          in
+          "highlight ${pad 14 group}${pad 22 "cterm=${builtins.elemAt parts 0}"}"
+          + "${pad 18 "ctermfg=${builtins.elemAt parts 1}"}ctermbg=${builtins.elemAt parts 2}";
+
       # Upstream's org.remmina.Remmina.desktop bakes absolute /nix/store
       # paths into Exec=, so launching from the menu would bypass the
       # nixGL wrapper. Provide a replacement whose Exec= uses the bare
@@ -189,29 +232,7 @@ in
           " Reset all styles first
           highlight clear
 
-          highlight Border	cterm=none	ctermfg=default	ctermbg=default
-
-          highlight TopLine	cterm=none	ctermfg=002	ctermbg=default
-          highlight TopLineSel	cterm=bold	ctermfg=002	ctermbg=default
-
-          highlight Win		cterm=none	ctermfg=251	ctermbg=default
-          highlight Directory	cterm=bold	ctermfg=004	ctermbg=default
-          highlight CurrLine	cterm=bold,inverse	ctermfg=default	ctermbg=default
-          highlight OtherLine	cterm=bold	ctermfg=default	ctermbg=default
-          highlight Selected	cterm=none	ctermfg=003	ctermbg=008
-
-          highlight JobLine	cterm=bold	ctermfg=251	ctermbg=008
-          highlight StatusLine	cterm=none	ctermfg=008	ctermbg=default
-          highlight ErrorMsg	cterm=bold	ctermfg=001	ctermbg=default
-          highlight WildMenu	cterm=bold	ctermfg=015	ctermbg=008
-          highlight CmdLine	cterm=none	ctermfg=007	ctermbg=default
-
-          highlight Executable	cterm=bold	ctermfg=002	ctermbg=default
-          highlight Link		cterm=bold	ctermfg=006	ctermbg=default
-          highlight BrokenLink	cterm=bold	ctermfg=001	ctermbg=default
-          highlight Device	cterm=bold,standout	ctermfg=000	ctermbg=011
-          highlight Fifo		cterm=none	ctermfg=003	ctermbg=default
-          highlight Socket	cterm=bold	ctermfg=005	ctermbg=default
+          ${lib.concatMapStringsSep "\n" renderHighlight vifmHighlight}
         '';
       };
 

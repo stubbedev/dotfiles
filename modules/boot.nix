@@ -175,21 +175,23 @@ _: {
             # location depends on the bootloader. Both are too host-variable to
             # automate safely, so print the steps; theme files are already in
             # place above.
-            echo "" >&2
-            echo "INFO: Theme files installed. Three manual steps remain on Arch:" >&2
-            echo "" >&2
-            echo "  1. sudo plymouth-set-default-theme catppuccin-mocha" >&2
-            echo "" >&2
-            echo "  2. Add 'plymouth' to the HOOKS array in /etc/mkinitcpio.conf" >&2
-            echo "     BEFORE 'udev' (and before 'encrypt'/'sd-encrypt' if used)." >&2
-            echo "     Then: sudo mkinitcpio -P" >&2
-            echo "" >&2
-            echo "  3. Add 'quiet splash' to your kernel cmdline:" >&2
-            echo "     - GRUB:         append to GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub," >&2
-            echo "                     then 'sudo grub-mkconfig -o /boot/grub/grub.cfg'" >&2
-            echo "     - systemd-boot: edit /boot/loader/entries/*.conf, append to 'options'" >&2
-            echo "" >&2
-            echo "  Wiki: https://wiki.archlinux.org/title/Plymouth" >&2
+            cat >&2 <<'EOF'
+
+            INFO: Theme files installed. Three manual steps remain on Arch:
+
+              1. sudo plymouth-set-default-theme catppuccin-mocha
+
+              2. Add 'plymouth' to the HOOKS array in /etc/mkinitcpio.conf
+                 BEFORE 'udev' (and before 'encrypt'/'sd-encrypt' if used).
+                 Then: sudo mkinitcpio -P
+
+              3. Add 'quiet splash' to your kernel cmdline:
+                 - GRUB:         append to GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub,
+                                 then 'sudo grub-mkconfig -o /boot/grub/grub.cfg'
+                 - systemd-boot: edit /boot/loader/entries/*.conf, append to 'options'
+
+              Wiki: https://wiki.archlinux.org/title/Plymouth
+            EOF
 
           else
             echo "Unsupported distribution (no apt-get/dnf/pacman). Theme files staged but boot integration skipped." >&2

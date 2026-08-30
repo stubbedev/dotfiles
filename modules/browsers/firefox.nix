@@ -24,6 +24,24 @@
           "{7719f622-a980-4a30-ba6a-1a5ad11b677c}" = "pin-unpin-tab";
         };
 
+        # Prefs locked through the autoconfig file, as data rather than seven
+        # hand-written `lockPref(...)` calls: `builtins.toJSON` renders each
+        # value in its own JS literal form, so the int/bool/string distinction
+        # is the Nix value's, not something to get right by hand in quoting.
+        # Locked means locked: these cannot be changed from about:config.
+        lockedPrefs = {
+          # Titlebar off — tabs live in the GNOME/Hyprland titlebar strip.
+          "browser.tabs.inTitlebar" = 0;
+          # Touchpad pinch-zoom and kinetic scrolling, off by default on Linux.
+          "apz.allow_zooming" = true;
+          "apz.gtk.touchpad_pinch.enabled" = true;
+          "apz.gtk.kinetic_scroll.enabled" = true;
+          # Two-finger swipe back/forward, matching every other app here.
+          "widget.disable-swipe-tracker" = false;
+          "browser.gesture.swipe.left" = "Browser:BackOrBackDuplicate";
+          "browser.gesture.swipe.right" = "Browser:ForwardOrForwardDuplicate";
+        };
+
         # Vendored Tridactyl theme, so the build is reproducible and works
         # offline (no fetch at browser startup). The revision and hash live in
         # flake.lock via the `tridactyl-theme-src` input; `nix flake update`
@@ -107,13 +125,11 @@
                 }) firefoxAddons;
               };
               extraPrefs = ''
-                lockPref("browser.tabs.inTitlebar", 0);
-                lockPref("apz.allow_zooming", true);
-                lockPref("apz.gtk.touchpad_pinch.enabled", true);
-                lockPref("apz.gtk.kinetic_scroll.enabled", true);
-                lockPref("widget.disable-swipe-tracker", false);
-                lockPref("browser.gesture.swipe.left", "Browser:BackOrBackDuplicate");
-                lockPref("browser.gesture.swipe.right", "Browser:ForwardOrForwardDuplicate");
+                ${lib.concatStringsSep "\n" (
+                  lib.mapAttrsToList (
+                    key: value: "lockPref(${builtins.toJSON key}, ${builtins.toJSON value});"
+                  ) lockedPrefs
+                )}
 
                 // --- Focus page content on new tab / new window ---
                 // Firefox parks the cursor in the urlbar for about:newtab,

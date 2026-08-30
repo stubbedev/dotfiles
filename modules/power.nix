@@ -290,6 +290,30 @@ _: {
       pkgs,
       ...
     }:
+    let
+      # Intel hybrid parts, by family — intel-lpmd only has a P/E-core topology
+      # to work with on these, and exits immediately anywhere else. The numbers
+      # are CPUID model IDs as /proc/cpuinfo reports them (list from omarchy).
+      # Keyed by family so a new generation is one named line rather than a
+      # digit appended to a bare run of numbers and a comment to keep in sync.
+      intelHybridModels = {
+        alder-lake = [
+          151
+          154
+        ];
+        raptor-lake = [
+          183
+          186
+          191
+        ];
+        meteor-lake = [
+          170
+          172
+        ];
+        lunar-lake = [ 189 ];
+        panther-lake = [ 204 ];
+      };
+    in
     lib.mkIf config.features.desktop {
       # "Charge to Full Now" — the button macOS puts next to Optimized Battery
       # Charging. Lifts the 80% cap for the rest of this charging session;
@@ -509,13 +533,15 @@ _: {
           script = ''
             PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-            # intel-lpmd only has a CPU topology to work with on Intel hybrid
-            # parts. Model list from omarchy: Alder Lake (151/154), Raptor Lake
-            # (183/186/191), Meteor Lake (170/172), Lunar Lake (189), Panther
-            # Lake (204). Anything else, skip — the daemon would just exit.
+            # Anything not in intelHybridModels (modules/power.nix) is skipped
+            # — the daemon would just exit there.
             cpu_model=$(awk -F: '/^model[[:space:]]*:/ { gsub(/ /, "", $2); print $2; exit }' /proc/cpuinfo)
             case "$cpu_model" in
-            151 | 154 | 170 | 172 | 183 | 186 | 189 | 191 | 204)
+            ${
+              lib.concatMapStringsSep " | " toString (
+                lib.sort (a: b: a < b) (lib.concatLists (lib.attrValues intelHybridModels))
+              )
+            })
               ${pkgs.stubbe.installHostPackage {
                 detect = "intel_lpmd";
                 apt = [ "intel-lpmd" ];
