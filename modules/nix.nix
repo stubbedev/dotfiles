@@ -1,9 +1,5 @@
-# Nix itself: package set, binary caches, garbage collection, and the GitHub
-# token that keeps `nix flake update` off the anonymous API rate limit.
 { config, inputs, ... }:
 let
-  # The NixOS module below shadows `config` with its own, so alias the
-  # flake-parts one for the overlay list.
   flakeConfig = config;
 in
 {
@@ -17,12 +13,9 @@ in
     {
       environment.systemPackages = [ pkgs.attic-client ];
 
-      # Mirror the standalone-HM nixpkgs instantiation (modules/core/flake.nix)
-      # from the same shared values, so `pkgs.<x>` on the system side resolves
-      # through the same overlays the HM build sees. Without this, system
-      # packages fall back to a vanilla nixpkgs eval and miss every override.
-      # Read from the flake level, NOT from `pkgs.stubbe`: `pkgs` is built FROM
-      # these values, so reaching through it here is an infinite recursion.
+      # Without this, system packages fall back to a vanilla nixpkgs eval and
+      # miss every override. Read from the flake level, not `pkgs.stubbe`:
+      # `pkgs` is built FROM these values, so that is infinite recursion.
       nixpkgs = {
         config = flakeConfig.stubbe.lib.nixpkgsConfig;
         overlays = builtins.attrValues flakeConfig.flake.overlays;
@@ -35,35 +28,22 @@ in
             "flakes"
           ];
 
-          # Daemon-level substituters — what `nixos-rebuild` and any root-side
-          # nix invocation read. The HM-side copy in modules/core/home.nix only
-          # applies to the standalone-HM target (useGlobalPkgs gates it off
-          # here). Without this, system rebuilds miss the nix-community cache
-          # (fenix, lanzaboote, …) and rebuild from source.
+          # The HM-side copy only applies to standalone HM, so without this the
+          # daemon misses nix-community and rebuilds from source.
           inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
 
-          # Don't let a "path absent" verdict linger. nix queries substituters
-          # for a build's output path BEFORE building it; on our self-hosted
-          # cache that path is a 404 until we push it seconds later, and the
-          # default 3600s negative TTL then hides the freshly-pushed path for an
-          # hour — so `build → push → substitute` looks broken. 0 = always
-          # re-check, which is cheap on a fast link to a close cache.
+          # nix asks the substituter before building, so our self-hosted cache
+          # 404s until the push seconds later. The default 3600s negative TTL
+          # would then hide the pushed path for an hour.
           narinfo-cache-negative-ttl = 0;
 
-          # 1 MiB (the nix default) stalls substitution: the NAR decompressor
-          # blocks the moment the buffer fills, so downloads run in lockstep
-          # with the writer ("warning: download buffer is full"). 128 MiB is
-          # RAM we have and keeps the stream moving.
+          # At the 1 MiB default the NAR decompressor blocks as soon as the
+          # buffer fills and downloads run in lockstep with the writer.
           download-buffer-size = 128 * 1024 * 1024;
 
-          # Hardlink-dedupe identical files on every add, rather than waiting
-          # for the weekly `nix.optimise` run. Cheap per build, and it keeps
-          # store growth smooth between GC cycles.
           auto-optimise-store = true;
 
-          # Restrict who can talk to the daemon. The default `@users` lets any
-          # local user trigger evaluation and store writes; the only consumer
-          # here is the primary user.
+          # The default `@users` lets any local user trigger store writes.
           allowed-users = [ "@wheel" ];
           trusted-users = [
             "root"
@@ -71,33 +51,19 @@ in
           ];
         };
 
-        # `!include` (the optional form) so an early-boot evaluation before the
-        # secret is rendered does not error.
+        # Optional form, so an early-boot eval before the secret exists is fine.
         extraOptions = ''
           !include ${config.sops.templates."nix-access-tokens.conf".path}
         '';
 
-        # Pin <nixpkgs> for system-side nix invocations (nixos-rebuild, root nix
-        # repl, anything reading NIX_PATH from the daemon environment). The
-        # user-side NIX_PATH for nixd/nvim is set in modules/shell.nix.
         nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
 
-        # Backgrounded GC and builds should not fight foreground apps.
-        # SCHED_IDLE + idle IO class = run only when nothing else wants the
-        # CPU or the disk, so foreground latency stays clean during rebuilds.
         daemonCPUSchedPolicy = "idle";
         daemonIOSchedClass = "idle";
 
-        # Garbage-collect weekly, and keep the system profile trimmed to
-        # "current + 1 previous" so a rebuild that boots poorly is still
-        # instantly rollback-able without months of stale generations holding
-        # hundreds of GB live.
-        #
-        # `nix-collect-garbage` only frees paths with no remaining GC root, and
-        # old generation symlinks ARE roots — so generations must be pruned
-        # BEFORE collecting or there is nothing to free. `--delete-older-than`
-        # is time-based and lets the count drift; `--delete-generations +2`
-        # enforces a count regardless of switch frequency.
+        # Old generation symlinks are GC roots, so they must be pruned BEFORE
+        # collecting or there is nothing to free. `--delete-older-than` is
+        # time-based and lets the count drift with switch frequency.
         gc = {
           automatic = true;
           dates = "weekly";
@@ -109,17 +75,13 @@ in
           dates = [ "weekly" ];
         };
 
-        # Flake-only system: the nix-channel CLI and its update timer are dead
-        # weight, and a stale `nix-channel --update` could drift the system away
-        # from the flake.lock pin.
+        # A stale `nix-channel --update` could drift the system off flake.lock.
         channel.enable = false;
       };
 
-      # The gc/optimise timers are weekly + Persistent, so a run missed while
-      # the machine was off fires at the NEXT boot — nix-gc alone is ~3.5min of
-      # saturated disk IO, which starves the compositor and leaves the desktop
-      # blank for ~90s after login. Idle IO/CPU scheduling makes both yield to
-      # anything interactive: login stays fast, maintenance still completes.
+      # Persistent timers fire at the next boot after a missed run, and nix-gc
+      # saturates disk IO long enough to leave the desktop blank after login.
+      # Idle scheduling makes it yield to anything interactive.
       systemd.services = {
         nix-gc.serviceConfig = {
           ExecStartPre = [
@@ -135,20 +97,15 @@ in
       };
 
       system.activationScripts = {
-        # Prune on every switch too, so generations do not accumulate between
-        # weekly GC runs — same shape as the HM activation below.
         pruneSystemGenerations.text = ''
           ${lib.getExe' config.nix.package "nix-env"} --profile /nix/var/nix/profiles/system --delete-generations +2 || true
         '';
 
       };
 
-      # GitHub API token for flake input fetches. sops-nix decrypts it into /run
-      # and the template renders the nix.conf line there, so the token never
-      # lands in the world-readable /nix/store copy of nix.conf — which
-      # `nix.settings.access-tokens` would do. owner = primaryUser because
-      # `nix flake update` runs unprivileged even on NixOS, so the user's own
-      # client must be able to read it; root/daemon reads it regardless.
+      # Rendered into /run, not the store: `nix.settings.access-tokens` would
+      # put the token in the world-readable nix.conf. Owned by primaryUser
+      # because `nix flake update` runs unprivileged even on NixOS.
       sops = {
         secrets.github-token = pkgs.stubbe.secret { name = "github-token"; };
         templates."nix-access-tokens.conf" = {
@@ -175,8 +132,7 @@ in
         with pkgs;
         [
           nix-zsh-completions
-          # nh ships unconditionally via modules/scripts.nix (the `hm` wrapper
-          # depends on it), so it is deliberately absent here.
+          # nh ships unconditionally via modules/scripts.nix.
           pass
           cachix
           attic-client
@@ -186,12 +142,8 @@ in
         ]
       );
 
-      # home-manager's switch does NOT prune old generations: the
-      # ~/.local/state/nix/profiles/{home-manager,profile,channels}-N-link
-      # symlinks accumulate forever and pin every store path they reference,
-      # which is by far the biggest source of store bloat on a host that
-      # rebuilds many times a day. Trim to "current + 1 previous" on every
-      # switch, so a switch cleans up after itself.
+      # home-manager never prunes: its generation symlinks accumulate forever
+      # and pin every store path they reference.
       stubbe.setup.pruneNixGenerations.script =
         lib.concatMapStrings
           (profile: ''
@@ -206,8 +158,7 @@ in
             "channels"
           ];
 
-      # Actually free the store paths whose last GC root the prune above
-      # removed. Non-NixOS only: on NixOS the system nix-gc.service collects.
+      # Non-NixOS only: on NixOS the system nix-gc.service collects.
       systemd.user = lib.mkIf (!onNixOS) {
         services.nix-collect-garbage = {
           Unit.Description = "Collect unreachable nix store paths";
@@ -229,12 +180,9 @@ in
         };
       };
 
-      # Non-NixOS: HM owns /etc/nix here, so the same token has to be written
-      # by an activation. api.github.com caps anonymous requests at 60/hr per
-      # IP, and `nix flake update` resolves every input's HEAD against that
-      # API — a flake with ~20 github inputs exhausts the budget in one run and
-      # falls back to stale cached revs ("HTTP error 403 … rate limit exceeded
-      # … using cached version"). A token lifts the cap to 5000/hr.
+      # Anonymous api.github.com allows 60 requests/hr, and `nix flake update`
+      # resolves every input HEAD against it, so one run exhausts the budget and
+      # silently falls back to stale cached revs.
       stubbe.setup.nixGithubToken = {
         privileged = true;
         title = "GitHub access token for Nix flake fetches";
@@ -259,12 +207,9 @@ in
             exit 0
           fi
         '';
-        # The script's text is hashed to gate the sudo re-prompt, so it must not
-        # embed anything that churns between switches. Both references below are
-        # stable: `pkgs.stubbe.file` is content-addressed on the ciphertext (so
-        # it changes exactly when the token is rotated — precisely when we DO
-        # want a re-prompt), and profileDirectory/bin is a fixed string, unlike
-        # `${pkgs.sops}` which moves on every nixpkgs bump.
+        # This text is hashed to gate the sudo re-prompt, so it must embed
+        # nothing that churns between switches -- notably not `${pkgs.sops}`,
+        # which moves on every nixpkgs bump.
         script =
           let
             secret = pkgs.stubbe.file "secrets/github-token";

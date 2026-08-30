@@ -73,6 +73,8 @@ _: {
 
         xdg.configFile."opencode/plugins/lsp-warnings.js".source =
           ../../src/opencode/plugins/lsp-warnings.js;
+        xdg.configFile."opencode/plugins/no-aliases.js".source =
+          ../../src/opencode/plugins/no-aliases.js;
 
         stubbe.setup.opencode.script = ''
           ${pkgs.stubbe.jsonMerge {
