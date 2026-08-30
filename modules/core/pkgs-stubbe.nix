@@ -1,22 +1,3 @@
-# `pkgs.stubbe` — every helper this repo needs, in one namespace, reachable
-# from any module of any class without a single `specialArgs` entry.
-#
-# Why an overlay and not injected module args: an overlay rides on `pkgs`,
-# which both the NixOS and the home-manager module systems already hand every
-# module. The old `homeLib` was passed via `_module.args`, which meant it had
-# to be re-imported by hand in NixOS modules, and every builder needing `pkgs`
-# carried a `pkgs ? null` + lazy-throw guard for the callers that had none.
-# None of that exists here.
-#
-# Contents:
-#   * everything in `flake.lib` (pure data — colours, URLs, caches, scripts)
-#   * `file`          content-addressed access to the few remaining repo files
-#   * `secret`        sops secret declarations
-#   * `install*`      privileged-activation shell builders
-#   * `json*`         activation-time JSON state mutators
-#   * `bashApp`/`zshApp`  inline scripts as checked Nix bins
-#   * `nixGL`/`mk*Wrapper`  graphics-wrapper primitives (policy lives in
-#                     modules/core/gfx.nix, which knows the target platform)
 { config, ... }:
 {
   flake.overlays.stubbe =
@@ -25,15 +6,9 @@
       inherit (final) lib;
       flakeLib = config.stubbe.lib;
 
-      # Content-addressed copy of one path inside this repo.
-      #
-      # Never reference `${self}/src/x` directly: `self` is the whole flake
-      # source, so a derivation that names a path inside it depends on ALL of
-      # it and its output hash changes on every commit (and every dirty-tree
-      # edit). That churn is what made privileged activations re-prompt and
-      # the home-manager generation rebuild on unrelated edits. `builtins.path`
-      # hashes the file's own contents instead, so a store path here changes
-      # exactly when that file changes.
+      # Never reference ${self}/src/x directly: that depends on the whole flake
+      # source, so the hash churns on every commit and privileged activations
+      # re-prompt. builtins.path hashes the file's own contents.
       repoPath =
         relPath:
         builtins.path {
@@ -43,23 +18,11 @@
     in
     {
       stubbe = flakeLib // {
-        # ── Repo files ──────────────────────────────────────────────────
-        # For the few things that remain real files (the live-edit hyprland
-        # tree, wallpapers, encrypted secrets); everything else is inline nix.
         file = repoPath;
 
-        # Colour palette in the shapes consumers actually want. `colors` is
-        # bare hex; these are the renderers, so no themed config ever
-        # hardcodes a Catppuccin value.
         withHash = lib.mapAttrs (_: hex: "#${hex}") flakeLib.colors;
         withArgb = lib.mapAttrs (_: hex: "0xff${hex}") flakeLib.colors;
 
-        # ── Secrets ─────────────────────────────────────────────────────
-        # Declare a binary-mode sops secret backed by <repo>/secrets/<name>,
-        # decrypted to `path` at activation. The value is what
-        # `sops.secrets.<key>` expects; the caller picks the key.
-        # `path` is optional: NixOS secrets land in /run/secrets/<name> by
-        # default, while HM secrets normally name an explicit destination.
         secret =
           {
             name,
@@ -71,15 +34,8 @@
           }
           // lib.optionalAttrs (path != null) { inherit path; };
 
-        # ── Privileged activation builders ──────────────────────────────
-        # Each returns a shell snippet for a `stubbe.setup.<name>.script`
-        # whose `privileged = true` (see modules/core/setup.nix), where a
-        # `sudo` shell function is already in scope.
-
-        # Materialise a store path into a root-owned system location.
-        # Store path (not an inline heredoc): no quoting hazard, no
-        # eval-time readFile, and the snippet's own hash — which gates the
-        # sudo re-prompt — changes exactly when the content does.
+        # A store path, not a heredoc: the snippet hash gates the sudo
+        # re-prompt, so it must change exactly when the content does.
         installFile =
           {
             source,
@@ -92,12 +48,10 @@
             sudo install -D -m ${mode} -o ${owner} -g ${group} ${source} ${lib.escapeShellArg target}
           '';
 
-        # Symlink a store path into a root-owned system location, creating the
         # parent directory. Unlike installFile this leaves no copy behind, so
         # the target follows the store path a rebuild produces — right for
         # files a host daemon reads but never rewrites (dbus service units,
         # udisks2.conf). Takes the same `{ source, target }` shape as
-        # installFile so a list of links renders with concatMapStrings.
         installLink =
           { source, target }:
           ''
@@ -105,7 +59,6 @@
             sudo ln -sfT ${source} ${lib.escapeShellArg target}
           '';
 
-        # Same, for content generated in Nix rather than kept as a repo file.
         installText =
           {
             name,
@@ -122,8 +75,6 @@
             }
           );
 
-        # Install host-OS packages via the first available package manager,
-        # when `detect` is not already on PATH. Aborts on unsupported distros.
         installHostPackage =
           {
             detect,
@@ -153,8 +104,7 @@
             fi
           '';
 
-        # Install a polkit rule and reload polkitd. Rules want root:polkitd
-        # ownership where the polkitd group exists, root:root otherwise.
+        # Rules want root:polkitd where that group exists, root:root otherwise.
         installPolkitRule =
           { source, target }:
           ''
@@ -167,10 +117,9 @@
             fi
           '';
 
-        # Activation guards. Each exits 0 — skipping the rest of the setup,
-        # including its sudo prompt — when the precondition is not met.
-        # PATH is restored first: activations run with a stripped PATH and
-        # many probes (apparmor_status, udevadm, …) live under /sbin.
+        # Each exits 0 so the rest of the setup, including its sudo prompt, is
+        # skipped. PATH is restored first: activations run stripped and many
+        # probes live under /sbin.
         requireCommand = cmd: ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
           if ! command -v ${cmd} >/dev/null 2>&1; then
@@ -184,15 +133,9 @@
           fi
         '';
 
-        # A complete `stubbe.setup.<name>` body granting one Nix-store binary
-        # the right to create unprivileged user namespaces.
-        #
-        # Ubuntu 24.04+ sets kernel.apparmor_restrict_unprivileged_userns=1,
-        # which limits userns (required by Chromium-family and bubblewrap
-        # sandboxes) to binaries with a matching AppArmor profile. Nix-store
-        # paths are not covered by the stock profiles, so the app aborts on
-        # launch ("No usable sandbox!" / "setting up uid map: Permission
-        # denied"). Children stay unconfined, so nested sandboxes still work.
+        # Ubuntu 24.04+ limits unprivileged userns to binaries with a matching
+        # AppArmor profile, and nix-store paths match none of the stock ones, so
+        # Chromium and bubblewrap abort with "No usable sandbox!".
         apparmorSetup =
           {
             appName,
@@ -231,16 +174,10 @@
             '';
           };
 
-        # ── JSON state-file mutators ────────────────────────────────────
-        # Both shell out to jq against the LIVE file, so every byte the owning
-        # app wrote between evaluation and activation survives. Merging at eval
-        # time against `builtins.readFile` would silently drop that window.
-        #
-        # `jsonMerge` deep-merges (additive, right wins — jq's `*`), for state
-        # files an app rewrites at runtime. `jsonSet` REPLACES one top-level
-        # key wholesale, so entries dropped from `value` actually disappear —
-        # for a managed subtree inside an externally-owned file (mcpServers in
-        # ~/.claude.json).
+        # jq against the LIVE file, so anything the owning app wrote between
+        # evaluation and activation survives.
+        # jsonMerge is additive; jsonSet REPLACES one key, so entries dropped
+        # from `value` actually disappear.
         jsonMerge =
           {
             name,
@@ -296,14 +233,8 @@
             fi
           '';
 
-        # ── Inline scripts as Nix bins ──────────────────────────────────
-        # Land under config.home.profileDirectory/bin (~/.nix-profile/bin, or
-        # /etc/profiles/per-user/$USER/bin on NixOS) so they are on PATH and
-        # owned by the Nix profile.
-
-        # `writeShellApplication`, but shellchecked at the same `-S warning`
-        # severity the repo's CI gate has always used — the default style
-        # severity would fail builds on cosmetic findings.
+        # -S warning, not the default style severity, which fails builds on
+        # cosmetic findings.
         bashApp =
           {
             name,
@@ -320,9 +251,8 @@
             '';
           };
 
-        # The zsh analogue of `writeShellApplication`: an executable
-        # bin/<name> with a zsh shebang, parse-checked (`zsh -n`) at build
-        # time so a syntax error is a build failure, not a broken PATH bin.
+        # Parse-checked at build time so a syntax error is a build failure, not
+        # a broken PATH bin.
         zshApp =
           { name, text }:
           final.writeTextFile {
@@ -338,27 +268,18 @@
             meta.mainProgram = name;
           };
 
-        # ── Graphics wrapper primitives ─────────────────────────────────
-        # Facts about this machine's GPU and the nixGL bundle that matches it.
-        # The platform POLICY (wrap on non-NixOS, no-op on NixOS) lives in
-        # modules/core/gfx.nix — these are just the building blocks.
-        #
-        # Requires --impure for the /proc read; the flake already runs that way.
+        # Requires --impure for the /proc read.
         hasNvidia = builtins.pathExists (/. + "/proc/driver/nvidia/version");
 
-        # `nixgl.nixGLNvidia` only exists when the overlay's eval-time version
-        # detection succeeded (it reads /proc with builtins.readFile, which
-        # returns "" on kernels reporting the file as zero-sized). Fall back to
-        # nixGL's `auto` set, which copies the file in a runCommand and so
-        # always detects.
+        # nixGLNvidia only exists when the overlay's eval-time detection worked;
+        # builtins.readFile returns "" on kernels reporting /proc as zero-sized.
+        # The `auto` set copies the file in a runCommand and always detects.
         nixGL =
           if final.stubbe.hasNvidia then
             (final.nixgl.nixGLNvidia or final.nixgl.auto.nixGLNvidia)
           else
             final.nixgl.nixGLIntel;
 
-        # Wrap a binary in nixGL and inject the system driver search paths, so
-        # loaders find Mesa's GBM backends and DRI drivers on non-NixOS hosts.
         # `--suffix` lets user-set values win; missing paths are skipped by the
         # loader, but if NONE of a list exists EGL/GBM init fails — hence the
         # RHEL/Arch (lib64), generic (lib) and Debian multiarch layouts below.
@@ -393,11 +314,8 @@
           ];
         };
 
-        # NVIDIA's libEGL_nvidia.so dlopens libnvidia-egl-wayland.so.1 and
-        # libnvidia-egl-gbm.so.1 for the Wayland EGL and GBM platforms. nixGL's
-        # NVIDIA bundle does NOT ship those external platform libs, so Nix-built
-        # Wayland clients fail with "provided display handle is not supported"
-        # on non-NixOS hosts. Add the lib dirs and register their JSON configs.
+        # nixGL's NVIDIA bundle ships no external EGL platform libs, so Nix-built
+        # Wayland clients fail with "provided display handle is not supported".
         nvidiaEglLibs = lib.optionalString final.stubbe.hasNvidia (
           lib.concatStringsSep ":" [
             "${final.egl-wayland}/lib"

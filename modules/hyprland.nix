@@ -1,21 +1,11 @@
-# Hyprland: the compositor, its Lua config, the session target everything else
-# hangs off, and login (greetd autologin straight into it).
-#
-# The desktop SHELL — bar, notifications, OSD, wallpaper, lock — is wayle, in
-# modules/wayle.nix. This file is only the compositor and its session.
 { inputs, ... }:
 let
-  # greetd autologin session launcher — shared by the NixOS half (a store
-  # writeShellScript) and standalone home-manager (installed to
-  # /etc/greetd/hyprland-session.sh, a real file so login survives GC).
-  #
   # A display manager's wayland-session wrapper normally sources the user's
   # login environment before starting the compositor. greetd's initial_session
   # (autologin) execs its command directly with only the PAM environment, so we
   # reproduce that here: pull in the Home-Manager session vars (PATH,
   # XDG_DATA_DIRS, XCURSOR_*, MOZ_ENABLE_WAYLAND, ...) from whichever profile
   # location this host uses, then hand off to the Hyprland launch wrapper.
-  #
   # greetd sets HOME/USER for the session, but the profile lookups below are
   # useless without them — derive from the passwd db if either is missing so a
   # thin session env can't silently strand us (no profile sourced →
@@ -52,25 +42,15 @@ in
       ...
     }:
     let
-      # The shared launcher: load the user's HM session env, then exec
-      # start-hyprland. Same text the non-NixOS activation installs to /etc.
       launcher = pkgs.writeShellScript "hyprland-greetd-session" greetdSessionScript;
     in
     lib.mkIf config.stubbe.userFeatures.hyprland {
-      # `package` defaults to pkgs.hyprland — the same one the HM wrappers wrap,
-      # so both targets agree on the binary without pinning it here.
       programs.hyprland.enable = true;
 
-      # Login: greetd with autologin straight into Hyprland, no interactive
-      # greeter at boot.
-      #
-      # Why autologin and no graphical greeter: a Wayland-compositor greeter
-      # (SDDM+kwin, or cage) holds DRM master and tears it down slowly when an
-      # external display is lit, so the incoming session loses the DRM-master
-      # handoff race and black-screens. greetd's initial_session runs the
-      # session directly with nothing holding DRM master ahead of it, so the
-      # race cannot happen. The access gate is wayle-lock, launched at Hyprland
-      # start — the session boots to a locked screen.
+      # No graphical greeter: a Wayland-compositor greeter holds DRM master and
+      # releases it too slowly when an external display is lit, so the incoming
+      # session loses the handoff race and black-screens. Access is gated by
+      # wayle-lock instead, so the session boots locked.
       services.greetd = {
         enable = true;
         settings = {
@@ -78,9 +58,8 @@ in
             command = "${launcher}";
             user = config.host.primaryUser;
           };
-          # Shown only after an explicit logout: agreety, a minimal text
-          # prompt. Not a compositor, never takes DRM master, so it
-          # reintroduces no handoff race. Runs as the greetd `greeter` user.
+          # agreety is not a compositor and never takes DRM master, so it
+          # reintroduces no handoff race.
           default_session.command = "${lib.getExe' config.services.greetd.package "agreety"} --cmd ${launcher}";
         };
       };
@@ -97,18 +76,15 @@ in
       inherit (config.stubbe) gfx;
       palette = pkgs.stubbe.colors;
 
-      # Scripts live in the live checkout, not the store, so an edit takes
-      # effect on the next dispatch without a rebuild. Also why the
-      # monitor-toggle unit below can just be restarted.
+      # The live checkout, not the store, so an edit takes effect on the next
+      # dispatch without a rebuild.
       scriptDir = "${config.stubbe.paths.dotfiles}/src/hyprland/scripts";
 
-      # nixGL-wrapped compositor. Nix's mesa-libgbm ships no GBM backends, so
-      # off-NixOS the binary cannot find the host's drivers without this; on
-      # NixOS the wrapper collapses to a rename.
+      # Nix's mesa-libgbm ships no GBM backends, so off-NixOS the binary cannot
+      # find the host drivers. Collapses to a rename on NixOS.
       hyprlandWrapped = gfx.wrapAs "hyprland" pkgs.hyprland;
 
-      # start-hyprland expects `Hyprland`; everything else here prefers
-      # lowercase. Expose both names for the one binary.
+      # start-hyprland expects `Hyprland`; everything else prefers lowercase.
       hyprlandBothCases = pkgs.linkFarm "hyprland-both-cases" [
         {
           name = "bin/hyprland";
@@ -120,10 +96,8 @@ in
         }
       ];
 
-      # Resolve home.sessionPath / XDG_DATA_DIRS into ":"-joined absolute
-      # strings for makeWrapper --prefix. $HOME placeholders expand against the
-      # real home; the literal $XDG_DATA_DIRS placeholder home-manager injects
-      # is dropped.
+      # $HOME placeholders expand against the real home; the literal
+      # $XDG_DATA_DIRS placeholder home-manager injects is dropped.
       sessionPaths =
         let
           replaceHome = lib.replaceStrings [ "$HOME" ] [ config.home.homeDirectory ];
@@ -137,8 +111,7 @@ in
           );
         };
 
-      # --no-nixgl: the upstream watchdog's own nixGL detection would wrap a
-      # second time. --path points it at our already-wrapped binary.
+      # Without --no-nixgl the upstream watchdog wraps a second time.
       startHyprland = pkgs.runCommand "start-hyprland" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         makeWrapper ${pkgs.hyprland}/bin/start-hyprland $out/bin/start-hyprland \
           --add-flags "--no-nixgl --path ${hyprlandWrapped}/bin/hyprland" \
@@ -152,8 +125,7 @@ in
           --prefix XDG_DATA_DIRS : "${sessionPaths.dataDirs}"
       '';
 
-      # hyprctl with instance auto-detection. Shells started before a Hyprland
-      # restart (tmux sessions, long-lived terminals) carry a stale
+      # Shells predating a Hyprland restart carry a stale
       # HYPRLAND_INSTANCE_SIGNATURE and every dispatch fails silently.
       hyprctl = pkgs.writeShellScriptBin "hyprctl" ''
         # Keep the existing signature when its socket is still live — always the
@@ -191,17 +163,13 @@ in
         exec ${pkgs.hyprland}/bin/hyprctl "$@"
       '';
 
-      # Bring up the compositor's user systemd target, so everything
-      # WantedBy=hyprland-session.target starts. Called from hyprland.lua.
       compositorSession = pkgs.writeShellScriptBin "compositor-session" ''
         set -eu
         self="''${1:?compositor name required (hyprland)}"
         exec ${lib.getExe' pkgs.systemd "systemctl"} --user start "$self-session.target"
       '';
 
-      # LuaCATS type stubs for the `hl` API, generated from the exact Hyprland
-      # source we run so they cannot drift from the running version. `.src`
-      # rather than the built package: the generator and the headers it parses
+      # `.src`, not the built package: the generator and the headers it parses
       # only exist in the source tree.
       hlMetaStub = pkgs.runCommand "hl.meta.lua" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 ${pkgs.hyprland.src}/meta/generateLuaStubs.py --root ${pkgs.hyprland.src} --output "$out"
@@ -215,26 +183,18 @@ in
         hyprctl
         startHyprland
         compositorSession
-        # Replaces the Xwayland binary outright, so X11 apps get nixGL too.
         (gfx.wrapExe "Xwayland" pkgs.xwayland)
         (gfx.wrapExe "hyprland-guiutils"
           inputs.hyprland-guiutils.packages.${pkgs.stdenv.hostPlatform.system}.default
         )
         (gfx.wrap pkgs.hyprpicker)
-        # Nested single-app Wayland compositor — for debugging screen-locking
-        # and kiosk-style apps without locking the host session.
         (gfx.wrap pkgs.cage)
-        # Brightness helper, also bound to XF86MonBrightness* in hyprland.lua
-        # (which calls the script in the live checkout directly — the file
-        # stays in src/hyprland/scripts/ with the rest of the live lua tree).
         (pkgs.runCommandLocal "monitor-brightness" { } ''
           install -Dm755 ${pkgs.stubbe.file "src/hyprland/scripts/monitor.brightness.sh"} $out/bin/monitor-brightness
         '')
       ]
       ++ (with pkgs; [
-        # Idle daemon (ext-idle-notify-v1); the unit is below.
         hypridle
-        # Polkit authentication agent; the unit is below.
         hyprpolkitagent
         hyprcursor
         hyprlang
@@ -251,38 +211,24 @@ in
         wlprop
         wl-clipboard
         wl-clip-persist
-        # The SUPER+V clipboard bind (hyprland.lua) ends with `wtype -M ctrl v`
-        # to paste the picked entry back into the focused window.
         wtype
-        # IPC glue for the scripts that talk to compositor/daemon sockets
-        # (hy3 tiling, jetbrains popup resize, wayle widget helpers).
         socat
-        # `notify-send` + libnotify. wayle owns
-        # org.freedesktop.Notifications, but libnotify CLI callers silently
-        # no-op without the binary on PATH.
+        # libnotify CLI callers silently no-op without the binary on PATH.
         libnotify
         xdg-desktop-portal
       ]);
 
       xdg.configFile = {
-        # Hyprland 0.55+ Lua config. It require()s the Nix-generated nix.lua
-        # below for the values only Nix knows.
         "hypr/hyprland.lua".source = pkgs.stubbe.file "src/hyprland/hyprland.lua";
         "hypr/.luarc.json".source = pkgs.stubbe.file "src/hyprland/.luarc.json";
-        # Ecosystem daemons still use hyprlang (no Lua support).
         "hypr/hypridle.conf".source = pkgs.stubbe.file "src/hyprland/hypridle.conf";
         "hypr/scripts".source = pkgs.stubbe.file "src/hyprland/scripts";
 
-        # Generated `hl` API type stubs for lua_ls; .luarc.json points its
-        # workspace.library here.
         "hypr/hl.meta.lua".source = hlMetaStub;
 
-        # hy3 ships no stubs; hand-written from hy3 hl0.56.0.1 dispatchers.cpp.
-        # Extends HL.PluginNamespace (from hl.meta.lua) with the hy3 factories.
+        # hy3 ships no stubs, so these are hand-written and can go stale.
         "hypr/hy3.meta.lua".source = pkgs.stubbe.file "src/hyprland/hy3.meta.lua";
 
-        # hyprtoolkit theme (hyprpolkitagent and other hyprtoolkit GUIs),
-        # 0xAARRGGBB, generated from the palette so it matches the rest.
         "hypr/hyprtoolkit.conf".text =
           let
             argb = pkgs.stubbe.withArgb;
@@ -298,8 +244,6 @@ in
             accent_secondary=${argb.lavender}
           '';
 
-        # Nix-derived values require()d by hyprland.lua: cursor/NVIDIA env, the
-        # hy3 plugin store path, the palette, and the live script dirs.
         "hypr/nix.lua".text = ''
           -- Generated by modules/hyprland.nix.
           -- Cursor — single source of truth: pkgs.stubbe.theme. Mirrored by HM
@@ -457,9 +401,7 @@ in
 
                   export HYPRLAND_INSTANCE_SIGNATURE="$target_instance"
 
-                  # Capture (workspace, monitor) for every monitor + the globally focused
-                  # workspace, reload, then restore so multi-monitor reloads don't shift
-                  # focus.
+                  # Capture and restore, or a multi-monitor reload shifts focus.
                   before=$(${hyprctl} monitors -j 2>/dev/null) || exit 0
                   focused_ws=$(printf '%s' "$before" \
                     | jq -r 'map(select(.focused == true))[0].activeWorkspace.id // empty')
@@ -468,22 +410,15 @@ in
 
                   ${hyprctl} reload >/dev/null 2>&1 || exit 0
 
-                  # Reload re-enables eDP-1 from monitors.conf and auto-positions the
-                  # externals to its right; re-apply the lid-closed layout before
-                  # workspace restore so workspaces don't migrate back. reflow_monitors
-                  # disables eDP and re-packs the externals from 0,0 in one pass, so the
-                  # external is not left stranded at a half-screen offset. (`hyprctl
-                  # keyword` is rejected under the Lua config — "keyword can't work with
-                  # non-legacy parsers. Use eval." — so drive it through the exposed Lua
-                  # reflow_monitors instead.)
+                  # Reload re-enables eDP-1, so the lid-closed layout has to be
+                  # re-applied before workspace restore or workspaces migrate back.
+                  # `hyprctl keyword` is rejected under the Lua config, hence eval.
                   if grep -qi closed /proc/acpi/button/lid/*/state 2>/dev/null; then
                     ${hyprctl} eval "reflow_monitors(true)" >/dev/null 2>&1 || true
                   fi
 
-                  # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua
-                  # config (it is parsed as hl.dispatch(<args>) Lua); pass a Lua
-                  # dispatcher expression instead. focusmonitor/workspace both map to
-                  # hl.dsp.focus{ monitor = ... } / hl.dsp.focus{ workspace = ... }.
+                  # Legacy `hyprctl dispatch <name> <args>` is parsed as Lua under the
+                  # Lua config, so pass a dispatcher expression instead.
                   while IFS=' ' read -r mon ws; do
                     [ -n "$mon" ] && [ -n "$ws" ] || continue
                     ${hyprctl} dispatch "hl.dsp.focus({ monitor = '$mon' })" >/dev/null 2>&1 || true
@@ -537,9 +472,7 @@ in
                 pacman = [ "greetd" ];
               }}
 
-              # Ensure the unprivileged `greeter` user greetd drops to for the
-              # agreety fallback exists. Debian's package usually creates it;
-              # idempotent here for other distros and partial installs.
+              # Debian's package usually creates this user; other distros do not.
               if ! getent passwd greeter >/dev/null 2>&1; then
                 sudo useradd --system --create-home --home-dir /var/lib/greetd \
                   --shell /usr/sbin/nologin --user-group \
@@ -550,8 +483,8 @@ in
                 name = "hyprland-session.sh";
                 target = launcher;
                 mode = "0755";
-                # Host /bin/sh, not a store path: this copy is what login runs,
-                # and it must survive a nix-collect-garbage.
+                # Host /bin/sh, not a store path: login runs this and it must
+                # survive a nix-collect-garbage.
                 text = "#!/bin/sh\n" + greetdSessionScript;
               }}
 
@@ -581,14 +514,10 @@ in
                 '';
               }}
 
-              # Boot VT race. Debian's greetd.service orders only after
-              # plymouth-quit-*wait*.service, which Ubuntu does not pull into
-              # the boot transaction — so `plymouth quit` runs *concurrently*
-              # with greetd, and its VT restore yanks the console back to tty1
-              # after greetd has already switched to tty7. greetd then sits
-              # waiting for its VT to go active, so autologin never fires and
-              # you land on the getty@tty1 prompt. Ordering after the quit
-              # itself makes greetd the last thing to touch the console.
+              # Ubuntu does not pull plymouth-quit-wait into the boot transaction,
+              # so `plymouth quit` runs concurrently with greetd and its VT restore
+              # yanks the console back to tty1. greetd then waits forever for its
+              # VT and autologin never fires.
               ${pkgs.stubbe.installText {
                 name = "greetd-plymouth-order.conf";
                 target = "/etc/systemd/system/greetd.service.d/plymouth-order.conf";
@@ -600,8 +529,8 @@ in
               }}
               sudo systemctl daemon-reload
 
-              # Display-manager swap. Disable competing DMs FIRST so their
-              # `[Install] Alias=display-manager.service` symlinks come down.
+              # Disable competing DMs first, so their display-manager.service alias
+              # symlinks come down before greetd claims the name.
               current_dm=""
               if [ -L /etc/systemd/system/display-manager.service ]; then
                 current_dm=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
@@ -627,7 +556,6 @@ in
 
                 sudo systemctl enable greetd.service
 
-                # Materialise the alias ourselves if greetd.service omits it.
                 if [ ! -L /etc/systemd/system/display-manager.service ] \
                    || [ "$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)" != "greetd" ]; then
                   greetd_unit=$(systemctl show -p FragmentPath greetd.service --value 2>/dev/null)
