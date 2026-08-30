@@ -1,10 +1,3 @@
-# Credentials and privilege: sudo policy, PAM, the GNOME keyring, and gnupg.
-#
-# The keyring is the subtle part. Login here is greetd *autologin* — no password
-# is typed at boot — so the only place the login password is entered is the
-# session unlock, which means the unlock is the gate that must unlock the
-# keyring. Both halves below wire that, and both pin the `default` keyring back
-# to `login`.
 _: {
   flake.modules.nixos.security =
     { lib, pkgs, ... }:
@@ -59,14 +52,9 @@ _: {
     {
       security.polkit.enable = true;
 
-      # Rule files are parsed in lexical order; the names match what the
-      # non-NixOS activations install under /etc/polkit-1/rules.d/. The VPN
-      # rule (49-openconnect.rules) lives with its aspect in modules/vpn.nix.
       environment.etc = {
         "polkit-1/rules.d/52-power-management.rules".text =
           let
-            # verb (+ its -multiple-sessions form; inhibit-overriding variants
-            # only where systemd defines them).
             verbs = [
               "reboot"
               "reboot-ignore-inhibit"
@@ -116,8 +104,6 @@ _: {
       ...
     }:
     let
-      # Whichever secret-service provider the host actually has, in preference
-      # order. null when none is installed, which disables the unit below.
       secretsExec =
         if builtins.pathExists /usr/bin/ksecretd then
           "/usr/bin/ksecretd"
@@ -132,7 +118,6 @@ _: {
       home.packages = lib.mkIf config.features.desktop (
         with pkgs;
         [
-          # GPG + keyring tooling
           gnupg
           pinentry-gnome3 # Wayland-compatible pinentry for GPG
           gcr_4 # provides gcr-prompter
@@ -173,7 +158,6 @@ _: {
         # default slot. Once that happens the default keyring is no longer
         # PAM-unlocked, so every secret-service client prompts for a password
         # on first use each session.
-        #
         # Pin `default` back to `login`. PAM creates `login` itself on first
         # login when missing, so naming it ahead of time is safe. Unprivileged
         # and ungated by platform, so it runs on both targets. Takes effect on
@@ -193,7 +177,6 @@ _: {
           '';
         };
 
-        # Non-NixOS half of security.pam.services.*.enableGnomeKeyring above.
         keyringPam = lib.mkIf (config.features.hyprland || config.features.theming) {
           privileged = true;
           title = "GNOME Keyring PAM setup";
@@ -201,8 +184,6 @@ _: {
             This will add GNOME Keyring PAM lines to login session files
             to enable automatic keyring unlock on login.
           '';
-          # The lock re-evaluates when any of these appear or disappear, so
-          # installing a new display manager later forces a re-run.
           stateInputs = [
             "/etc/pam.d/login"
             "/etc/pam.d/ly"

@@ -1,4 +1,3 @@
-# PHP: one build, serving the CLI, php-fpm and FrankenPHP.
 _: {
   flake.modules.homeManager.php =
     {
@@ -8,12 +7,6 @@ _: {
       ...
     }:
     let
-      # === Knobs ============================================================
-      # phpPackage   — switch the major version here (e.g. pkgs.php83).
-      # excludedExts — broken / proprietary / conflicting / non-ZTS; excluded
-      #                everywhere. One build serves CLI, FPM and FrankenPHP,
-      #                so anything that can't ride ZTS lands here.
-      # extraIni     — runtime limits applied to every SAPI.
       phpPackage = pkgs.php84;
 
       excludedExts = [
@@ -55,7 +48,6 @@ _: {
         opcache.enable_cli = 1
       '';
 
-      # === Builders =========================================================
       # ONE php build serves CLI, FPM and FrankenPHP. phpPackageZts replicates
       # frankenphp's internal override *exactly* (pkgs/by-name/fr/frankenphp:
       # phpEmbedWithZts) so its re-override on our buildEnv is a genuine no-op
@@ -83,7 +75,6 @@ _: {
       # frankenphp already embeds our exact libphp — it just needs pointing at
       # our extensions, which PHP_INI_SCAN_DIR does. --set beats the
       # --set-default in nixpkgs' own wrapper.
-      #
       # The assert is the load-bearing part: if nixpkgs adds or changes an arg
       # in phpEmbedWithZts, our php stops being the one frankenphp embeds and
       # the extensions would be ABI-mismatched. Fail eval instead.
@@ -108,12 +99,9 @@ _: {
         ''
       );
 
-      # Composer pinned to our extension-laden php so `composer install`
-      # uses the same SAPI/extension set as the user's `php` invocations.
       composer = phpPackage.packages.composer.override { inherit php; };
     in
     lib.mkIf config.features.php {
-      # php-fpm's pool config.
       xdg.configFile."php/php-fpm.conf".source = (pkgs.formats.ini { }).generate "php-fpm.conf" {
         global = {
           pid = "/tmp/php-fpm.pid";
@@ -140,10 +128,6 @@ _: {
         frankenphp
         composer
         mago
-        # OCR engine for PHP tesseract wrappers (thiagoalessio/tesseract_ocr
-        # et al). No maintained native PHP extension exists; the composer
-        # packages shell out to this binary, so PATH covers both php-fpm/CLI
-        # and frankenphp.
         tesseract
         # PHP language server. On global PATH so Claude Code's phpantom-lsp
         # plugin (src/claude/phpantom-lsp) and any non-nvim consumer find it;

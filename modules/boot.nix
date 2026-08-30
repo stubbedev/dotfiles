@@ -1,8 +1,3 @@
-# Boot: the splash screen, and the kernel log level that keeps it readable.
-#
-# The Plymouth theme is a package we build (pkgs.catppuccin-mocha-plymouth) and
-# both halves install the same one — NixOS through boot.plymouth, non-NixOS by
-# copying it into the host's /usr/share and regenerating the initramfs.
 _: {
   flake.modules.nixos.boot =
     {
@@ -42,10 +37,6 @@ _: {
       ...
     }:
     {
-      # Non-NixOS half of boot.plymouth above: copy the same theme package into
-      # the host's /usr/share, make it the default, get `quiet splash` onto the
-      # kernel cmdline, and rebuild the initramfs — each step through the
-      # distro's own reversible tool.
       stubbe.setup.plymouthTheme = lib.mkIf config.features.theming {
         privileged = true;
         title = "Installing Catppuccin Mocha Plymouth theme";

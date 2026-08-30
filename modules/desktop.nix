@@ -1,16 +1,9 @@
-# The desktop-environment plumbing that is not the compositor and not the
-# shell: D-Bus, MIME defaults, the file manager, and the handful of GUI
-# utilities a workstation needs.
-#
 # MIME defaults exist on both sides on purpose: the system-wide
 # /etc/xdg/mimeapps.list is the fallback for anything without a per-user entry,
 # and the per-user list overrides it. The type lists are shared here so the two
 # can never disagree about which types mpv or imv own.
 _:
 let
-  # mpv opens every video format; imv every still image (svg is left to the
-  # browser). Shared by the system-wide fallback list and the per-user one, so
-  # the two can never disagree.
   mimeDefaults =
     browser: lib:
     let
@@ -64,14 +57,8 @@ in
   flake.modules.nixos.desktop =
     { lib, ... }:
     {
-      # dbus-broker is the modern, faster D-Bus implementation: lower latency,
-      # structured journal logging, kdbus-style design without the kernel
-      # module. A drop-in replacement for the legacy dbus-daemon.
       services.dbus.implementation = "broker";
 
-      # ~200 MB of NixOS option HTML / docbook XML in the system closure.
-      # search.nixos.org and `man configuration.nix` (still kept by
-      # documentation.man.enable) cover the same ground.
       documentation.nixos.enable = false;
 
       xdg.mime.defaultApplications = mimeDefaults "firefox.desktop" lib;
@@ -86,11 +73,6 @@ in
       ...
     }:
     let
-      # vifm's palenight highlight groups, as `group = "<cterm> <fg> <bg>"`.
-      # The literal block this replaces was aligned with hand-placed tabs, so
-      # the columns drifted with the length of the group name; here the
-      # renderer pads and the blank lines that group related entries are the
-      # `null` rows.
       vifmHighlight = [
         { Border = "none default default"; }
         null
@@ -175,39 +157,25 @@ in
       home.packages =
         with pkgs;
         [
-          # Network management (GUI applets)
           networkmanagerapplet
           networkmanager-openconnect
 
-          # Bluetooth GUI. The privileged half is in modules/bluetooth.nix.
           blueman
 
-          # Logitech Unifying/Bolt peripherals (battery, DPI, per-device rules).
-          # Needs the udev rules from hardware.logitech.wireless on NixOS.
           solaar
 
-          # Monitor brightness (brightnessctl ships from modules/wayle.nix,
-          # whose bar scroll actions are its consumer)
           ddcutil
 
-          # Clipboard (stored by the hyprland.lua wl-paste watcher, browsed
-          # via the SUPER+V rofi bind)
           cliphist
 
-          # `secret-tool`, for scripts that reach the keyring from the CLI.
           libsecret
 
           util-linux
 
-          # File managers
           yazi
           pcmanfm
         ]
         ++ [
-          # Remote desktop. Upstream's org.remmina.Remmina.desktop bakes absolute
-          # store paths into Exec=, so launching from the menu would bypass the
-          # nixGL wrapper — hence the replacement desktop item above, which
-          # symlinkJoin's first-wins ordering makes shadow upstream's.
           (config.stubbe.gfx.bundle {
             pkg = pkgs.remmina;
             exes = [
@@ -217,8 +185,6 @@ in
             extraPaths = [ remminaDesktop ];
           })
         ]
-        # gvfs + udisks2 are user-installed only off NixOS; on NixOS they come
-        # from services.{gvfs,udisks2}.enable in modules/storage.nix.
         ++ lib.optionals (config.host.platform != "nixos") [
           pkgs.gvfs
           pkgs.udisks2
@@ -264,7 +230,6 @@ in
             };
           };
 
-          # Hide the system Nautilus entry from rofi — pcmanfm is "Files" now.
           "org.gnome.Nautilus" = {
             name = "Nautilus";
             exec = "nautilus --new-window %U";
@@ -310,8 +275,6 @@ in
         };
       };
 
-      # Defaults for D-Bus / xdg-open / portal callers. The browser default
-      # differs per target: Firefox on NixOS, Chrome on standalone HM.
       xdg.mimeApps = {
         enable = true;
         defaultApplications =

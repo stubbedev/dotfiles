@@ -136,6 +136,7 @@ in
           pass
           cachix
           attic-client
+          xilo
           nixd
           nixdoc
           nil

@@ -1,21 +1,10 @@
 { inputs, ... }:
 {
-  # Treeman per-worktree DB orchestrator + treemand user daemon.
-  #
-  # Two scopes:
   #   - homeManager: installs treeman + treemand into home.packages and
   #     wires the daemon as a systemd user service. This bypasses
   #     `treeman daemon install` (which writes a runtime-mutable unit
   #     under ~/.config/systemd/user/) — keeping the unit declarative
   #     means the whole stack survives a clean home-manager rebuild.
-  #   - nixos: also puts the CLI + daemon binaries in
-  #     environment.systemPackages so non-HM users on the box can run
-  #     `treeman` from a login shell. The daemon itself stays user-scope
-  #     (treeman state is per-user), so no system unit is declared here.
-  #
-  # The HM unit body mirrors contrib/treemand.service from upstream
-  # (Description, After, Restart, RestartSec); only ExecStart is
-  # rewritten to the Nix store path.
   flake.modules.nixos.treeman =
     { pkgs, ... }:
     let
@@ -46,10 +35,6 @@
       home.packages = [
         treemanPkg
         treemandPkg
-        # Status widget for the shell's custom treeman module. wayle's custom
-        # module parses waybar-style JSON natively (text/tooltip/class), so the
-        # script is reused as-is — registered here so the module can call it by
-        # name on PATH.
         (pkgs.stubbe.bashApp {
           name = "treeman-status";
           text = ''
@@ -83,8 +68,6 @@
           # the `icon` format, so overriding status.formats.icon makes the wayle bar
           # widget minimal: one compact "{glyph} {count}" pair per bucket
           # (stable/up/down/failed), no word labels. The wayle treeman module passes
-          # this through unchanged and draws no icon of its own — see the wayle
-          # config + widget script in modules/wayle.nix.
           status.formats.icon = "{icon_stable} {stable}  {icon_up} {up}  {icon_down} {down}  {icon_failed} {failed}";
         };
         force = true;

@@ -1,12 +1,3 @@
-# rofi — the launcher, and the app/window/run switcher behind the Hyprland
-# binds.
-#
-# Three files, split by who owns the values:
-#   config.rasi            generated — it names the icon theme, which
-#                          `pkgs.stubbe.theme` owns.
-#   catppuccin-mocha.rasi  generated — it is the palette, nothing else.
-#   catppuccin-default.rasi  a real file: pure layout, referencing the palette
-#                          variables above by name.
 _: {
   flake.modules.homeManager.rofi =
     {
@@ -34,7 +25,6 @@ _: {
           @theme "catppuccin-default"
         '';
 
-        # The palette as rasi variables, generated from pkgs.stubbe.colors —
         # catppuccin-default.rasi refers to these by name. force: a stale
         # pre-home-manager real file may sit at this path and would otherwise
         # abort activation with "would be clobbered".

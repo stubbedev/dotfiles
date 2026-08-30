@@ -1,17 +1,7 @@
--- Multicursor keymaps. Separate from lua/keymaps.lua because multicursor is
--- deferred: this module is required from the post-UI hook in lua/plugins.lua,
--- after the plugin has actually been sourced.
 
 local map = vim.keymap.set
 local mc = require("multicursor-nvim")
 
--- Add or skip a cursor above/below the main one.
---
--- On Alt, not the bare arrow keys. Under LazyVim this plugin was declared with
--- no `keys`/`event`/`cmd` and `defaults.lazy = true`, so it had no load trigger
--- and never actually loaded -- these mappings never existed and the arrows just
--- moved the cursor. Binding them globally broke plain arrow movement
--- everywhere, oil included.
 map({ "n", "x" }, "<M-Up>", function()
   mc.lineAddCursor(-1)
 end, { desc = "Multicursor: add cursor above" })
@@ -25,8 +15,6 @@ map({ "n", "x" }, "<leader><Down>", function()
   mc.lineSkipCursor(1)
 end, { desc = "Multicursor: skip cursor below" })
 
--- Add/skip a cursor by matching word/selection, under <leader>m so the
--- <leader>n / <leader>s namespaces stay free.
 map({ "n", "x" }, "<leader>mn", function()
   mc.matchAddCursor(1)
 end, { desc = "Multicursor: match add cursor forward" })
@@ -40,14 +28,10 @@ map({ "n", "x" }, "<leader>mS", function()
   mc.matchSkipCursor(-1)
 end, { desc = "Multicursor: match skip cursor backward" })
 
--- A cursor per line in a motion or selection.
 map({ "n", "x" }, "ga", mc.addCursorOperator, { desc = "Multicursor: add cursor per line in motion" })
 
--- Disable and enable cursors.
 map({ "n", "x" }, "<c-q>", mc.toggleCursor, { desc = "Multicursor: toggle cursors enabled" })
 
--- These only apply while multiple cursors exist, so they can overlap with
--- normal mappings.
 mc.addKeymapLayer(function(layer)
   layer({ "n", "x" }, "<M-Left>", mc.prevCursor, { desc = "Multicursor: previous cursor" })
   layer({ "n", "x" }, "<M-Right>", mc.nextCursor, { desc = "Multicursor: next cursor" })

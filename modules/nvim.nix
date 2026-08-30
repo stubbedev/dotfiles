@@ -1,17 +1,6 @@
-# Neovim, wrapped with its LSP/formatter/linter toolchain from nixpkgs.
-#
-# Three layers, each owning exactly one thing:
-#   - this file: every *binary* (language servers, linters, formatters) and the
-#     treesitter parsers, all pinned by flake.lock. Nothing is downloaded or
-#     compiled at runtime, so there is no gcc or tree-sitter CLI here.
-#   - src/nvim/init.lua: the editor plugins, via nvim 0.12's built-in
-#     `vim.pack`. Those still come from GitHub, updated with `vim.pack.update()`.
-#   - src/nvim/lua/*.lua: plain config. No plugin framework.
-#
-# The Lua tree stays a real, editable directory in the checkout (via
-# `stubbe.mutable` link) rather than a store symlink: vim.pack writes its
-# plugin state next to it, and the whole point of the config is that an edit
-# takes effect in the next nvim, not the next rebuild.
+# A real editable directory, not a store symlink: vim.pack writes plugin state
+# next to it, and an edit must take effect in the next nvim, not the next
+# rebuild.
 { inputs, ... }:
 {
   flake.modules.homeManager.nvim =
@@ -22,19 +11,12 @@
       ...
     }:
     let
-      # Treesitter parsers and queries, from nix rather than `:TSInstall`
-      # compiling them into ~/.local/share/nvim at runtime. That's why there is
-      # no gcc or tree-sitter CLI in runtimePkgs.
-      #
-      # Both halves come from the same source. nixpkgs builds
-      # `nvim-treesitter-parsers.<lang>` from the revisions nvim-treesitter
-      # itself pins, and the queries below come from that same nvim-treesitter
-      # checkout -- so a grammar can never drift from the query written against
-      # it. Taking parsers from nixpkgs' independently-versioned
-      # `tree-sitter-grammars` instead does drift, and it fails loudly:
+      # From nix rather than `:TSInstall` compiling at runtime, which is why
+      # runtimePkgs carries no gcc or tree-sitter CLI.
+      # Parsers and queries must come from the SAME nvim-treesitter checkout or a
+      # grammar drifts from the query written against it. nixpkgs'
+      # independently-versioned `tree-sitter-grammars` does drift, and fails with
       # `Invalid node type "tool_directive"` (gomod), `keyword_include` (sql).
-      #
-      # Updating is `nix flake update`; nothing here is pinned by hand.
       languages = [
         "bash"
         "blade"
@@ -109,14 +91,11 @@
                 ];
               };
 
-              # The wrapper builds pack/myNeovimPackages/start and prepends it
-              # to 'packpath' -- the same layout vim.pack uses, so nix-supplied
-              # runtime dirs and vim.pack plugins coexist without either
-              # knowing about the other.
+              # Same layout vim.pack uses, so nix-supplied runtime dirs and
+              # vim.pack plugins coexist without either knowing about the other.
               specs.treesitter = treesitter-runtime;
 
               runtimePkgs = with pkgs; [
-                # ── LSPs ────────────────────────────────────────────────
                 nixd
                 lua-language-server
                 vscode-langservers-extracted # html, cssls (scss), jsonls, eslint
@@ -125,42 +104,27 @@
                 yaml-language-server
                 marksman
 
-                # Web / JS / TS.
-                #
-                # typescript-go (`tsgo --lsp --stdio`) replaces vtsls and
-                # typescript-language-server: one Go binary instead of a node
-                # process plus three tsserver children. It has no tsserver
-                # *plugin* support, which is why vue and svelte below each run
-                # their own self-contained server rather than injecting a
-                # plugin into a shared tsserver.
+                # tsgo has no tsserver *plugin* support, which is why vue and
+                # svelte each run a self-contained server below.
                 typescript-go
                 oxlint
                 oxfmt
                 vue-language-server # v3 bridges to tsgo itself
                 svelte-language-server
 
-                # Backend / domain
                 phpantom_lsp
                 templ
-                # Python: ruff lints and formats, ty type-checks. Both are
-                # Astral's, both are Rust, and together they replace
-                # basedpyright -- a 153MB node process -- with 14MB.
                 ruff
                 ty
                 rust-analyzer
                 gopls
                 golangci-lint-langserver
 
-                # SQL: one Rust binary doing lint + format + LSP, with real
-                # dialect support (postgres, sqlite, mysql, tsql, duckdb, ...).
                 sqruff
                 postgres-language-server # deeper postgres semantics when a project wants it
 
-                # Containers. One Go binary covering Dockerfile *and* compose,
-                # replacing the two node servers (70MB + 71MB) it supersedes.
                 docker-language-server
 
-                # ── Formatters / linters ────────────────────────────────
                 stylua
                 nixfmt
                 prettier
@@ -172,11 +136,9 @@
                 markdownlint-cli2
                 shellcheck
                 shfmt
-                # Nix static analysis, wired in src/nvim/lua/format.lua.
                 statix
                 deadnix
 
-                # ── Toolchain runtimes ──────────────────────────────────
                 cargo
                 rustc
                 gomodifytags
@@ -184,28 +146,21 @@
                 impl
                 iferr
 
-                # Search / IO used by the picker and by git integration.
                 ripgrep
                 fd
                 fzf
                 git
 
-                # Structural search-and-replace, driven by grug-far. Unlike
-                # ripgrep it matches on syntax tree shape, so a project-wide
-                # rename skips strings and comments that merely look the same.
                 ast-grep
 
-                # setpriv(1), for the PR_SET_PDEATHSIG wrapper that
-                # src/nvim/lua/lsp.lua puts in front of every language server
-                # so none of them survives an unclean nvim exit.
+                # For the PR_SET_PDEATHSIG wrapper in src/nvim/lua/lsp.lua: some
+                # servers ignore the LSP processId and outlive an unclean exit.
                 util-linux
 
-                # The `nix` CLI: needed by nixd (flake eval) and by lsp.lua's
-                # before_init callback that picks the right nixos/home config.
+                # nixd shells out to it for flake eval.
                 nix
 
-                # JS runtime for the servers that are still node programs
-                # (vue, svelte, the vscode-langservers-extracted family).
+                # Several of the servers above are still node programs.
                 nodejs
               ];
             };

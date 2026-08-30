@@ -1,8 +1,3 @@
-# Where this configuration is running, and what the host is allowed to assume.
-#
-# One `host.*` namespace shared by both classes: the home-manager modules read
-# `host.platform` to decide whether they own privileged system state or defer
-# to the NixOS modules, and the NixOS modules read the rest.
 _: {
   flake.modules.homeManager.platform =
     { lib, ... }:

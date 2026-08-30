@@ -1,21 +1,3 @@
-# `features.*` — the per-host on/off contract every aspect gates on.
-#
-# Two flags are broad:
-#
-#   desktop      Interactive workstation: GUI plus the tools needed to drive
-#                one (rofi, alacritty, the mail TUI, theming, clipboard, …).
-#                Baseline CLI tools (git, tmux, jq, ripgrep) are NOT gated on
-#                this — they ship unconditionally from modules/cli.nix, because
-#                a headless host without them is unusable.
-#
-#   development  Language toolchains beyond that baseline (node/bun/pnpm, go,
-#                rust via fenix, the nixd/nh/nil pack, direnv). Independent of
-#                `desktop`: a remote build box can have development = true,
-#                desktop = false.
-#
-# The rest are per-subsystem toggles. All default true on stubbe's machines;
-# flip them off per host.
-#
 # The flag TABLE below is the single source of truth: the home-manager options
 # are generated from it, and so is the NixOS-side mirror at the bottom — which
 # is what lets a NixOS aspect ask "did this host enable features.docker?"
@@ -61,7 +43,6 @@ in
 
   # The NixOS mirror. A NixOS aspect gates on `config.stubbe.userFeatures.<x>`,
   # resolved ONCE here from the primary user's home-manager config.
-  #
   # The fallback matters: the installer ISO imports every NixOS aspect but
   # declares no home-manager user, so there is nothing to read. Everything off
   # is the right answer there — the ISO wants a bootable installer, not a

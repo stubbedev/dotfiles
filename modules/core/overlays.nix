@@ -1,14 +1,5 @@
-# nixpkgs overlays: third-party flake packages surfaced into `pkgs`, upstream
-# fixes we carry, and the handful of packages this repo builds itself.
-#
-# Every overlay registered under `flake.overlays` is applied to BOTH targets:
-# the standalone-HM pkgs (modules/core/flake.nix) and NixOS's `nixpkgs.overlays`
-# (modules/nix.nix), so a `pkgs.<x>` reference resolves identically on either.
 { inputs, ... }:
 let
-  # Auto-detect the NVIDIA driver version from /proc, for both the proprietary
-  # and the Open kernel modules. Requires --impure (the flake already runs
-  # that way) so the /proc read succeeds.
   nvidiaVersion =
     let
       versionPath = /. + "/proc/driver/nvidia/version";
@@ -25,7 +16,6 @@ let
 in
 {
   flake.overlays = {
-    # nixGL, instantiated with the detected NVIDIA version.
     nixgl =
       final: _prev:
       let
@@ -42,7 +32,6 @@ in
         );
       };
 
-    # cship ships no flake (`flake = false`); build it from its Cargo manifest.
     cship =
       final: _prev:
       let
@@ -69,8 +58,6 @@ in
       wayle = inputs.wayle.packages.${prev.stdenv.hostPlatform.system}.default;
     };
 
-    # phpantom_lsp / xilo: flake packages surfaced so both targets see them
-    # through the shared overlay set.
     phpantom_lsp = final: _prev: {
       phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
     };
@@ -129,7 +116,6 @@ in
       ];
     };
 
-    # Packages this repo builds itself.
     stubbe-packages = final: prev: {
       # nixpkgs ships `catppuccin-plymouth` hardcoded to the macchiato flavour.
       # Upstream has all four — swap sourceRoot + install paths for the mocha
@@ -147,9 +133,6 @@ in
         '';
       });
 
-      # lazy-tmux: tmux session snapshot/restore with scrollback and
-      # per-program integrations (a `claude` pane comes back as
-      # `claude --resume <id>`). Not in nixpkgs and upstream ships no flake, so
       # pin the release tarball — a statically linked Go binary, nothing to
       # compile. Bumping = new version + that release's sha256 from its
       # checksums.txt; `hm upgrade`'s bump_release_pins only rewrites

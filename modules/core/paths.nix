@@ -1,7 +1,3 @@
-# Well-known paths, as options rather than an ad-hoc `constants.nix` imported
-# through `_module.args`. Being options means they are typed, overridable
-# per host, documented in `man home-configuration.nix`, and readable with
-# `nix eval .#homeConfigurations.stubbe.config.stubbe.paths`.
 _: {
   flake.modules.homeManager.paths =
     { config, lib, ... }:

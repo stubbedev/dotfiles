@@ -1,9 +1,3 @@
-# btop, the system monitor.
-#
-# The theme is generated from `pkgs.stubbe.colors` (it used to be four
-# hand-maintained .theme files, three of which were never selected), and
-# btop.conf is installed writable because btop rewrites it as you change
-# settings in the UI.
 _: {
   flake.modules.homeManager.monitoring =
     {
@@ -27,8 +21,6 @@ _: {
         # the driver libs on the loader path even on NixOS.
         package = gfx.withDriverLibs pkgs.btop;
 
-        # btop reads themes but never writes them, so a store symlink is right
-        # here. Generated, so the palette lives in exactly one place.
         themes.${themeName} = lib.concatStringsSep "\n" (
           lib.mapAttrsToList (key: value: ''theme[${key}]="${value}"'') {
             main_bg = c.base;
@@ -79,8 +71,6 @@ _: {
 
       # btop rewrites btop.conf whenever a setting is changed in the UI, so it
       # cannot be a store symlink. Rendered from an attrset in btop's own
-      # key = value dialect (True/False capitalised, strings quoted); btop
-      # re-adds its explanatory comments the first time it saves.
       stubbe.mutable.".config/btop/btop.conf" = {
         method = "copy";
         source =

@@ -1,15 +1,8 @@
 { inputs, ... }:
 let
-  # A display manager's wayland-session wrapper normally sources the user's
-  # login environment before starting the compositor. greetd's initial_session
-  # (autologin) execs its command directly with only the PAM environment, so we
-  # reproduce that here: pull in the Home-Manager session vars (PATH,
-  # XDG_DATA_DIRS, XCURSOR_*, MOZ_ENABLE_WAYLAND, ...) from whichever profile
-  # location this host uses, then hand off to the Hyprland launch wrapper.
-  # greetd sets HOME/USER for the session, but the profile lookups below are
-  # useless without them — derive from the passwd db if either is missing so a
-  # thin session env can't silently strand us (no profile sourced →
-  # start-hyprland not on PATH → exit → text tty).
+  # greetd's initial_session execs directly with only the PAM environment, so
+  # the HM session vars have to be sourced here. HOME/USER come from passwd when
+  # unset, or the profile lookups strand the session on a text tty.
   greetdSessionScript = ''
     [ -n "''${USER:-}" ] || USER="$(id -un)"
     [ -n "''${HOME:-}" ] || HOME="$(getent passwd "$USER" | cut -d: -f6)"
@@ -276,22 +269,16 @@ in
       systemd.user = {
         targets.hyprland-session.Unit = {
           Description = "Hyprland session";
-          # xdg-desktop-portal 1.22+ has Requisite=graphical-session.target,
-          # which never starts the target itself — so without this bind the
-          # portal fails instantly ("Dependency failed for Portal service").
-          # BindsTo pulls graphical-session.target up with the session and drops
-          # it on exit (that target is RefuseManualStart + StopWhenUnneeded).
+          # xdg-desktop-portal 1.22+ has Requisite=graphical-session.target but
+          # never starts it, so without this bind the portal fails instantly.
           BindsTo = [ "graphical-session.target" ];
           Before = [ "graphical-session.target" ];
         };
 
         services = {
-          # Idle lock, dpms, idle sleep, and the logind sleep delay-inhibitor
-          # that runs before_sleep_cmd. A unit rather than exec-once so a crash
-          # cannot silently leave the session suspending unlocked
-          # (Restart=on-failure), and so sd-switch restarts it when
-          # hypridle.conf changes — exec-once processes kept running the old
-          # config until the next login.
+          # A unit, not exec-once: a crash would otherwise leave the session
+          # suspending unlocked, and exec-once keeps the old config until the
+          # next login.
           hypridle = {
             Unit = {
               Description = "Hypridle idle daemon (lock, dpms, idle sleep)";
@@ -311,10 +298,7 @@ in
             };
           };
 
-          # DRM hotplug + lid reactor (monitors, wallpaper, wireplumber,
-          # undock-while-closed suspend). Runs from the live checkout, so
-          # `systemctl --user restart monitor-toggle` picks up script edits —
-          # no relogin, no pkill hunting like the old exec-once launch.
+          # Runs from the live checkout, so a restart picks up script edits.
           monitor-toggle = {
             Unit = {
               Description = "DRM hotplug + lid reactor (monitor.toggle.sh)";
@@ -331,11 +315,8 @@ in
             };
           };
 
-          # hyprpolkitagent ships only $out/libexec/hyprpolkitagent — no bin
-          # entry — so home-manager's bin-only linking cannot surface it and
-          # `systemctl --user start hyprpolkitagent` (called from hyprland.lua)
-          # finds no unit. Defining it here also gives pkexec something to
-          # talk to (nmcli, brightness, anything escalating interactively).
+          # hyprpolkitagent ships only $out/libexec, no bin entry, so
+          # home-manager's bin-only linking cannot surface it.
           hyprpolkitagent = {
             Unit = {
               Description = "Hyprland polkit authentication agent";
@@ -354,15 +335,9 @@ in
       };
 
       stubbe.setup = {
-        # Reload Hyprland after every successful switch when a live session is
-        # detected; skipped silently otherwise (e.g. switching from a TTY) so it
-        # never blocks activation.
-        #
-        # Hyprland's own config auto-reload is disabled via
-        # misc.disable_autoreload in hyprland.lua, because reloading with
-        # multiple monitors re-evaluates monitor rules and re-attaches
-        # workspaces, which shifts focus. Doing it here lets us capture the
-        # focused workspace first and dispatch back to it after.
+        # Auto-reload is off in hyprland.lua: reloading with multiple monitors
+        # re-attaches workspaces and shifts focus. Doing it here lets the focused
+        # workspace be captured first and restored after.
         hyprlandReload.script =
           let
             # HM activation runs with a stripped PATH that excludes the user
@@ -433,8 +408,6 @@ in
             }
           );
 
-        # Non-NixOS login: same launcher, same autologin + agreety-fallback
-        # shape as services.greetd in the NixOS half.
         greetd = {
           privileged = true;
           title = "Installing greetd (autologin login manager, replaces SDDM)";
@@ -456,10 +429,8 @@ in
           '';
           script =
             let
-              # greetd execs this at boot. Installed to /etc, NOT referenced as
-              # a store path, so `nix-collect-garbage` can never remove the file
-              # login depends on. It resolves start-hyprland at runtime from the
-              # user's (GC-rooted) HM profile.
+              # Installed to /etc rather than referenced as a store path, so
+              # nix-collect-garbage can never remove the file login depends on.
               launcher = "/etc/greetd/hyprland-session.sh";
             in
             ''

@@ -1,11 +1,3 @@
-# tmux, with lazy-tmux for session persistence.
-#
-# lazy-tmux replaced resurrect+continuum: it snapshots window names, layouts,
-# pane commands and shell scrollback, and restores ONE session on demand
-# (`wakeup --session`) instead of every session at server start. Its claude
-# integration records the Claude Code session id and restores the pane as
-# `claude --resume <id>`, so Alt+f on a repo brings the conversation back
-# rather than a fresh one.
 _: {
   flake.modules.homeManager.tmux =
     {

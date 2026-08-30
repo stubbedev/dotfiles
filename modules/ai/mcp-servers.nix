@@ -77,10 +77,8 @@
           name = "sentry-mcp";
         };
       };
-      # NOTE: 39107/39108 are retired (srv-mcp / treeman-mcp). Their CLIs and state
-      # daemons stay — only the MCP fronts are gone: their tools duplicated what the
-      # shell already does well, at the cost of two always-on units. Don't reuse the
-      # ports without checking for a stale unit on an un-switched host.
+      # 39107/39108 are retired (srv-mcp / treeman-mcp). Do not reuse them without
+      # checking for a stale unit on an un-switched host.
 
       proxiedPort = 39105;
       # atlassian is gated by HOST (every repo on the forge has Jira context worth
@@ -89,16 +87,10 @@
       # roots onto one upstream and break per-repo resolution. Reusing the
       # httpServices attr key makes the gated proxy route win the client entry.
       #
-      # Neither the remote nor the forge hostname is hard-coded here (this repo is
-      # public): both are env-var placeholders proxy-mcp expands at runtime
-      # (--expand-env) from the sops-encrypted secrets/mcp-proxy-env, decrypted via
-      # EnvironmentFile (see modules/ai/mcp-services.nix). Unset → expands to ""
-      # → no entry resolves → proxy-mcp >= 0.0.22 gates every client out, so a
-      # missing secret hides the tools rather than exposing them everywhere.
+      # Placeholders, not literals: this repo is public. Unset expands to "" and
+      # gates every client out, so a missing secret hides the tools rather than
+      # exposing them everywhere.
       kontainerRepo = "\${KONTAINER_REMOTE}";
-      # The two other frontend/app repos worth driving a browser against. Same
-      # placeholder scheme (values live in secrets/mcp-proxy-env), same fail-closed
-      # behaviour when unset.
       kontainerCmsRepo = "\${KONTAINER_CMS_REMOTE}";
       kontainerSiteRepo = "\${KONTAINER_SITE_REMOTE}";
       # A whitelist entry with no path component gates a whole git host: every repo

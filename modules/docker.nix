@@ -1,6 +1,3 @@
-# Docker, plus the host-local registry on :5000 that the build workflows push
-# to. Both halves configure the same daemon settings, so the containerd
-# snapshotter and the insecure-registry entry cannot drift.
 _: {
   flake.modules.nixos.docker =
     { config, lib, ... }:
@@ -27,8 +24,6 @@ _: {
         };
       };
 
-      # Local registry, backed by a named volume so image blobs survive
-      # container restarts.
       virtualisation.oci-containers = {
         backend = "docker";
         containers.registry = {

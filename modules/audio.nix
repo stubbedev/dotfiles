@@ -1,10 +1,5 @@
-# Audio: PipeWire as the server, WirePlumber as the session manager, and the
-# per-device drop-ins this laptop and its dock need.
 _: {
   flake.modules.nixos.audio = _: {
-    # PipeWire replaces PulseAudio + JACK. The HM half below drops *.conf files
-    # into ~/.config/{pipewire,wireplumber}.conf.d/, which both daemons read on
-    # either target.
     services.pipewire = {
       enable = true;
       alsa.enable = true;
@@ -13,11 +8,8 @@ _: {
       wireplumber.enable = true;
     };
 
-    # Required by PipeWire for realtime scheduling of audio threads.
     security.rtkit.enable = true;
 
-    # Disable the legacy PulseAudio service NixOS ships by default; PipeWire's
-    # pulse shim provides the same socket interface.
     services.pulseaudio.enable = false;
   };
 

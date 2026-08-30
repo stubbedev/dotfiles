@@ -1,9 +1,3 @@
-# Hardware: what the kernel needs to reach the disk, which firmware ships, and
-# the udev rules that keep this particular laptop's peripherals sane.
-#
-# The udev rule TEXTS in the let below are the single source of truth and
-# both halves install the same bytes — NixOS through services.udev, and
-# non-NixOS by writing them into /etc/udev/rules.d.
 _:
 let
   usbAutosuspendRules = ''
@@ -54,12 +48,6 @@ let
     ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", ENV{SYSTEMD_WANTS}+="touchpad-rebind.service"
   '';
 
-  # Rebind the i2c-hid touchpad after a Thunderbolt dock undock. See
-  # touchpadRebindRules above for the full why. Shared by both deploy paths:
-  # NixOS runs it as systemd.services.touchpad-rebind's `script`; non-NixOS
-  # installs it to /etc/udev/scripts/rebind-touchpad.sh, run by
-  # /etc/systemd/system/touchpad-rebind.service. Both are pulled in by
-  # SYSTEMD_WANTS from the udev DRM-hotplug rule.
   rebindTouchpadScript = ''
     set -u
 
@@ -162,10 +150,6 @@ in
           ];
           kernelModules = [ ];
 
-          # Modern systemd-in-initrd: parallel mount setup, structured journal
-          # during early boot, and a prerequisite for lanzaboote's stub
-          # generation. Faster with better diagnostics than the legacy
-          # script-based initrd.
           systemd.enable = true;
         };
         kernelModules = [
@@ -208,17 +192,11 @@ in
         logitech.wireless.enable = true;
       };
 
-      # LVFS-backed firmware updates for UEFI/BIOS, SSDs, dock chips,
-      # Thunderbolt controllers. Manual flow:
-      #   sudo fwupdmgr refresh && sudo fwupdmgr get-updates && sudo fwupdmgr update
       services.fwupd.enable = true;
 
       # No periodic fstrim: btrfs mounts with discard=async by default since
       # kernel 6.2, so freed extents are already trimmed continuously. A weekly
       # full-FS `fstrim -a` over ~1.6T free on this DRAM-less SATA SSD (PNY
-      # CS900) is redundant and pins the disk in D-state for 15+ min, starving
-      # concurrent nix builds. Flip back on only for a filesystem without
-      # async discard.
       services.fstrim.enable = false;
 
       services.udev.extraRules = ''
@@ -236,16 +214,9 @@ in
         ACTION=="remove", SUBSYSTEM=="thunderbolt", ENV{DEVTYPE}=="thunderbolt_device", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", RUN+="${lib.getExe' config.systemd.package "systemctl"} --no-block start touchpad-rebind.service"
       '';
 
-      # Rebind the i2c-hid touchpad after a dock undock — see
-      # touchpadRebindRules for why. oneshot, so either
-      # trigger starts it once per event; the script sleeps to let the dock
-      # power transition settle, and runs here rather than in the udev worker
-      # so udev is not blocked.
       systemd.services.touchpad-rebind = {
         description = "Rebind wedged i2c-hid touchpad after dock undock";
         serviceConfig.Type = "oneshot";
-        # socat: the script pokes Hyprland's request socket to reapply the
-        # per-device scroll config after rebind.
         path = [ pkgs.socat ];
         script = rebindTouchpadScript;
       };
@@ -365,8 +336,6 @@ in
               name = "rebind-touchpad.sh";
               target = "/etc/udev/scripts/rebind-touchpad.sh";
               mode = "0755";
-              # env-resolved host bash, not a store path: this copy lives in
-              # /etc and must survive a nix-collect-garbage.
               text = "#!/usr/bin/env bash\n" + rebindTouchpadScript;
             }}
 

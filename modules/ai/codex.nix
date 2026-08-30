@@ -1,4 +1,3 @@
-# Codex CLI, wired to the shared MCP inventory.
 _: {
   flake.modules.homeManager.codex =
     {

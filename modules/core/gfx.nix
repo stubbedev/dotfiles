@@ -1,13 +1,3 @@
-# `stubbe.gfx.*` — graphics wrapping, as functions on `config` so call sites
-# stay short and platform-agnostic:
-#
-#   home.packages = [ (config.stubbe.gfx.wrap pkgs.imv) ];
-#
-# On non-NixOS hosts a Nix-built GUI binary cannot find the host's GL/EGL
-# drivers, so each wrapper routes through nixGL and injects the system driver
-# search paths. On NixOS the drivers are already in place and every wrapper
-# collapses to (almost) a no-op. That platform decision is made ONCE, here —
-# the primitives it composes live in `pkgs.stubbe` (modules/core/pkgs-stubbe.nix).
 _: {
   flake.modules.homeManager.gfx =
     {
@@ -20,8 +10,6 @@ _: {
       onNixOS = config.host.platform == "nixos";
       inherit (pkgs.stubbe) mkGLWrapper;
 
-      # A bare `bin/<name>` symlink to an existing binary. Used on NixOS where
-      # the only thing a "wrapper" still has to do is rename.
       linkAs =
         name: exe:
         pkgs.runCommand name { } ''
@@ -70,15 +58,9 @@ _: {
         else
           mkGLWrapper name (lib.getExe program);
 
-      # Wrap a package's binaries, then bundle the result back together with
-      # the upstream paths via symlinkJoin. Collapses the
-      # gfx-wrap → makeWrapper → symlinkJoin pattern that otherwise repeats for
-      # chrome / slack / firefox / remmina.
       bundle =
         {
           pkg,
-          # Binaries to wrap. The first resolves via meta.mainProgram; the rest
-          # are looked up by name. Defaults to just the mainProgram.
           exes ? null,
           gfx ? true,
           flags ? [ ],

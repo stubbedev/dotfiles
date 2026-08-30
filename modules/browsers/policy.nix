@@ -1,14 +1,7 @@
-# The Chrome enterprise policy body, and the NixOS half that installs it.
-#
-# One definition, two consumers: modules/browsers/chrome.nix writes it into
-# /etc/opt/chrome/policies/managed/ via a privileged activation on non-NixOS,
-# and the NixOS module below writes the identical JSON through environment.etc.
 _:
 let
-  # Chrome Web Store update endpoint, used by every force-installed entry.
   updateUrl = "https://clients2.google.com/service/update2/crx";
 
-  # Extensions force-installed from the Chrome Web Store, id → name.
   # Force-installed extensions cannot be disabled or removed from within
   # Chrome — delete an entry here to un-manage it. SurfingKeys still needs its
   # one-time "Allow access to file URLs" toggle granted by hand.

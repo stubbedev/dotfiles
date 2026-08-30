@@ -1,23 +1,11 @@
-# `stubbe.mutable.<target>` — the one way this repo installs a file that must
-# NOT be a read-only store symlink.
-#
-# `xdg.configFile` / `home.file` are the default and stay the default: a store
-# symlink is what you want for anything Nix fully owns. Two cases genuinely
-# cannot use it:
-#
 #   link   Point at the live checkout, so editing the file in ~/.stubbe takes
 #          effect without a rebuild. For configs you iterate on by hand
 #          (the neovim lua tree, aerc stylesets).
-#
 #   copy   Give the app a real, writable file it may rewrite at runtime, and
 #          re-assert ours on every switch. For apps that persist UI state into
 #          their own config (btop.conf, lazygit's state.yml) — a symlink would
 #          be edited in place inside the git checkout, or fail against the
 #          read-only store.
-#
-# Content comes either from the live checkout (`src`, relative to
-# `<stubbe.paths.dotfiles>/src`) or from Nix (`source` / `text`). `link`
-# requires `src` by definition — a store path cannot be made writable.
 _: {
   flake.modules.homeManager.mutable =
     {
@@ -29,7 +17,6 @@ _: {
     let
       liveRoot = "${config.stubbe.paths.dotfiles}/src";
 
-      # Absolute source path for one entry, and the target under $HOME.
       sourceOf = m: if m.src != null then "${liveRoot}/${m.src}" else "${m.source}";
       targetOf = m: "${config.home.homeDirectory}/${m.target}";
 

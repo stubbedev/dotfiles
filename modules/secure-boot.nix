@@ -30,8 +30,6 @@
           pkiBundle = "/var/lib/sbctl";
         };
 
-        # sbctl CLI for verifying + managing the key bundle on the
-        # running system.
         environment.systemPackages = [ pkgs.sbctl ];
       };
     };

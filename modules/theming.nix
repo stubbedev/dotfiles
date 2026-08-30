@@ -1,9 +1,3 @@
-# Everything that makes the desktop look like one system: the GTK/Qt/icon/cursor
-# theme names, the fonts, and the per-toolkit config each one needs.
-#
-# Every theme NAME comes from `pkgs.stubbe.theme` (flake.lib), so the GTK theme,
-# the Kvantum theme, the Qt icon theme, the cursor exported into the session and
-# the copy the greeter reads can never disagree.
 _: {
   flake.modules.nixos.theming =
     { pkgs, ... }:
@@ -13,9 +7,6 @@ _: {
       # otherwise activation errors with "dconf is not enabled".
       programs.dconf.enable = true;
 
-      # Qt platform theming. qt5ct/qt6ct read the conf files written by the HM
-      # half, which delegate widget rendering to Kvantum; Kvantum picks up its
-      # theme from ~/.config/Kvantum/kvantum.kvconfig, also written there.
       qt = {
         enable = true;
         platformTheme = "qt5ct";
@@ -30,15 +21,10 @@ _: {
         MOZ_ENABLE_WAYLAND = "1";
         MOZ_USE_XINPUT2 = "1";
 
-        # Cursor, system-wide so PAM/login shells and the session manager
-        # export it before the compositor starts. The HM half mirrors this.
         XCURSOR_THEME = pkgs.stubbe.theme.cursor;
         XCURSOR_SIZE = toString pkgs.stubbe.theme.cursorSize;
       };
 
-      # Mirrors the font set the HM half installs. On NixOS these must be
-      # system-wide so the greeter — which runs before any user session — can
-      # render them.
       fonts = {
         packages = with pkgs; [
           nerd-fonts.jetbrains-mono
@@ -49,8 +35,6 @@ _: {
       };
 
       environment.systemPackages = with pkgs; [
-        # Provides the Catppuccin-Mocha-Mauve Kvantum theme files. The Qt5/Qt6
-        # style plugins are installed into the user profile by the HM half.
         catppuccin-kvantum
         # Cursor theme system-wide (not just home-manager) so it lands in
         # /run/current-system/sw/share/icons — where the greetd greeter, running
@@ -72,7 +56,6 @@ _: {
       theme = pkgs.stubbe.theme;
       ini = pkgs.formats.ini { };
 
-      # qt5ct and qt6ct share one ini format. Render once, write to both.
       qtCtConf = ini.generate "qtct.conf" {
         Appearance = {
           color_scheme_path = "";
@@ -155,7 +138,6 @@ _: {
 
           libsForQt5.qt5ct
           kdePackages.qt6ct
-          # Kvantum style engine, both Qt majors.
           libsForQt5.qtstyleplugin-kvantum
           kdePackages.qtstyleplugin-kvantum
         ];
@@ -167,8 +149,6 @@ _: {
           ".local/share/icons/${theme.cursor}".source = "${pkgs.vimix-cursors}/share/icons/${theme.cursor}";
           ".local/share/icons/Vimix-dark".source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
 
-          # Flatpak dark-mode overrides. Qt/KDE flatpaks may still have poor
-          # contrast: they use the Breeze theme from their own runtime.
           ".local/share/flatpak/overrides/global".source = ini.generate "flatpak-global" {
             Context.filesystems = "xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro";
             Environment = {
@@ -179,8 +159,6 @@ _: {
               GDK_BACKEND = "wayland,x11";
             };
           };
-          # Steam: X11/GLX support under Wayland, plus XDG_RUNTIME_DIR access
-          # for XAUTHORITY and Discord RPC.
           ".local/share/flatpak/overrides/com.valvesoftware.Steam" = {
             source = ini.generate "flatpak-steam" {
               Context.filesystems = "/run/user/1000";
@@ -191,15 +169,10 @@ _: {
       };
 
       xdg.configFile = {
-        # The Catppuccin-Mocha-Mauve theme files come from catppuccin-kvantum,
-        # a system package on NixOS.
         "Kvantum/kvantum.kvconfig".source = ini.generate "kvantum.kvconfig" {
           General.theme = theme.kvantum;
         };
 
-        # QT_QPA_PLATFORMTHEME=qt5ct — set system-wide by the NixOS qt module,
-        # and per-session by hyprland.lua — makes Qt apps read these. Qt6 apps
-        # consult qt6ct/qt6ct.conf with the same format.
         "qt5ct/qt5ct.conf".source = qtCtConf;
         "qt6ct/qt6ct.conf".source = qtCtConf;
       };
@@ -211,7 +184,6 @@ _: {
         method = "copy";
         source =
           let
-            # Breeze Dark accents shared by every Colors:* section.
             breezeColors = {
               DecorationFocus = "61,174,233";
               DecorationHover = "61,174,233";

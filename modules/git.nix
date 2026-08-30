@@ -1,9 +1,3 @@
-# git, plus lazygit as its TUI.
-#
-# Both configs are generated from Nix: lazygit's theme then draws from
-# `pkgs.stubbe.colors` instead of carrying its own copy of the palette, and its
-# runtime state file is copied through `stubbe.mutable` because lazygit rewrites
-# it in place.
 _: {
   flake.modules.homeManager.git =
     {
@@ -15,9 +9,6 @@ _: {
     let
       c = pkgs.stubbe.withHash;
 
-      # Claude Code adds a Co-authored-by trailer to commits it writes. We
-      # don't want it in this repo's history, and settings.includeCoAuthoredBy
-      # only covers the tool's own path — a hook catches every route.
       stripClaudeCoauthors = pkgs.writeShellScript "git-hook-commit-msg-strip-claude-coauthors" ''
         exec ${lib.getExe pkgs.gnused} -E -i '/^Co-authored-by:.*(Claude|Anthropic)/Id' "$1"
       '';
@@ -31,8 +22,6 @@ _: {
         };
         disableStartupPopups = false;
         promptToReturnFromSubprocess = false;
-        # Unbind lazygit's own commit prompt so `c` reaches the custom command
-        # below instead.
         keybinding.files.commitChanges = "";
         customCommands = [
           {
@@ -45,8 +34,6 @@ _: {
                 key = "Message";
               }
             ];
-            # Prefix the message with the ticket id from the branch name, when
-            # the branch carries one.
             command = ''git commit -m "$(git branch --show-current | awk 'match($0, /[A-Z]+-[0-9]+/) { printf "%s: ", substr($0, RSTART, RLENGTH) }'){{ .Form.Message }}"'';
             description = "Custom commit message";
           }
@@ -75,8 +62,6 @@ _: {
       programs.git = {
         enable = true;
         hooks.commit-msg = stripClaudeCoauthors;
-        # Rendered to ~/.config/git/ignore — git's default global-ignore path,
-        # so no core.excludesfile is needed.
         ignores = [
           ".worktrees"
           ".gwt-*"
@@ -92,17 +77,7 @@ _: {
             name = "Alexander Bugge Stage";
             email = "abs@stubbe.dev";
           };
-          # Cache untracked-file enumeration per directory (keyed on mtime) so
-          # `git status` skips re-walking unchanged trees — the big gitignored
-          # vendor/ and node_modules/ dirs in large checkouts. Takes a cold
-          # `git status` on the work monorepo from ~0.2s to ~0.01s, which is
-          # what made the per-worktree scan in gwt/gwtd slow. Auto-maintained
-          # by git; safe on local filesystems with reliable mtime.
           core.untrackedCache = true;
-          # Large-repo index bundle: index v4 (smaller, faster to read) plus
-          # index.skipHash (skip the trailing SHA on index writes). Also
-          # implies core.untrackedCache — kept explicit above so the reason is
-          # documented and survives a change to the feature bundle.
           feature.manyFiles = true;
           init.defaultBranch = "master";
           push.autoSetupRemote = true;
@@ -116,9 +91,6 @@ _: {
         settings = lazygitSettings;
       };
 
-      # lazygit rewrites state.yml as you use it, so it cannot be a store
-      # symlink. `lastversion` pins the current package version so lazygit's
-      # "new version available" popup stays quiet after a nixpkgs bump.
       stubbe.mutable.".config/lazygit/state.yml" = {
         method = "copy";
         source = (pkgs.formats.yaml { }).generate "lazygit-state.yml" {

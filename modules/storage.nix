@@ -1,5 +1,3 @@
-# Storage: the btrfs layout, swap, SMART monitoring, removable media, and the
-# stateless-root option.
 _: {
   flake.modules.nixos.storage =
     {
@@ -8,10 +6,6 @@ _: {
       ...
     }:
     let
-      # The installer formats every selected disk as one btrfs volume labeled
-      # `stubbe`. Any member device is enough to mount it; btrfs auto-discovers
-      # the rest via `btrfs device scan` at boot when boot.supportedFilesystems
-      # contains "btrfs".
       btrfsDevice = "/dev/disk/by-label/stubbe";
       mountOpts = [
         "compress=zstd"
@@ -32,10 +26,6 @@ _: {
       };
     in
     {
-      # Compressed RAM swap — no disk cost, kicks in under memory pressure and
-      # keeps the OOM killer at bay during big rebuilds. zstd compresses ~3x on
-      # typical workloads, so 50% of RAM ≈ 1.5x extra effective. The non-NixOS
-      # half is the zram setup below.
       zramSwap = {
         enable = true;
         algorithm = "zstd";
@@ -55,18 +45,12 @@ _: {
           freeSwapThreshold = 10;
         };
 
-        # SMART monitoring: polls every disk on a timer and logs failing
-        # attributes. No email destination — `journalctl -u smartd` surfaces
-        # alerts. autodetect picks up every /dev/sd*, /dev/nvme* with no
-        # per-host config.
         smartd = {
           enable = true;
           autodetect = true;
           notifications.x11.enable = true;
         };
 
-        # Auto-mount removable media (USB sticks, SD cards, MTP). The shell's
-        # disk widget and the file managers read its D-Bus API.
         udisks2.enable = true;
 
         # Virtual filesystem layer for GIO apps (PCManFM, nautilus, …): trash
@@ -75,8 +59,6 @@ _: {
         # fail silently.
         gvfs.enable = true;
 
-        # Monthly checksum scrub catches bit-rot on the btrfs members before
-        # silent corruption propagates to backups.
         btrfs.autoScrub = lib.mkIf config.host.installed {
           enable = true;
           interval = "monthly";

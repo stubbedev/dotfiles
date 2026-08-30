@@ -1,20 +1,3 @@
-# `stubbe.setup.<name>` — the one way this repo runs imperative work at
-# activation time.
-#
-# Every aspect that needs a shell step (bootstrapping a maildir, editing
-# /etc/pam.d, installing a host-OS package) declares it inline in its own
-# aspect file. There is no factory to import, no metadata attrset to `//`
-# together, and no name repeated as a string: the attribute name IS the DAG
-# node name, and the option types catch a missing `script` at eval time —
-# which is what the old `requireActionScript` throw was hand-rolling.
-#
-#   stubbe.setup.aerc.script = "…";                 # unprivileged, every host
-#   stubbe.setup.zram = {                           # sudo, non-NixOS only
-#     privileged = true;
-#     body = "…";
-#     script = "…";
-#   };
-#
 # `privileged = true` wraps the script in the shared sudo-prompt scaffolding
 # and gates it off on NixOS, where the matching `flake.modules.nixos.<aspect>`
 # half owns the same system state declaratively.

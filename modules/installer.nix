@@ -13,7 +13,6 @@ let
   # Build with --impure to enable this; under pure eval (e.g. `nix flake
   # check`) HOME is empty and we fall back to no preloaded keys so the
   # ISO derivation still evaluates.
-  #
   # SECURITY WARNING. The resulting ISO contains UNENCRYPTED PRIVATE
   # SSH KEYS. Treat the ISO as a sensitive artefact: never publish it,
   # never put it on a shared file server, and wipe USB sticks once the
@@ -123,9 +122,6 @@ in
         boot = {
           zfs.forceImportRoot = false;
 
-          # stb-install-nixos creates btrfs volumes and a vfat EFI partition.
-          # Explicit declaration ensures the kernel modules are present and
-          # fsck helpers are included even if cd-base doesn't pull them in.
           supportedFilesystems = lib.mkAfter [
             "btrfs"
             "vfat"
@@ -134,10 +130,7 @@ in
           # Auto-load common wired NIC drivers. nixos-install fetches packages
           # from cache.nixos.org — a missing driver means a stalled install.
           # hardware.nix covers storage controllers; these cover the NIC side.
-          # (graphics.nix already force-loads `nvidia` unconditionally, which
-          # is what populates /proc/driver/nvidia/version on NVIDIA targets.)
           kernelModules = lib.mkAfter [
-            # --- Wired ethernet ---
             "r8169" # Realtek Gigabit PCIe (most consumer boards)
             "r8168" # Realtek Gigabit alt driver
             "r8152" # Realtek USB ethernet
@@ -152,7 +145,6 @@ in
             "atl1c" # Qualcomm/Atheros wired
             "alx" # Qualcomm/Atheros wired (newer)
             "forcedeth" # nForce onboard
-            # USB ethernet dongles
             "ax88179_178a" # ASIX USB 3.0 ethernet (common dongles)
             "cdc_ether" # Generic CDC ethernet / USB tethering
             "cdc_ncm" # CDC NCM (4G modems, some hubs)
@@ -161,7 +153,6 @@ in
             "smsc75xx" # SMSC USB ethernet
             "smsc95xx" # SMSC USB ethernet (Raspberry Pi style)
 
-            # --- WiFi ---
             "iwlwifi" # Intel WiFi 4/5/6/6E/7 (dominant in laptops)
             "iwldvm" # Intel WiFi 4000 series firmware driver
             "iwlmvm" # Intel WiFi 5000+ series firmware driver
@@ -183,22 +174,17 @@ in
             "brcmsmac" # Broadcom SoftMAC
             "b43" # Broadcom 43xx (older)
 
-            # --- Bluetooth (useful if WiFi uses BT coexistence firmware) ---
             "btusb" # USB Bluetooth (covers most BT dongles + built-in)
             "btintel" # Intel Bluetooth
             "btrtl" # Realtek Bluetooth
             "btmtk" # MediaTek Bluetooth
 
-            # --- Input (belt-and-suspenders over hardware.nix) ---
             "hid_generic" # Generic HID fallback
             "i2c_hid" # I2C HID (laptop touchpads/keyboards)
             "i2c_hid_acpi"
           ];
         };
 
-        # All firmware blobs including non-redistributable (Broadcom WiFi,
-        # some Intel/Realtek). Needed for brcmfmac, some iwlwifi revisions,
-        # and various USB WiFi chips.
         hardware.enableAllFirmware = true;
         nixpkgs.config.allowUnfree = true;
 
@@ -217,14 +203,8 @@ in
           # The ISO's only job is to run stb-install-nixos. Skip the display
           # manager and autologin root on tty1 so the live boot lands directly
           # at a root shell. The installed system logs in via greetd autologin
-          # (modules/hyprland.nix); this override is scoped to the ISO.
           greetd.enable = lib.mkForce false;
 
-          # The live ISO is a console-only installer; X stays off. The
-          # nvidia kernel module is pulled into the closure and force-loaded
-          # by graphics.nix unconditionally, so /proc/driver/nvidia/version
-          # populates on NVIDIA targets and stb-install-nixos --impure can
-          # auto-detect the GPU regardless of the build host.
           xserver.enable = lib.mkForce false;
           getty.autologinUser = lib.mkForce "root";
 
@@ -305,10 +285,6 @@ in
     { pkgs, system, ... }:
     let
       iso = config.flake.nixosConfigurations.installer-iso.config.system.build.isoImage;
-      # Boot the freshly-built ISO under qemu/KVM with EFI firmware and a
-      # persistent virtio disk, so stb-install-nixos can be exercised end-
-      # to-end without burning a USB stick. Disk path overridable via the
-      # ISO_VM_DISK env var; defaults to /tmp/stb-installer-vm.qcow2.
       iso-vm = pkgs.writeShellApplication {
         name = "installer-iso-vm";
         runtimeInputs = [

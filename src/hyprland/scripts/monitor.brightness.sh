@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Adjust monitor brightness. Prefers brightnessctl (internal/backlight) and
-# falls back to ddcutil for external monitors.
 
 set -euo pipefail
 
@@ -13,7 +11,6 @@ if [ -z "$action" ]; then
   exit 1
 fi
 
-# Try internal/backlight first via brightnessctl
 if command -v brightnessctl >/dev/null 2>&1; then
   device=$(brightnessctl --list --class backlight --machine 2>/dev/null | awk -F, 'NR==1 {print $1}')
   if [ -n "$device" ]; then
@@ -39,7 +36,6 @@ if command -v brightnessctl >/dev/null 2>&1; then
   fi
 fi
 
-# Fallback to external monitors via ddcutil
 if command -v ddcutil >/dev/null 2>&1; then
   current=$(ddcutil getvcp 10 --brief 2>/dev/null | awk 'NR==1 {print $3}')
   if [ -n "${current:-}" ]; then

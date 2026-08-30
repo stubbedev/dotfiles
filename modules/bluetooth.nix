@@ -1,18 +1,11 @@
-# Bluetooth. On NixOS the system module owns the daemon and the GUI manager's
-# privileged half; on a non-NixOS host blueman comes from Nix but its mechanism
-# must be reachable from the SYSTEM bus, which never looks in ~/.nix-profile —
-# hence the activation that links the store files into /etc.
 _: {
   flake.modules.nixos.bluetooth = _: {
     hardware.bluetooth = {
       enable = true;
       powerOnBoot = true;
-      # Battery reporting on BLE peripherals (mice, headphones, controllers)
-      # via the standard BAS GATT characteristic.
       settings.General.Experimental = true;
     };
 
-    # The system service, so the tray applet finds an autostart-ready daemon.
     services.blueman.enable = true;
   };
 

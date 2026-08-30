@@ -1,9 +1,4 @@
 _: {
-  # `nix flake check` validates src/hyprland/hyprland.lua with Hyprland's own
-  # --verify-config (headless config parse). Catches the whole class of bugs
-  # that only surface at login: unknown/renamed config keys, wrong value
-  # types, hy3 plugin config errors, and lua errors — none of which a plain
-  # lua syntax check sees.
   perSystem =
     { pkgs, ... }:
     let

@@ -1,12 +1,5 @@
 { self, ... }:
 {
-  # `nix flake check` drives a real tmux server against the real generated
-  # config and the real lazy-tmux binary, then asserts the session save/restore
-  # contract end to end. Everything here is logic that fails silently: a
-  # snapshot that comes back without window names, a restore that drops
-  # @pinned, a picker that renders zero rows. The sandbox has ptys, so tmux
-  # runs for real — no mocking of the thing under test.
-  #
   # Deliberately not covered: fzf's interactive layer (the picker is exercised
   # through its `--lines` mode), `claude --resume` (needs a Claude Code
   # transcript directory to detect), and anything that needs an attached
@@ -26,8 +19,6 @@
       commandsSh =
         self.homeConfigurations.stubbe.config.home.file.".config/tmux/scripts/commands.sh".source;
 
-      # The launchers under test, built from the same `stubbe.lib` sources the
-      # installed bins use (modules/scripts.nix).
       launcherBins = map (
         name:
         pkgs.stubbe.zshApp {

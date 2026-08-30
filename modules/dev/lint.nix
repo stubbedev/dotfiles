@@ -1,21 +1,8 @@
 { self, ... }:
 {
-  # Static analysis over the whole repo. statix catches Nix anti-patterns
-  # (empty patterns, manual inherits — see statix.toml for what's turned
-  # off); deadnix catches unused bindings and function arguments. Both run
-  # read-only against the flake source in the store, so the checks are pure
-  # and cheap. `nix run .#lint-fix` below applies the machine-fixable subset.
   perSystem =
     { pkgs, ... }:
     {
-      # `nix run .#lint-fix` applies every fix the linters can apply
-      # themselves, in the working tree. CI runs this before the checks and
-      # commits the result, so formatting and dead-code drift never costs a
-      # round trip. Uses the same pkgs as the checks below — a fixer on a
-      # different tool version than the checker can disagree with it.
-      #
-      # shellcheck has no reliable fixer (its --format=diff patches are
-      # partial), so bin/ findings still have to be fixed by hand.
       apps.lint-fix.program = pkgs.writeShellApplication {
         name = "lint-fix";
         runtimeInputs = [
@@ -44,14 +31,11 @@
           touch "$out"
         '';
 
-        # No exclusions: with the activation factory gone, every module names
-        # only the arguments it actually uses.
         lint-deadnix = pkgs.runCommand "lint-deadnix" { nativeBuildInputs = [ pkgs.deadnix ]; } ''
           deadnix --fail -- ${self}
           touch "$out"
         '';
 
-        # Formatting drift fails the check; fix with `nix fmt`.
         lint-fmt = pkgs.runCommand "lint-fmt" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
           find ${self} -name '*.nix' -print0 | xargs -0 nixfmt --check
           touch "$out"

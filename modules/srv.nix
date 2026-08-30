@@ -1,15 +1,7 @@
-# srv — the local-site server: Traefik + per-site containers, reachable at
-# https://<name>.local with mkcert-signed certificates.
-#
-# The certificate trust story is why this file has four blocks. srv generates
-# per-site certs signed by the mkcert root CA, and nothing trusts that CA until
-# it is installed:
-#   * NixOS system store  → security.pki.certificateFiles (nixos half)
-#   * NixOS browser NSS   → an unprivileged `mkcert -install` with
-#                           TRUST_STORES=nss (mkcertNss below), because
-#                           security.pki only covers the system store
-#   * non-NixOS both      → one privileged `mkcert -install` (mkcertTrust),
-#                           which does the system store AND the NSS databases
+# Four blocks because nothing trusts the mkcert root CA until it is installed,
+# and the system store and the browser NSS databases are separate: security.pki
+# covers only the former, so NixOS needs an unprivileged NSS install alongside
+# it, while non-NixOS gets both from one privileged `mkcert -install`.
 { inputs, ... }:
 {
   flake.modules.nixos.srv =
@@ -27,14 +19,11 @@
     lib.mkIf config.stubbe.userFeatures.srv {
       environment.systemPackages = [
         pkgs.mkcert
-        # certutil — mkcert uses it to install the root CA into the
-        # Firefox/Chromium NSS databases.
         pkgs.nss.tools
       ];
 
-      # builtins.path imports the cert into the store so nss-cacert can read it
-      # from inside the build sandbox; a raw "/home/…" string would resolve at
-      # eval time but be unreadable at build time.
+      # builtins.path so the build sandbox can read it: a raw "/home/..." string
+      # resolves at eval time but is unreadable at build time.
       security.pki.certificateFiles = lib.optional (builtins.pathExists rootCA) (
         builtins.path {
           path = rootCA;
@@ -42,16 +31,11 @@
         }
       );
 
-      # Hand DNS to systemd-resolved so split-DNS layers cleanly on top
-      # of whatever per-link nameservers NetworkManager negotiates
-      # (corp, VPN, ISP). srv_dns answers only the names srv has
-      # registered; everything else stays on the link's upstream.
+      # Split-DNS layers on top of whatever per-link nameservers NetworkManager
+      # negotiates: srv_dns answers only registered names.
       services.resolved.enable = true;
       networking.networkmanager.dns = "systemd-resolved";
 
-      # Whenever srv writes its domain list, regenerate the resolved
-      # drop-in so adds/removes take effect without a nix-rebuild. Also
-      # runs at boot so already-registered sites work after a reboot.
       systemd.paths.srv-resolved-sync = {
         wantedBy = [ "multi-user.target" ];
         pathConfig = {
@@ -107,43 +91,26 @@
       home.packages = [
         srvPkg
         pkgs.mkcert
-        # certutil — used by mkcert to install the root CA into Firefox/
-        # Chromium NSS databases.
         pkgs.nss.tools
       ];
 
-      # Own the srv watch daemon declaratively instead of via
-      # `srv daemon install`. That imperative installer bakes the
-      # then-current /nix/store path of the srv binary into the unit's
-      # ExecStart; the next srv upgrade or `nix-collect-garbage` deletes
-      # that path, leaving the unit crash-looping with status=203/EXEC
-      # ("Unable to locate executable"). A dead daemon never connects site
-      # containers to the Traefik network, so Traefik falls back to its
-      # self-signed default cert for every local site (start.local included)
-      # — which on NixOS looks like an untrusted/invalid cert. Pointing
-      # ExecStart at the flake-pinned binary tracks the current srv and
-      # keeps it a GC root, so it never goes stale.
-      #
-      # Migration off the imperative unit is automatic — see the `force`
-      # below.
+      # Declarative, not `srv daemon install`: that bakes a then-current store
+      # path into ExecStart, which the next upgrade or GC deletes, leaving the
+      # unit at status=203/EXEC. A dead daemon leaves Traefik serving its
+      # self-signed default cert for every local site.
       systemd.user.services.srv-daemon = {
         Unit = {
           Description = "srv daemon - Docker container network connector";
           Documentation = "https://github.com/stubbedev/srv";
-          # No `After = docker.service`: this is a *user* unit and ordering
-          # only resolves against other user-manager units, so a dep on the
-          # system docker.service is silently ignored. The docker-not-ready
-          # race is handled by Restart=on-failure below instead.
+          # A user unit cannot order against system docker.service -- the dep is
+          # silently ignored -- so Restart=on-failure handles that race.
         };
         Service = {
           Type = "simple";
           ExecStart = "${lib.getExe' srvPkg "srv"} daemon start --foreground";
           Restart = "on-failure";
           RestartSec = 5;
-          # systemd user services start with a minimal PATH and do not
-          # inherit the interactive shell's. srv shells out to `docker`, so
-          # surface the host's client — /run/current-system on NixOS,
-          # /usr/bin on a standalone-HM distro (absent dirs are ignored).
+          # User services get a minimal PATH, and srv shells out to `docker`.
           Environment = [
             "PATH=/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin"
             "XDG_CONFIG_HOME=${config.xdg.configHome}"
@@ -156,7 +123,6 @@
       # install` writes a *real* file at this path, which home-manager would
       # refuse to replace ("Existing file would be clobbered" -- no
       # backupFileExtension is set). `force` claims the path instead.
-      #
       # This merges onto the unit home-manager's systemd module already
       # generates: it renders every unit through `xdg.configFile` under
       # exactly this name, setting `source`, and this adds `force`. Linux
@@ -167,8 +133,6 @@
       };
 
       stubbe.setup = {
-        # Non-NixOS: `mkcert -install` trusts the CA in BOTH the system store
-        # and the browser NSS databases.
         mkcertTrust = {
           privileged = true;
           title = "Installing the mkcert root CA into the system & browser trust stores";
@@ -180,31 +144,25 @@
             https://start.local validate instead of failing with "unable to
             get local issuer certificate".
           '';
-          # Skip until srv/mkcert has generated the root CA — the next switch
-          # retries once it exists.
+          # Skip until the root CA exists; the next switch retries.
           preCheck = ''
             if [ ! -f "${rootCA}" ]; then
               echo "mkcert-trust: root CA not generated yet (run 'srv install'); skipping."
               exit 0
             fi
           '';
-          # mkcert needs certutil (nss.tools) on PATH to reach the NSS stores;
-          # without it the system store is still updated but browsers are not.
-          # mkcert invokes sudo itself for the system store.
+          # Without certutil on PATH the system store is still updated but
+          # browsers are not.
           script = ''
             export PATH="${pkgs.nss.tools}/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
             ${lib.getExe pkgs.mkcert} -install
           '';
-          # Re-run when the CA appears or disappears (regenerated, fresh OS).
           stateInputs = [ rootCA ];
         };
 
-        # NixOS: security.pki above replaces only the SYSTEM-store half, so
-        # nothing seeds NSS and https://start.local validates with curl but is
-        # still rejected by Firefox/Chromium. This closes that gap. mkcert's NSS
-        # installer is unprivileged (the NSS dbs are user-owned), so no sudo —
-        # and TRUST_STORES=nss keeps it from trying to sudo into the system
-        # store that security.pki already owns.
+        # security.pki seeds only the system store, so without this a local site
+        # validates with curl but is rejected by Firefox/Chromium. TRUST_STORES=nss
+        # keeps mkcert from sudo-ing into the store security.pki already owns.
         mkcertNss = lib.mkIf (config.host.platform == "nixos") {
           script = ''
             if [ -f "${rootCA}" ]; then

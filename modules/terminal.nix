@@ -1,8 +1,3 @@
-# Alacritty, as a single-instance daemon every window attaches to.
-#
-# The config is generated from Nix rather than kept as two TOML files, so the
-# Catppuccin colours come from `pkgs.stubbe.colors` like every other themed
-# surface instead of being a third hand-maintained copy of the palette.
 _: {
   flake.modules.homeManager.terminal =
     {
@@ -18,9 +13,6 @@ _: {
       # Nix string literals have no \u escape; a JSON one does.
       esc = builtins.fromJSON ''"\u001b"'';
 
-      # nixGL-wrapped alacritty. The `alacritty-daemon` unit below runs
-      # `--daemon` from this same derivation, and the thin client wrapper
-      # attaches new windows to it over the shared IPC socket.
       alacrittyGfx = gfx.wrap pkgs.alacritty;
 
       # `alacritty` on PATH: attach a window to the running daemon so every
@@ -28,7 +20,6 @@ _: {
       # the systemd unit, so this is a thin client with no spawn/poll race. It
       # falls back to a standalone window if the socket is not up yet (an early
       # login before the unit reaches its target). Control/query subcommands
-      # pass straight through.
       alacrittyClient = pkgs.writeShellScriptBin "alacritty" ''
         real="${alacrittyGfx}/bin/alacritty"
         socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
@@ -231,7 +222,6 @@ _: {
               }
             ];
 
-          # Catppuccin Mocha, generated from pkgs.stubbe.colors.
           colors = {
             primary = {
               background = c.base;
@@ -309,7 +299,6 @@ _: {
         };
       };
 
-      # One daemon process, every terminal attached over the IPC socket.
       # Starting only after the compositor target means the imported Wayland env
       # is present when windows are created. --socket pins a deterministic path
       # the client mirrors (%t = $XDG_RUNTIME_DIR).

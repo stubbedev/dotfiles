@@ -1,14 +1,6 @@
--- Statusline and tabline, hand-rolled on the native 'statusline'/'tabline'
--- options. This replaces lualine.
---
--- Worth knowing why it's hand-rolled rather than "one more plugin": the old
--- lualine tabline rebuilt itself by calling lualine.setup() -- a full ~3ms
--- re-init -- on every BufAdd/BufDelete. A native expression is re-evaluated by
--- the redraw loop instead, so showing the buffer list costs nothing.
 
 local M = {}
 
--- Catppuccin Mocha, matching lua/options.lua's terminal palette.
 local c = {
   base = "#1e1e2e",
   mantle = "#181825",
@@ -48,7 +40,6 @@ local function set_highlights()
   hl("StFile", c.text, c.surface0)
   hl("StFill", c.subtext, c.mantle)
   hl("StRecord", c.base, c.red, true)
-  -- Tabline
   hl("TabLineSel", c.base, c.blue, true)
   hl("TabLine", c.subtext, c.surface0)
   hl("TabLineFill", c.subtext, c.mantle)
@@ -60,16 +51,11 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = set_highlights,
 })
 
--- vim.diagnostic.status() renders every severity with its count, already
--- highlighted, using the sign text from vim.diagnostic.config() in
--- lua/options.lua. It replaces ~20 lines that did the same by hand.
 local function diagnostics()
   local status = vim.diagnostic.status()
   return status == "" and "" or (" " .. status .. " ")
 end
 
--- nvim-recorder's macro slots. Falls back to nvim's own reg_recording() if the
--- plugin ever goes away, so the statusline never errors.
 local function macros()
   local ok, recorder = pcall(require, "recorder")
   if not ok then
@@ -81,11 +67,6 @@ local function macros()
     return "%#StRecord# " .. status .. " "
   end
 
-  -- nvim-recorder deliberately returns "" when the only thing to show is an
-  -- empty active slot (`if output == "[ ]" then return "" end`), so the
-  -- indicator vanishes until a macro exists. Keep the slot on screen instead;
-  -- which slot is active isn't exported by the plugin, so an all-empty set
-  -- shows as an empty pair of brackets.
   local slots = recorder.displaySlots()
   if slots == "" then
     slots = "\u{f00cd} [ ]"
@@ -93,10 +74,6 @@ local function macros()
   return "%#StFill# " .. slots .. " "
 end
 
--- Whatever a language server is currently busy with -- indexing, loading a
--- workspace. Empty when nothing is running, so it costs a line only when there
--- is something to say. Fed by the `Progress` event, so it covers anything that
--- reports progress, not just LSP.
 local function progress()
   local ok, status = pcall(vim.ui.progress_status)
   if not ok or not status or status == "" then
@@ -113,9 +90,6 @@ local function branch()
   return "%#StBranch# \u{e0a0} " .. head .. " "
 end
 
--- What to show in the file segment. Special buffers have no useful path -- a
--- picker would otherwise print `term://~/git/dotfiles//2104962:/usr/bin/sh` --
--- so name them by what they are.
 local function location()
   if vim.bo.buftype == "terminal" then
     return "terminal"
@@ -150,8 +124,6 @@ function M.render()
   })
 end
 
--- Tabline: the list of listed buffers, but only once there are at least two --
--- a single-buffer tabline is a wasted line.
 
 local function listed_buffers()
   return vim.tbl_filter(function(b)
@@ -159,15 +131,10 @@ local function listed_buffers()
   end, vim.api.nvim_list_bufs())
 end
 
--- 'showtabline' has to be set from an autocmd, not from inside M.tabline():
--- an option written during the redraw that is evaluating the tabline doesn't
--- take effect, so the bar silently never appears.
 vim.api.nvim_create_autocmd({ "BufAdd", "BufDelete", "BufEnter", "BufWipeout" }, {
   group = vim.api.nvim_create_augroup("statusline_tabline", { clear = true }),
   callback = function()
     vim.schedule(function()
-      -- Only assign when it changes: BufEnter fires constantly, and writing
-      -- the option is what forces a redraw.
       local want = #listed_buffers() > 1 and 2 or 1
       if vim.o.showtabline ~= want then
         vim.o.showtabline = want

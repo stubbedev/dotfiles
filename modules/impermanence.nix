@@ -38,7 +38,6 @@
         # Declarative persistence. Anything outside this list is wiped
         # on every boot. NixOS activation rebuilds /etc, /run, and most
         # of /var from the system closure, so only state that changes
-        # at runtime needs to land here.
         environment.persistence."/persist" = {
           hideMounts = true;
           directories = [

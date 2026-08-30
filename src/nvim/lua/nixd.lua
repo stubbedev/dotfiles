@@ -1,15 +1,3 @@
--- Flake-aware settings for nixd.
---
--- Pointing nixd at `nixosConfigurations.<host>.options` and
--- `homeConfigurations.<user>.options` is what lets completion index into the
--- right host and user. Discovering those names needs `nix eval`, which takes
--- ~3s on a cold flake.
---
--- That never blocks the editor. `settings()` reads an on-disk cache and
--- returns immediately, so the file is on screen and nixd is already answering
--- for plain nixpkgs; `warm()` resolves anything missing in the background and
--- pushes it to the running server with didChangeConfiguration. Opening a .nix
--- file in an uncached flake used to block for 2.9s.
 
 local M = {}
 
@@ -38,7 +26,6 @@ local function flake_expr(root, attr)
   return { expr = string.format('(builtins.getFlake "%s").%s', root, attr) }
 end
 
----Settings for a flake root, from cache only. Never evaluates, never blocks.
 function M.settings(root)
   local entry = type(cache[root]) == "table" and cache[root] or {}
   local options = {}
@@ -55,11 +42,6 @@ function M.settings(root)
   }
 end
 
----Run `nix eval` off the main loop. `cb` gets the decoded JSON, or nil.
----
----The callback is scheduled onto the main loop rather than left where
----vim.system puts it: that is a |fast-event| context, where touching vim.env or
----any vim.fn throws and silently kills the chain mid-way.
 local function eval(root, attr, apply, cb)
   local cmd = { "nix", "eval", "--json", "--no-warn-dirty", root .. "#" .. attr }
   if apply then
@@ -75,7 +57,6 @@ local function eval(root, attr, apply, cb)
   )
 end
 
----Pick the configuration matching this host/user, else the only plausible one.
 local function pick(names, map)
   if type(map) == "table" then
     local hostname = vim.uv.os_gethostname()
@@ -89,8 +70,6 @@ local function pick(names, map)
     end
   end
 
-  -- No identity matched. A single non-throwaway configuration is a safe guess;
-  -- more than one is ambiguous, and the wrong host is worse than none.
   local fallback
   for _, name in ipairs(names) do
     if not name:match("[Ii]nstaller") and not name:match("[Ii]so") and not name:match("[Ll]ive") then
@@ -116,8 +95,6 @@ end
 
 local warming = {}
 
----Resolve a flake's configuration names in the background, then hand them to
----the already-running client. No-op once a root is cached.
 function M.warm(root, client)
   if warming[root] or cache[root] then
     return

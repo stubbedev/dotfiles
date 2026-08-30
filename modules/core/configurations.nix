@@ -1,8 +1,3 @@
-# Turn `configurations.{homeManager,nixos}.<host>` into real flake outputs.
-#
-# Hosts declare themselves under `configurations.*` (see modules/hosts/) and
-# this file is the only place that knows how to instantiate either class.
-#
 # Note the absence of `extraSpecialArgs` / `specialArgs`: nothing is injected
 # into a module. Values that used to travel that way now reach modules the two
 # ways the module system already provides — `pkgs.stubbe.*` for helpers and

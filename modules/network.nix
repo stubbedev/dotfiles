@@ -1,8 +1,3 @@
-# Networking: NetworkManager, the firewall, mDNS, and inbound ssh.
-#
-# Avahi is deployed two ways (services.avahi, or a privileged activation that
-# installs the daemon and edits nsswitch), and the interface allowlist is the
-# one value both halves need to agree on — so it is a single let-binding here.
 _: {
   flake.modules.nixos.network =
     { lib, pkgs, ... }:
@@ -36,9 +31,6 @@ _: {
         };
       };
 
-      # mDNS / DNS-SD: advertise this machine to printers / Chromecasts / dev
-      # boxes on the LAN, and keep service discovery working.
-      #
       # nssmdns4 is intentionally OFF: it hooks `mdns4_minimal
       # [NOTFOUND=return]` into nsswitch ahead of `resolve`, which hijacks every
       # `*.local` lookup to multicast mDNS and returns before systemd-resolved
@@ -46,7 +38,6 @@ _: {
       # dnsmasq via a systemd-resolved drop-in, so with nss-mdns in front
       # `grafana.local` never reaches dnsmasq. Turning it off lets `resolve`
       # answer `.local` from dnsmasq.
-      #
       # Trade-off: glibc no longer resolves OTHER hosts' `.local` names via mDNS
       # (`ssh printer.local`); the daemon still advertises this host and powers
       # DNS-SD service discovery.

@@ -1,14 +1,8 @@
--- Autocommands.
 
 local function augroup(name)
   return vim.api.nvim_create_augroup("stubbe_" .. name, { clear = true })
 end
 
--- Treesitter ---------------------------------------------------------------
---
--- Parsers and queries come from nix (modules/nvim.nix drops them on the
--- packpath), so there is no nvim-treesitter Lua to configure -- starting the
--- built-in highlighter per filetype is the whole integration.
 vim.api.nvim_create_autocmd("FileType", {
   group = augroup("treesitter"),
   callback = function(args)
@@ -19,11 +13,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Big files ----------------------------------------------------------------
---
--- This is what snacks.bigfile did. Without it, opening a generated file (the
--- 131MB resultCache.php in a Laravel cache dir, a bundled .js) locks the UI
--- while treesitter and the LSP try to parse it.
 vim.api.nvim_create_autocmd("BufReadPre", {
   group = augroup("bigfile"),
   callback = function(args)
@@ -37,7 +26,6 @@ vim.api.nvim_create_autocmd("BufReadPre", {
     vim.opt_local.swapfile = false
     vim.opt_local.undofile = false
     vim.opt_local.list = false
-    -- syntax off is deferred: the filetype that triggers it isn't set yet.
     vim.schedule(function()
       if vim.api.nvim_buf_is_valid(args.buf) then
         vim.bo[args.buf].syntax = ""
@@ -46,10 +34,7 @@ vim.api.nvim_create_autocmd("BufReadPre", {
   end,
 })
 
--- Diagnostics --------------------------------------------------------------
 
--- .env files are matched by filename, not filetype: they're usually detected
--- as "sh", and a shell linter has strong opinions about KEY=value files.
 vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
   group = augroup("env"),
   pattern = { ".env", ".env.*", "*.env" },
@@ -58,7 +43,6 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
   end,
 })
 
--- Quality of life ----------------------------------------------------------
 
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = augroup("yank"),
@@ -67,7 +51,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
   end,
 })
 
--- Reopen a file where you left it.
 vim.api.nvim_create_autocmd("BufReadPost", {
   group = augroup("last_loc"),
   callback = function(args)
@@ -83,7 +66,6 @@ vim.api.nvim_create_autocmd("BufReadPost", {
   end,
 })
 
--- Writing to a path whose directory doesn't exist yet should just work.
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = augroup("mkdir"),
   callback = function(args)
@@ -94,7 +76,6 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   end,
 })
 
--- Close throwaway windows with plain `q`.
 vim.api.nvim_create_autocmd("FileType", {
   group = augroup("close_with_q"),
   pattern = { "help", "qf", "man", "checkhealth", "lspinfo", "query", "startuptime" },
@@ -104,7 +85,6 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Keep splits proportional when the terminal is resized.
 vim.api.nvim_create_autocmd("VimResized", {
   group = augroup("resize"),
   command = "tabdo wincmd =",

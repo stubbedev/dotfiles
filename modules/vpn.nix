@@ -1,13 +1,3 @@
-# The corporate VPN: openconnect as a systemd SYSTEM service, controlled with
-# `systemctl start/stop` under a narrow polkit manage-units rule.
-#
-# This replaced the old pkexec design (four scripts pkexec-ing raw
-# openconnect/pkill plus 200 lines of polkit JS validating the full command
-# line). That rule was fragile by construction — any mismatch (argv[0] vs
-# canonical path, pid-file path, pkill flags, missing DBUS session) silently
-# fell through to an interactive sudo prompt. systemd owns the process now, so
-# authorisation is one question: may this user start/stop this one unit.
-#
 # Auth stays interactive in the user session: GlobalProtect 2FA happens in
 # `openconnect --authenticate` (unprivileged), the resulting session cookie is
 # cached at ~/.config/vpn/<provider>/cookie (0600), and the root service reads
@@ -25,10 +15,6 @@ let
   # status and bar all agree on which interface to probe.
   ifaceOf = provider: builtins.substring 0 15 "oc-${provider}";
 
-  # What the root service runs: source both LoadCredential files, then exec
-  # openconnect in the FOREGROUND with the cookie on stdin. Logs go to the
-  # journal. The cookie file is written by vpn-<provider>-connect below
-  # (printf %q quoting, so plain `source` round-trips it).
   runScript =
     { openconnect, provider }:
     ''
@@ -88,8 +74,6 @@ let
   ];
 in
 {
-  # NixOS half: the unit is part of the system closure and the polkit rule is
-  # a plain /etc file.
   flake.modules.nixos.vpn =
     {
       config,
@@ -109,8 +93,6 @@ in
         in
         {
           description = "openconnect VPN tunnel (${provider})";
-          # Started and stopped by the user (vpn-<provider>-connect /
-          # -disconnect via systemctl); never at boot.
           serviceConfig = {
             Type = "exec";
             LoadCredential = credentialsOf provider home;
@@ -134,10 +116,6 @@ in
       ...
     }:
     let
-      # connect / disconnect / status / bar for one provider, as Nix bins named
-      # vpn-<provider>-<action>. `bar` is the status-widget tool (emits JSON,
-      # dispatches the toggle). Runtime config + cookie live under
-      # ~/.config/vpn/<provider>/.
       mkScripts =
         provider:
         let
@@ -341,10 +319,6 @@ in
               fi
             '';
 
-            # The status-widget tool: emits waybar-style JSON and dispatches the
-            # toggle. The wayle bar watches the .connecting marker (inotify) and
-            # the tunnel interface (ip monitor) directly — state transitions are
-            # driven purely by the marker and the link, no refresh signal.
             bar = ''
               ${common}
               CONFIG_FILE="$HOME/.config/vpn/${provider}/config"

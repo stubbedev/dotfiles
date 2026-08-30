@@ -1,12 +1,4 @@
 _: {
-  # The power-source decisions are exactly the kind of logic that fails
-  # silently: get the prediction wrong and the machine quietly holds at 80%
-  # forever, or quietly sits at 100% forever, and either way nothing errors.
-  # Same for the profile half — stomping a hand-picked profile every five
-  # minutes looks like nothing at all until you notice the bar changing back.
-  # So drive the real script against a fake sysfs tree, a fixed clock and a
-  # stub powerprofilesctl.
-  #
   # Not covered: the systemd wiring (timer cadence, the .path unit) and the
   # real EC's rejection of a start > end write — both need a machine, not a
   # sandbox. What is covered is every branch that decides the numbers.
