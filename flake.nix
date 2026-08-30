@@ -7,16 +7,11 @@
     # Module 595.71.05+. Switch back to upstream once merged.
     nixgl = {
       url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
-      # Imported via a path with `pkgs = final`, so its flake outputs are never
-      # used and following ours just drops a redundant nixpkgs from the lock.
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 
-    # Hyprland and hy3 come from nixpkgs, not the official flake: nixpkgs builds
-    # the plugin against the same compositor so they cannot drift, and patches
-    # the `glaze 7...<8` CMake range the flake fails on.
     hyprland-guiutils = {
       url = "github:hyprwm/hyprland-guiutils";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,10 +29,8 @@
       url = "github:stubbedev/treeman";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # what this one compiled. Pinned to the tag the SERVER runs (v1.0.0): the
-    # cache-config API is versioned, so a client ahead of the server 404s
-    # — tracking master means a client push can outrun the server's API;
-    # keep the server current (see project_xilo_cache_server memory).
+    # Pinned to the tag the SERVER runs: the cache-config API is versioned, so a
+    # client ahead of the server 404s.
     xilo = {
       url = "github:stubbedev/xilo";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -78,7 +71,6 @@
       # cava C sources missing.
       url = "git+https://github.com/stubbedev/wayle.git?ref=master&submodules=1";
     };
-    # Pinned sources, so nothing clones at runtime.
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
       flake = false;
@@ -91,7 +83,6 @@
       url = "github:stubbedev/zsh-fzf-npm-run";
       flake = false;
     };
-    # Release tag, bumped by `hm upgrade`.
     phpantom_lsp = {
       url = "github:PHPantom-dev/phpantom_lsp/0.10.0";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -110,15 +101,8 @@
     };
     impermanence = {
       url = "github:nix-community/impermanence";
-      # No build artifacts, so following ours just trims the lock.
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Sources we build ourselves. `flake = false` means these are plain
-    # checkouts, and the point of routing them through inputs is that their
-    # revisions and hashes live in flake.lock -- nothing in-tree is pinned to a
-    # commit hash, and `nix flake update` is the only way any of them move.
-    # Where a URL carries a tag or version, that is deliberate: the version is
-    # a decision, the hash is not.
     ghostscript-src = {
       url = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz";
       type = "tarball";
@@ -129,7 +113,6 @@
       flake = false;
     };
     libembroidery-src = {
-      # No tagged release yet, so this tracks main.
       url = "github:Embroidermodder/libembroidery";
       flake = false;
     };

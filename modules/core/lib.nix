@@ -57,10 +57,6 @@
       plymouth = "catppuccin-mocha";
     };
 
-    # see the README). A file:// page can't be used: Tridactyl's `set newtab`
-    # double-opens file:// URLs (tridactyl#530); serving over https also gives
-    # one URL that works for both Firefox and Chrome. Shared so tridactylrc,
-    # the Firefox Homepage policy and the Chrome enterprise policy all agree.
     newtabUrl = "https://start.local/";
 
     cache = {
@@ -76,15 +72,6 @@
       ];
     };
 
-    # The `hm` CLI surface, as data. Before this the same verb list was written
-    # out by hand four times — the dispatch `case`, the `usage()` heredoc and
-    # the "supported subcommands" error in modules/scripts.nix, plus the zsh
-    # `_hm` completion in modules/shell.nix — and had already drifted: the
-    # completion offered `hm cache zsh` and `hm search`, neither of which the
-    # wrapper implements. Everything except the dispatch `case` now renders
-    # from this one table, via the `hm.render*` helpers below.
-    #   group  "hidden" is proxied straight to the home-manager CLI: completed
-    #          so the verbs are discoverable, but kept out of `hm help`.
     hm =
       let
         cmd =
@@ -306,7 +293,6 @@
             desc = "Open a nix repl scoped to the configuration (NixOS)";
           }
           {
-            # Standalone home-manager has no rollback verb.
             name = "rollback";
             platform = "nixos";
             group = "rebuild";
@@ -410,11 +396,7 @@
             ++ map (l: pad (descCol + 2) + l) extra
           );
 
-        # zsh `_describe` reads its pairs from a single-quoted array, so an
-        # apostrophe in a description must close and reopen the quote.
         zshQuote = s: "'" + lib.replaceStrings [ "'" ] [ "'\\''" ] s + "'";
-        # A completion menu gets one line per entry, so `desc` + `extra` cannot
-        # be used there.
         zshRow = e: zshQuote "${e.name}:${e.summary or e.desc}";
       in
       {
@@ -442,9 +424,6 @@
               helpRow c.syntax c.desc c.extra
           ) (lib.filter (c: c.group == group) commands);
 
-        # Nix strips the common indent of an `''` string's literal lines, but
-        # interpolated newlines arrive at column zero, so each renderer has to
-        # re-apply `indent` itself.
         renderZsh =
           indent: platform:
           lib.concatMapStringsSep "\n${indent}" zshRow (lib.filter (c: c.platform == platform) commands);
@@ -460,7 +439,6 @@
         subNames = name: lib.concatMapStringsSep "|" (s: s.name) (byName name).sub;
       };
 
-    # Shared verbatim by both targets so packages resolve identically.
     nixpkgsConfig = {
       allowUnfree = true;
       permittedInsecurePackages = [

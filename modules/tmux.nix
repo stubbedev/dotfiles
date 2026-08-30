@@ -9,12 +9,6 @@ _: {
     let
       p = pkgs.stubbe.withHash;
 
-      # The four pane directions, in the three shapes tmux wants them: the arrow
-      # key half of the bind, tmux's own -L/-R/-U/-D flag, and — for move_pane —
-      # which pane dimension being full-window makes the move a no-op, plus the
-      # `move-pane` flags that put the pane back on the right side of the split.
-      # Written once here because the same four rows drive twelve bind lines in
-      # tmux.conf and four near-identical case branches in commands.sh.
       directions = [
         {
           key = "Left";
@@ -58,7 +52,6 @@ _: {
       # pane there. The shifted row is the US-layout shift of each digit, which
       # tmux names literally, so it is a lookup rather than something derivable
       # from the number (`#` and `$` are escaped for tmux's config parser).
-      # Window 10 lives on the 0 key.
       shiftedDigit = {
         "1" = "!";
         "2" = "@";
@@ -81,9 +74,6 @@ _: {
         }) shiftedDigit
       );
 
-      # tmux.conf is column-aligned by hand, so a generated row pads its key to
-      # the same field width as the neighbouring literal binds, and its comment
-      # to the same column. `prefix` carries whatever flags precede the key.
       padTo =
         n: str: str + lib.concatStrings (lib.genList (_: " ") (lib.max 1 (n - lib.stringLength str)));
       bindRow =
@@ -124,9 +114,6 @@ _: {
             fi
 
             if tmux select-window -t "=$window_name" 2>/dev/null; then
-              # A restored window can still land on a bare shell — lazy-tmux replays the
-              # pane command, but an older snapshot (or a denied command) leaves the
-              # shell. Respawn so the toggle always lands on a live pane.
               if [ "$#" -gt 0 ] &&
                 [ "$(tmux display-message -p '#{pane_current_command}')" = "$(basename "$(tmux show-option -gv default-shell)")" ]; then
                 tmux respawn-pane -k "$@"
@@ -313,11 +300,6 @@ _: {
             save_pins
           }
 
-          # lazy-tmux carries over no pane options, so @pinned — and with it the
-          # double-tap guard on M-q/M-Q — would silently vanish on restore. Dumped on
-          # every toggle_pin (the only place @pinned changes) and replayed by
-          # tmux-pick-project after a wakeup; the session/window/pane keys survive
-          # because lazy-tmux restores windows and panes at their saved indices.
           save_pins() {
             mkdir -p "''${PINNED_STATE%/*}"
             tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}' |
@@ -334,19 +316,11 @@ _: {
             done < "$PINNED_STATE"
           }
 
-          # The lazy-tmux daemon only ticks every few minutes; detaching or killing the
-          # server is the usual prelude to a reboot, so flush the snapshots right then
-          # instead of betting on the next tick. Scrollback settings come from
-          # ~/.config/lazy-tmux/lazy-tmux.toml.
           save_state() {
             command -v lazy-tmux >/dev/null 2>&1 || return 0
             lazy-tmux save --all >/dev/null 2>&1
           }
 
-          # Close a session without losing it: snapshot first (scrollback settings come
-          # from lazy-tmux.toml), then let lazy-tmux kill it. The client is moved to
-          # another session first — detach-on-destroy would otherwise drop it to the bare
-          # terminal. `tmux-pick-session` (M-d in zsh) lists it as sleeping afterwards.
           sleep_session() {
             local current other
             if ! command -v lazy-tmux >/dev/null 2>&1; then
@@ -449,13 +423,6 @@ _: {
             fi
           }
 
-          # tmux runs status strings through strftime and then format expansion, but the
-          # values it substitutes in (#W, #() output) are inserted literally and never
-          # re-scanned — checked against the drawn bar, where a window named 'a#Sb' draws
-          # as 'a#Sb' and a '%H' in a name stays '%H'. So any already-substituted text
-          # this function feeds back through either pass has to be escaped ('#'->'##',
-          # '%'->'%%') or the label mutates mid-animation: a window named 'a#Sb' would
-          # flash the session name, '50%H' the current hour.
           pending_animation() {
             local pane_id="$1"
             local win_id="$2"
@@ -468,8 +435,6 @@ _: {
             pane)   flag_scope=-p ; flag_target="$pane_id" ; flag_name=@kill_pane_pending ;;
             window) flag_scope=-w ; flag_target="$win_id"  ; flag_name=@kill_window_pending ;;
             esac
-            # %q the interpolated values: the trap body is eval'd after the function has
-            # returned, so the locals are gone and they cannot be expanded lazily.
             local restore
             printf -v restore 'tmux set -wu -t %q window-status-current-format 2>/dev/null; tmux set %s -t %q %s 0 2>/dev/null' \
               "$win_id" "$flag_scope" "$flag_target" "$flag_name"
@@ -481,12 +446,6 @@ _: {
             [[ "$raw" =~ ^(#\[[^]]*\]) ]] && base_style="''${BASH_REMATCH[1]}"
             template="''${raw//#\[*([^]])\]/}"
 
-            # display-message expands #{...} but silently drops #(...) — only the
-            # status-line draw loop runs those jobs. Left unresolved, the frozen frames
-            # lose whatever the jobs contribute (the branch ticket), so tapping M-q/M-Q
-            # visibly shortens the label before the bar snaps back. Run them here.
-            # Built left to right rather than by substitution, so job output that itself
-            # looks like a job can never be re-scanned.
             local rest="$template" expanded="" pre job out
             while [[ "$rest" == *'#('* ]]; do
               pre="''${rest%%#(*}"
@@ -494,9 +453,6 @@ _: {
               job="''${rest%%)*}"
               rest="''${rest#*)}"
               out=$(eval "$(tmux display-message -p -t "$win_id" "$job")" 2>/dev/null)
-              # Only '%' is escaped here. The bar re-scans job output for '#' directives
-              # but does not strftime it; display-message does both, so escaping '#' too
-              # would freeze a literal '#S' where the bar had already resolved it.
               expanded+="$pre''${out//%/%%}"
             done
             template="$expanded$rest"
@@ -509,9 +465,6 @@ _: {
               chars+=("$c")
             done < <(LC_ALL=C.UTF-8 grep -o . <<<"$rendered")
 
-            # Escaped once up front, and by parameter expansion rather than a subshell:
-            # the frames are rebuilt every tick, so anything per-char here multiplies out.
-            # chars stays unescaped — it still counts rendered cells, which the fill walks.
             local -a esc=()
             local n
             for n in "''${chars[@]}"; do
@@ -538,8 +491,6 @@ _: {
               sleep "$per_cell"
             done
 
-            # Keep the filled bar on screen briefly so the keypress window extends
-            # visibly past the animation's final frame.
             sleep 0.2
           }
 
@@ -547,8 +498,6 @@ _: {
             local chars=("⡿" "⣟" "⣯" "⣷" "⣾" "⣽" "⣻" "⢿")
             local original restore
             original=$(tmux show-option -gqv status-left)
-            # %q, so a theme string containing a quote cannot break out of the restore
-            # command and leave status-left wiped.
             printf -v restore 'tmux set -g status-left %q 2>/dev/null' "$original"
             trap "$restore" EXIT INT TERM
 
@@ -568,9 +517,6 @@ _: {
           }
 
           reload() {
-            # Bound to both M-r and M-R. In a zsh pane, hand off to zsh's own reload
-            # widget (it re-sources tmux and exec's a fresh zsh, with no echoed text);
-            # otherwise just reload the tmux config here.
             if [[ "$(tmux display-message -p '#{pane_current_command}')" == *zsh ]]; then
               tmux send-keys M-R
             else
@@ -595,10 +541,6 @@ _: {
               return
             fi
 
-            # One branch per direction, generated from `directions` in
-            # modules/tmux.nix: not at the edge, so swap with the neighbour;
-            # already spanning the perpendicular dimension, so there is nothing
-            # to move into; otherwise re-join at that side of the window.
             case "$direction" in
             ${lib.concatMapStringsSep "\n  " (
               d:
@@ -692,11 +634,6 @@ _: {
         '';
       };
 
-      # Single source of truth for save behaviour: the daemon, `save_state` on
-      # detach and the Alt+f restore path all read this instead of repeating
-      # flags at every call site. scrollback is opt-in upstream. 1m matches the
-      # old @continuum-save-interval and costs ~36K per live session with 10k
-      # lines of scrollback, so stretching the interval is not worth it.
       xdg.configFile."lazy-tmux/lazy-tmux.toml".source =
         (pkgs.formats.toml { }).generate "lazy-tmux.toml"
           {
@@ -712,35 +649,23 @@ _: {
         sensibleOnTop = true;
         plugins = [ pkgs.tmuxPlugins.yank ];
         extraConfig = ''
-          # ==============================================
-          # Prefix Key Configuration
-          # ==============================================
           set -g prefix M-Space
           bind M-Space send-prefix
 
           set -g @stubbe_commands "$HOME/.config/tmux/scripts/commands.sh"
 
-          # Reload — M-r and M-R behave identically (see commands.sh `reload`).
           bind -n M-r run-shell -b "#{@stubbe_commands} reload"
           bind -n M-R run-shell -b "#{@stubbe_commands} reload"
 
-          # ==============================================
-          # Terminal & Color Configuration
-          # ==============================================
           set -g  default-terminal    "tmux-256color"
           set -ga terminal-overrides  ",*256col*:Tc"
           set -ga terminal-overrides  '*:Ss=\E[%p1%d q:Se=\E[ q'
           set -as terminal-features   ",*:RGB"
-          # Pass OSC 8 hyperlinks through to the outer terminal (alacritty) so its
-          # built-in URL hint (hover underline + pointer, click to open) sees them.
           set -as terminal-features   ",*:hyperlinks"
           set -g  set-clipboard       on
           set -g  allow-passthrough   on
           set-environment -g COLORTERM "truecolor"
 
-          # ==============================================
-          # Pane Navigation (Alt + arrows)
-          # ==============================================
           ${lib.concatMapStringsSep "\n" (
             d:
             bindRow {
@@ -751,9 +676,6 @@ _: {
           bind -n M-W     select-pane -t :.+       # Focus next pane
           bind -n M-w     select-pane -t :.-       # Focus previous pane
 
-          # ==============================================
-          # Pane Resizing (Alt+Ctrl+arrows, mirrors SUPER_CTRL in Hyprland)
-          # ==============================================
           ${lib.concatMapStringsSep "\n" (
             d:
             bindRow {
@@ -763,9 +685,6 @@ _: {
             } "M-C-${d.key}" "resize-pane -${d.flag}" "Resize pane ${d.word}"
           ) directions}
 
-          # ==============================================
-          # Pane Management
-          # ==============================================
           bind -n M-z       resize-pane -Z                                         # Toggle pane zoom
           ${lib.concatMapStringsSep "\n" (
             d:
@@ -781,9 +700,6 @@ _: {
           bind -n M-q       run-shell -b "#{@stubbe_commands} kill_pane"           # Kill pane (double-tap if pinned)
           bind    Space     run-shell -b "#{@stubbe_commands} toggle_mark_join"    # Toggle mark / join pane
 
-          # ==============================================
-          # Move Pane to Window (Alt+Shift+Number)
-          # ==============================================
           ${lib.concatMapStringsSep "\n" (
             w:
             bindRow
@@ -796,9 +712,6 @@ _: {
               "Move pane to window ${toString w.n}"
           ) windowKeys}
 
-          # ==============================================
-          # Window Navigation & Management
-          # ==============================================
           ${lib.concatMapStringsSep "\n" (
             w:
             bindRow {
@@ -813,48 +726,29 @@ _: {
           bind -n M-c command-prompt -I "#W" "rename-window -- \"%%\""             # Rename window
           bind -n M-Q run-shell -b "#{@stubbe_commands} kill_window"               # Kill window (double-tap if pinned)
 
-          # ==============================================
-          # Session Management
-          # ==============================================
           bind -n M-d detach-client                                                                                 # Detach from session
           bind -n M-S choose-session                                                                                # Session picker
           bind -n M-N if-shell '[ "$(tmux list-sessions -F "#{session_name}" | wc -l)" -gt 1 ]' 'switch-client -n'  # Next session
           bind -n M-B if-shell '[ "$(tmux list-sessions -F "#{session_name}" | wc -l)" -gt 1 ]' 'switch-client -p'  # Previous session
           bind -n M-x run-shell -b "#{@stubbe_commands} sleep_session"                                              # Sleep session (save + close)
 
-          # ==============================================
-          # Layout Management
-          # ==============================================
           bind -n M-t next-layout                                                  # Next layout
           bind -n M-T previous-layout                                              # Previous layout
 
-          # ==============================================
-          # Copy Mode & Clipboard
-          # ==============================================
           bind -n M-v copy-mode                                                    # Enter copy mode
           bind -n M-p paste-buffer                                                 # Paste buffer
           bind -T copy-mode-vi v send-keys -X begin-selection                      # Begin selection
 
-          # ==============================================
-          # Custom Scripts & FZF Integration
-          # ==============================================
           bind -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"       # FZF project picker
           bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
           bind -n M-h run-shell -b "#{@stubbe_commands} toggle_claude_window"        # Toggle claude window
           bind -n M-H run-shell -b "#{@stubbe_commands} claude_inline_pane"          # Run claude in current pane
 
-          # ==============================================
-          # Lazy Window Toggles (lazygit, sysmon, lazydocker)
-          # ==============================================
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
           set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
           set-hook -g client-session-changed "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
           set-hook -g client-detached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
           set-hook -g client-detached[60] "run-shell -b \"#{@stubbe_commands} save_state\""
-          # @pinned is a pane option and no restore path carries pane options over, so
-          # replay the dump on attach and on session switch. That covers every way a
-          # session comes back: Alt+f (tmux-pick-project), M-d (tmux-pick-session), the
-          # M-i picker, and a bare `lazy-tmux wakeup`.
           set-hook -g client-attached[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
           set-hook -g client-session-changed[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
           run-shell -b "#{@stubbe_commands} session_init"
@@ -863,16 +757,10 @@ _: {
           bind -n M-a run-shell -b "#{@stubbe_commands} toggle_sysmon_window"      # Toggle sysmon
           bind -n M-A run-shell -b "#{@stubbe_commands} toggle_lazydocker_window"  # Toggle lazydocker
 
-          # ==============================================
-          # Pinned Windows (double-tap to kill)
-          # ==============================================
           bind    p   run-shell -b "#{@stubbe_commands} toggle_pin"                # Toggle pin (prefix)
           bind -n M-P run-shell -b "#{@stubbe_commands} toggle_pin"                # Toggle pin
           bind    X   run-shell -b "#{@stubbe_commands} kill_server_confirm"       # Kill server (double-tap)
 
-          # ==============================================
-          # Theme (Catppuccin Mocha)
-          # ==============================================
           set -g status-position top
           set -g status-style bg=default,fg=default
           set -g status-justify left
@@ -891,9 +779,6 @@ _: {
           set -g copy-mode-mark-style          bg=${p.base},fg=${p.lavender}
           set -g copy-mode-current-match-style bg=${p.red},fg=${p.base}
 
-          # ==============================================
-          # General Settings
-          # ==============================================
           set -g  base-index        1          # Start window numbering at 1
           setw -g pane-base-index   1          # Start pane numbering at 1
           set -g  renumber-windows  on         # Renumber windows when one is closed
@@ -909,18 +794,8 @@ _: {
           set -g  monitor-activity  on         # Monitor background window activity
 
 
-          # ==============================================
-          # lazy-tmux autosave daemon
-          # ==============================================
-          # Started per tmux server, killed with it. The daemon flocks a file
-          # keyed by the tmux socket path, so re-sourcing this file on M-r
-          # exits non-zero instead of stacking a second daemon — hence the
-          # `|| true`. Interval and scrollback come from lazy-tmux.toml.
           run-shell -b '${lib.getExe pkgs.lazy-tmux} daemon >/dev/null 2>&1 || true'
 
-          # Saved-session picker (includes sessions that are not running).
-          # M-o is deliberately left unbound in tmux so it falls through to
-          # the zsh `^[o` → nvim binding (modules/shell.nix settings).
           bind -n M-i display-popup -B -w 70% -h 75% -E '${lib.getExe pkgs.lazy-tmux} picker'
         '';
       };

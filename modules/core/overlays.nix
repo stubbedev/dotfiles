@@ -48,12 +48,8 @@ in
         };
       };
 
-    # wayle ships its own flake. Use its prebuilt `packages.default` (from the
-    # nix.stubbe.dev binary cache) rather than its `overlays.default`: that
-    # overlay rebuilds via `prev.callPackage` against OUR nixpkgs, whose
-    # store-path hashes never match the CI-built cache (built against wayle's
-    # own nixpkgs), so everything would rebuild from source. Requires
-    # wayle.inputs.nixpkgs NOT following ours — see flake.nix.
+    # `packages.default`, never its `overlays.default`: that overlay rebuilds via
+    # callPackage against OUR nixpkgs, so no store hash matches the CI cache.
     wayle = _final: prev: {
       wayle = inputs.wayle.packages.${prev.stdenv.hostPlatform.system}.default;
     };
@@ -66,13 +62,9 @@ in
       xilo = inputs.xilo.packages.${final.stdenv.hostPlatform.system}.default;
     };
 
-    # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so its glib
-    # finds no gvfs client module and every dav:// / smb:// / mtp:// URI fails
-    # with "Operation not supported". wrapGAppsHook3 appends the module dir of
-    # any buildInput that ships one, so listing gvfs bakes the path into the
-    # binary whatever launches it (rofi, .desktop, shell). On NixOS
-    # services.gvfs already exports the variable session-wide; the baked prefix
-    # is the same directory.
+    # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so without
+    # gvfs listed here every dav:// / smb:// / mtp:// URI fails with
+    # "Operation not supported".
     pcmanfm-gvfs = _final: prev: {
       pcmanfm = prev.pcmanfm.overrideAttrs (old: {
         buildInputs = (old.buildInputs or [ ]) ++ [ prev.gvfs ];
@@ -82,9 +74,6 @@ in
     # Assorted Python 3.14 / new-toolchain fallout in nixpkgs. Each override is
     # deletable once nixpkgs or upstream adapts.
     python-fixes = _final: prev: {
-      # catppuccin-gtk 1.0.3's build script passes type=bool alongside
-      # argparse.BooleanOptionalAction, which Python 3.14 rejects (deprecated
-      # in 3.12, removed in 3.14). Strip the kwarg; the action never used it.
       catppuccin-gtk = prev.catppuccin-gtk.overrideAttrs (old: {
         postPatch = (old.postPatch or "") + ''
           sed -i '/type=bool,/d' sources/build/args.py
@@ -93,17 +82,10 @@ in
 
       pythonPackagesExtensions = (prev.pythonPackagesExtensions or [ ]) ++ [
         (pyfinal: pyprev: {
-          # click-threading's pytest setup collects docs/conf.py, which imports
-          # pkg_resources — removed from setuptools 82.
           click-threading = pyprev.click-threading.overridePythonAttrs (_old: {
             disabledTestPaths = [ "docs/conf.py" ];
           });
 
-          # matplotlib 3.11 removed matplotlib.style.core, which catppuccin's
-          # style registration still imports on plain `import catppuccin`, so
-          # the package's own import check explodes whenever matplotlib is
-          # visible. Drop the matplotlib extra from the check env — runtime
-          # users like catppuccin-gtk never install it.
           catppuccin = pyprev.catppuccin.overridePythonAttrs (_old: {
             nativeCheckInputs = [
               pyfinal.pytestCheckHook
@@ -117,10 +99,8 @@ in
     };
 
     stubbe-packages = final: prev: {
-      # nixpkgs ships `catppuccin-plymouth` hardcoded to the macchiato flavour.
-      # Upstream has all four — swap sourceRoot + install paths for the mocha
-      # variant, matching the Kvantum/GTK Catppuccin Mocha set. The sed patches
-      # ImageDir so plymouth finds its assets at the final share/ path.
+      # nixpkgs hardcodes catppuccin-plymouth to the macchiato flavour; upstream
+      # ships all four.
       catppuccin-mocha-plymouth = prev.catppuccin-plymouth.overrideAttrs (_: {
         pname = "catppuccin-mocha-plymouth";
         sourceRoot = "source/themes/catppuccin-mocha";
@@ -133,10 +113,8 @@ in
         '';
       });
 
-      # pin the release tarball — a statically linked Go binary, nothing to
-      # compile. Bumping = new version + that release's sha256 from its
-      # checksums.txt; `hm upgrade`'s bump_release_pins only rewrites
-      # `github:owner/repo/tag` flake inputs, so this pin is manual.
+      # `hm upgrade` only rewrites `github:owner/repo/tag` flake inputs, so this
+      # tarball pin has to be bumped by hand.
       lazy-tmux = final.stdenvNoCC.mkDerivation (finalAttrs: {
         pname = "lazy-tmux";
         version = "0.2.1";

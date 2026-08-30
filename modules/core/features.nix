@@ -1,7 +1,3 @@
-# The flag TABLE below is the single source of truth: the home-manager options
-# are generated from it, and so is the NixOS-side mirror at the bottom — which
-# is what lets a NixOS aspect ask "did this host enable features.docker?"
-# without every module repeating `config.home-manager.users.<user>.features or { }`.
 _:
 let
   flags = {
@@ -41,12 +37,8 @@ in
       ) flags;
     };
 
-  # The NixOS mirror. A NixOS aspect gates on `config.stubbe.userFeatures.<x>`,
-  # resolved ONCE here from the primary user's home-manager config.
   # The fallback matters: the installer ISO imports every NixOS aspect but
-  # declares no home-manager user, so there is nothing to read. Everything off
-  # is the right answer there — the ISO wants a bootable installer, not a
-  # workstation.
+  # declares no home-manager user, so there is nothing to read.
   flake.modules.nixos.features =
     { config, lib, ... }:
     {

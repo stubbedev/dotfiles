@@ -13,13 +13,10 @@
       home = {
         # mkDefault so the NixOS bridge can set these from
         # users.users.<name>.home without a priority conflict; on standalone HM
-        # these defaults are the only definitions.
         username = lib.mkDefault "stubbe";
         homeDirectory = lib.mkDefault "/home/stubbe";
         stateVersion = "26.05";
 
-        # We track nixpkgs nixos-unstable + home-manager master. HM master
-        # bumps its release string ahead of unstable (e.g. HM 26.11 while
         enableNixpkgsReleaseCheck = false;
 
         sessionPath = [

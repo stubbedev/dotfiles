@@ -1,19 +1,10 @@
 { self, ... }:
 {
-  # Deliberately not covered: fzf's interactive layer (the picker is exercised
-  # through its `--lines` mode), `claude --resume` (needs a Claude Code
-  # transcript directory to detect), and anything that needs an attached
-  # client. The sandbox server has no client, so `#{pane_id}` does not resolve
-  # for the display-message calls in toggle_pin/kill_pane, and the
-  # client-attached hook never fires — hence save_pins/restore_pins are driven
-  # directly here, with the hook wiring asserted separately in section 1.
   perSystem =
     { pkgs, lib, ... }:
     let
       inherit (pkgs) lazy-tmux;
 
-      # The config home-manager actually deploys, not a stand-in: this is what
-      # carries the daemon launch, the M-i picker binding and the hook wiring.
       deployedFiles = self.homeConfigurations.stubbe.config.xdg.configFile;
       tmuxConf = deployedFiles."tmux/tmux.conf".source;
       commandsSh =
@@ -50,16 +41,11 @@
             mkdir -p "$HOME/.config/tmux/scripts" "$LAZY_TMUX_DATA_DIR"
 
             # commands.sh carries the deployed `#!/usr/bin/env bash` shebang,
-            # and the sandbox has /bin/sh but no /usr/bin/env — patchShebangs
-            # rewrites it to a store path so it still runs as a script. The
-            # launcher bins already carry store-zsh shebangs (zshApp).
             commands="$HOME/.config/tmux/scripts/commands.sh"
             install -m755 ${commandsSh} "$commands"
             mkdir -p "$HOME/bin"
             install -m755 ${lib.concatMapStringsSep " " (b: "${b}/bin/*") launcherBins} "$HOME/bin/"
 
-            # tmux-pick-project shells out to the interactive fzf picker; stub it
-            # with a fixed answer so the rest of the Alt+f path is exercised.
             repo="$HOME/repo"
             mkdir -p "$repo"
             cat > "$HOME/bin/fzf-pick-project" <<EOF
@@ -71,9 +57,6 @@
             patchShebangs "$HOME/bin" "$commands"
             export PATH="$HOME/bin:$PATH"
 
-            # A long interval keeps the daemon the deployed config starts from
-            # snapshotting mid-assertion; it still saves once at startup, which
-            # is why every check below saves explicitly instead of relying on it.
             cat > "$HOME/.config/lazy-tmux.toml" <<EOF
             data_dir = "$LAZY_TMUX_DATA_DIR"
             save_interval = "1h"
@@ -86,9 +69,6 @@
             fail() { echo "FAIL: $*" >&2; exit 1; }
             ok() { echo "ok - $*"; }
 
-            # ---------------------------------------------------------------
-            # 1. the deployed config loads, and the lazy-tmux wiring is in it
-            # ---------------------------------------------------------------
             tmux -f ${tmuxConf} new-session -d -s wiring -c "$HOME" ||
               fail "generated tmux.conf did not load"
 
@@ -106,15 +86,6 @@
               fail "save_state is not hooked to client-detached"
             ok "pins and save hooks registered"
 
-            # ---------------------------------------------------------------
-            # 2. window names, pane commands and scrollback survive a restore
-            # ---------------------------------------------------------------
-            # The marker is echoed by the pane's own command rather than
-            # send-keys: key-name lookup varies with the loaded config, and the
-            # point here is the snapshot, not tmux's key parser. `exec sh` keeps
-            # the pane a shell, which is what makes lazy-tmux capture its
-            # scrollback. `tail` in the second window is the non-shell command
-            # whose replay we assert (no terminfo needed, unlike top).
             tmux new-session -d -s proj -n editor -c "$HOME" \
               "sh -c 'echo SCROLLBACK_MARKER; exec sh'"
             tmux new-window -t proj: -n mon "tail -f /dev/null"
@@ -130,8 +101,6 @@
             [ "$names" = "1:editor 2:mon " ] || fail "window names not restored (got: $names)"
             ok "window names restored"
 
-            # Restoring by name has to switch automatic-rename off, or tmux
-            # renames the window to whatever runs in it on the next redraw.
             for w in 1 2; do
               [ "$(tmux show-options -t proj:$w -wqv automatic-rename)" = "off" ] ||
                 fail "automatic-rename still on for window $w — names would drift"
@@ -146,9 +115,6 @@
               fail "scrollback not replayed"
             ok "scrollback replayed"
 
-            # ---------------------------------------------------------------
-            # 3. @pinned is a pane option: restore drops it, restore_pins re-adds
-            # ---------------------------------------------------------------
             tmux set -p -t proj:editor.1 @pinned 1
             tmux run-shell -t proj "$commands save_pins"
             sleep 1
@@ -168,9 +134,6 @@
               fail "restore_pins did not replay @pinned"
             ok "@pinned round-trips through save_pins/restore_pins"
 
-            # ---------------------------------------------------------------
-            # 4. sleep_session saves and closes, leaving a fresher snapshot
-            # ---------------------------------------------------------------
             before=$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/proj.json")
             sleep 1
             tmux run-shell -t proj "$commands sleep_session"
@@ -181,10 +144,6 @@
             [ "$after" != "$before" ] || fail "sleep_session did not re-save before killing"
             ok "sleep_session saves then closes"
 
-            # ---------------------------------------------------------------
-            # 5. picker rows: live vs sleeping, dead directories hidden,
-            #    "$(whoami)(repo)" labels stripped
-            # ---------------------------------------------------------------
             user=$(whoami)
             gone="$HOME/worktree-gone"
             mkdir -p "$gone"
@@ -208,21 +167,13 @@
             grep -q '󰒲' <<< "$rows" || fail "sleeping row has no sleep glyph"
             ok "picker hides dead snapshots and strips name wrappers"
 
-            # A live session renders without the glyph.
             lazy-tmux wakeup --session "$user(kept)" >/dev/null
             sleep 2
             live_row=$(tmux-pick-session --lines | grep "^$user(kept)")
             grep -q '󰒲' <<< "$live_row" && fail "live session rendered as sleeping"
             ok "live session rendered as live"
 
-            # ---------------------------------------------------------------
-            # 6. Alt+f: cold start creates the session, second run wakes the
-            #    snapshot instead of starting over
-            # ---------------------------------------------------------------
             proj_session="$(whoami)($(basename "$repo"))"
-            # Runs inside the server so $TMUX is set; the trailing
-            # switch-client has no client to move here, so ignore the status
-            # and assert on the session state instead.
             tmux run-shell -t wiring "tmux-pick-project" || true
             sleep 2
             tmux has-session -t "=$proj_session" 2>/dev/null ||
@@ -241,18 +192,10 @@
               fail "second Alt+f started a fresh session instead of waking the snapshot"
             ok "Alt+f wakes the snapshot on the second run"
 
-            # ---------------------------------------------------------------
-            # 7. move_pane: all four directions, generated from one table in
-            #    modules/tmux.nix. Two panes side by side means the pane is
-            #    always at one horizontal edge and never at a vertical one, so
-            #    L/R exercise the swap path and U/D the full-dimension
-            #    early-return — the two halves of every generated branch.
-            # ---------------------------------------------------------------
             tmux new-session -d -s move -c "$HOME"
             tmux split-window -h -t move
             sleep 1
 
-            # After the split the active pane is the right-hand one.
             right=$(tmux display-message -p -t move '#{pane_id}')
             left=$(tmux list-panes -t move -F '#{pane_id}' | grep -vxF "$right")
 
@@ -268,10 +211,6 @@
               fail "move_pane R did not swap the pane back"
             ok "move_pane R swaps with the right neighbour"
 
-            # The other half of each branch: a pane that is already at the edge
-            # it is being pushed towards AND spans the perpendicular dimension
-            # has nowhere to go. A vertical split gives two full-width panes,
-            # so U on the top one and D on the bottom one must both no-op.
             tmux new-window -t move -c "$HOME"
             tmux split-window -v -t move
             sleep 1

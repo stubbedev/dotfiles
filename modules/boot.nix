@@ -15,9 +15,6 @@ _: {
           themePackages = [ pkgs.catppuccin-mocha-plymouth ];
         };
 
-        # Quiet kernel + low console log level keep the splash readable instead
-        # of being shouted over by dmesg lines. udev / systemd status messages
-        # still reach the journal.
         kernelParams = [
           "quiet"
           "splash"
@@ -63,14 +60,8 @@ _: {
             varies). Instructions are printed instead.
         '';
         script = ''
-          # Activations run with a stripped PATH; restore it so update-grub,
-          # grubby and the plymouth-* helpers under /sbin are reachable.
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-          # 1. Install Plymouth. Detect on plymouthd (always present when
-          #    plymouth is installed): the older plymouth-set-default-theme
-          #    helper was dropped in Ubuntu 25.10, so detecting on that would
-          #    re-trigger apt on every activation from questing on.
           ${pkgs.stubbe.installHostPackage {
             detect = "plymouthd";
             apt = [ "plymouth" ];
@@ -78,20 +69,12 @@ _: {
             pacman = [ "plymouth" ];
           }}
 
-          # 2. Stage theme files — a pure copy, no boot impact yet. Patch
-          #    ImageDir so plymouth finds the assets at the final /usr/share
-          #    path rather than the store path baked into the theme file.
           sudo install -d -m 0755 /usr/share/plymouth/themes/catppuccin-mocha
           sudo cp -a ${pkgs.catppuccin-mocha-plymouth}/share/plymouth/themes/catppuccin-mocha/. \
             /usr/share/plymouth/themes/catppuccin-mocha/
           sudo sed -i 's|^ImageDir=.*|ImageDir=/usr/share/plymouth/themes/catppuccin-mocha|' \
             /usr/share/plymouth/themes/catppuccin-mocha/catppuccin-mocha.plymouth
 
-          # 3. Validate plymouth recognises the theme BEFORE touching the
-          #    initrd. Ubuntu 25.10+ dropped plymouth-set-default-theme (which
-          #    had a -l flag), so check for the .plymouth manifest directly. If
-          #    it is missing the copy was incomplete, and we abort with no boot
-          #    path modified.
           themeManifest=/usr/share/plymouth/themes/catppuccin-mocha/catppuccin-mocha.plymouth
           if [ ! -f "$themeManifest" ]; then
             echo "ERROR: plymouth does not recognise catppuccin-mocha after copy." >&2
@@ -100,19 +83,11 @@ _: {
             exit 1
           fi
 
-          # 4. Default theme + kernel cmdline + initrd rebuild, per distro,
-          #    detected by package manager so each uses its own native,
-          #    idempotent, reversible tool.
           if command -v apt-get >/dev/null 2>&1; then
-            # ----- Debian / Ubuntu -----
-            # /etc/default/grub sources /etc/default/grub.d/*.cfg, so a drop-in
-            # extends GRUB_CMDLINE_LINUX_DEFAULT without touching the main
-            # config. Rollback = rm the drop-in + update-grub.
             ${pkgs.stubbe.installText {
               name = "50-plymouth-splash.cfg";
               target = "/etc/default/grub.d/50-plymouth-splash.cfg";
               text = ''
-                # Managed by stubbe — modules/boot.nix
                 GRUB_CMDLINE_LINUX_DEFAULT="''${GRUB_CMDLINE_LINUX_DEFAULT} quiet splash"
               '';
             }}
@@ -124,17 +99,11 @@ _: {
               exit 1
             fi
 
-            # Debian/Ubuntu ship default.plymouth as an alternatives-managed
-            # symlink, and 25.10 dropped the helper that used to wrap this.
-            # --install is idempotent; --set forces the selection.
             sudo update-alternatives --install \
               /usr/share/plymouth/themes/default.plymouth default.plymouth \
               "$themeManifest" 100
             sudo update-alternatives --set default.plymouth "$themeManifest"
 
-            # -k all rebuilds EVERY kernel's initrd, not just the
-            # default-symlinked one: without it, booting a non-default kernel
-            # keeps the previous theme and the splash silently does not change.
             if ! sudo update-initramfs -u -k all; then
               echo "ERROR: initrd rebuild failed. Existing initrd untouched (update-initramfs writes atomically)." >&2
               echo "  Next boot should still work; the splash just won't render." >&2
@@ -142,10 +111,6 @@ _: {
             fi
 
           elif command -v dnf >/dev/null 2>&1; then
-            # ----- Fedora -----
-            # grubby edits each kernel's BLS entry directly, no
-            # /etc/default/grub regeneration. Idempotent, reversible via
-            # --remove-args.
             if command -v grubby >/dev/null 2>&1; then
               sudo grubby --update-kernel=ALL --args="quiet splash" >/dev/null
             else
@@ -160,19 +125,6 @@ _: {
             fi
 
           elif command -v pacman >/dev/null 2>&1; then
-            # ----- Arch -----
-            # Needs (a) the `plymouth` hook in /etc/mkinitcpio.conf BEFORE
-            # `udev`, and (b) `quiet splash` on the kernel cmdline, whose
-            # location depends on the bootloader. Both are too host-variable to
-            # automate safely, so print the steps; theme files are already in
-            # place above.
-            # NOTE: the EOF below is deliberately two columns left of this
-            # block, and must stay there. Nix strips an indented string by its
-            # *minimum* indent — 10 here, set by the PATH= line at the top of
-            # this script — not by each line's own. A terminator aligned with
-            # `cat` therefore renders in column 2, where bash does not accept
-            # it: "here-document delimited by end-of-file", then a syntax
-            # error at the end of the script. Do not tidy the alignment.
             cat >&2 <<'EOF'
 
             INFO: Theme files installed. Three manual steps remain on Arch:
@@ -195,11 +147,6 @@ _: {
             echo "Unsupported distribution (no apt-get/dnf/pacman). Theme files staged but boot integration skipped." >&2
           fi
 
-          # Unmask plymouth-quit.service if a previous activation masked it.
-          # Masking that unit deadlocks boot: it is what runs `plymouth quit`,
-          # and plymouth-quit-wait.service only blocks on plymouth's exit — so
-          # without the quit signal the splash never clears and the display
-          # manager stays gated behind it.
           if command -v systemctl >/dev/null 2>&1 \
              && [ "$(systemctl is-enabled plymouth-quit.service 2>/dev/null)" = "masked" ]; then
             sudo systemctl unmask plymouth-quit.service

@@ -38,8 +38,6 @@ _: {
       # (btop loading libnvidia-ml.so for NVIDIA stats). Unlike the wrappers
       # above this is NOT a no-op on NixOS: GL apps find their drivers via
       # glvnd, but a plain dlopen by soname does not, and on NixOS the driver
-      # libs live in /run/opengl-driver/lib — off the default loader path. On
-      # non-NixOS, nixGL's bundle already includes those libs.
       withDriverLibs =
         program:
         let
@@ -67,8 +65,6 @@ _: {
           env ? { },
           unset ? [ ],
           prefix ? { },
-          # Include the upstream package in the join, exposing its share/.
-          # Set false when supplying a replacement desktop item via extraPaths.
           includeUpstream ? true,
           extraPaths ? [ ],
           mainProgram ? null,

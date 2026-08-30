@@ -13,11 +13,6 @@ _: {
       };
 
       environment.sessionVariables = {
-        # Route GTK apps (notably Firefox) through their Wayland backends so
-        # libinput gestures — two-finger scroll, pinch-zoom, swipe
-        # back/forward — reach the application instead of being swallowed by
-        # XWayland's lack of XInput2 gesture support. MOZ_USE_XINPUT2 covers
-        # the X11-fallback path.
         MOZ_ENABLE_WAYLAND = "1";
         MOZ_USE_XINPUT2 = "1";
 
@@ -40,7 +35,6 @@ _: {
         # /run/current-system/sw/share/icons — where the greetd greeter, running
         # as the unprivileged `greeter` user that cannot read a 0700 $HOME, can
         # actually find it. Without it the login screen falls back to the huge
-        # built-in cursor.
         vimix-cursors
       ];
     };
@@ -120,9 +114,6 @@ _: {
         "org/blueman/general".notification-daemon = true;
       };
 
-      # Symlinks fonts from home.packages into ~/.local/share/fonts and runs
-      # fc-cache on activation. Without this, fontconfig only sees /usr/share
-      # and Nix-installed fonts are invisible on non-NixOS hosts.
       fonts.fontconfig.enable = true;
 
       home = {
@@ -144,8 +135,6 @@ _: {
 
         file = {
           ".icons/${theme.cursor}".source = "${pkgs.vimix-cursors}/share/icons/${theme.cursor}";
-          # Also under .local/share/icons, for libxcursor lookups that prefer
-          # the XDG path (Ubuntu 24.04 libXcursor 1.2.3+).
           ".local/share/icons/${theme.cursor}".source = "${pkgs.vimix-cursors}/share/icons/${theme.cursor}";
           ".local/share/icons/Vimix-dark".source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
 
@@ -274,7 +263,6 @@ _: {
           };
       };
 
-      # Snap apps can only see themes installed under /var/lib/snapd/desktop.
       stubbe.setup.snapThemes = {
         privileged = true;
         title = "Installing Vimix icon/cursor themes for snaps";

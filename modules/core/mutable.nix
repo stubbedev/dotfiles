@@ -1,11 +1,3 @@
-#   link   Point at the live checkout, so editing the file in ~/.stubbe takes
-#          effect without a rebuild. For configs you iterate on by hand
-#          (the neovim lua tree, aerc stylesets).
-#   copy   Give the app a real, writable file it may rewrite at runtime, and
-#          re-assert ours on every switch. For apps that persist UI state into
-#          their own config (btop.conf, lazygit's state.yml) — a symlink would
-#          be edited in place inside the git checkout, or fail against the
-#          read-only store.
 _: {
   flake.modules.homeManager.mutable =
     {
@@ -27,8 +19,6 @@ _: {
           dst = lib.escapeShellArg (targetOf m);
         in
         {
-          # rm -rf covers both a stale symlink and a previously materialised
-          # directory, so switching a target between methods is not a manual fix.
           link = ''
             mkdir -p "$(dirname ${dst})"
             rm -rf ${dst}
@@ -115,9 +105,6 @@ _: {
           }
         ]) entries;
 
-        # One DAG node for the lot. Ordered after linkGeneration so
-        # home-manager's own symlink cleanup cannot remove what we just wrote
-        # (linkGeneration itself already runs after writeBoundary).
         home.activation.mutableFiles = lib.mkIf (entries != [ ]) (
           lib.hm.dag.entryAfter [ "linkGeneration" ] (
             lib.concatMapStringsSep "\n" renderEntry (lib.sort (a: b: a.target < b.target) entries)

@@ -15,11 +15,6 @@ _: {
 
       alacrittyGfx = gfx.wrap pkgs.alacritty;
 
-      # `alacritty` on PATH: attach a window to the running daemon so every
-      # terminal shares one process. The single-instance lifecycle is owned by
-      # the systemd unit, so this is a thin client with no spawn/poll race. It
-      # falls back to a standalone window if the socket is not up yet (an early
-      # login before the unit reaches its target). Control/query subcommands
       alacrittyClient = pkgs.writeShellScriptBin "alacritty" ''
         real="${alacrittyGfx}/bin/alacritty"
         socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
@@ -36,11 +31,9 @@ _: {
         exec "$real" "$@"
       '';
 
-      # symlinkJoin the client first (first-wins, so it shadows upstream
-      # bin/alacritty) with upstream alacritty for Alacritty.desktop and icons.
-      # writeShellScriptBin alone emits only bin/, so without the join the
-      # desktop entry is absent on both targets and alacritty never shows in
-      # rofi. The .desktop's Exec=alacritty resolves to the client on PATH.
+      # Client first so it shadows upstream bin/alacritty. writeShellScriptBin
+      # emits only bin/, so without the join there is no .desktop entry and
+      # alacritty never shows in rofi.
       alacritty = pkgs.symlinkJoin {
         name = "alacritty-${pkgs.alacritty.version}";
         paths = [
@@ -80,8 +73,6 @@ _: {
             };
           };
 
-          # 0 = no alacritty scrollback: tmux owns history, and a second buffer
-          # only makes Shift+PageUp scroll the wrong one.
           scrolling.history = 0;
 
           font = {
@@ -299,9 +290,6 @@ _: {
         };
       };
 
-      # Starting only after the compositor target means the imported Wayland env
-      # is present when windows are created. --socket pins a deterministic path
-      # the client mirrors (%t = $XDG_RUNTIME_DIR).
       systemd.user.services.alacritty-daemon = lib.mkIf config.features.hyprland {
         Unit = {
           Description = "Alacritty daemon (shared single-instance process)";

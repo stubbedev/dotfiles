@@ -12,11 +12,6 @@ _: {
         "noatime"
       ];
 
-      # Mountpoint → subvolume. Keep in lockstep with what bin/stb-install-nixos
-      # creates after `mkfs.btrfs` finishes. @persist stores
-      # impermanence-survived state; on a non-impermanent host it is still
-      # mounted (cheap) so the layout stays forward-compatible when
-      # host.impermanent flips on.
       subvolumes = {
         "/" = "@";
         "/home" = "@home";
@@ -33,12 +28,6 @@ _: {
       };
 
       services = {
-        # Userspace OOM killer that fires before the kernel's last-resort
-        # heuristic: it picks a smarter victim (highest oom_score under memory
-        # pressure, not a random root process) and reacts at lower thresholds.
-        # With zram in place true OOM is rare, but this keeps response time
-        # predictable when it hits. Defaults are 10/10; tightened because zram
-        # compresses ~3x, so 10% nominal swap ≈ 30% effective.
         earlyoom = {
           enable = true;
           freeMemThreshold = 5;
@@ -53,10 +42,6 @@ _: {
 
         udisks2.enable = true;
 
-        # Virtual filesystem layer for GIO apps (PCManFM, nautilus, …): trash
-        # support, MTP device mounting, SFTP/SMB browsing, archive mounting.
-        # Without it, deleting in PCManFM is permanent and network/phone mounts
-        # fail silently.
         gvfs.enable = true;
 
         btrfs.autoScrub = lib.mkIf config.host.installed {
@@ -104,20 +89,11 @@ _: {
           ("Aw, Snap!", blank Slack). zram gives ~3x effective headroom so the
           OOM threshold is rarely hit.
         '';
-        # Reinstall if the package is removed: the generator binary appearing or
-        # disappearing flips the lock so this re-runs.
         stateInputs = [ "/usr/lib/systemd/system-generators/zram-generator" ];
         preCheck = pkgs.stubbe.requireCommand "systemctl";
         script = ''
-          # Activations run with a stripped PATH; restore it so `command -v`
-          # finds apt-get / dnf / pacman under /usr/sbin etc.
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-          # systemd-zram-generator ships only a systemd generator (no PATH
-          # binary), so installHostPackage's `command -v` detection cannot see
-          # it — gate on the generator file instead. The package name differs:
-          # Debian/Ubuntu call it systemd-zram-generator, Fedora/Arch
-          # zram-generator.
           if [ ! -e /usr/lib/systemd/system-generators/zram-generator ] \
              && [ ! -e /lib/systemd/system-generators/zram-generator ]; then
             if command -v apt-get >/dev/null 2>&1; then
@@ -133,7 +109,6 @@ _: {
             fi
           fi
 
-          # Mirrors zramSwap in the NixOS half: zstd, 50% of RAM.
           ${pkgs.stubbe.installText {
             name = "zram-generator.conf";
             target = "/etc/systemd/zram-generator.conf";
@@ -147,9 +122,6 @@ _: {
               };
           }}
 
-          # daemon-reload re-runs the generator against the new conf (creating
-          # the systemd-zram-setup@zram0 instance); restart applies it live so
-          # the device comes up without a reboot.
           sudo systemctl daemon-reload
           sudo systemctl restart systemd-zram-setup@zram0.service
         '';

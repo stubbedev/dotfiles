@@ -4,7 +4,6 @@ let
 
   # Force-installed extensions cannot be disabled or removed from within
   # Chrome — delete an entry here to un-manage it. SurfingKeys still needs its
-  # one-time "Allow access to file URLs" toggle granted by hand.
   extensions = {
     "gfbliohnnapiefjpjlpjnehglfpaknnc" = "SurfingKeys";
     "mbcjcnomlakhkechnbhmfjhnnllpbmlh" = "Tab Pinner (Keyboard Shortcuts)";
@@ -19,17 +18,10 @@ let
 in
 {
   stubbe.lib.chromePolicy = newtabUrl: {
-    # NewTabPageLocation drives both the new tab page and new windows (a new
-    # window opens a new tab page). HomepageLocation points the home page and
-    # the home button at the same minimal local page.
     NewTabPageLocation = newtabUrl;
     HomepageLocation = newtabUrl;
     HomepageIsNewTabPage = false;
 
-    # Memory Saver: discard inactive background tabs to reclaim renderer RAM
-    # (each open tab holds a live renderer process). HighEfficiencyMode is the
-    # on/off toggle; MemorySaverModeSavings tunes aggressiveness (0 = longer
-    # wait, 1 = balanced, 2 = max savings / discards sooner).
     HighEfficiencyModeEnabled = true;
     MemorySaverModeSavings = 2;
 

@@ -11,8 +11,6 @@ let
 
   unitOf = provider: "openconnect-${provider}.service";
 
-  # Linux interface names cap at 15 chars. Deterministic, so the service,
-  # status and bar all agree on which interface to probe.
   ifaceOf = provider: builtins.substring 0 15 "oc-${provider}";
 
   runScript =
@@ -31,8 +29,6 @@ let
         --cookie-on-stdin
         --interface ${ifaceOf provider}
       )
-      # The cookie was issued via the gateway usergroup path, so the reconnect
-      # must use the same path or the gateway rejects it (extra 2FA).
       usergroup="''${VPN_USERGROUP-gateway}"
       if [ -n "$usergroup" ]; then
         args+=(--usergroup="$usergroup")
@@ -44,8 +40,6 @@ let
       exec ${openconnect} "''${args[@]}" "$VPN_HOST" <<<"$VPN_COOKIE"
     '';
 
-  # The entire authorisation surface: this user may start/stop/restart exactly
-  # these units, from a local active session. Compare with what it replaced.
   polkitRule =
     username:
     let
@@ -139,7 +133,6 @@ in
             pkgs.stubbe.bashApp {
               inherit text;
               name = "vpn-${provider}-${action}";
-              # setsid (bar's detached spawns) must not depend on host PATH.
               runtimeInputs = [ pkgs.util-linux ];
             }
           )
@@ -177,8 +170,6 @@ in
                 exit 0
               fi
 
-              # Strip openconnect's shell quoting from one --authenticate value.
-              # Unquoted values pass through untouched.
               unquote() {
                 local v="$1"
                 local esc="'\\'''"
@@ -197,11 +188,6 @@ in
                 [ -n "''${VPN_COOKIE:-}" ] && [ -n "''${VPN_HOST:-}" ]
               }
 
-              # Authenticate via openconnect --authenticate to get a session
-              # cookie — unprivileged, interactive (one 2FA prompt).
-              # VPN_USERGROUP defaults to "gateway" so we skip portal auth and
-              # only get one 2FA prompt; set VPN_USERGROUP="" in the config to
-              # fall back to portal auth.
               fetch_cookie() {
                 local password="$1"
                 local auth_output
@@ -222,10 +208,6 @@ in
                   return 1
                 fi
 
-                # openconnect --authenticate outputs shell-quoted assignments
-                # (COOKIE='…' HOST='…' FINGERPRINT='…'). Parsed, not eval'd:
-                # these values come from the gateway, so `eval` would hand a
-                # hostile or MITM'd server code execution as this user.
                 local COOKIE="" HOST="" FINGERPRINT="" key value
                 while IFS='=' read -r key value; do
                   case "$key" in
@@ -241,16 +223,11 @@ in
                 fi
 
                 mkdir -p "$CONFIG_DIR"
-                # umask, not a post-hoc chmod: no window where the cookie is
-                # world-readable. The root service reads it via LoadCredential.
                 ( umask 077
                   printf 'VPN_COOKIE=%q\nVPN_HOST=%q\nVPN_FINGERPRINT=%q\n' \
                     "$COOKIE" "$HOST" "$FINGERPRINT" > "$COOKIE_FILE" )
               }
 
-              # Start the unit and wait for the tunnel interface. A rejected
-              # cookie makes openconnect exit → the unit lands in failed →
-              # return 1 so the caller can re-auth.
               start_unit() {
                 systemctl start ${unit} || return 1
                 for _ in $(seq 1 30); do
@@ -265,14 +242,11 @@ in
                 return 1
               }
 
-              # openconnect alive but the tunnel iface is down (dropped session,
-              # or after resume): tear the stale unit down before reconnecting.
               if systemctl is-active --quiet ${unit}; then
                 echo "${unit} running but ${iface} is down — restarting" >&2
                 systemctl stop ${unit} || true
               fi
 
-              # Try the cached cookie first (no 2FA needed).
               if load_cookie; then
                 echo "Trying cached cookie..." >&2
                 if start_unit; then
@@ -284,7 +258,6 @@ in
                 rm -f "$COOKIE_FILE"
               fi
 
-              # No valid cookie — fetch one (triggers 2FA once).
               password=$(<"$PASSWORD_FILE")
               if [ -z "$password" ]; then
                 echo "Password file $PASSWORD_FILE is empty" >&2
@@ -303,9 +276,6 @@ in
             '';
 
             disconnect = ''
-              # KillSignal=SIGKILL in the unit skips openconnect's gateway
-              # logout, so the cached cookie stays valid for a 2FA-free
-              # reconnect until the gateway's idle-timeout.
               systemctl stop ${unit}
               echo "${provider} VPN disconnected"
             '';
@@ -326,15 +296,10 @@ in
               RUNTIME_DIR="/run/user/$(id -u)"
               CONNECTING_FILE="$RUNTIME_DIR/openconnect-${provider}.connecting"
               LOG_FILE="$RUNTIME_DIR/openconnect-${provider}-bar.log"
-              # Companion scripts share the nix-profile bin/ layout — via PATH.
               CONNECT_SCRIPT="vpn-${provider}-connect"
               DISCONNECT_SCRIPT="vpn-${provider}-disconnect"
               CONNECT_TIMEOUT=90
 
-              # Gate for the process-group kills below. `kill -- -$PID` with
-              # PID=1 becomes `kill -- -1` — SIGTERM to every process we may
-              # signal. PID=1 is exactly what connect() writes as its spawning
-              # placeholder, so both signal sites must refuse it.
               killable() {
                 case "''${1:-}" in
                   ''' | *[!0-9]*) return 1 ;;
@@ -353,9 +318,6 @@ in
                 interface_up
               }
 
-              # Returns 0 if a connect attempt is currently in flight (within
-              # the timeout window). On timeout, kills the wrapper process group
-              # and stops the unit to clean up any half-started tunnel.
               connecting_active() {
                 [ -f "$CONNECTING_FILE" ] || return 1
 
@@ -371,10 +333,6 @@ in
                   return 1
                 fi
 
-                # Stale marker (process gone, trap didn't run). /proc, not
-                # kill -0: the PID=1 placeholder is root-owned, so kill -0 fails
-                # with EPERM and would drop the bar out of "connecting" while
-                # the wrapper is still spawning.
                 if [ ! -d "/proc/$PID" ]; then
                   rm -f "$CONNECTING_FILE"
                   return 1
@@ -438,17 +396,8 @@ in
                 local now
                 now=$(date +%s)
 
-                # Pre-write the connecting marker so the bar sees "connecting"
-                # immediately (its inotify watch fires on this create). PID=1
-                # (init) always exists, so connecting_active()'s /proc check
-                # keeps the marker while the wrapper is still spawning; the
-                # wrapper then overwrites it with its own PID for the
-                # timeout-kill path.
                 printf 'PID=1\nSTART=%s\n' "$now" > "$CONNECTING_FILE"
 
-                # Spawn the connect script in its own session so the whole group
-                # can be killed on timeout. The EXIT trap removes the marker once
-                # the connect attempt settles either way.
                 setsid bash -c '
                   marker="$1"
                   start="$2"
@@ -461,7 +410,6 @@ in
               }
 
               disconnect() {
-                # Cancel any in-flight connect attempt
                 if [ -f "$CONNECTING_FILE" ]; then
                   local PID="" START=0
                   # shellcheck source=/dev/null
@@ -472,7 +420,6 @@ in
                   rm -f "$CONNECTING_FILE"
                 fi
 
-                # Detached: the bar reacts to the interface going down.
                 setsid "$DISCONNECT_SCRIPT" </dev/null >>"$LOG_FILE" 2>&1 &
                 disown
               }
@@ -481,7 +428,6 @@ in
                 if is_running; then
                   disconnect
                 elif connecting_active; then
-                  # Clicked while connecting — treat as cancel
                   disconnect
                 else
                   connect
@@ -502,11 +448,6 @@ in
           };
     in
     lib.mkIf config.features.vpn {
-      # Two binary secrets per provider: the gateway/username config (rotates
-      # rarely — `hm secret edit vpn-konform-config`) and the password (rotates
-      # often — `hm secret set vpn-konform`). Both decrypt under
-      # ~/.config/vpn/konform/, which the connect script and the root unit's
-      # LoadCredential read at runtime.
       sops.secrets = {
         vpn-konform-config = pkgs.stubbe.secret {
           name = "vpn-konform-config";
@@ -518,17 +459,10 @@ in
         };
       };
 
-      home.packages =
-        lib.concatMap mkScripts providers
-        # The unit's runner (non-NixOS) resolves openconnect from the HM
-        # profile, and connect's --authenticate runs it as the user — ship it
-        # here so features.vpn never depends on features.development.
-        ++ [ pkgs.openconnect ];
+      home.packages = lib.concatMap mkScripts providers ++ [ pkgs.openconnect ];
 
-      # Non-NixOS half of the NixOS block above: the same unit and polkit rule
-      # written into /etc. The runner goes to /usr/local/sbin as a real file
-      # (a store path in a /etc unit would break on nix-collect-garbage); it
-      # resolves openconnect via the stable HM profile path.
+      # The runner is a real file in /usr/local/sbin: a store path in an /etc
+      # unit would break on nix-collect-garbage.
       stubbe.setup.vpnUnits = {
         privileged = true;
         title = "Installing openconnect systemd units + polkit rule";

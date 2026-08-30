@@ -25,9 +25,6 @@ _: {
           @theme "catppuccin-default"
         '';
 
-        # catppuccin-default.rasi refers to these by name. force: a stale
-        # pre-home-manager real file may sit at this path and would otherwise
-        # abort activation with "would be clobbered".
         "rofi/catppuccin-mocha.rasi" = {
           force = true;
           text = ''
@@ -39,8 +36,6 @@ _: {
           '';
         };
 
-        # `@name` below are rasi variables (resolved by rofi against the
-        # generated catppuccin-mocha import above), not template markers.
         "rofi/catppuccin-default.rasi".text = ''
           @import "catppuccin-mocha"
 

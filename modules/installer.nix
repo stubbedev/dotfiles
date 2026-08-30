@@ -8,11 +8,6 @@
 let
   system = "x86_64-linux";
 
-  # Read ~/.ssh impurely so the installer image ships with the user's
-  # public/private SSH keys preloaded into /root/.ssh on first boot.
-  # Build with --impure to enable this; under pure eval (e.g. `nix flake
-  # check`) HOME is empty and we fall back to no preloaded keys so the
-  # ISO derivation still evaluates.
   # SECURITY WARNING. The resulting ISO contains UNENCRYPTED PRIVATE
   # SSH KEYS. Treat the ISO as a sensitive artefact: never publish it,
   # never put it on a shared file server, and wipe USB sticks once the
@@ -21,8 +16,6 @@ let
   # basenames before building, e.g.
   #   STB_ISO_SSH_KEYS=id_ed25519:id_ed25519.pub:known_hosts \
   #     nix build .#installer-iso --impure
-  # When unset, every regular file under ~/.ssh is read (legacy
-  # behaviour) and a build-time warning fires.
   homeDirectory = builtins.getEnv "HOME";
   hasHome = homeDirectory != "";
   sshDirectory = if hasHome then /. + "${homeDirectory}/.ssh" else null;
@@ -127,9 +120,6 @@ in
             "vfat"
           ];
 
-          # Auto-load common wired NIC drivers. nixos-install fetches packages
-          # from cache.nixos.org — a missing driver means a stalled install.
-          # hardware.nix covers storage controllers; these cover the NIC side.
           kernelModules = lib.mkAfter [
             "r8169" # Realtek Gigabit PCIe (most consumer boards)
             "r8168" # Realtek Gigabit alt driver
@@ -191,18 +181,11 @@ in
         networking = {
           hostName = lib.mkForce "stubbe-iso";
 
-          # Live ISO uses iwd + impala instead of NetworkManager. impala is a
-          # ratatui TUI for iwd; it's lighter than nmtui and gives an
-          # interactive WiFi picker on the install tty. NM is force-disabled
-          # because it claims wpa_supplicant and conflicts with iwd.
           networkmanager.enable = lib.mkForce false;
           wireless.iwd.enable = true;
         };
 
         services = {
-          # The ISO's only job is to run stb-install-nixos. Skip the display
-          # manager and autologin root on tty1 so the live boot lands directly
-          # at a root shell. The installed system logs in via greetd autologin
           greetd.enable = lib.mkForce false;
 
           xserver.enable = lib.mkForce false;
@@ -228,20 +211,12 @@ in
             printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'
             printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n'
             printf '       \033[2m(--host <attr> to install a different host, --help for flags)\033[0m\n\n'
-            # Auto-launch impala on tty1 when no default route is present,
-            # so the live image hands the user a WiFi picker instead of a
-            # cold shell. Once a route appears (ethernet plugged in or
-            # impala connects), subsequent logins skip the TUI.
             if [ -z "''${STB_WIFI_TUI_RAN:-}" ] \
                 && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] \
                 && ! ip -4 route show default | grep -q .; then
               export STB_WIFI_TUI_RAN=1
               command -v impala >/dev/null && impala || true
             fi
-            # Surface live-ISO IPs + remote-install command. Useful for
-            # headless installs (no monitor / no keyboard) where the user
-            # boots the USB, looks up the assigned IP from their router,
-            # and would otherwise have to guess. Skip loopback + LL.
             ips="$(ip -4 -o addr show scope global 2>/dev/null \
                      | awk '{ split($4, a, "/"); print a[1] }' \
                      | paste -sd ' ' -)"
@@ -266,10 +241,6 @@ in
           git
           gptfdisk
           impala
-          # Standalone memtest86+ binary. The installation-cd's grub menu
-          # isn't extensible without forking nixpkgs, so we ship the EFI
-          # blob in the live system and document `kexec` from the live tty
-          # as the way to run it (see stb-welcome.sh).
           memtest86plus
           parted
           rsync

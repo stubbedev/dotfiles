@@ -133,14 +133,8 @@ _: {
 
             sudo systemctl daemon-reload
 
-            # dbus-daemon caches /etc/dbus-1/system.d at startup, so the bus
-            # policy above is invisible — and mechanism activation fails with a
-            # bare "Access denied" — until it is reloaded.
             sudo systemctl reload dbus >/dev/null 2>&1 || true
 
-            # The mechanism is D-Bus activated on demand, so there is nothing to
-            # enable — but an old instance from a previous build has to go, or
-            # the next call keeps talking to it.
             sudo systemctl stop blueman-mechanism.service >/dev/null 2>&1 || true
           '';
       };

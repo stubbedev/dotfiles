@@ -12,12 +12,6 @@
       imports = [ inputs.impermanence.nixosModules.impermanence ];
 
       config = lib.mkIf (config.host.installed && config.host.impermanent) {
-        # Roll back the @ subvol to the @-blank snapshot taken by
-        # bin/stb-install-nixos before nixos-install populated it.
-        # Runs in the initrd before any service touches the filesystem,
-        # so the current generation's activation script repopulates
-        # /etc + /var from scratch on every boot — only paths declared
-        # in `environment.persistence."/persist"` survive.
         boot.initrd.systemd.services.rollback-root = {
           description = "Rollback / to @-blank";
           wantedBy = [ "initrd.target" ];
@@ -35,9 +29,6 @@
           '';
         };
 
-        # Declarative persistence. Anything outside this list is wiped
-        # on every boot. NixOS activation rebuilds /etc, /run, and most
-        # of /var from the system closure, so only state that changes
         environment.persistence."/persist" = {
           hideMounts = true;
           directories = [

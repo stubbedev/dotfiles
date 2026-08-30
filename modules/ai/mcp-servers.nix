@@ -1,22 +1,5 @@
-# The canonical MCP server inventory, published as `config.stubbe.mcp.servers`
-# for modules/ai/mcp-services.nix (systemd units) and modules/ai/mcp-clients.nix
-# (per-agent renderings).
-#
-# `httpServices` are long-lived shared HTTP servers started at login. They stay
-# native HTTP rather than being bridged: a stdio->HTTP bridge collapses every
-# window onto one upstream session, and these resolve the caller's repo from the
-# per-request X-Repo-Root header. (Per-session MCP roots is the older path to the
-# same value; MCP 2026-07-28 bans the server->client call it needs, so the header
-# is now the mechanism and roots only a fallback.)
-#
-# `proxied` are stdio servers fronted by ONE socket-activated proxy-mcp, each
-# served at /<name>/mcp on `proxiedPort`. Backends connect lazily and retire
-# after their own `idleSec`, so the heavy browser drops while a DB stays warm.
-#
-# `repoScoped` opts an entry OUT of the global client inventory: the unit and the
-# proxy route are built as usual, but no agent loads it everywhere. This repo
-# names those in .mcp.json (Claude), opencode.jsonc (opencode) and
-# .codex/config.toml (Codex).
+# httpServices stay native HTTP rather than bridged: a stdio->HTTP bridge would
+# collapse every window onto one upstream session, losing the per-request repo.
 { inputs, ... }:
 {
   flake.modules.homeManager.mcpServers =
@@ -30,7 +13,6 @@
       system = pkgs.stdenv.hostPlatform.system;
       inherit (config.home) homeDirectory;
 
-      # Store paths, so a spawn never makes an `npx @latest` round-trip.
       flakeBin = input: bin: "${inputs.${input}.packages.${system}.default}/bin/${bin}";
       jenkinsMcp = flakeBin "jenkins-mcp" "jenkins-mcp";
       sentryMcp = flakeBin "sentry-mcp" "sentry-mcp";
@@ -81,12 +63,8 @@
       # checking for a stale unit on an un-switched host.
 
       proxiedPort = 39105;
-      # atlassian is gated by HOST (every repo on the forge has Jira context worth
-      # reaching); jenkins/sentry to the ONE repo they are configured against.
       # "perSession" is required: a "shared" session would collapse every window's
       # roots onto one upstream and break per-repo resolution. Reusing the
-      # httpServices attr key makes the gated proxy route win the client entry.
-      #
       # Placeholders, not literals: this repo is public. Unset expands to "" and
       # gates every client out, so a missing secret hides the tools rather than
       # exposing them everywhere.
@@ -124,10 +102,6 @@
           port = proxiedPort;
           path = "/chrome-devtools/mcp";
           idleSec = 300;
-          # Repo-gated like ds/jenkins/sentry: browser automation is only ever
-          # aimed at the three web apps, and everywhere else its 30-odd tools are
-          # pure schema noise. Gating is per DOWNSTREAM session (from the client's
-          # X-Repo-Root), so the one shared browser upstream is unaffected.
           repoWhitelist = [
             kontainerRepo
             kontainerCmsRepo
@@ -146,8 +120,6 @@
         };
       }
       // {
-        # ponytail: bump idleSec if the NixOS option index cold-reload after idle
-        # proves annoying.
         nix-mcp = {
           host = "127.0.0.1";
           port = proxiedPort;
@@ -157,8 +129,6 @@
           args = [ ];
           repoScoped = true;
         };
-        # A source with an `ssh` block holds a tunnel open for the life of the
-        # backend, so idle-exit here is what stops the staging tunnel living 24/7.
         ds = {
           host = "127.0.0.1";
           port = proxiedPort;
@@ -175,8 +145,6 @@
         };
         # idleSec matches pty-mcp's own session idle-timeout: a shorter proxy
         # clock would tear down live ssh/vim/REPL sessions the server still
-        # considers active. Askpass is explicit because autodetect only finds
-        # kdialog/zenity/ssh-askpass.
         pty-mcp = {
           host = "127.0.0.1";
           port = proxiedPort;
@@ -190,8 +158,6 @@
           repoScoped = true;
         };
       }
-      # No env needed: notmuch falls back to the legacy ~/.notmuch-config that
-      # modules/mail.nix writes, and the binary comes off the proxy service PATH.
       // lib.optionalAttrs enableMail {
         notmuch-mcp = {
           host = "127.0.0.1";

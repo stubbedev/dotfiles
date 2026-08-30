@@ -38,8 +38,6 @@ in
       };
 
       boot = {
-        # Unconditional so a GPU swap is self-healing: ~150MB unused on
-        # non-NVIDIA hosts.
         extraModulePackages = [
           config.boot.kernelPackages.nvidiaPackages.production.open
         ];
@@ -99,7 +97,6 @@ in
           ExecStart = "${pkgs.coreutils}/bin/true";
           TimeoutStopSec = 20;
           ExecStop = pkgs.writeShellScript "nvidia-unload-on-shutdown" ''
-            # fbcon pins nvidia_drm even after the compositor exits.
             for vt in /sys/class/vtconsole/vtcon*; do
               if grep -qi 'frame buffer' "$vt/name" 2>/dev/null; then
                 echo 0 > "$vt/bind" 2>/dev/null || true

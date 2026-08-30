@@ -48,10 +48,6 @@
             sudo install -D -m ${mode} -o ${owner} -g ${group} ${source} ${lib.escapeShellArg target}
           '';
 
-        # parent directory. Unlike installFile this leaves no copy behind, so
-        # the target follows the store path a rebuild produces — right for
-        # files a host daemon reads but never rewrites (dbus service units,
-        # udisks2.conf). Takes the same `{ source, target }` shape as
         installLink =
           { source, target }:
           ''
@@ -85,17 +81,11 @@
           ''
             if ! command -v ${detect} >/dev/null 2>&1; then
               if command -v apt-get >/dev/null 2>&1; then
-                # --no-install-recommends: many Debian/Ubuntu packages
-                # (sddm → plasma-desktop, plymouth → snapd, …) recommend entire
-                # desktop environments. Activation is opinionated about what
-                # gets installed, so suppress recommends and let each module
-                # list explicit deps.
                 sudo apt-get update
                 sudo apt-get install -y --no-install-recommends ${lib.escapeShellArgs apt}
               elif command -v dnf >/dev/null 2>&1; then
                 sudo dnf install -y --setopt=install_weak_deps=False ${lib.escapeShellArgs dnf}
               elif command -v pacman >/dev/null 2>&1; then
-                # pacman has no Recommends concept; optional deps stay opt-in.
                 sudo pacman -S --needed --noconfirm ${lib.escapeShellArgs pacman}
               else
                 echo "No supported package manager (apt-get/dnf/pacman) found." >&2
@@ -193,8 +183,6 @@
             if [ -f ${lib.escapeShellArg target} ]; then
               ${lib.getExe final.jq} -s '(.[0] // {}) * .[1]' ${lib.escapeShellArg target} ${patchFile} \
                 > ${lib.escapeShellArg "${target}.hm-tmp"}
-              # Skip the rename when the result is already byte-identical, so
-              # steady state does not race the app's own writes.
               if cmp -s ${lib.escapeShellArg "${target}.hm-tmp"} ${lib.escapeShellArg target}; then
                 rm -f ${lib.escapeShellArg "${target}.hm-tmp"}
               else
@@ -251,8 +239,6 @@
             '';
           };
 
-        # Parse-checked at build time so a syntax error is a build failure, not
-        # a broken PATH bin.
         zshApp =
           { name, text }:
           final.writeTextFile {
@@ -268,7 +254,6 @@
             meta.mainProgram = name;
           };
 
-        # Requires --impure for the /proc read.
         hasNvidia = builtins.pathExists (/. + "/proc/driver/nvidia/version");
 
         # nixGLNvidia only exists when the overlay's eval-time detection worked;

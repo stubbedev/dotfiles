@@ -19,14 +19,9 @@ _: {
           (config.stubbe.gfx.bundle {
             pkg = pkgs.codex;
             gfx = false;
-            # ~/.codex/config.toml remains user/`codex mcp add`-owned. Dotted
-            # overrides add the canonical managed inventory without replacing
-            # unrelated user-defined servers.
             flags = [
               "--yolo"
               "--dangerously-bypass-hook-trust"
-              # Codex's equivalent of Claude's `tui = "fullscreen"`: always
-              # use the terminal's alternate screen, including inside Zellij.
               "-c"
               (lib.escapeShellArg ''tui.alternate_screen="always"'')
             ]
@@ -34,7 +29,6 @@ _: {
           })
         ];
 
-        # hooks.json is separate from the user-owned config.toml; trust it via codex `/hooks`.
         stubbe.setup.codex.script = ''
           ${pkgs.stubbe.jsonMerge {
             name = "codex-hooks-no-aliases";

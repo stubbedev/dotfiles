@@ -17,7 +17,6 @@
       };
 
       mbsyncrc = ''
-        # ─── Kontainer (Exchange / IMAPS) ────────────────────────────
         IMAPAccount kontainer
         Host ex.konformit.com
         Port 993
@@ -25,9 +24,6 @@
         PassCmd "cat ${passwords.kontainer}"
         TLSType IMAPS
         AuthMechs LOGIN
-        # Exchange's IMAP layer pipelines FETCH responses in a way that trips
-        # mbsync's parser ("malformed FETCH response: unexpected attribute").
-        # Forcing one command at a time avoids the race.
         PipelineDepth 1
 
         IMAPStore kontainer-remote
@@ -45,18 +41,9 @@
         Create Both
         Expunge Both
         SyncState *
-        # Cap the initial pull — the server has ~5k INBOX messages, most years
-        # old. The recent ~2k is plenty for local search; older mail still
-        # lives on the server and can be reached on demand.
         MaxMessages 2000
         ExpireUnread no
 
-        # ─── Gmail ───────────────────────────────────────────────────
-        # [Gmail]/All Mail mirrors every message ever, so sync only inbox /
-        # sent / drafts. Archive (= [Gmail]/All Mail in aerc) still works
-        # because aerc moves the maildir file into
-        # ${maildir}/gmail/[Gmail]/All Mail/ on archive, and mbsync pushes
-        # that copy up on the next sync.
         IMAPAccount gmail
         Host imap.gmail.com
         Port 993
@@ -80,8 +67,6 @@
         Create Both
         Expunge Both
         SyncState *
-        # Same reasoning as above, so a long-lived account does not drag in
-        # years of history on first sync.
         MaxMessages 5000
         ExpireUnread no
       '';
@@ -116,21 +101,12 @@
           util-linux # flock
         ];
         text = ''
-          # Sync every channel by default; pass channel name(s) to limit.
-          # Run channels independently so one account's outage (auth, network,
-          # server-side flake-out) does not black-hole the other.
           if [ "$#" -eq 0 ]; then
             channels=(kontainer gmail)
           else
             channels=("$@")
           fi
 
-          # mail-sync is invoked from three independent schedulers: the systemd
-          # timer, aerc's per-account check-mail-cmd, and the user from a
-          # shell. Without serialization they collide on mbsync's per-channel
-          # SyncState lock, leaving half-synced folders in "cannot be opened
-          # anymore" state. Per-channel flock with -E 75 distinguishes "lock
-          # busy" (skip cleanly) from "mbsync genuinely failed" (report).
           lock_dir="''${XDG_RUNTIME_DIR:-/tmp}"
           mkdir -p "$lock_dir"
 
@@ -148,10 +124,6 @@
             esac
           done
 
-          # Always reindex — a partial sync is still worth indexing so aerc
-          # reflects whatever did land. --quiet is a `new` subcommand flag, and
-          # suppresses per-message progress; the "Ignoring non-mail file" lines
-          # come from mbsync, not notmuch.
           notmuch new --quiet || true
 
           notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer' || true
@@ -167,7 +139,6 @@
 
       # Without maildir-account-path aerc enumerates the shared maildir root and
       # every tab shows both accounts' folders.
-      # aerc >=0.22 takes both from the notmuch config instead.
       accountsConf = (pkgs.formats.ini { }).generate "aerc-accounts.conf" {
         kontainer = {
           source = "notmuch://";
@@ -216,7 +187,6 @@
 
       mailOpen = pkgs.stubbe.bashApp {
         name = "mail-open";
-        # Must not depend on the host providing pkill/jq.
         runtimeInputs = with pkgs; [
           procps
           jq
@@ -225,11 +195,6 @@
           APP_ID="aerc-mail"
 
           spawn_term() {
-            # aerc ignores SIGHUP, so closing its window leaves the process orphaned and
-            # window-less forever, still owning $XDG_RUNTIME_DIR/aerc.sock — every later
-            # `aerc :<cmd>` IPC call (see binds.conf) then lands in that ghost instead of
-            # the live instance. We only get here when no aerc window matched, so any
-            # aerc still running is a ghost. SIGTERM shuts it down cleanly.
             pkill -TERM -f '/bin/aerc$' || true
             ${config.stubbe.paths.terminal} --class "$APP_ID" -e aerc
           }
@@ -238,12 +203,6 @@
             addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
             if [[ -n "$addr" ]]; then
               ws=$(hyprctl -j activeworkspace | jq -r '.id')
-              # Legacy `hyprctl dispatch <name> <args>` is rejected under the Lua config
-              # (parsed as hl.dispatch(<args>) Lua), and there is no by-address
-              # move-to-workspace dispatcher. Reproduce `movetoworkspace ws,address:addr`
-              # by focusing the window (hy3 moves the *focused* window) then moving it to
-              # the captured workspace with follow — same end state: aerc on the current
-              # workspace, focused.
               hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })"
               hyprctl dispatch "hl.plugin.hy3.move_to_workspace('$ws', { follow = true })"
             else
@@ -267,13 +226,10 @@
       mailUnsubscribe = pkgs.stubbe.bashApp {
         name = "mail-unsubscribe";
         text = ''
-          # Absent headers make the greps below fail legitimately; the script
-          # branches on empty results instead of aborting.
           set +e +o pipefail
 
           email=$(cat)
 
-          # Extract List-Unsubscribe header
           unsub_header=$(echo "$email" | grep -i "^List-Unsubscribe:" | head -1)
 
           if [ -z "$unsub_header" ]; then
@@ -281,11 +237,9 @@
             exit 1
           fi
 
-          # Extract URL (handles both <URL> and plain URL formats)
           url=$(echo "$unsub_header" | grep -oP 'https?://[^>,\s]+' | head -1)
 
           if [ -z "$url" ]; then
-            # Try extracting mailto link
             mailto=$(echo "$unsub_header" | grep -oP 'mailto:[^>,\s]+' | head -1)
             if [ -n "$mailto" ]; then
               echo "Found mailto unsubscribe: $mailto"
@@ -297,11 +251,9 @@
             exit 1
           fi
 
-          # Check for List-Unsubscribe-Post header (RFC 8058 - one-click unsubscribe)
           unsub_post=$(echo "$email" | grep -i "^List-Unsubscribe-Post:" | head -1)
 
           if [ -n "$unsub_post" ]; then
-            # RFC 8058: POST with List-Unsubscribe=One-Click
             echo "Processing one-click unsubscribe..."
             response=$(curl -sS -X POST -d "List-Unsubscribe=One-Click" "$url" -w "\n%{http_code}" -o /dev/null)
             http_code=$(echo "$response" | tail -n1)
@@ -315,7 +267,6 @@
               exit 1
             fi
           else
-            # Standard GET-based unsubscribe
             echo "Processing unsubscribe request..."
             response=$(curl -sS -L "$url" -w "\n%{http_code}" -o /dev/null)
             http_code=$(echo "$response" | tail -n1)
@@ -378,23 +329,11 @@
       mailPager = pkgs.stubbe.bashApp {
         name = "mail-pager";
         text = ''
-          # aerc exports AERC_MIME_TYPE to the pager, not only to the filters the
-          # manual documents (verified against 0.22). The part type decides how to
-          # read it.
           case "''${AERC_MIME_TYPE:-}" in
           image/*)
-            # chafa emits ANSI art, which nvim would show as literal escape codes.
             exec less -Rc
             ;;
           text/html)
-            # Already through html-to-md, so it really is markdown. Colours come from
-            # treesitter rather than `syntax on`: the markdown and markdown_inline
-            # parsers ship inside the neovim derivation, so this holds under -u NONE
-            # with no plugins, and the default colourscheme defines the @markup.* groups.
-            # conceallevel hides the markup itself; mailPagerLua puts the hidden link
-            # destination in a float so revealing one never reflows the line. Sourced
-            # with `silent!` so a missing Lua half costs you the float and nothing else
-            # — bare `-S` raises a modal E484 that blocks reading the message at all.
             syntax=(
               -c 'set filetype=markdown conceallevel=2 concealcursor=nvic'
               -c 'lua pcall(vim.treesitter.start, 0, "markdown")'
@@ -402,9 +341,6 @@
             )
             ;;
           *)
-            # Prose the sender typed by hand. Markdown conceal here would swallow
-            # literal **, ` and (…) that were never markup. ft=mail is nvim's own
-            # syntax for this: quote depth, headers, signatures.
             syntax=(
               -c 'syntax enable'
               -c 'set filetype=mail'
@@ -412,8 +348,6 @@
             ;;
           esac
 
-          # Normal is cleared last so aerc's styleset background shows through instead
-          # of nvim's — `syntax enable` would otherwise reset it.
           exec nvim -u NONE -U NONE --noplugin -n -i NONE -M \
             -c 'set mouse= clipboard=unnamedplus' \
             -c 'set nonumber norelativenumber signcolumn=no nolist laststatus=0 noruler noshowcmd' \
@@ -453,7 +387,6 @@
 
         # aerc takes the database path from notmuch config discovery, so point
         # that at the legacy ~/.notmuch-config we write rather than leaving
-        # aerc to guess XDG paths that do not exist here.
         sessionVariables.NOTMUCH_CONFIG = "${home}/.notmuch-config";
 
         file = {
@@ -468,15 +401,7 @@
         "aerc/aerc.conf".text = ''
           [general]
           default-save-path=~/Downloads
-          # accounts.conf contains no passwords (cred-cmds reference sops-decrypted
-          # files at mode 0400). Skip aerc's 0600 check since the file is symlinked
-          # from /nix/store and is therefore world-readable by design.
           unsafe-accounts-conf=true
-          # Default 10s is too short for kontainer's Exchange server: its broken IMAP
-          # pipelining forces mbsync to PipelineDepth=1 (one command at a time), and
-          # even an incremental sync of a few hundred messages overruns 10s. The next
-          # tick fires only after the current one completes, so a longer ceiling
-          # doesn't pile up overlapping runs.
           check-mail-timeout=2m
 
           [compose]
@@ -502,15 +427,9 @@
           border-char-vertical="│"
           border-char-horizontal="─"
           styleset-name=catppuccin-macchiato
-          # Default true. Stays explicit because the whole local-cache pipeline
-          # (mbsync + notmuch synchronize_flags) hinges on the `unread` flag being
-          # stripped exactly once, when the user opens the message viewer — not
-          # while browsing the message list, syncing IMAP, or indexing the maildir.
           auto-mark-read=true
         '';
         "aerc/binds.conf".text = ''
-          # LazyVim-inspired keybinds for aerc
-          # Leader key is <Space>
 
           [messages]
           j = :next<Enter> # Next message
@@ -543,7 +462,6 @@
           <Space><S-Tab> = :prev-tab<Enter> # Previous tab
           <Space>j = :next-folder<Enter> # Next folder
           <Space>k = :prev-folder<Enter> # Previous folder
-          # Telescope/FZF-style search and filter
           <Space>ff = :filter<space> # Filter (live search)
           <Space>fs = :search<space>  # Search (persistent)
           <Space>fc = :clear<Enter> # Clear filter/search
@@ -566,7 +484,6 @@
           <Space>mR = :pipe -m aerc :read<Enter> # Mark all marked as read
           <Space>mU = :pipe -m aerc :unread<Enter> # Mark all marked as unread
           <Enter> = :view<Enter> # View message
-          # Bulk selection and operations
           v = :mark -t<Enter>:next<Enter> # Toggle mark and move to next
           V = :mark -v<Enter> # Visual mode - toggle all
           <Space>v = :mark -a<Enter> # Mark all
@@ -577,14 +494,6 @@
           D = :pipe -m aerc :delete<Enter> # Delete marked emails
 
           [view]
-          # aerc grabs these before the nvim pager sees them; :close tears the pager
-          # terminal down with the viewer. IPC (`aerc :close` from a script) cannot do
-          # this: IPC only resolves global-context commands, never view-context ones.
-          # <Esc> is deliberately NOT bound: aerc decides before nvim ever sees a key, so
-          # a bind here would steal <Esc> in every nvim mode, not just normal. Closing on
-          # <Esc> is not worth losing visual/insert-mode exit inside the pager — `q`
-          # closes. aerc also will not close the viewer when the pager exits on its own
-          # (verified: `pager=cat` leaves the dead pane up), so nvim cannot do it either.
           q = :close<Enter> # Close
           J = :next<Enter> # Next message
           K = :prev<Enter> # Previous message
@@ -599,21 +508,17 @@
           <Space>y = :accept<Enter> # Accept
           <Space>n = :decline<Enter> # Decline
           <Space>u = :pipe -m mail-unsubscribe<Enter>
-          # parse-http-links (default on) collects the message's URLs; both commands
-          # tab-complete over that list, which beats hunting for the link in the body.
           <Space>l = :open-link<space> # Open link
           <Space>L = :copy-link<space> # Copy link
           <Space>? = :help keys<Enter> # Show key help
 
           [compose]
-          # Navigate between header fields
           <Tab> = :next-field<Enter> # Next field
           <S-Tab> = :prev-field<Enter> # Previous field
           <C-j> = :next-field<Enter> # Next field
           <C-k> = :prev-field<Enter> # Previous field
 
           [compose::editor]
-          # Navigation in compose editor (before neovim opens for body)
           $noinherit = true
           $ex = <C-x>
           <Tab> = :next-field<Enter> # Next field
@@ -622,7 +527,6 @@
           <C-k> = :prev-field<Enter> # Previous field
 
           [compose::review]
-          # When reviewing before sending
           y = :send<Enter> # Send email
           n = :abort<Enter> # Abort sending
           e = :edit<Enter> # Edit again
@@ -635,7 +539,6 @@
       };
 
       stubbe.mutable = {
-        # Linked, not copied, so a styleset edit shows on the next launch.
         ".config/aerc/stylesets".src = "mail/stylesets";
       };
 
@@ -649,8 +552,6 @@
         fi
       '';
 
-      # STATUS-only round-trips are cheap when nothing changed, and mail-sync's
-      # own flock stops concurrent runs piling up.
       systemd.user = {
         services.mail-sync = {
           Unit = {

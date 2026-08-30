@@ -132,7 +132,6 @@ in
         with pkgs;
         [
           nix-zsh-completions
-          # nh ships unconditionally via modules/scripts.nix.
           pass
           cachix
           attic-client
@@ -159,7 +158,6 @@ in
             "channels"
           ];
 
-      # Non-NixOS only: on NixOS the system nix-gc.service collects.
       systemd.user = lib.mkIf (!onNixOS) {
         services.nix-collect-garbage = {
           Unit.Description = "Collect unreachable nix store paths";
@@ -198,12 +196,9 @@ in
         '';
         preCheck = ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-          # No nix → nothing to configure.
           if ! command -v nix >/dev/null 2>&1; then
             exit 0
           fi
-          # The age identity is derived from the SSH key; without it we cannot
-          # decrypt. Skip silently rather than prompt for sudo we cannot use.
           if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
             exit 0
           fi
@@ -217,10 +212,6 @@ in
             profileBin = config.stubbe.paths.nixBin;
           in
           ''
-            # Derive the age identity straight from the SSH key (the same path
-            # sops-nix uses) so this does not depend on
-            # ~/.config/sops/age/keys.txt having been materialised yet — that
-            # activation runs after ours.
             ageKey=$(${profileBin}/ssh-to-age -private-key -i "$HOME/.ssh/id_ed25519")
             token=$(SOPS_AGE_KEY="$ageKey" ${profileBin}/sops --decrypt \
               --input-type binary --output-type binary \
@@ -232,10 +223,6 @@ in
               exit 1
             fi
 
-            # root-owned, but group = the invoking user so their unprivileged
-            # `nix flake update` can still read it (0640). Write via a
-            # 0077-umask tmp file then `install`, so the token is never
-            # world-readable even for the instant before a chmod.
             grp=$(id -gn)
             umask 077
             tmp=$(mktemp)
@@ -244,11 +231,6 @@ in
             sudo install -m 0640 -o root -g "$grp" "$tmp" /etc/nix/nix-access-tokens.conf
             rm -f "$tmp"
 
-            # Reference it from the main config. `!include` (leading bang) is
-            # the optional form: no error if the file is later removed.
-            # Appended once, idempotently; the installer-managed nix.conf is
-            # left otherwise untouched. The relative path resolves against
-            # /etc/nix.
             if ! grep -qxF '!include nix-access-tokens.conf' /etc/nix/nix.conf 2>/dev/null; then
               printf '\n# managed-by: stubbe nix-github-token\n!include nix-access-tokens.conf\n' \
                 | sudo tee -a /etc/nix/nix.conf >/dev/null

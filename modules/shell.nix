@@ -1,4 +1,3 @@
-# zsh, fully Nix-managed.
 # Relies on zsh ignoring a .zwc only when the source is STRICTLY newer: store
 # mtimes are epoch-equal, so the adjacent .zwc always wins.
 { inputs, ... }:
@@ -29,26 +28,10 @@
     let
       system = pkgs.stdenv.hostPlatform.system;
 
-      # Rendered from the same table as the wrapper in modules/scripts.nix;
-      # hand-maintaining the two let them drift.
       hmSpec = pkgs.stubbe.hm;
 
       zshFiles = {
         "paths" = ''
-          # PATH initialisation for interactive zsh.
-          #
-          # home-manager already exports the canonical PATH via home.sessionPath
-          # (see modules/core/home.nix). This file just guarantees the order is
-          # right when zsh starts from contexts that bypass the profile (e.g. tmux
-          # panes attaching across reboots) and adds the few dirs Nix doesn't own.
-          #
-          # The list is deliberately minimal — every CLI tool we use is installed
-          # via Nix and reached through home-manager's profile dir (~/.nix-profile
-          # on standalone HM, /etc/profiles/per-user/$USER on NixOS-integrated HM).
-          # The non-existent candidate is silently skipped by the `[[ -d ]]` guard.
-          # Tool-managed install dirs (~/.cargo/bin, ~/.bun/bin, ~/.go/bin,
-          # ~/.deno/bin, ~/.opencode/bin, ~/.local/share/nvim/mason/bin, …) stay
-          # off PATH so we don't shadow the pinned versions.
 
           function _paths_init {
             local -a STUBBE_PATHS=(
@@ -73,7 +56,6 @@
           unfunction _paths_init
         '';
         "apaths" = ''
-          # EXPAND LIST WITH DESIRED APPLICATION PATHS
 
           function _apaths_init {
             local -a STUBBE_APP_PATHS=(
@@ -111,12 +93,6 @@
             [[ -f "$1" ]]
           }
 
-          # Reload the shell. Re-sourcing ~/.zshrc into the live shell accumulates
-          # state — plugins such as fast-syntax-highlighting and zsh-autosuggestions
-          # wrap ZLE widgets, so each re-source stacks another wrapper layer and the
-          # shell gets slower every reload. `exec` replaces the process with a fresh
-          # one instead: a clean reload, no accumulation. cwd and exported env carry
-          # over; non-exported vars and the job table do not.
           function src_zsh {
             exec zsh
           }
@@ -124,13 +100,6 @@
         "funcs" = ''
           # shellcheck disable=SC1091
 
-          # Git + worktree workflow now lives in the `treeman` binary as
-          # `treeman git <verb>` and `treeman worktree <verb>` subcommands (native
-          # TUI pickers, shell completions, tests). What used to be ~1200 lines of
-          # zsh here is now thin aliases over those subcommands, plus `cd` shims
-          # for the handful of commands that must move the parent shell — a binary
-          # can't change its caller's directory, so those print a path and the
-          # shim cd's to it.
 
           typeset -gA _git_shorthand_docs=(
             gcm 'treeman git commit — auto ticket prefix; trailing \ opens editor'
@@ -155,9 +124,6 @@
             gwtc 'treeman worktree back --remove — cd to main root and drop the exited worktree if clean'
           )
 
-          # Minimal git helpers — only what the `claude` wrapper below needs to
-          # decide whether to auto-clean the worktree on exit. Everything else
-          # that used to live here moved into treeman.
           function in_git_repo {
             local dir=$PWD
             while [[ $dir != / ]]; do
@@ -167,14 +133,11 @@
             return 1
           }
 
-          # In a linked worktree, $_git_root/.git is a gitlink file; in the main
-          # repo it's a directory. Requires in_git_repo to have run.
           function _in_linked_worktree {
             [[ -f "$_git_root/.git" ]]
           }
 
           if are_binary git treeman; then
-            # Pure-git verbs — direct passthrough, no shell state needed.
             alias gcm='treeman git commit'
             alias gp='treeman git push'
             alias ga='treeman git add'
@@ -189,16 +152,12 @@
             alias ggo='treeman git pull --pick'
             alias gl='treeman git log'
 
-            # Branch diffs: bare form opens the branch picker; an arg diffs vs it.
             gd()  { treeman git diff --pick "$@"; }
             gcd() { treeman git diff --pick --patch "$@"; }
 
-            # cd-barrier commands: treeman prints the destination path on stdout
-            # (status on stderr); the shim cd's the shell there.
             gcb() { local p; p=$(treeman git switch "$@") && [[ -n $p ]] && cd "$p"; }
 
             gwt() {
-              # `gwt -` toggles to the previously-visited worktree.
               if [[ $1 == - ]]; then
                 local p; p=$(treeman worktree prev) && [[ -n $p ]] && cd "$p"
                 return
@@ -208,8 +167,6 @@
 
             gwtd() { treeman worktree delete "$@"; }
 
-            # `worktree back` prints the main repo path on line 1 (status follows
-            # on later lines); take just the first line to cd.
             gwte() { local p; p=$(treeman worktree back)                && cd "''${p%%$'\n'*}"; }
             gwtc() { local p; p=$(treeman worktree back --remove --force) && cd "''${p%%$'\n'*}"; }
           fi
@@ -267,24 +224,11 @@
           fi
 
           if is_binary direnv; then
-            # Toggle direnv for the current directory.
-            #   denv on     write .envrc (defaults to `dotenv`) and allow it
-            #   denv off    revoke and delete a .envrc that we created
-            #   denv status print direnv status for the current directory
             function denv {
-              # Use dotenv_if_exists (not plain `dotenv`) so direnv stays silent
-              # when a project has no .env yet — plain `dotenv` calls log_error,
-              # which prints to stderr regardless of DIRENV_LOG_FORMAT.
               local marker='dotenv_if_exists'
               local action="''${1:-status}"
               case "$action" in
                 on)
-                  # Build the desired set of .envrc lines from what's already
-                  # there, dropping any bare `dotenv` line (legacy / stray) so it
-                  # doesn't fire log_error when .env is absent. Then ensure
-                  # `dotenv_if_exists` is present. Any non-dotenv user-authored
-                  # lines are preserved verbatim so a hand-written .envrc isn't
-                  # clobbered.
                   local _content=""
                   if [[ -f .envrc ]]; then
                     _content="$(grep -vxF 'dotenv' .envrc || true)"
@@ -302,9 +246,6 @@
                 off)
                   direnv revoke 2>/dev/null
                   if [[ -f .envrc ]]; then
-                    # Strip the marker lines we author (current + legacy). If
-                    # anything else remains, keep the file with the stripped
-                    # contents; otherwise remove it.
                     local _remaining
                     _remaining=$(grep -vxF -e "$marker" -e 'dotenv' .envrc || true)
                     if [[ -z "$_remaining" ]]; then
@@ -328,7 +269,6 @@
           fi
         '';
         "aliases" = ''
-          # INFO: Default Aliases
           alias la='ls -laF'
           alias ff='find . -type f -name'
           alias h='history'
@@ -338,12 +278,6 @@
           alias cp='cp -i'
           alias mv='mv -i'
 
-          # INFO: Conditional Aliases
-          # pbcopy routes through `clip` (modules/scripts.nix) so a copy works the
-          # same over SSH and in a bare tty as it does on the Wayland session.
-          # pbpaste has no such fallback — OSC 52 reads are refused by every
-          # terminal worth using — so it stays on whatever local selection
-          # tool exists.
           if is_binary clip; then
             alias pbcopy='clip'
           elif is_binary xclip; then
@@ -361,9 +295,6 @@
           fi
 
           if is_binary nvim; then
-            # vi/vim/nano/ed/code come from the nix-wrapper-modules wrapper aliases —
-            # see modules/nvim.nix.
-            # svim still needs a real alias because it passes -u NONE.
             alias svim='nvim -u NONE'
           fi
 
@@ -377,11 +308,6 @@
           function _settings_init {
             bindkey "^Xa" _expand_alias
 
-            # Bind a key to run a command. Commands that exec, attach, or take over
-            # the terminal (exec zsh, tmux attach, nvim) misbehave — or kill the
-            # shell — when run from inside a ZLE widget, so the command is deferred
-            # to a one-shot precmd hook that fires once ZLE has exited. accept-line
-            # on an empty buffer drives that prompt cycle without echoing any text.
             autoload -Uz add-zsh-hook
             function _bind_run {
               local key=$1 cmd=$2
@@ -393,8 +319,6 @@
               bindkey "$key" "$widget"
             }
 
-            # Reload — re-source tmux (when inside it) and exec a fresh zsh. Bound on
-            # both Alt-r and Alt-R; inside tmux these are handled by tmux itself.
             local _reload_cmd='[[ -n $TMUX ]] && tmux source-file "$HOME/.config/tmux/tmux.conf"; src_zsh'
             _bind_run "^[R" "$_reload_cmd"
             _bind_run "^[r" "$_reload_cmd"
@@ -421,13 +345,9 @@
             zstyle ':completion:*' sort false
             zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 
-            # disable sort when completing `git checkout`
             zstyle ':completion:*:git-checkout:*' sort false
-            # set descriptions format to enable group support
             zstyle ':completion:*:descriptions' format '[%d]'
-            # set list-colors to enable filename colorizing
             zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
-            # force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
             zstyle ':completion:*' menu no
             if is_binary eza; then
                 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
@@ -436,10 +356,6 @@
             zstyle ':fzf-tab:*' switch-group '<' '>'
             zstyle ':fzf-tab:*' fuzzy-search true
 
-            # Add avahi-discovered .local hosts to ssh-style completion. The cache
-            # file is maintained by the zsh-avahi-hosts systemd user timer
-            # (modules/network.nix) — completion only reads it, so it
-            # never blocks and never forks.
             function _avahi_ssh_hosts {
               local cache="''${XDG_CACHE_HOME:-$HOME/.cache}/zsh-avahi-hosts"
               if [[ -s $cache ]]; then
@@ -453,19 +369,10 @@
             HYPHEN_INSENSITIVE=false
             DISABLE_AUTO_TITLE=true
             VIM_MODE_NO_DEFAULT_BINDINGS=true
-            # ESC→NORMAL and prefix-key disambiguation wait this long (×10ms). zsh
-            # default is 40 (400ms) — the source of vi-mode's "laggy" feel. 1 = 10ms,
-            # instant mode switch. Read live by ZLE per keystroke, so setting it here
-            # (after the plugin loads) takes effect immediately.
             KEYTIMEOUT=1
             ARTISAN_OPEN_ON_MAKE_EDITOR=nvim
-            # zsh-autosuggestions perf. Default re-binds every ZLE widget on each
-            # precmd ("a decent performance hit" per the plugin) — every plugin here
-            # loads before the first prompt, so one rebind captures them all.
             ZSH_AUTOSUGGEST_MANUAL_REBIND=1
-            # Don't run the history search on long lines/pastes.
             ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
-            # History options live in programs.zsh.history (modules/shell.nix).
 
             setopt COMPLETE_ALIASES
 
@@ -482,9 +389,6 @@
                 _bind_run "^[d" "tmux-pick-session"
                 _bind_run "^[D" "fzf-directory-picker"
             fi
-            # fzf/starship/direnv/zoxide init scripts are built at nix build time
-            # (modules/shell.nix) and sourced from the store by the
-            # generated .zshrc (modules/shell.nix) — nothing to eval here.
 
             if is_binary pyenv; then
                 export PYENV_ROOT="$HOME/.pyenv"
@@ -504,7 +408,6 @@
           unfunction _settings_init
         '';
         "completions/_denv" = ''
-          #compdef denv
 
           _denv() {
             local -a actions
@@ -528,8 +431,6 @@
                   typeset -ga _gsc_br_cache=("''${reply[@]}")
                   typeset -g _gsc_br_time=$now _gsc_br_pwd=$PWD
                 fi
-                # Filter current branch at use time (not cache time) so a `git checkout`
-                # without leaving $PWD doesn't show a stale current.
                 local _cur=$(git branch --show-current 2>/dev/null)
                 local -a _filtered=()
                 local _b
@@ -556,7 +457,6 @@
                 _arguments '1:flag:((--all\:"include\ all\ remotes/stash"))'
                 ;;
               gwte|gwtc)
-                # No positional args — suppress default file completion.
                 return 0
                 ;;
               *)
@@ -568,16 +468,11 @@
           _git_shortcuts "$@"
         '';
         "completions/_hm" = ''
-          #compdef hm
 
           _hm() {
             local context state line
             typeset -A opt_args
 
-            # Mirror is_nixos() in modules/scripts.nix so completion only offers
-            # verbs the wrapper will actually accept. /etc/os-release is the canonical
-            # systemd-distributed identifier; absent on most non-NixOS hosts but cheap
-            # to read, so the grep stays scoped to it.
             local -i _hm_is_nixos=0
             if [[ -r /etc/os-release ]] && grep -q '^ID=nixos' /etc/os-release; then
               _hm_is_nixos=1
@@ -585,19 +480,14 @@
 
             local -a commands
             commands=(
-              # Works everywhere the wrapper does.
               ${hmSpec.renderZsh "    " "all"}
             )
 
             if (( _hm_is_nixos )); then
-              # NixOS-only — these all route through nixos-rebuild and have no
-              # standalone home-manager equivalent.
               commands+=(
                 ${hmSpec.renderZsh "      " "nixos"}
               )
             else
-              # Standalone home-manager only — the wrapper rejects these on NixOS
-              # because the home-manager CLI isn't installed in submodule mode.
               commands+=(
                 ${hmSpec.renderZsh "      " "standalone"}
               )
@@ -650,7 +540,6 @@
                     _message 'configuration option name'
                     ;;
                   remove-generations)
-                    # Get generation IDs
                     local -a generations
                     if (( ''${+commands[home-manager]} )); then
                       generations=(''${(f)"$(home-manager generations 2>/dev/null | grep -o '^[0-9]\+' || true)"})
@@ -711,13 +600,9 @@
                     return 0
                     ;;
                   ${hmSpec.plainVerbs})
-                    # These commands don't take meaningful tab-completable arguments here;
-                    # extra flags fall through via the default _command_names branch.
                     return 0
                     ;;
                   gc)
-                    # nix-collect-garbage flags. -d is the wrapper default but the user
-                    # may want to override.
                     _arguments \
                       '-d[Delete old generations of all profiles]' \
                       '--delete-old[Delete old generations of all profiles]' \
@@ -726,7 +611,6 @@
                     return 0
                     ;;
                   trust)
-                    # `hm trust <name> <pubkey>` or `hm trust <pubkey>` or stdin pipe.
                     case $CURRENT in
                       2) _message 'machine name (or pubkey alone for auto-name)' ;;
                       3) _message 'age recipient pubkey (age1...)' ;;
@@ -734,8 +618,6 @@
                     return 0
                     ;;
                   secret)
-                    # `hm secret edit|set|rotate <name>`. Complete <name> from existing
-                    # entries under secrets/ (one binary blob per file).
                     case $CURRENT in
                       2)
                         local -a actions
@@ -767,7 +649,6 @@
                     return 0
                     ;;
                   cache)
-                    # `hm cache nvim|zsh|locks|all` — see hm_cache() in modules/scripts.nix.
                     case $CURRENT in
                       2)
                         local -a targets
@@ -780,8 +661,6 @@
                     return 0
                     ;;
                   *)
-                    # For any unrecognized command, fall back to home-manager completion
-                    # by removing the first word and calling home-manager completion
                     shift words
                     (( CURRENT-- ))
                     _command_names -e
@@ -797,7 +676,6 @@
         '';
       };
 
-      # Autoloaded off fpath, never sourced.
       sourceableZshFiles = lib.filter (n: !(lib.hasPrefix "completions/" n)) (lib.attrNames zshFiles);
 
       zshConfig =
@@ -812,10 +690,6 @@
                 cp ${pkgs.writeText (baseNameOf name) text} $out/${name}
               '') zshFiles
             )}
-            # zcompile is a zsh builtin, so run it inside zsh. The list is
-            # derived, not repeated: every zshFiles entry outside completions/
-            # is sourced at startup and wants a .zwc, and a hand-written list
-            # is one a new entry gets left out of.
             zsh -c 'for f in ${lib.concatStringsSep " " sourceableZshFiles}; do zcompile $out/$f; done'
           '';
 
@@ -856,7 +730,6 @@
         '') pluginSpecs
       );
 
-      # Only tools whose packages ship no zsh completion of their own.
       zshCompletions = pkgs.runCommandLocal "stubbe-zsh-completions" { } ''
         dir=$out/share/zsh/site-functions
         mkdir -p $dir
@@ -871,12 +744,9 @@
           ${pkgs.wayle}/bin/wayle completions zsh > $dir/_wayle
         ''}
         ${lib.optionalString config.features.docker ''
-          # The host docker CLI is not in the closure, and this completion is
-          # protocol-stable across the version skew.
           cp ${pkgs.docker}/share/zsh/site-functions/_docker $dir/_docker
         ''}
         ${lib.optionalString config.features.php ''
-          # FrankenPHP embeds Caddy and emits a Caddy-named completion.
           ${pkgs.frankenphp}/bin/frankenphp completion zsh \
             | sed 's/caddy/frankenphp/g' > $dir/_frankenphp
         ''}
@@ -1551,9 +1421,6 @@
       };
 
       stubbe.setup.zshPatina.script = ''
-        # activate embeds $XDG_RUNTIME_DIR/zsh-patina as the socket path, and
-        # NixOS runs user activation without XDG_RUNTIME_DIR — fall back to the
-        # same path login shells get.
         export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
         _patina_cache='${config.xdg.cacheHome}/zsh'
         mkdir -p "$_patina_cache"
@@ -1561,15 +1428,11 @@
           mv "$_patina_cache/patina-init.zsh.tmp" "$_patina_cache/patina-init.zsh"
           ${lib.getExe pkgs.zsh} -c 'zcompile "$1"' _ "$_patina_cache/patina-init.zsh" || true
         else
-          # Keep a previous good script if activate fails (e.g. no runtime dir
-          # in a container build); shells degrade to no highlighting.
           rm -f "$_patina_cache/patina-init.zsh.tmp"
         fi
         unset _patina_cache
       '';
 
-      # avahi-browse takes ~1.5s, far too slow to run from a completion, so the
-      # shell only ever reads this cache.
       systemd.user = {
         services.zsh-avahi-hosts = {
           Unit.Description = "Refresh avahi .local host cache for zsh completion";
@@ -1583,8 +1446,6 @@
                 set -u
                 mkdir -p "$(dirname '${cacheFile}')"
                 tmp='${cacheFile}.tmp'
-                # avahi-browse talks to the system avahi-daemon over D-Bus; if
-                # the host runs no daemon this fails and we keep the old cache.
                 if ${pkgs.avahi}/bin/avahi-browse -atrp 2>/dev/null \
                      | ${lib.getExe pkgs.gawk} -F';' '$1=="=" && $3=="IPv4" && ($5=="_workstation._tcp" || $5 ~ /ssh/) && $7!="" {print $7}' \
                      | sort -u > "$tmp" 2>/dev/null; then

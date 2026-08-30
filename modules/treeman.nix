@@ -1,10 +1,5 @@
 { inputs, ... }:
 {
-  #   - homeManager: installs treeman + treemand into home.packages and
-  #     wires the daemon as a systemd user service. This bypasses
-  #     `treeman daemon install` (which writes a runtime-mutable unit
-  #     under ~/.config/systemd/user/) — keeping the unit declarative
-  #     means the whole stack survives a clean home-manager rebuild.
   flake.modules.nixos.treeman =
     { pkgs, ... }:
     let
@@ -38,15 +33,11 @@
         (pkgs.stubbe.bashApp {
           name = "treeman-status";
           text = ''
-            # `treeman status --format waybar` emits {text,tooltip,class} directly.
             command -v treeman >/dev/null 2>&1 && treeman status --format waybar 2>/dev/null
           '';
         })
       ];
 
-      # Global config (single file, not the whole dir — treeman only reads it;
-      # state + DB live elsewhere). force overrides the pre-existing hand-edited
-      # file on first switch.
       xdg.configFile."treeman/config.yaml" = {
         source = (pkgs.formats.yaml { }).generate "treeman-config.yaml" {
           notifications = {
@@ -64,10 +55,6 @@
             interval_minutes = 30;
           };
 
-          # Bar status line. `treeman status --format waybar` builds its `text` from
-          # the `icon` format, so overriding status.formats.icon makes the wayle bar
-          # widget minimal: one compact "{glyph} {count}" pair per bucket
-          # (stable/up/down/failed), no word labels. The wayle treeman module passes
           status.formats.icon = "{icon_stable} {stable}  {icon_up} {up}  {icon_down} {down}  {icon_failed} {failed}";
         };
         force = true;

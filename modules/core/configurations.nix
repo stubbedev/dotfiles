@@ -1,11 +1,3 @@
-# Note the absence of `extraSpecialArgs` / `specialArgs`: nothing is injected
-# into a module. Values that used to travel that way now reach modules the two
-# ways the module system already provides — `pkgs.stubbe.*` for helpers and
-# data (modules/core/pkgs-stubbe.nix), and `config.stubbe.*` / `config.host.*`
-# for anything derived from the configuration itself. Flake inputs are resolved
-# at flake-parts level inside each aspect file, where `inputs` is in scope
-# anyway. This is what makes every module movable between the two targets
-# without rewiring.
 {
   lib,
   config,

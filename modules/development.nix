@@ -43,7 +43,6 @@
           openconnect
 
           mold
-          # gcc also ships a `cc`.
           (lib.setPrio 15 clang)
           sccache
           cargo-sweep
@@ -85,7 +84,6 @@
 
       # Deliberately not npm_config_store_dir: npm scans every npm_config_*
       # variable, has no `store-dir` key, and warns on every invocation.
-      # A dev container mounting ~/.config/pnpm can leave an unmanaged file here.
       xdg.configFile."pnpm/rc" = {
         force = true;
         text = ''
@@ -93,17 +91,12 @@
         '';
       };
 
-      # Holds the auth token in plaintext, so it is sops-encrypted and the login
-      # survives rebuilds. Re-encrypt after `npm login` writes a fresh token.
       sops.secrets.npmrc = pkgs.stubbe.secret {
         name = "npmrc";
         path = "${config.home.homeDirectory}/.npmrc";
       };
 
       stubbe.setup.nodeCaBundle.script = ''
-        # Activations run with a stripped PATH; awk (gawk) and find/xargs
-        # (findutils) are not on it, and without them the dedup pass below
-        # fails and the bundle is left as-is.
         export PATH="${
           lib.makeBinPath [
             pkgs.gawk
@@ -151,14 +144,8 @@
           done
         }
 
-        # 1. The OS trust store — always present, valid PEM, and already
-        #    includes the mkcert CA. Seeding with it guarantees a non-empty
-        #    bundle so the runtime (BoringSSL, via Claude Code) never warns at
-        #    launch: a missing file fails with errno 2 ("system library"), an
-        #    empty one with "PEM routines".
         add_file "${config.home.sessionVariables.SSL_CERT_FILE}"
 
-        # 2. The mkcert root, in case the OS store predates the current CA.
         if [ -n "''${CAROOT-}" ]; then
           add_file "''${CAROOT}/rootCA.pem"
         fi
@@ -167,21 +154,15 @@
           [ -n "$caroot" ] && add_file "$caroot/rootCA.pem"
         fi
 
-        # 3. valet + srv leaf/CA certs, which are not in the OS store.
         add_valet_paths
         ${lib.optionalString config.features.srv "add_srv_paths"}
 
-        # Collapse to unique CERTIFICATE blocks, dropping comments and the
-        # OS-store/mkcert-root overlap. BoringSSL stops at the first
-        # unparseable block, so emit only clean cert PEM.
         awk '
           /-----BEGIN CERTIFICATE-----/ { inblk = 1; blk = "" }
           inblk { blk = blk $0 "\n" }
           /-----END CERTIFICATE-----/ { inblk = 0; if (!seen[blk]++) printf "%s", blk }
         ' "$tmp" > "$tmp.dedup" && mv "$tmp.dedup" "$tmp"
 
-        # Publish only a non-empty result; otherwise keep the last good bundle
-        # rather than leaving the path missing, which is what triggers the warn.
         if [ -s "$tmp" ]; then
           mv "$tmp" "$bundle"
         else
@@ -200,10 +181,6 @@
               find="${lib.getExe' pkgs.findutils "find"}"
               grep="${lib.getExe' pkgs.gnugrep "grep"}"
 
-              # --- Cargo: stale target/ dirs under ~/git ------------------
-              # mtime +30: untouched for 30 days. A sibling Cargo.toml confirms
-              # we never nuke a coincidentally-named `target` dir. -prune stops
-              # find descending into the (huge) match before we remove it.
               "$find" "$HOME/git" -mindepth 2 -maxdepth 6 -type d -name target -mtime +30 -prune -print0 2>/dev/null \
                 | while IFS= read -r -d "" t; do
                     if [ -f "$(dirname "$t")/Cargo.toml" ]; then
@@ -215,19 +192,13 @@
               ${lib.optionalString config.features.docker ''
                 docker="$(command -v docker || true)"
                 if [ -n "$docker" ]; then
-                  # Build cache: nothing references it once a build finishes.
                   "$docker" builder prune -f >/dev/null 2>&1 || true
-                  # Dangling (untagged) image layers only — never tagged images.
                   "$docker" image prune -f >/dev/null 2>&1 || true
 
-                  # Anonymous volumes (64-hex names) with no container attached.
-                  # Named volumes are skipped by the regex — they may hold data.
                   "$docker" volume ls -f dangling=true -q 2>/dev/null \
                     | "$grep" -E '^[0-9a-f]{64}$' \
                     | while IFS= read -r v; do "$docker" volume rm "$v" >/dev/null 2>&1 || true; done
 
-                  # Orphaned buildx builder state: buildx_buildkit_<name>0_state
-                  # whose <name> is no longer a registered builder.
                   "$docker" volume ls -q 2>/dev/null | "$grep" -E '^buildx_buildkit_.*_state$' \
                     | while IFS= read -r v; do
                         b="''${v#buildx_buildkit_}"

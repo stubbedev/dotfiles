@@ -1,7 +1,3 @@
-# MIME defaults exist on both sides on purpose: the system-wide
-# /etc/xdg/mimeapps.list is the fallback for anything without a per-user entry,
-# and the per-user list overrides it. The type lists are shared here so the two
-# can never disagree about which types mpv or imv own.
 _:
 let
   mimeDefaults =
@@ -114,7 +110,6 @@ in
       # Upstream's org.remmina.Remmina.desktop bakes absolute /nix/store
       # paths into Exec=, so launching from the menu would bypass the
       # nixGL wrapper. Provide a replacement whose Exec= uses the bare
-      # command name; symlinkJoin first-wins ensures it shadows upstream's.
       remminaDesktop = pkgs.makeDesktopItem {
         name = "org.remmina.Remmina";
         desktopName = "Remmina";
@@ -239,10 +234,8 @@ in
 
       };
 
-      # pcmanfm rewrites this file at runtime (window geometry, view state),
-      # so a store symlink gets replaced by a real file on first run and the
-      # next activation refuses to clobber it. Writable copy, re-asserted each
-      # switch — same treatment as btop.conf and kdeglobals.
+      # pcmanfm rewrites this file at runtime, so a store symlink is replaced by
+      # a real file on first run and the next activation refuses to clobber it.
       stubbe.mutable.".config/pcmanfm/default/pcmanfm.conf" = {
         method = "copy";
         source = (pkgs.formats.ini { }).generate "pcmanfm.conf" {
@@ -289,13 +282,8 @@ in
           // mimeDefaults browser lib;
       };
 
-      # Nix's appimageTools wrappers (Electron/AppImage packages) build their
-      # FHS sandbox with bubblewrap, and Ubuntu 24.04+ only lets binaries with a
-      # matching AppArmor profile create unprivileged user namespaces — so the
-      # store bwrap aborts on launch with
-      #   bwrap: setting up uid map: Permission denied
-      # Whitelisting it (any version) covers every such package at once;
-      # children stay unconfined, so a nested Electron chrome-sandbox works too.
+      # appimageTools wrappers build their FHS sandbox with bubblewrap, which
+      # Ubuntu 24.04+ blocks without a matching AppArmor profile.
       stubbe.setup.bubblewrapApparmor = pkgs.stubbe.apparmorSetup {
         appName = "Nix bubblewrap (AppImage/FHS sandbox)";
         profileName = "nix-bubblewrap";

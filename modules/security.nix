@@ -3,18 +3,10 @@ _: {
     { lib, pkgs, ... }:
     {
       security.sudo = {
-        # Explicit policy: wheel members must enter their password. This is the
-        # upstream default, declared here so a future module that pulls in
-        # passwordless-wheel as a side effect cannot silently flip it off.
         wheelNeedsPassword = true;
 
-        # Restrict the sudo binary's setuid bit to wheel members, so non-wheel
-        # users cannot even invoke `sudo`. The primary user is in wheel
-        # (modules/users.nix), so day-to-day sudo is unaffected.
         execWheelOnly = true;
 
-        # Show '*' for each typed password character (sudo gives no echo at
-        # all by default). Note: reveals password length to shoulder-surfers.
         extraConfig = ''
           Defaults pwfeedback
         '';
@@ -127,10 +119,6 @@ _: {
         ]
       );
 
-      # On a non-NixOS host the org.freedesktop.secrets provider is whatever the
-      # distro installed, and nothing starts it under the compositor session —
-      # so secret-service clients (Chrome, libsecret callers) find no backend.
-      # Start whichever one exists, and only if the name is not already claimed.
       systemd.user.services = lib.mkIf (secretsExec != null && config.features.hyprland) {
         secrets-service = {
           Unit = {
@@ -158,18 +146,11 @@ _: {
         # default slot. Once that happens the default keyring is no longer
         # PAM-unlocked, so every secret-service client prompts for a password
         # on first use each session.
-        # Pin `default` back to `login`. PAM creates `login` itself on first
-        # login when missing, so naming it ahead of time is safe. Unprivileged
-        # and ungated by platform, so it runs on both targets. Takes effect on
-        # the next login — a gnome-keyring-daemon already running keeps the
-        # default it loaded at startup.
         keyringDefault = lib.mkIf config.features.desktop {
           script = ''
             keyringDir="${config.xdg.dataHome}/keyrings"
             defaultFile="$keyringDir/default"
             mkdir -p "$keyringDir"
-            # The `default` file holds the bare keyring name with no trailing
-            # newline (a 15-byte file reads back exactly "Default_Keyring").
             if [ "$(cat "$defaultFile" 2>/dev/null)" != "login" ]; then
               printf '%s' login > "$defaultFile"
               echo "keyring-default: pinned default keyring to 'login'."
@@ -194,13 +175,6 @@ _: {
           script = ''
             authLine="auth optional pam_gnome_keyring.so"
             sessionLine="session optional pam_gnome_keyring.so auto_start"
-            # The password line keeps the `login` keyring's password in sync
-            # with the login password when it changes; without it autounlock
-            # silently breaks after the next password change (PAM then feeds the
-            # new password to a keyring still sealed with the old one). NixOS's
-            # enableGnomeKeyring emits all three lines — match that here so both
-            # targets configure PAM identically. `use_authtok` reuses the new
-            # password pam_unix already collected earlier in the stack.
             passwordLine="password optional pam_gnome_keyring.so use_authtok"
             pamFiles=(
               /etc/pam.d/login
@@ -209,11 +183,6 @@ _: {
               /etc/pam.d/gdm
               /etc/pam.d/greetd
             )
-            # Tolerant regex: distro-shipped lines like
-            # `-auth   optional        pam_gnome_keyring.so` (dash prefix, tabs,
-            # multi-space) escaped a literal-string match and we appended a
-            # duplicate on every activation. Match any non-comment line in the
-            # right phase that references pam_gnome_keyring.so.
             hasPhase() {
               local file="$1" phase="$2"
               grep -qE "^[[:space:]]*-?''${phase}[[:space:]]+\S+[[:space:]]+.*pam_gnome_keyring\.so" "$file"

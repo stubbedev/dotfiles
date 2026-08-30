@@ -5,10 +5,6 @@ _: {
       inherit (pkgs) hyprland;
       inherit (pkgs.hyprlandPlugins) hy3;
 
-      # Stand-in for the HM-generated nix.lua: loads the real hy3 plugin (so the
-      # hy3 config block is actually validated) and returns colors/paths shaped
-      # like the real thing. Any colors.<key> resolves to a valid color, so the
-      # check never needs to track which palette entries hyprland.lua uses.
       testNixLua = pkgs.writeText "nix.lua" ''
         hl.plugin.load("${hy3}/lib/libhy3.so")
         return {

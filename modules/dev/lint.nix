@@ -41,11 +41,6 @@
           touch "$out"
         '';
 
-        # Only the two pre-Nix bootstraps are still real script files; inline
-        # scripts get their shellcheck (bashApp) or `zsh -n` (zshApp) at build
-        # time in pkgs.stubbe. Exception: tmux's commands.sh ships via
-        # home.file (its 600 lines predate strict mode), so it is exercised by
-        # the tmux-session check rather than shellchecked.
         lint-shellcheck = pkgs.runCommand "lint-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
           shellcheck -S warning ${self}/bin/stb-install ${self}/bin/stb-install-nixos
           touch "$out"

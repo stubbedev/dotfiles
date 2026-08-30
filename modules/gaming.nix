@@ -6,8 +6,6 @@ _: {
       pkgs,
       ...
     }:
-    # Gate on host.installed so the installer ISO doesn't carry steam +
-    # 32-bit graphics + lutris (saves ~hundreds of MB of squashfs).
     lib.mkIf config.host.installed {
       programs.steam = {
         enable = true;
@@ -16,10 +14,6 @@ _: {
         # Hyprland's setcap wrapper leaks CAP_SYS_NICE into children's
         # ambient set, which trips bwrap's "Unexpected capabilities but
         # not setuid" check and prevents Steam's FHS env from launching.
-        # Override buildFHSEnv's bubblewrap to strip ambient caps before
-        # invoking the real bwrap. Done via .override (not a wholesale
-        # package replacement) so the NixOS module's own .override on
-        # programs.steam.package still works.
         package = pkgs.steam.override (_prev: {
           buildFHSEnv = pkgs.buildFHSEnv.override {
             bubblewrap = pkgs.symlinkJoin {

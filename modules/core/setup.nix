@@ -1,6 +1,3 @@
-# `privileged = true` wraps the script in the shared sudo-prompt scaffolding
-# and gates it off on NixOS, where the matching `flake.modules.nixos.<aspect>`
-# half owns the same system state declaratively.
 _: {
   flake.modules.homeManager.setup =
     {
@@ -10,9 +7,6 @@ _: {
       ...
     }:
     let
-      # Sudo-prompted wrapper for a privileged setup. Produces the consistent
-      # "Installing <x>" banner, and locks on a hash of the script text so a
-      # switch that changes nothing costs nothing.
       sudoScript =
         name: setup:
         let
@@ -22,13 +16,6 @@ _: {
         pkgs.writeShellScript "setup-${name}" ''
           set -e
 
-          # nh pipes (and hides) activation output, so a switch sitting in a
-          # slow action (update-initramfs, mkcert -install, …) looks hung.
-          # Write progress straight to the terminal when there is one.
-          # `[ -w /dev/tty ]` is not enough: without a controlling terminal the
-          # node exists and tests writable, but opening it fails ("No such
-          # device or address") and `set -e` would abort the whole activation —
-          # so probe with a real open in a subshell.
           if (exec >/dev/tty) 2>/dev/null; then
             exec >/dev/tty 2>&1
           fi
@@ -41,18 +28,12 @@ _: {
             fi
           done
 
-          # No sudo on this host — nothing privileged is possible, so skip.
-          # exit, not return: this is a top-level script, not a sourced file —
-          # `return` here is a bash error that would abort the activation.
           if [ -z "$SUDO" ]; then
             exit 0
           fi
 
           sudo() { "$SUDO" "$@"; }
 
-          # Fingerprint world-readable paths the script depends on, so the lock
-          # invalidates when they appear or disappear (e.g. a display manager
-          # getting installed after the script first ran).
           stateHash=$(
             for p in ${statePathsArg}; do
               if [ -e "$p" ]; then printf '%s:1\n' "$p"; else printf '%s:0\n' "$p"; fi
@@ -74,19 +55,12 @@ _: {
           echo ""
           printf '%s\n' ${lib.escapeShellArg setup.body}
 
-          # No confirmation prompt: activation runs behind nh, which pipes our
-          # stdout/stderr, so a `read -p` blocks invisibly and the switch looks
-          # hung. sudo itself still authenticates on /dev/tty when the
-          # timestamp has expired, so the privilege gate stays interactive
-          # where it must be.
           ${setup.script}
           mkdir -p "$HOME/.local/state/nix/home-manager"
           echo -n "$combinedHash" > "$lockFile"
           echo ""
         '';
 
-      # A privileged setup is skipped on NixOS: modules/<aspect>.nix's nixos
-      # half owns that system state there.
       onNixOS = config.host.platform == "nixos";
       wanted = lib.filterAttrs (_: s: s.enable && !(s.privileged && onNixOS)) config.stubbe.setup;
     in

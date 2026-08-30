@@ -1,7 +1,4 @@
 _: {
-  # Not covered: the systemd wiring (timer cadence, the .path unit) and the
-  # real EC's rejection of a start > end write — both need a machine, not a
-  # sandbox. What is covered is every branch that decides the numbers.
   perSystem =
     { pkgs, ... }:
     {
@@ -25,8 +22,6 @@ _: {
             printf 'Mains' >"$root/ps/AC/type"
             printf 'Battery' >"$root/ps/BAT0/type"
 
-            # Stub PPD: records every call, and answers `list` with the three
-            # profiles this laptop actually exposes.
             ppd_log="$root/ppd.log"
             : >"$ppd_log"
             cat >"$root/bin/powerprofilesctl" <<'STUB'
@@ -52,7 +47,6 @@ _: {
 
             fail() { echo "FAIL: $1" >&2; exit 1; }
 
-            # $1 = "dow hh mm", $2 = expected start/end, $3 = what it proves
             run() {
               POWER_SOURCE_NOW="$1" bash ${pkgs.writeText "power-source.sh" pkgs.stubbe.powerSourceScript}
               got="$(caps)"
@@ -68,7 +62,6 @@ _: {
             grep -qx 'set performance' "$ppd_log" || fail "on AC the profile should be performance"
             echo "ok: the first run lands on the AC profile"
 
-            # Four Monday unplugs between 16:45 and 17:30.
             printf '1 1020\n1 1035\n1 1005\n1 1050\n' >"$root/state/unplugs"
 
             run "1 16 00" "95/100" "an hour before the usual Monday unplug, top up"
@@ -79,13 +72,9 @@ _: {
             [ "$(sets)" = 1 ] || fail "the timer must not restomp the profile, got $(sets) calls"
             echo "ok: a profile picked by hand survives runs with no power-source change"
 
-            # The manual override wins regardless of the prediction.
             touch "$root/run/full-now"
             run "1 10 00" "95/100" "charge-to-full overrides a far-off prediction"
 
-            # ... and does not survive the charger coming out. On battery the
-            # script only records and exits, so the caps are left as the udev
-            # rule would have set them.
             unplug
             reset
             run "2 17 10" "75/80" "on battery the script leaves the thresholds alone"

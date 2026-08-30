@@ -1,16 +1,10 @@
 { inputs, ... }:
 let
-  # greetd's initial_session execs directly with only the PAM environment, so
-  # the HM session vars have to be sourced here. HOME/USER come from passwd when
-  # unset, or the profile lookups strand the session on a text tty.
   greetdSessionScript = ''
     [ -n "''${USER:-}" ] || USER="$(id -un)"
     [ -n "''${HOME:-}" ] || HOME="$(getent passwd "$USER" | cut -d: -f6)"
     export USER HOME
 
-    # Both profile paths are probed so one script works on both platforms:
-    #   ~/.nix-profile               — standalone home-manager (Ubuntu, ...)
-    #   /etc/profiles/per-user/$USER — home-manager as a NixOS module
     for prof in "$HOME/.nix-profile" "/etc/profiles/per-user/$USER"; do
       if [ -r "$prof/etc/profile.d/hm-session-vars.sh" ]; then
         # shellcheck disable=SC1091  # runtime-only file, absent at lint time
@@ -40,10 +34,6 @@ in
     lib.mkIf config.stubbe.userFeatures.hyprland {
       programs.hyprland.enable = true;
 
-      # No graphical greeter: a Wayland-compositor greeter holds DRM master and
-      # releases it too slowly when an external display is lit, so the incoming
-      # session loses the handoff race and black-screens. Access is gated by
-      # wayle-lock instead, so the session boots locked.
       services.greetd = {
         enable = true;
         settings = {
@@ -51,8 +41,6 @@ in
             command = "${launcher}";
             user = config.host.primaryUser;
           };
-          # agreety is not a compositor and never takes DRM master, so it
-          # reintroduces no handoff race.
           default_session.command = "${lib.getExe' config.services.greetd.package "agreety"} --cmd ${launcher}";
         };
       };
@@ -69,15 +57,10 @@ in
       inherit (config.stubbe) gfx;
       palette = pkgs.stubbe.colors;
 
-      # The live checkout, not the store, so an edit takes effect on the next
-      # dispatch without a rebuild.
       scriptDir = "${config.stubbe.paths.dotfiles}/src/hyprland/scripts";
 
-      # Nix's mesa-libgbm ships no GBM backends, so off-NixOS the binary cannot
-      # find the host drivers. Collapses to a rename on NixOS.
       hyprlandWrapped = gfx.wrapAs "hyprland" pkgs.hyprland;
 
-      # start-hyprland expects `Hyprland`; everything else prefers lowercase.
       hyprlandBothCases = pkgs.linkFarm "hyprland-both-cases" [
         {
           name = "bin/hyprland";
@@ -89,8 +72,6 @@ in
         }
       ];
 
-      # $HOME placeholders expand against the real home; the literal
-      # $XDG_DATA_DIRS placeholder home-manager injects is dropped.
       sessionPaths =
         let
           replaceHome = lib.replaceStrings [ "$HOME" ] [ config.home.homeDirectory ];
@@ -104,7 +85,6 @@ in
           );
         };
 
-      # Without --no-nixgl the upstream watchdog wraps a second time.
       startHyprland = pkgs.runCommand "start-hyprland" { nativeBuildInputs = [ pkgs.makeWrapper ]; } ''
         makeWrapper ${pkgs.hyprland}/bin/start-hyprland $out/bin/start-hyprland \
           --add-flags "--no-nixgl --path ${hyprlandWrapped}/bin/hyprland" \
@@ -118,12 +98,7 @@ in
           --prefix XDG_DATA_DIRS : "${sessionPaths.dataDirs}"
       '';
 
-      # Shells predating a Hyprland restart carry a stale
-      # HYPRLAND_INSTANCE_SIGNATURE and every dispatch fails silently.
       hyprctl = pkgs.writeShellScriptBin "hyprctl" ''
-        # Keep the existing signature when its socket is still live — always the
-        # case when Hyprland itself dispatches an exec bind. Only auto-detect
-        # when the variable is absent or points at a dead instance.
         uid="''${UID:-$(id -u)}"
         hypr_root="/run/user/$uid/hypr"
 
@@ -134,7 +109,6 @@ in
         if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ] && _socket_ok "$HYPRLAND_INSTANCE_SIGNATURE"; then
           : # already correct
         else
-          # Newest instance (by lock file mtime) that has a live socket.
           current_instance=""
           newest_lock=""
           for lockfile in "$hypr_root"/*/hyprland.lock; do
@@ -162,8 +136,6 @@ in
         exec ${lib.getExe' pkgs.systemd "systemctl"} --user start "$self-session.target"
       '';
 
-      # `.src`, not the built package: the generator and the headers it parses
-      # only exist in the source tree.
       hlMetaStub = pkgs.runCommand "hl.meta.lua" { nativeBuildInputs = [ pkgs.python3 ]; } ''
         python3 ${pkgs.hyprland.src}/meta/generateLuaStubs.py --root ${pkgs.hyprland.src} --output "$out"
       '';
@@ -206,7 +178,6 @@ in
         wl-clip-persist
         wtype
         socat
-        # libnotify CLI callers silently no-op without the binary on PATH.
         libnotify
         xdg-desktop-portal
       ]);
@@ -219,7 +190,6 @@ in
 
         "hypr/hl.meta.lua".source = hlMetaStub;
 
-        # hy3 ships no stubs, so these are hand-written and can go stale.
         "hypr/hy3.meta.lua".source = pkgs.stubbe.file "src/hyprland/hy3.meta.lua";
 
         "hypr/hyprtoolkit.conf".text =
@@ -227,7 +197,6 @@ in
             argb = pkgs.stubbe.withArgb;
           in
           ''
-            # Catppuccin Mocha (Mauve), generated from pkgs.stubbe.colors.
             background=${argb.crust}
             base=${argb.base}
             alternate_base=${argb.mantle}
@@ -269,16 +238,11 @@ in
       systemd.user = {
         targets.hyprland-session.Unit = {
           Description = "Hyprland session";
-          # xdg-desktop-portal 1.22+ has Requisite=graphical-session.target but
-          # never starts it, so without this bind the portal fails instantly.
           BindsTo = [ "graphical-session.target" ];
           Before = [ "graphical-session.target" ];
         };
 
         services = {
-          # A unit, not exec-once: a crash would otherwise leave the session
-          # suspending unlocked, and exec-once keeps the old config until the
-          # next login.
           hypridle = {
             Unit = {
               Description = "Hypridle idle daemon (lock, dpms, idle sleep)";
@@ -289,8 +253,6 @@ in
             Install.WantedBy = sessionTarget;
             Service = {
               Type = "simple";
-              # Listener commands (hyprctl, wayle-lock, loginctl) resolve via
-              # PATH, and the systemd user manager's PATH has no nix profile.
               Environment = [ "PATH=${config.stubbe.paths.nixBin}:/usr/bin:/bin" ];
               ExecStart = lib.getExe pkgs.hypridle;
               Restart = "on-failure";
@@ -298,7 +260,6 @@ in
             };
           };
 
-          # Runs from the live checkout, so a restart picks up script edits.
           monitor-toggle = {
             Unit = {
               Description = "DRM hotplug + lid reactor (monitor.toggle.sh)";
@@ -315,8 +276,6 @@ in
             };
           };
 
-          # hyprpolkitagent ships only $out/libexec, no bin entry, so
-          # home-manager's bin-only linking cannot surface it.
           hyprpolkitagent = {
             Unit = {
               Description = "Hyprland polkit authentication agent";
@@ -335,13 +294,8 @@ in
       };
 
       stubbe.setup = {
-        # Auto-reload is off in hyprland.lua: reloading with multiple monitors
-        # re-attaches workspaces and shifts focus. Doing it here lets the focused
-        # workspace be captured first and restored after.
         hyprlandReload.script =
           let
-            # HM activation runs with a stripped PATH that excludes the user
-            # profile, so hyprctl has to be named by absolute path.
             hyprctl = "${config.stubbe.paths.nixBin}/hyprctl";
           in
           lib.getExe (
@@ -376,7 +330,6 @@ in
 
                   export HYPRLAND_INSTANCE_SIGNATURE="$target_instance"
 
-                  # Capture and restore, or a multi-monitor reload shifts focus.
                   before=$(${hyprctl} monitors -j 2>/dev/null) || exit 0
                   focused_ws=$(printf '%s' "$before" \
                     | jq -r 'map(select(.focused == true))[0].activeWorkspace.id // empty')
@@ -385,15 +338,10 @@ in
 
                   ${hyprctl} reload >/dev/null 2>&1 || exit 0
 
-                  # Reload re-enables eDP-1, so the lid-closed layout has to be
-                  # re-applied before workspace restore or workspaces migrate back.
-                  # `hyprctl keyword` is rejected under the Lua config, hence eval.
                   if grep -qi closed /proc/acpi/button/lid/*/state 2>/dev/null; then
                     ${hyprctl} eval "reflow_monitors(true)" >/dev/null 2>&1 || true
                   fi
 
-                  # Legacy `hyprctl dispatch <name> <args>` is parsed as Lua under the
-                  # Lua config, so pass a dispatcher expression instead.
                   while IFS=' ' read -r mon ws; do
                     [ -n "$mon" ] && [ -n "$ws" ] || continue
                     ${hyprctl} dispatch "hl.dsp.focus({ monitor = '$mon' })" >/dev/null 2>&1 || true
@@ -429,8 +377,6 @@ in
           '';
           script =
             let
-              # Installed to /etc rather than referenced as a store path, so
-              # nix-collect-garbage can never remove the file login depends on.
               launcher = "/etc/greetd/hyprland-session.sh";
             in
             ''
@@ -443,7 +389,6 @@ in
                 pacman = [ "greetd" ];
               }}
 
-              # Debian's package usually creates this user; other distros do not.
               if ! getent passwd greeter >/dev/null 2>&1; then
                 sudo useradd --system --create-home --home-dir /var/lib/greetd \
                   --shell /usr/sbin/nologin --user-group \
@@ -454,8 +399,6 @@ in
                 name = "hyprland-session.sh";
                 target = launcher;
                 mode = "0755";
-                # Host /bin/sh, not a store path: login runs this and it must
-                # survive a nix-collect-garbage.
                 text = "#!/bin/sh\n" + greetdSessionScript;
               }}
 
@@ -463,45 +406,29 @@ in
                 name = "greetd-config.toml";
                 target = "/etc/greetd/config.toml";
                 text = ''
-                  # Managed by stubbe — modules/hyprland.nix
                   [terminal]
-                  # VT 7: the Debian/Ubuntu greetd.service unit ships
-                  # `Conflicts=getty@tty7`, so greetd must own tty7 or it
-                  # collides with the un-conflicted getty@tty1 (both grab the
-                  # VT, getty wins the console, autologin never renders →
-                  # stranded on a text tty). tty1..6 stay as recovery consoles.
                   vt = 7
 
-                  # Autologin: no interactive greeter at boot.
                   [initial_session]
                   command = "${launcher}"
                   user = "${config.home.username}"
 
-                  # Fallback after an explicit logout: agreety text prompt (not
-                  # a compositor, never takes DRM master).
                   [default_session]
                   command = "agreety --cmd ${launcher}"
                   user = "greeter"
                 '';
               }}
 
-              # Ubuntu does not pull plymouth-quit-wait into the boot transaction,
-              # so `plymouth quit` runs concurrently with greetd and its VT restore
-              # yanks the console back to tty1. greetd then waits forever for its
-              # VT and autologin never fires.
               ${pkgs.stubbe.installText {
                 name = "greetd-plymouth-order.conf";
                 target = "/etc/systemd/system/greetd.service.d/plymouth-order.conf";
                 text = ''
-                  # Managed by stubbe — modules/hyprland.nix
                   [Unit]
                   After=plymouth-quit.service plymouth-quit-wait.service
                 '';
               }}
               sudo systemctl daemon-reload
 
-              # Disable competing DMs first, so their display-manager.service alias
-              # symlinks come down before greetd claims the name.
               current_dm=""
               if [ -L /etc/systemd/system/display-manager.service ]; then
                 current_dm=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)

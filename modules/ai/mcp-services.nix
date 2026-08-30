@@ -10,9 +10,6 @@
     lib.mkIf (config.features.claudeCode || config.features.codex) (
       let
         system = pkgs.stdenv.hostPlatform.system;
-        # Kept out of this public repo and the world-readable store; proxy-mcp
-        # expands the placeholders in repoWhitelist at runtime.
-        # Edit: hm secret edit mcp-proxy-env.
         proxyEnvPath = "${config.home.homeDirectory}/.config/mcp-proxy/proxy.env";
         inherit (config.stubbe.mcp) servers;
 
@@ -34,13 +31,10 @@
         };
 
         mcpProxy = "${inputs.proxy-mcp.packages.${system}.proxy-mcp}/bin/proxy-mcp";
-        # proxy-mcp spawns `npx`, which needs node on PATH.
         backendPath = "PATH=${pkgs.nodejs}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin:/usr/bin:/bin";
 
-        # Safe: every proxied entry carries the same host/port, only `path` differs.
         proxyHost = (lib.head (lib.attrValues servers.proxied)).host;
         proxyPort = (lib.head (lib.attrValues servers.proxied)).port;
-        # The process must outlive the last backend it might still be retiring.
         procIdleSec = lib.foldl' lib.max 0 (map (p: p.idleSec) (lib.attrValues servers.proxied));
 
         # `type` must be explicit or proxy-mcp defaults to SSE. `addr` is ignored
@@ -86,7 +80,6 @@
         proxiedServices = lib.optionalAttrs (servers.proxied != { }) {
           mcp-proxy = {
             Unit.Description = "MCP proxy (proxy-mcp → ${toString (lib.attrNames servers.proxied)}, socket-activated)";
-            # No [Install]: started on demand by mcp-proxy.socket.
             Service = {
               # notify holds off Accept until every route is registered, so the
               # activating connection waits in the backlog instead of racing it.
@@ -99,9 +92,7 @@
               # --expand-env is global: no other config value may contain a
               # literal `$`.
               ExecStart = "${mcpProxy} --config ${proxyConfig} --expand-env=true --idle-timeout=${toString procIdleSec}s";
-              # A cold `npx` fetch on first run can take this long.
               TimeoutStartSec = 120;
-              # Idle-exit is a clean exit, so only failures should restart.
               Restart = "on-failure";
               RestartSec = 2;
             };

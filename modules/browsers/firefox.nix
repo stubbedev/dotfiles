@@ -19,9 +19,6 @@
           "{7719f622-a980-4a30-ba6a-1a5ad11b677c}" = "pin-unpin-tab";
         };
 
-        # toJSON renders each value in its own JS literal form, so the
-        # int/bool/string distinction is the Nix value's rather than a quoting
-        # detail to get right by hand. Locked means unchangeable in about:config.
         lockedPrefs = {
           "browser.tabs.inTitlebar" = 0;
           "apz.allow_zooming" = true;
@@ -32,11 +29,8 @@
           "browser.gesture.swipe.right" = "Browser:ForwardOrForwardDuplicate";
         };
 
-        # Vendored so nothing is fetched at browser startup.
         catppuccinMocha = "${inputs.tridactyl-theme-src}/themes/catppuccin-mocha.css";
 
-        # Tridactyl's default detection also hints anything with cursor:pointer
-        # or a bare [tabindex], which is far too much on a modern SPA.
         hintSelector = lib.concatStringsSep ", " [
           "a"
           "area"
@@ -61,13 +55,8 @@
         # ~/.mozilla/firefox path; stripping it gets the XDG default instead.
         # libxul.so needs libpng-apng, which the nixpkgs wrapper leaves off
         # LD_LIBRARY_PATH, so ld.so.cache finds the host's stock libpng first.
-        # firefox.desktop uses a PATH-resolved Exec, so bundling upstream gets
-        # its icons and desktop entry while the wrapper still wins.
-        # The new *tab* page has no Firefox policy and is handled by Tridactyl's
-        # `set newtab`; both point at pkgs.stubbe.newtabUrl so new tab and new
-        #                       tab and new window load the same page.
         # Under XWayland libinput gesture events are swallowed unless
-        # MOZ_USE_XINPUT2 is set, so both are set for the X11-fallback path. apz.gtk.touchpad_pinch.enabled enables
+        # MOZ_USE_XINPUT2 is set, so both are set for the X11-fallback path.
         home.packages = [
           (config.stubbe.gfx.bundle {
             pkg = pkgs.firefox.override {
@@ -131,20 +120,15 @@
             unset = [ "MOZ_LEGACY_PROFILES" ];
             prefix.LD_LIBRARY_PATH = "${pkgs.libpng.out}/lib";
           })
-          # Without the registered native messenger Tridactyl cannot read its rc
-          # file, discover local themes or run `:source`.
           pkgs.tridactyl-native
         ];
 
         home.file =
           let
-            # The manifest carries an absolute store path, so a symlink suffices.
             manifest = "${pkgs.tridactyl-native}/lib/mozilla/native-messaging-hosts/tridactyl.json";
           in
           {
             ".mozilla/native-messaging-hosts/tridactyl.json".source = manifest;
-            # Both layouts are listed so registration works whichever path
-            # Firefox ends up using.
             ".config/mozilla/native-messaging-hosts/tridactyl.json".source = manifest;
           };
 

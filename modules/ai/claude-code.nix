@@ -10,11 +10,8 @@ _: {
     }:
     lib.mkIf config.features.claudeCode (
       let
-        # Claude Code sources the user's zsh before every Bash call, so the agent
-        # inherits interactive aliases that block on prompts nobody can answer.
         # The unalias must be on its OWN LINE: zsh expands aliases while parsing
         # a line, so a `;`-joined one comes too late.
-        # Functions survive on purpose: hm, treeman and gwt are functions.
         # No permissionDecision: "allow" here would auto-approve every Bash call.
         noAliasesHook = pkgs.writeShellScript "claude-hook-no-aliases" ''
           exec ${lib.getExe pkgs.jq} -c '{hookSpecificOutput:{hookEventName:"PreToolUse",updatedInput:(.tool_input+{command:("unalias -a 2>/dev/null\n"+.tool_input.command)})}}'
@@ -28,9 +25,6 @@ _: {
             nixd = {
               command = lib.getExe' pkgs.nixd "nixd";
               extensionToLanguage.".nix" = "nix";
-              # No diagnostic.suppress: nixf 2.9 has no "sema-escaping-with"
-              # sname any more, and nixd logs "unknown" for it on every publish.
-              # (src/nvim/lua/lsp.lua still passes it -- same dead setting.)
               settings.nixd.nixpkgs.expr = "import <nixpkgs> { }";
             };
 
@@ -64,7 +58,6 @@ _: {
               extensionToLanguage.".svelte" = "svelte";
             };
 
-            # .blade.php matches on its trailing .php, so this covers Blade too.
             phpantom = {
               command = lib.getExe' pkgs.phpantom_lsp "phpantom_lsp";
               extensionToLanguage.".php" = "php";
@@ -172,9 +165,6 @@ _: {
             };
           };
 
-        # lspServers is only reachable through a plugin, and a marketplace is a
-        # directory on disk. Read-only is fine: a directory marketplace is never
-        # written to.
         lspMarketplace =
           let
             manifest = {
@@ -262,19 +252,11 @@ _: {
             };
           }}
 
-          # Marketplaces and plugin enablement go through jsonSet, not the merge
-          # above: a merge is additive, so a marketplace dropped from this file
-          # would linger in the live settings.json and Claude Code would keep
-          # reporting its plugin as missing. Same reasoning as .mcpServers below.
           ${pkgs.stubbe.jsonSet {
             name = "claude-marketplaces";
             target = "${config.home.homeDirectory}/.claude/settings.json";
             key = "extraKnownMarketplaces";
             value = {
-              # Language servers, generated above. Replaces the hand-written
-              # src/claude/phpantom-lsp marketplace, which only ever registered
-              # .php -- so every other language Claude edited here came back
-              # with no diagnostics at all.
               lsp.source = {
                 source = "directory";
                 path = "${lspMarketplace}";
@@ -325,19 +307,12 @@ _: {
 
           ${pkgs.stubbe.jsonMerge {
             name = "caveman-config";
-            # caveman-config.js resolves $XDG_CONFIG_HOME/caveman/config.json,
-            # falling back to ~/.config/caveman/config.json. Pin defaultMode so
-            # caveman starts "full" on every session regardless of the plugin's
-            # built-in default drifting in a future update.
             target = "${config.home.homeDirectory}/.config/caveman/config.json";
             patch.defaultMode = "full";
           }}
 
           ${pkgs.stubbe.jsonMerge {
             name = "ponytail-config";
-            # Ponytail resolves ~/.config/ponytail/config.json (or
-            # $PONYTAIL_DEFAULT_MODE). Pin defaultMode so every session starts at
-            # a known intensity regardless of the plugin's built-in default.
             target = "${config.home.homeDirectory}/.config/ponytail/config.json";
             patch.defaultMode = "full";
           }}

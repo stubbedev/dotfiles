@@ -51,10 +51,6 @@ _: {
       # ONE php build serves CLI, FPM and FrankenPHP. phpPackageZts replicates
       # frankenphp's internal override *exactly* (pkgs/by-name/fr/frankenphp:
       # phpEmbedWithZts) so its re-override on our buildEnv is a genuine no-op
-      # — buildEnv preserves the extension list and the override chain
-      # (mkBuildEnv uses lib.makeOverridable), so frankenphp ends up embedding
-      # the very same store path we put on PATH. Diverge on any of these args
-      # and nix silently compiles a second php.
       phpPackageZts = phpPackage.override {
         embedSupport = true;
         ztsSupport = true;
@@ -71,13 +67,6 @@ _: {
       # Deliberately NOT `frankenphp.override { inherit php; }`: that only
       # changes which php.ini the binary symlinks, yet rebuilds the whole Go
       # binary (plus a 300M+ go-modules fetch) on every nixpkgs bump. Since
-      # phpPackageZts matches phpEmbedWithZts arg-for-arg, the *cached*
-      # frankenphp already embeds our exact libphp — it just needs pointing at
-      # our extensions, which PHP_INI_SCAN_DIR does. --set beats the
-      # --set-default in nixpkgs' own wrapper.
-      # The assert is the load-bearing part: if nixpkgs adds or changes an arg
-      # in phpEmbedWithZts, our php stops being the one frankenphp embeds and
-      # the extensions would be ABI-mismatched. Fail eval instead.
       frankenphp =
         assert pkgs.frankenphp.php.unwrapped.drvPath == phpPackageZts.unwrapped.drvPath;
         pkgs.symlinkJoin {
@@ -89,10 +78,6 @@ _: {
           '';
         };
 
-      # php-fpm wrapper so `php-fpm` defaults to ~/.config/php/php-fpm.conf
-      # without forcing the user to pass -y every invocation. An explicit
-      # -y / --fpm-config still wins: php-fpm takes the *last* one given.
-      # hiPrio resolves the bin/php-fpm collision with php's own copy.
       phpFpmBin = lib.hiPrio (
         pkgs.writeShellScriptBin "php-fpm" ''
           exec ${php}/bin/php-fpm -y "''${XDG_CONFIG_HOME:-$HOME/.config}/php/php-fpm.conf" "$@"
@@ -119,19 +104,12 @@ _: {
       };
 
       home.packages = with pkgs; [
-        # `php` on PATH is literally frankenphp's embedded interpreter — same
-        # store path, one build. Kept as the real CLI SAPI rather than a
-        # `frankenphp php-cli` shim: php-cli takes only `script.php [args]`
-        # and `-r`, and chokes on -d/-v/-m/-i/-a/stdin.
         php
         phpFpmBin
         frankenphp
         composer
         mago
         tesseract
-        # PHP language server. On global PATH so Claude Code's phpantom-lsp
-        # plugin (src/claude/phpantom-lsp) and any non-nvim consumer find it;
-        # nvim gets its own copy via the wrapper's runtimePkgs.
         phpantom_lsp
       ];
     };

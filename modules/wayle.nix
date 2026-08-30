@@ -64,14 +64,11 @@
         builtins.pathExists psu
         && lib.any (lib.hasPrefix "BAT") (builtins.attrNames (builtins.readDir psu));
 
-      # The gfx symlinkJoin carries no meta.mainProgram.
       wayleBin = lib.getExe' waylePackage "wayle";
 
       launcher = pkgs.stubbe.bashApp {
         name = "wayle-launch";
         text = ''
-          # Environment probing: the session vars may legitimately be unset and
-          # detection loops tolerate failing probes — no strict mode.
           set +e +u +o pipefail
 
           shopt -s nullglob
@@ -88,8 +85,6 @@
             fi
           fi
 
-          # Only scan for a Hyprland instance if we look like a Hyprland session;
-          # otherwise jump straight to launching wayle.
           if [ -z "$CURRENT_INSTANCE" ] && [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
             while [ $attempt -lt 50 ] && [ -z "$CURRENT_INSTANCE" ]; do
               for lockfile in "/run/user/$uid/hypr/"*/hyprland.lock; do
@@ -111,11 +106,6 @@
             export HYPRLAND_INSTANCE_SIGNATURE="$CURRENT_INSTANCE"
           fi
 
-          # A Wayland socket file alone isn't proof a compositor is alive — when a
-          # compositor exits abnormally (or libwayland falls back to wayland-2 because
-          # wayland-1 is taken, then exits) the socket file lingers. libwayland's lock
-          # file is held with flock by the live compositor, so a non-blocking flock
-          # that succeeds means nobody owns the socket.
           _wayland_live() {
             local display="$1"
             [ -S "$runtime/$display" ] || return 1
@@ -123,7 +113,6 @@
             ! flock -n -x "$runtime/$display.lock" true 2>/dev/null
           }
 
-          # Auto-detect WAYLAND_DISPLAY if not set or if the socket is stale.
           if [ -n "$WAYLAND_DISPLAY" ] && _wayland_live "$WAYLAND_DISPLAY"; then
             :
           else
@@ -131,7 +120,6 @@
             attempt=0
             while [ $attempt -lt 50 ] && [ -z "$WAYLAND_DISPLAY" ]; do
               for socket in "$runtime"/wayland-[0-9]*; do
-                # Skip lock/aux files — real sockets are wayland-<digits>, no dot.
                 case "$socket" in *.*) continue ;; esac
                 candidate="''${socket##*/}"
                 if _wayland_live "$candidate"; then
@@ -154,12 +142,6 @@
 
           export GDK_BACKEND=wayland
 
-          # Apply the same wallpaper to every monitor. `wayle wallpaper set` without
-          # --monitor targets all of them, but needs the shell's IPC up first, so retry
-          # in the background (≈10s budget) and don't block the shell launch. Startup-
-          # only; the loop exits as soon as the set succeeds. The wallpaper path is
-          # stubbe.paths.wallpaper — also exported as the WALLPAPER session variable
-          # for the DRM-hotplug listener.
           (
             n=0
             while [ $n -lt 40 ]; do
@@ -171,7 +153,6 @@
             done
           ) &
 
-          # Replace this shell with the desktop shell (no lingering wrapper process).
           exec ${wayleBin} shell
         '';
       };
@@ -208,7 +189,6 @@
           enable = true;
           package = waylePackage;
           systemd.enable = false;
-          # Empty so the module does not also write config.toml.
           settings = { };
           portal.enable = true;
         };
@@ -222,13 +202,9 @@
           (pkgs.stubbe.bashApp {
             name = "wayle-widget";
             text = ''
-              # -u and pipefail, but NOT -e: watchers tolerate transient
-              # command failures (emit_line guards them itself).
               set +e
               set -uo pipefail
 
-              # Emit one reshaped line for a poll-style status cmd: JSON when it has output,
-              # else an empty line (hide-if-empty collapses it). Never exits the watcher.
               emit_line() {
                 local filt="$1" out
                 shift
@@ -237,39 +213,21 @@
                 printf '%s\n' "$(printf '%s' "$out" | jq -c "$filt" 2>/dev/null)"
               }
 
-              # Single tri-state line: map vpn-konform-bar's `class` to an `alt` key that
-              # drives the vpn module's icon-map + color-map (on / connecting / off), tooltip
-              # preserved. Replaces the old three-module hide-if-empty split — one module now
-              # swaps icon + color by state. ("error" → off, matching the old behaviour.)
               vpn_line() {
                 emit_line '{alt: (if .class == "connected" then "on" elif .class == "connecting" then "connecting" else "off" end), tooltip}' vpn-konform-bar status
               }
 
-              # Pass treeman's text through unchanged: its waybar text is a compact
-              # per-bucket "{glyph} {count}" line (configured via status.formats.icon in
-              # ~/.config/treeman/config.yaml), so the bucket glyphs ARE the content. The
-              # treeman custom module drops its own icon-name (config.toml) to avoid a
-              # duplicate leading icon.
               treeman_line() { emit_line '.' treeman-status; }
 
               rt="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
               case "''${1:-}" in
-                # treeman daemon streams lifecycle events; re-render status on each.
-                # --all: global (status aggregates every repo; without it `logs tail`
-                # auto-filters to the cwd, which for a bar widget is wrong/empty).
-                # --since 1s: skip the default 50-event history replay. --json: machine form.
                 treeman-watch)
                   treeman_line
                   treeman logs tail --follow --all --json --since 1s 2>/dev/null |
                     while IFS= read -r _; do treeman_line; done
                   ;;
 
-                # VPN state changes from two sources, both event-driven:
-                #   - the .connecting marker (inotify) → the in-flight "connecting" state
-                #   - the oc-konform tunnel interface up/down (ip monitor) → connected /
-                #     disconnected. The interface is the ground truth: systemd owns the
-                #     openconnect process, and the kernel always reports the link edge.
                 vpn-watch)
                   vpn_line
                   {
@@ -283,10 +241,6 @@
                   done
                   ;;
 
-                # Submap indicator: the hl Lua submap (SUPER+R resize_mode) writes a tmpfs
-                # marker on enter and removes it on exit (see src/hyprland/hyprland.lua), since
-                # it isn't a native Hyprland submap the bar could observe. Show the mode name
-                # while the marker exists, empty (hidden) otherwise.
                 submap-watch)
                   marker="$rt/wayle-submap"
                   emit_submap() {
@@ -299,17 +253,11 @@
                     done
                   ;;
 
-                # Keyboard-layout toast. xkb `grp:toggle` switches the layout internally
-                # (no compositor keybind to hook), so listen to the compositor's event
-                # stream and fire a transient OSD toast on every switch — the bar's
-                # keyboard-input module already shows the persistent state. $2 = hypr.
                 kb-toast)
                   case "''${2:-}" in
                     hypr)
                       sock="$rt/hypr/''${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket2.sock"
                       [ -S "$sock" ] || exit 0
-                      # activelayout>>KEYBOARD,LAYOUT_NAME. Hyprland fires one event per
-                      # keyboard at connect/startup; skip the first 3s so login is quiet.
                       start="$(date +%s)"
                       socat -U - "UNIX-CONNECT:$sock" 2>/dev/null | while IFS= read -r line; do
                         case "$line" in
@@ -666,8 +614,6 @@
                 }
               ''
             );
-            # Buttons always fill the inter-margin box, so margins are the only
-            # size lever. Raise top/bottom to shrink the tiles further.
             "buttons-per-row" = "1/1";
             margin = "15%";
             "margin-top" = "46%";
@@ -766,17 +712,6 @@
               name = "wayle-pam";
               target = "/etc/pam.d/wayle";
               text = ''
-                #%PAM-1.0
-                # gnome-keyring autounlock on the wayle session-lock unlock. Login on these
-                # hosts is greetd *autologin* (no password entered), so the keyring never
-                # PAM-unlocks at boot — the wayle unlock is the only place the login password
-                # is typed, so it must unlock the keyring or Chrome et al. prompt on first use.
-                #
-                # pam_unix is `required` (not `sufficient`): a `sufficient` pass short-circuits
-                # the auth stack and skips the gnome_keyring hook below it. `required` runs the
-                # whole stack, so pam_unix collects the password (AUTHTOK) and gnome_keyring
-                # reads it — the Arch `system-login` ordering. required-failure fails the stack,
-                # so pam_deny is no longer needed. Mirrors NixOS enableGnomeKeyring.
                 auth       required     pam_unix.so nullok
                 auth       optional     ${pamGnomeKeyring}
 
@@ -785,12 +720,6 @@
                 password   required     pam_unix.so nullok
                 password   optional     ${pamGnomeKeyring} use_authtok
 
-                # No gnome_keyring session/auto_start line: the daemon is socket-activated by
-                # systemd (gnome-keyring-daemon.socket). An auto_start here spawns a stray
-                # `gnome-keyring-daemon --unlock` that rebinds $XDG_RUNTIME_DIR/keyring/control
-                # out from under the real daemon — later unlocks then hit the stray while the
-                # D-Bus secrets service stays locked. Auth-phase unlock via the control socket
-                # is all the lock screen needs.
                 session    required     pam_unix.so
               '';
             };

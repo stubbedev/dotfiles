@@ -11,8 +11,6 @@
       ...
     }:
     let
-      # From nix rather than `:TSInstall` compiling at runtime, which is why
-      # runtimePkgs carries no gcc or tree-sitter CLI.
       # Parsers and queries must come from the SAME nvim-treesitter checkout or a
       # grammar drifts from the query written against it. nixpkgs'
       # independently-versioned `tree-sitter-grammars` does drift, and fails with
@@ -68,7 +66,6 @@
           ln -s ${pkgs.vimPlugins.nvim-treesitter-parsers.${lang}}/parser/${lang}.so "$out/parser/${lang}.so"
         '') languages}
 
-        # src/nvim/after/queries/ still layers on top of these.
         ln -s ${pkgs.vimPlugins.nvim-treesitter}/runtime/queries "$out/queries"
       '';
 
@@ -91,8 +88,6 @@
                 ];
               };
 
-              # Same layout vim.pack uses, so nix-supplied runtime dirs and
-              # vim.pack plugins coexist without either knowing about the other.
               specs.treesitter = treesitter-runtime;
 
               runtimePkgs = with pkgs; [
@@ -157,10 +152,8 @@
                 # servers ignore the LSP processId and outlive an unclean exit.
                 util-linux
 
-                # nixd shells out to it for flake eval.
                 nix
 
-                # Several of the servers above are still node programs.
                 nodejs
               ];
             };

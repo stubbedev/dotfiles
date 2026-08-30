@@ -5,11 +5,6 @@ _: {
       virtualisation.docker = {
         enable = true;
 
-        # containerd-snapshotter unlocks multi-arch/OCI image support and is
-        # required by the buildx/compose workflows that pull from the local
-        # registry below. insecure-registries lets `docker push
-        # localhost:5000/...` go over plain HTTP — fine for a host-local
-        # registry, unsafe over the network.
         daemon.settings = {
           features.containerd-snapshotter = true;
           insecure-registries = [ "localhost:5000" ];
@@ -58,12 +53,8 @@ _: {
           registry:2 container on :5000 backed by the registry-data volume.
         '';
         script = ''
-          # Activations run with a stripped PATH; bring the standard system
-          # paths back so `command -v` can find dnf/apt-get/pacman.
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-          # Not installHostPackage: Debian/Ubuntu's distro docker.io lags badly
-          # and lacks compose v2, so use Docker's own convenience script there.
           if ! command -v docker >/dev/null 2>&1; then
             if command -v pacman >/dev/null 2>&1; then
               sudo pacman -S --needed --noconfirm docker docker-compose docker-buildx
@@ -80,9 +71,6 @@ _: {
             fi
           fi
 
-          # Idempotent group + membership. `groupadd -f` is a no-op when the
-          # group exists; the id check avoids a redundant usermod (and its
-          # journal line) on every activation.
           sudo groupadd -f docker
           if ! id -nG ${config.home.username} | tr ' ' '\n' | grep -qx docker; then
             sudo usermod -aG docker ${config.home.username}
@@ -93,10 +81,6 @@ _: {
             sudo systemctl enable --now docker.service >/dev/null 2>&1 || true
           fi
 
-          # Merge required keys into /etc/docker/daemon.json without clobbering
-          # anything added by hand (DNS, registry-mirrors, …). storage-driver is
-          # stripped because it conflicts with containerd-snapshotter. Same
-          # settings as virtualisation.docker.daemon.settings above.
           _stb_patch=${
             (pkgs.formats.json { }).generate "docker-daemon-patch.json" {
               features.containerd-snapshotter = true;
@@ -132,10 +116,6 @@ _: {
           fi
           rm -f "$_stb_current" "$_stb_new"
 
-          # Local registry container. Idempotent: only `docker run` when no
-          # container named `registry` exists; existing ones (running or
-          # stopped) are left alone so we do not churn or wipe in-flight image
-          # blobs on every activation.
           if ! sudo docker inspect registry >/dev/null 2>&1; then
             sudo docker run -d \
               --name registry \

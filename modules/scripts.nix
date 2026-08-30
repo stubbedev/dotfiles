@@ -6,20 +6,10 @@ _: {
   stubbe.lib.tmuxLaunchers = {
     "tmux-pick-session" = ''
 
-      # Live sessions, then snapshots of sessions that are not running. The old
-      # live-only version was a dead end after a reboot: nothing is live, so it
-      # cleared the screen and exited. Selecting a sleeping session wakes it from its
-      # snapshot (windows, layouts, pane commands, scrollback, `claude --resume`).
-      #
-      # `--lines` prints the rows and exits — fzf's ctrl-x reload calls back into it.
 
       DATA_DIR="''${LAZY_TMUX_DATA_DIR:-$HOME/.local/share/lazy-tmux}"
-      # Absolute path to this script: fzf's ctrl-x reload re-runs it for fresh rows.
       SELF=''${0:A}
 
-      # name -> the session's working directory (first pane of its first window).
-      # Snapshots outlive the directory they describe: every deleted worktree leaves
-      # one behind, and waking it lands in a cwd that no longer exists.
       typeset -A SNAPSHOT_PATH
       snapshot_paths() {
         [[ -d $DATA_DIR/sessions ]] || return 0
@@ -28,8 +18,6 @@ _: {
           "$DATA_DIR"/sessions/*.json 2>/dev/null
       }
 
-      # Sessions are named "$(whoami)(repo)" — the prefix is on every row, so it is
-      # noise in the list. Strip it for display only; field 1 keeps the real name.
       label_of() {
         local name="$1" user="''${USER:-$(whoami)}"
         if [[ $name == "$user("*")" ]]; then
@@ -39,16 +27,8 @@ _: {
         print -r -- "$name"
       }
 
-      # Each row is "<name>\t<display>", and fzf is told to render from field 2 on, so
-      # the raw session name survives the render untouched.
       picker_lines() {
-        # `cwd`, not `path`: zsh ties the `path` array to $PATH, so a `local path`
-        # here would blank PATH for the whole function and every lookup would fail.
         local live name ts size cwd
-        # `tmux list-sessions` exits non-zero (and prints to stderr) when no server
-        # is running. We can't pre-check with `pgrep tmux`: it matches by truncated
-        # comm name (15 chars), and this script's own comm is `tmux-pick-sessi`,
-        # which substring-matches "tmux".
         live=$(tmux list-sessions -F "#{session_name}" 2>/dev/null)
 
         while IFS= read -r name; do
@@ -65,11 +45,8 @@ _: {
         while IFS=$'\t' read -r name ts size; do
           [[ -n $name ]] || continue
           grep -qxF "$name" <<< "$live" && continue
-          # Directory gone (deleted worktree, moved repo): hide the row. ctrl-x in
-          # the picker is the way to drop such snapshots for good.
           cwd="''${SNAPSHOT_PATH[$name]}"
           [[ -n $cwd && ! -d $cwd ]] && continue
-          # Timestamp trimmed to the minute; the seconds and offset just add noise.
           printf '%s\t󰒲 %-28s %s  %s\n' \
             "$name" "$(label_of "$name")" "$size" "''${''${ts:0:16}/T/ }"
         done < <(lazy-tmux list 2>/dev/null)
@@ -95,8 +72,6 @@ _: {
       SESSION=''${SELECTED%%$'\t'*}
       [[ -z $SESSION ]] && exit 0
 
-      # Sleeping session: restore it before attaching. @pinned comes back through the
-      # client-attached hook in tmux.conf.
       if ! tmux has-session -t="$SESSION" 2>/dev/null; then
         lazy-tmux wakeup --session "$SESSION" >/dev/null 2>&1 || exit 1
       fi
@@ -119,14 +94,6 @@ _: {
       TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 
       if command -v direnv >/dev/null 2>&1; then
-        # Backgrounded so the tmux switch is never blocked. The new session's
-        # first precmd fires direnv's hook; by then `direnv allow` has run
-        # and the .env vars are available. Fast path (well-formed .envrc)
-        # just re-allows; cold path defers to `denv on` so logic stays
-        # single-sourced in the zsh funcs (modules/shell.nix).
-        # Only touch denv-authored .envrc files. A hand-written .envrc with no
-        # dotenv markers is the user's own — direnv allow / denv on would either
-        # be a no-op or actively rewrite it. Skip when no .envrc exists at all.
         if [[ -f "$SELECTED/.envrc" ]] \
             && grep -qxFe 'dotenv_if_exists' -e 'dotenv' "$SELECTED/.envrc"; then
           (
@@ -139,16 +106,7 @@ _: {
           ) &!
         fi
       fi
-      # `tmux has-session -t=` exact-matches the name, and fails outright when no
-      # server is running — either branch below then starts one. pgrep tmux is no
-      # use as a server check: it substring-matches our own comm (`tmux-pick-proje`,
-      # truncated to 15 chars) and would race against tmux start-up.
       if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-        # Bring back this repo's last snapshot: window names, layouts, pane
-        # commands, shell scrollback, and `claude --resume <id>` for claude panes.
-        # Non-zero exit means there is no snapshot yet — the cold-start path.
-        # @pinned is replayed by the client-attached hook in tmux.conf, which fires
-        # on the attach/switch below.
         if ! lazy-tmux wakeup --session "$TMUXCLIENTNAME" >/dev/null 2>&1; then
           tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
           tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
@@ -168,9 +126,6 @@ _: {
       else
         TMUXCLIENTNAME="$1"
       fi
-      # Wake the snapshot first when the session is not running, so `new -As` below
-      # attaches to a restored session instead of an empty one. Non-zero exit means
-      # there is nothing saved under that name — then `new -As` creates it.
       if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
         lazy-tmux wakeup --session "$TMUXCLIENTNAME" >/dev/null 2>&1
       fi
@@ -205,7 +160,6 @@ _: {
           )
           AWK_FILTER=""
           for pattern in "''${FILTER_PATTERNS[@]}"; do
-            # Escape double quotes and backslashes for awk
             ESCAPED_PATTERN="''${pattern//\\/\\\\}"
             ESCAPED_PATTERN="''${ESCAPED_PATTERN//\"/\\\"}"
             if [[ -n "$AWK_FILTER" ]]; then
@@ -214,7 +168,6 @@ _: {
             AWK_FILTER="$AWK_FILTER index(tolower(\$0), tolower(\"$ESCAPED_PATTERN\")) == 0"
           done
 
-          # Git repos under HOME (outputs absolute paths)
           home_results() {
             fd . \
               --base-directory ~ \
@@ -225,7 +178,6 @@ _: {
               | awk -v home="$HOME" '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print home "/" $0 }'
           }
 
-          # Git repos under /etc/nixos — dotfiles live at /etc/nixos/dotfiles on NixOS
           nixos_results() {
             [[ -d /etc/nixos ]] || return 0
             fd . \
@@ -235,7 +187,6 @@ _: {
               --min-depth 1 \
               --hidden 2>/dev/null \
               | awk '/\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print "/etc/nixos/" $0 }'
-            # /etc/nixos itself might also be a git repo
             [[ -d /etc/nixos/.git ]] && echo "/etc/nixos"
           }
 
@@ -281,7 +232,6 @@ _: {
         '';
         "tmux-lazy-git" = ''
 
-          # Outside a git repo: clear and exit (the keybinding fires regardless of dir).
           if [[ ! -d .git ]] && ! git rev-parse --git-dir >/dev/null 2>&1; then
             clear
             exit 0
@@ -321,11 +271,6 @@ _: {
             exit 0
           fi
 
-          # exec so the TUI owns the pane. As a child of this wrapper it shares
-          # the wrapper's process group, so #{pane_current_command} reads "zsh"
-          # — which makes tmux's toggle_window think the pane fell back to a
-          # bare shell and respawn it, restarting btop and losing its graphs.
-          # remain-on-exit is off, so the pane still closes when the TUI quits.
           exec "$monitor"
         '';
       };
@@ -336,23 +281,10 @@ _: {
         name = "clip";
         runtimeInputs = [ pkgs.coreutils ];
         text = ''
-          # Copy stdin (or the arguments) to the system clipboard from wherever
-          # this shell happens to be: a local Wayland or X11 session, macOS,
-          # inside tmux, or over SSH on a box with no display at all.
-          #
-          # The sink order matters more than the sink list. Over SSH a $DISPLAY
-          # or $WAYLAND_DISPLAY inherited from the *remote* box's own session is
-          # a trap: writing there copies to a machine nobody is looking at, and
-          # reports success. So on a remote host the terminal-side sinks (tmux,
-          # OSC 52) go first and the display sinks are the last resort; on a
-          # local host it is the other way round.
 
           data=$(if [ "$#" -gt 0 ]; then printf '%s' "$*"; else cat; fi)
           [ -n "$data" ] || exit 0
 
-          # tmux's own paste buffer is not one of the sinks below: it is free, it
-          # cannot fail, and it makes `prefix ]` work whichever sink ends up
-          # winning. -w is deliberately absent here — that is sink_tmux's job.
           if [ -n "''${TMUX:-}" ]; then
             printf '%s' "$data" | tmux load-buffer - 2>/dev/null || true
           fi
@@ -379,37 +311,19 @@ _: {
             printf '%s' "$data" | pbcopy
           }
 
-          # tmux >= 3.2: -w forwards the buffer to the *outer* terminal as an
-          # OSC 52 write, which is what carries the copy back across an SSH hop.
-          # Older tmux has no -w and fails here; sink_osc52 then does it by hand.
           sink_tmux() {
             [ -n "''${TMUX:-}" ] || return 1
             printf '%s' "$data" | tmux load-buffer -w - 2>/dev/null
           }
 
-          # The only sink that needs nothing but a terminal: ask the emulator
-          # itself to set the clipboard. Survives any number of SSH hops because
-          # the escape rides the same stream as the text.
           sink_osc52() {
-            # 100 KiB is xterm's default selection limit and far past anything a
-            # path picker produces. Truncating would copy a corrupt value that
-            # still looks plausible, so refuse and let another sink answer.
             [ "''${#data}" -le 102400 ] || return 1
             local b64 seq
             b64=$(printf '%s' "$data" | base64 | tr -d '\n')
             seq="\033]52;c;$b64\a"
             if [ -n "''${TMUX:-}" ]; then
-              # DCS passthrough (needs `allow-passthrough on`, set in
-              # modules/tmux.nix): tmux hands the inner sequence to the outer
-              # terminal. Every ESC inside the wrapper has to be doubled, hence
-              # the \033\033 after `tmux;`.
               seq="\033Ptmux;\033$seq\033\\"
             fi
-            # /dev/tty exists and stats as writable even with no controlling
-            # terminal (cron, a systemd unit, a detached pipeline) — it is the
-            # *open* that fails, with ENXIO. So probe it by opening, and put the
-            # stderr redirect first so the failed open is silent rather than a
-            # stray shell message on an otherwise clean fallback.
             printf '%b' "$seq" 2>/dev/null >/dev/tty
           }
 
@@ -434,7 +348,6 @@ _: {
       hm = pkgs.stubbe.bashApp {
         name = "hm";
         text = ''
-          # Personal home-manager / nixos-rebuild front-end.
           set -euo pipefail
 
           hm_flake_dir="''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}"
@@ -449,11 +362,6 @@ _: {
 
           hm_flake_ref="path:$hm_flake_dir"
 
-          # On NixOS the home-manager CLI isn't installed (submoduleSupport
-          # path in upstream programs/home-manager.nix gates `home.packages`
-          # on `!submoduleSupport.enable`), so switch/build shell out to
-          # nixos-rebuild against nixosConfigurations.<hostname>. Override
-          # the resolved attr with HM_NIXOS_CONFIG if the flake key differs.
           is_nixos() {
             [ -r /etc/os-release ] && grep -q '^ID=nixos' /etc/os-release
           }
@@ -462,20 +370,11 @@ _: {
             echo "''${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
           }
 
-          # --- nh delegation -------------------------------------------------------
-          # nh (nix-community/nh) wraps nixos-rebuild / home-manager with a version
-          # diff (nvd) and nix-output-monitor progress. It ships unconditionally
-          # alongside this script (modules/scripts.nix), so the build/activate
-          # verbs always route through it; the verbs nh doesn't cover (dry-*,
-          # build-vm*, news, instantiate) stay on the raw path below. nh self-elevates
-          # on NixOS, so these calls carry no sudo prefix.
           run_nh() {
             local subcmd="$1"; shift
             local sub=home ref="$hm_flake_ref"
             if is_nixos; then
               sub=os
-              # nh derives the host attr from `hostname` just like nixos_attr's
-              # default; only pin it explicitly when HM_NIXOS_CONFIG overrides.
               [ -n "''${HM_NIXOS_CONFIG:-}" ] && ref="$ref#$HM_NIXOS_CONFIG"
             fi
             nh "$sub" "$subcmd" "$ref" -- --impure "$@"
@@ -484,9 +383,6 @@ _: {
           run_hm_subcmd() {
             local subcmd="$1"; shift
 
-            # Fast path: verbs nh renders with a version diff. boot/test are
-            # NixOS-only. Remaining verbs (dry-*, build-vm*, news, instantiate,
-            # passthrough) fall through to the raw path below.
             case "$subcmd" in
               switch|boot|test|build|repl)
                 if ! is_nixos; then
@@ -503,10 +399,6 @@ _: {
             esac
 
             if is_nixos; then
-              # Only the verbs nh doesn't cover reach here. None activate the
-              # system (switch/boot/test are handled by the nh fast path), so
-              # there's no privileged write and no HM activation to replay —
-              # except dry-activate, which runs the activation script in dry mode.
               local prefix=()
               case "$subcmd" in
                 dry-activate)
@@ -522,7 +414,6 @@ _: {
               "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@"
             else
               case "$subcmd" in
-                # nixos-rebuild-only verbs — no home-manager equivalent.
                 boot|test|dry-activate|dry-build|build-vm|build-vm-with-bootloader|repl)
                   echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
                   return 1
@@ -544,10 +435,6 @@ _: {
           }
 
           run_gc() {
-            # No args: hand off to `nh clean` (all profiles + gcroots + store gc,
-            # with a summary). With explicit args the caller is speaking
-            # nix-collect-garbage's flag language (-d, --delete-older-than …), which
-            # nh clean doesn't share, so pass them to nix-collect-garbage verbatim.
             if [ "$#" -eq 0 ]; then
               if is_nixos; then
                 nh clean all
@@ -558,8 +445,6 @@ _: {
             fi
 
             if is_nixos; then
-              # sudo so the system profile is also collected, not just the
-              # invoking user's. nix-collect-garbage scopes by who runs it.
               sudo nix-collect-garbage "$@"
             else
               nix-collect-garbage "$@"
@@ -568,19 +453,12 @@ _: {
 
           run_generations() {
             if is_nixos; then
-              # nh os info lists the system profile generations as a table.
               nh os info "$@"
             else
               home-manager generations "$@"
             fi
           }
 
-          # Generation trimming on every switch is handled by activation hooks, not
-          # here: modules/nix.nix (system.activationScripts.pruneSystemGenerations)
-          # and modules/nix.nix (home.activation.pruneNixGenerations) both trim
-          # profiles to "current + 1 previous" as part of the switch. Store GC runs on
-          # the weekly nix.gc / nix-collect-garbage timers. So `hm switch`/`upgrade`
-          # need do nothing extra — for an immediate store sweep, run `hm gc`.
 
           ensure_sudo() {
             if [[ "''${1:-}" == "true" ]]; then
@@ -589,9 +467,6 @@ _: {
             fi
           }
 
-          # On NixOS the activate verbs self-sudo deep inside nixos-rebuild, so the
-          # password prompt only appears after inputs are updated and the build runs.
-          # Prime the sudo timestamp upfront so `switch`/`upgrade` prompt immediately.
           prime_sudo_nixos() {
             if is_nixos && has_cmd sudo; then
               echo "Requesting sudo..."
@@ -599,12 +474,6 @@ _: {
             fi
           }
 
-          # --- flake.lock git automation -------------------------------------------
-          # `hm update`/`upgrade` regenerate flake.lock; keep it committed and synced
-          # with the remote without ever stopping on a merge conflict. flake.lock is
-          # fully generated, so a merge driver that keeps the in-progress side ("true"
-          # = exit 0, take current) makes every rebase/pull non-interactive; we then
-          # re-run `nix flake update` so the newest input revs land on top.
           flake_git() {
             git -C "$hm_flake_dir" "$@"
           }
@@ -617,17 +486,11 @@ _: {
             flake_git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1
           }
 
-          # Register the flake.lock merge driver locally. Idempotent; .git/config is
-          # untracked so it can't ship via the repo. .gitattributes maps
-          # `flake.lock merge=flakelock` onto this driver.
           ensure_flakelock_driver() {
             flake_git config merge.flakelock.name "keep current flake.lock (regenerated)" >/dev/null 2>&1 || true
             flake_git config merge.flakelock.driver true >/dev/null 2>&1 || true
           }
 
-          # Absorb remote commits before regenerating so the new lock lands on top of
-          # whatever other hosts already pushed. --autostash protects unrelated dirty
-          # work; the merge driver keeps it conflict-free.
           sync_flake_repo() {
             flake_in_git || return 0
             flake_has_upstream || return 0
@@ -637,9 +500,6 @@ _: {
             }
           }
 
-          # Commit flake.lock iff it changed, then push. A push race (remote moved
-          # between our pull and push) is retried once after another rebase — again
-          # conflict-free via the merge driver.
           commit_flake_lock() {
             flake_in_git || return 0
             flake_git diff --quiet -- flake.lock 2>/dev/null && return 0   # unchanged
@@ -657,12 +517,7 @@ _: {
               echo "flake.lock committed locally; push failed (resolve manually)" >&2
           }
 
-          # --- push freshly-built closure to the binary cache ----------------------
-          # After a switch, upload what THIS machine compiled to nix.stubbe.dev so other
-          # machines substitute it instead of rebuilding (replaces the retired nightly
-          # prebuild CI job). Best-effort: a push failure must never fail the switch.
           push_to_cache() {
-            # ${lib.getExe' pkgs.xilo "xilo"} is templated to an absolute store path; skip if unavailable.
             has_cmd ${lib.getExe' pkgs.xilo "xilo"} || return 0
 
             local tokenFile="$hm_flake_dir/secrets/xilo-token"
@@ -671,9 +526,6 @@ _: {
               return 0
             fi
 
-            # Decrypt the push token with the age identity derived from the SSH key —
-            # the same path sops-nix uses, so it doesn't depend on a materialised
-            # ~/.config/sops/age/keys.txt.
             local ageKey token
             ageKey=$(${lib.getExe pkgs.ssh-to-age} -private-key -i "$HOME/.ssh/id_ed25519" 2>/dev/null) || return 0
             token=$(SOPS_AGE_KEY="$ageKey" ${lib.getExe pkgs.sops} --decrypt \
@@ -682,10 +534,6 @@ _: {
               return 0
             }
 
-            # What we just activated. `xilo push` uploads the full closure but skips
-            # paths the server already has and anything signed by cache.nixos.org, so
-            # only the first-party deltas actually transfer. `default` resolves to the
-            # default/default cache under xilo's namespacing.
             local path
             if is_nixos; then
               path=$(readlink -f /run/current-system 2>/dev/null)
@@ -700,18 +548,11 @@ _: {
               || echo "cache push failed (non-fatal)." >&2
           }
 
-          # Some inputs are pinned to a release tag in flake.nix (tracking master
-          # rebuilds on every upstream commit). Move each pin to the latest GitHub
-          # release before `nix flake update` so the new tags are locked in the same
-          # pass. Best-effort: offline / API failure keeps the current pin.
           release_pinned_repos="PHPantom-dev/phpantom_lsp"
           bump_release_pins() {
             local repo latest name bumped=""
             has_cmd curl || return 0
             for repo in $release_pinned_repos; do
-              # `|| true`: grep -m1 exits at the first match and closes the pipe while
-              # curl is still writing — curl then fails (23) and pipefail + set -e would
-              # kill the whole script silently. Empty $latest is handled below.
               latest=$(curl -fsSL --max-time 10 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
                 | grep -om1 '"tag_name": *"[^"]*"' | cut -d'"' -f4) || true
               [ -n "$latest" ] || continue
@@ -744,9 +585,6 @@ _: {
 
             if has_cmd apt; then
               echo "Updating apt packages"
-              # -qq: errors only — drops the Hit lines, Ubuntu Pro/ESM nag, phasing
-              # notice, and the per-command Summary blocks. apt-get (not apt) is the
-              # stable scripting interface. noninteractive skips needrestart prompts.
               sudo apt-get -qq update
               sudo DEBIAN_FRONTEND=noninteractive apt-get -qq -y upgrade
               sudo apt-get -qq -y autoremove
@@ -775,14 +613,11 @@ _: {
                 sync_flake_repo
               fi
               bump_release_pins
-              # --quiet drops the per-input "copying path …" spam; warnings/errors
-              # still surface. The nh switch afterwards shows the actual version diff.
               nix flake update --flake "$hm_flake_ref" --quiet
               commit_flake_lock
             fi
 
             if has_cmd nix-channel; then
-              # Vestigial on a flakes host; silence the "unpacking N channels…" line.
               nix-channel --update >/dev/null 2>&1 || true
             fi
           }
@@ -825,10 +660,6 @@ _: {
           hm_trust() {
             local name="" pubkey=""
 
-            # Resolve (name, pubkey) from one of three forms:
-            #   1) hm trust <name> <pubkey>            — explicit
-            #   2) hm trust <pubkey>                   — auto-name
-            #   3) cmd | hm trust                      — stdin "<name> <pubkey>" or "<pubkey>"
             if [ "$#" -ge 2 ]; then
               name="$1"; pubkey="$2"
             elif [ "$#" -eq 1 ]; then
@@ -856,10 +687,6 @@ _: {
               return 2
             fi
 
-            # Auto-derive name if not supplied. Prefer the local hostname when
-            # the pubkey is *this machine's* SSH-derived recipient; otherwise
-            # fall back to the pubkey's last 8 chars so the line is at least
-            # eyeball-distinguishable.
             if [ -z "$name" ]; then
               local local_pubkey=""
               if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
@@ -877,9 +704,6 @@ _: {
               return 2
             fi
 
-            # Validate the bech32-encoded age pubkey by attempting an
-            # encryption with it. age fails fast on a bad checksum, so we
-            # don't mutate .sops.yaml on bad input.
             if ! ${lib.getExe pkgs.age} -r "$pubkey" -o /dev/null </dev/null 2>/dev/null; then
               echo "hm trust: '$pubkey' is not a valid age recipient pubkey" >&2
               return 2
@@ -896,7 +720,6 @@ _: {
               return 0
             fi
 
-            # Snapshot for rollback if any sops updatekeys call fails.
             local backup
             backup=$(mktemp)
             cp "$sops_yaml" "$backup"
@@ -907,9 +730,6 @@ _: {
               echo "hm trust: rolled back .sops.yaml" >&2
             }
 
-            # Append the new recipient line directly after the last existing
-            # 'age1...' entry under the age list. Awk preserves comments and
-            # surrounding structure, unlike a YAML round-trip.
             local tmp
             tmp=$(mktemp)
             awk -v new="          - $pubkey  # $name" '
@@ -926,8 +746,6 @@ _: {
 
             echo "Added $name → $pubkey to .sops.yaml"
 
-            # Re-wrap each existing secrets file's data key for the new recipient.
-            # Any failure rolls .sops.yaml back so the repo isn't left half-edited.
             shopt -s nullglob
             local secret count=0
             for secret in "$hm_flake_dir"/secrets/*; do
@@ -961,13 +779,6 @@ _: {
                   "$HOME/.cache/nvim"
                 ;;
               locks)
-                # Privileged activations (modules/core/setup.nix) skip
-                # themselves on each switch when their lock file matches the action
-                # hash + state-input hash. Wiping the lock files forces every gated
-                # activation to re-run on the next switch — useful when
-                # a system file has drifted out from under us (manual edit, package
-                # upgrade clobber, …) and we want home-manager to reassert the
-                # managed copy. See modules/core/setup.nix (sudoScript).
                 local lock_dir="$HOME/.local/state/nix/home-manager"
                 if [ -d "$lock_dir" ]; then
                   local count
@@ -1009,17 +820,14 @@ _: {
             echo "Scanning $root for reclaimable space (build artifacts, caches, core dumps)..." >&2
 
             local -a paths=()
-            # Regenerable build/dependency dirs — match once, don't descend into them.
             while IFS= read -r -d ''' p; do paths+=("$p"); done < <(
               find "$root" -xdev \( -path '*/.git' -o -path "$HOME/.cache" \) -prune -o \
                 \( -name node_modules -o -name target -o -name .next -o -name dist -o -name vendor -o -name .venv \) \
                 -type d -print0 -prune 2>/dev/null
             )
-            # Crash dumps directly under $HOME.
             while IFS= read -r -d ''' p; do paths+=("$p"); done < <(
               find "$HOME" -maxdepth 1 \( -name 'core.[0-9]*' -o -name 'core' \) -type f -print0 2>/dev/null
             )
-            # Cache subdirectories.
             while IFS= read -r -d ''' p; do paths+=("$p"); done < <(
               find "$HOME/.cache" -mindepth 1 -maxdepth 1 -print0 2>/dev/null
             )
@@ -1063,19 +871,12 @@ _: {
               echo "Usage: hm secret {${hmSpec.subNames "secret"}} <name>" >&2
               return 2
             fi
-            # All secrets are binary-mode single-blob files under secrets/<name>.
             local path="$hm_flake_dir/secrets/$name"
             case "$action" in
               edit)
-                # sops handles both create and edit transparently. Pass binary
-                # input/output types so creating a new secret opens an empty
-                # buffer (no yaml starter template).
                 ${lib.getExe pkgs.sops} --input-type binary --output-type binary "$path"
                 ;;
               set)
-                # Replace the secret value without opening an editor. On a TTY
-                # we prompt twice and confirm; piped input goes straight in
-                # (e.g. `secret-tool lookup ... | hm secret set vpn-konform`).
                 local pw=""
                 if [ -t 0 ]; then
                   read -srp "New value for $name: " pw
@@ -1095,10 +896,6 @@ _: {
                   echo "hm secret set: refusing to write empty value" >&2
                   return 1
                 fi
-                # --filename-override makes sops apply the creation_rules for
-                # secrets/<name> even though stdin doesn't have a real path.
-                # Write to a sibling tmp file then rename so a failure mid-
-                # encrypt can't truncate the existing secret.
                 local tmp="$path.new"
                 if ! printf '%s' "$pw" | ${lib.getExe pkgs.sops} --encrypt \
                     --input-type binary --output-type binary \
@@ -1193,8 +990,6 @@ _: {
               run_generations "$@"
               ;;
             "")
-              # `hm` with no args: show usage rather than tripping `set -u`
-              # on `$1` below, or proxying an empty arg to home-manager.
               usage
               exit 2
               ;;
@@ -1213,8 +1008,6 @@ _: {
       nixosIso = pkgs.stubbe.bashApp {
         name = "nixos-iso";
         text = ''
-          # Wrapper around `nix build .#installer-iso` + utilities for writing
-          # the result to a USB stick.
           set -euo pipefail
 
           flake_dir="''${NIXOS_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}"
@@ -1325,10 +1118,6 @@ _: {
               exit 1
             fi
 
-            # Skip rebuild if result link already points to a valid store path
-            # and no extra nix args were given. This avoids the full --impure
-            # re-evaluation (which nix always reruns even when nothing changed)
-            # when the user just ran `hm iso build` moments before.
             if [[ "''${#nix_args[@]}" -gt 0 ]] || \
                ! { [[ -L "$out_link" ]] && [[ -e "$(readlink -f "$out_link" 2>/dev/null || true)" ]]; }; then
               build_iso "''${nix_args[@]}"
@@ -1342,8 +1131,6 @@ _: {
             if command -v pv >/dev/null 2>&1 && [[ "$iso_size" -gt 0 ]]; then
               pv -s "$iso_size" "$iso_path" | sudo dd of="$device" bs=16M conv=fsync
             else
-              # bs=16M: larger chunks reduce syscall overhead.
-              # conv=fsync: single flush at end instead of after every block (oflag=sync).
               sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
             fi
             sync

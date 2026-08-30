@@ -9,11 +9,8 @@
     }:
     let
       inherit (config.stubbe) gfx;
-      # pavucontrol must run against SYSTEM GL, not nixGL: its GTK4 stack crashes
-      # when GL init mixes nixGL and the system NVIDIA driver. So gfx = false (no
-      # nixGL wrap) + unset the inherited nixGL env vars. mkWrappedPackage (not a
-      # bare writeShellScriptBin) so pavucontrol.desktop + icons land on
-      # XDG_DATA_DIRS — a bin-only script drops them and the app vanishes from rofi.
+      # SYSTEM GL, not nixGL: the GTK4 stack crashes when GL init mixes nixGL
+      # and the system NVIDIA driver.
       pavucontrol-wrapped = gfx.bundle {
         pkg = pkgs.pavucontrol;
         gfx = false;
@@ -25,26 +22,22 @@
         ];
       };
 
-      # Bump ghostscript to 10.07.0 just for the user-facing `gs` CLI.
-      # Done at the use site (not via overlay) so reverse deps like libreoffice
-      # and imagemagick keep using cached pkgs.ghostscript.
+      # At the use site, not via an overlay, so reverse deps like libreoffice and
+      # imagemagick keep using the cached pkgs.ghostscript.
       ghostscript-latest = pkgs.ghostscript.overrideAttrs (_old: {
         version = "10.07.0";
         src = inputs.ghostscript-src;
       });
 
-      # Pin ImageMagick to the exact release prod runs (remi `ImageMagick7` on
+      # Pinned to the exact release production runs: clip-path and alpha handling
+      # are version sensitive, so reproducing a bug locally needs the same patch
+      # release.
       # EL9, currently 7.1.2-25). Clip-path and alpha handling is version
-      # sensitive, so matching the patch release is required to reproduce and
-      # verify the KON-12723 download-template blanking locally.
       imagemagick-prod = pkgs.imagemagick.overrideAttrs (_old: {
         version = "7.1.2-25";
         src = inputs.imagemagick-src;
       });
 
-      # libembroidery ships the `sew` CLI for converting/inspecting machine
-      # embroidery files. Not in nixpkgs; built from upstream main since
-      # there are no tagged releases yet (v1.0 still pre-release).
       libembroidery = pkgs.stdenv.mkDerivation {
         pname = "libembroidery";
         version = "unstable";
@@ -86,17 +79,12 @@
         (gfx.wrapExe "ffprobe" ffmpeg-full)
         (gfx.wrapExe "ffplay" ffmpeg-full)
 
-        # gfx.bundle (not a bare wrap): bare gfx on non-NixOS emits only the
-        # nixGL bin/mpv, dropping share/applications/mpv.desktop — so file
-        # managers (pcmanfm/GIO) can't resolve the video/* default the mime maps
-        # point at. gfx.bundle symlinkJoins the upstream pkg, putting the
-        # .desktop + icons back on XDG_DATA_DIRS.
+        # gfx.bundle, not a bare wrap: bare gfx emits only bin/, dropping the
+        # .desktop entry that file managers resolve video/* through.
         (gfx.bundle { pkg = mpv; })
 
         (gfx.bundle { pkg = imv; })
 
-        # yazi's image-preview adapter on alacritty: the terminal has no
-        # graphics protocol, so yazi falls back to ueberzugpp's overlay.
         (gfx.wrapExe "ueberzugpp" ueberzugpp)
 
         pavucontrol-wrapped
