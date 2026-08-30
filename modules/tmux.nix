@@ -16,6 +16,92 @@ _: {
     }:
     let
       p = pkgs.stubbe.withHash;
+
+      # The four pane directions, in the three shapes tmux wants them: the arrow
+      # key half of the bind, tmux's own -L/-R/-U/-D flag, and — for move_pane —
+      # which pane dimension being full-window makes the move a no-op, plus the
+      # `move-pane` flags that put the pane back on the right side of the split.
+      # Written once here because the same four rows drive twelve bind lines in
+      # tmux.conf and four near-identical case branches in commands.sh.
+      directions = [
+        {
+          key = "Left";
+          flag = "L";
+          word = "left";
+          edge = "pane_at_left";
+          token = "left";
+          joinFlags = "-b -h";
+          fullDim = "height";
+        }
+        {
+          key = "Right";
+          flag = "R";
+          word = "right";
+          edge = "pane_at_right";
+          token = "right";
+          joinFlags = "-h";
+          fullDim = "height";
+        }
+        {
+          key = "Up";
+          flag = "U";
+          word = "up";
+          edge = "pane_at_top";
+          token = "top";
+          joinFlags = "-b";
+          fullDim = "width";
+        }
+        {
+          key = "Down";
+          flag = "D";
+          word = "down";
+          edge = "pane_at_bottom";
+          token = "bottom";
+          joinFlags = "";
+          fullDim = "width";
+        }
+      ];
+
+      # Windows 1-10: Alt+<digit> selects, Alt+Shift+<digit> moves the current
+      # pane there. The shifted row is the US-layout shift of each digit, which
+      # tmux names literally, so it is a lookup rather than something derivable
+      # from the number (`#` and `$` are escaped for tmux's config parser).
+      # Window 10 lives on the 0 key.
+      shiftedDigit = {
+        "1" = "!";
+        "2" = "@";
+        "3" = "\\#";
+        "4" = "\\$";
+        "5" = "%";
+        "6" = "^";
+        "7" = "&";
+        "8" = "*";
+        "9" = "(";
+        "10" = ")";
+      };
+      # Sorted numerically: attrset keys are strings, so "10" would otherwise
+      # sort before "2" and the generated binds would come out in that order.
+      windowKeys = lib.sort (a: b: a.n < b.n) (
+        lib.mapAttrsToList (n: shift: {
+          inherit shift;
+          n = lib.toInt n;
+          digit = if n == "10" then "0" else n;
+        }) shiftedDigit
+      );
+
+      # tmux.conf is column-aligned by hand, so a generated row pads its key to
+      # the same field width as the neighbouring literal binds, and its comment
+      # to the same column. `prefix` carries whatever flags precede the key.
+      padTo =
+        n: str: str + lib.concatStrings (lib.genList (_: " ") (lib.max 1 (n - lib.stringLength str)));
+      bindRow =
+        {
+          prefix ? "bind -n ",
+          keyField,
+          commentCol,
+        }:
+        key: body: comment:
+        padTo commentCol (prefix + padTo keyField key + body) + "# " + comment;
     in
     lib.mkIf config.features.desktop {
       home.packages = [ pkgs.lazy-tmux ];
@@ -517,50 +603,27 @@ _: {
               return
             fi
 
+            # One branch per direction, generated from `directions` in
+            # modules/tmux.nix: not at the edge, so swap with the neighbour;
+            # already spanning the perpendicular dimension, so there is nothing
+            # to move into; otherwise re-join at that side of the window.
             case "$direction" in
-            L)
-              edge_flag=$(tmux display-message -p "#{pane_at_left}")
-              if [ "$edge_flag" = "0" ]; then
-                tmux swap-pane -t "{left-of}"
-              elif [ "$pane_height" -eq "$window_height" ]; then
-                return
-              else
-                target_token="{left}"
-                join_flags=(-b -h)
-              fi
-              ;;
-            R)
-              edge_flag=$(tmux display-message -p "#{pane_at_right}")
-              if [ "$edge_flag" = "0" ]; then
-                tmux swap-pane -t "{right-of}"
-              elif [ "$pane_height" -eq "$window_height" ]; then
-                return
-              else
-                target_token="{right}"
-                join_flags=(-h)
-              fi
-              ;;
-            U)
-              edge_flag=$(tmux display-message -p "#{pane_at_top}")
-              if [ "$edge_flag" = "0" ]; then
-                tmux swap-pane -t "{up-of}"
-              elif [ "$pane_width" -eq "$window_width" ]; then
-                return
-              else
-                target_token="{top}"
-                join_flags=(-b)
-              fi
-              ;;
-            D)
-              edge_flag=$(tmux display-message -p "#{pane_at_bottom}")
-              if [ "$edge_flag" = "0" ]; then
-                tmux swap-pane -t "{down-of}"
-              elif [ "$pane_width" -eq "$window_width" ]; then
-                return
-              else
-                target_token="{bottom}"
-              fi
-              ;;
+            ${lib.concatMapStringsSep "\n  " (
+              d:
+              lib.concatStringsSep "\n    " [
+                "${d.flag})"
+                ''edge_flag=$(tmux display-message -p "#{${d.edge}}")''
+                ''if [ "$edge_flag" = "0" ]; then''
+                ("  " + ''tmux swap-pane -t "{${d.word}-of}"'')
+                ''elif [ "$pane_${d.fullDim}" -eq "$window_${d.fullDim}" ]; then''
+                "  return"
+                "else"
+                ("  " + ''target_token="{${d.token}}"'')
+                "  join_flags=(${d.joinFlags})"
+                "fi"
+                ";;"
+              ]
+            ) directions}
             esac
 
             if [ -n "$target_token" ]; then
@@ -686,29 +749,39 @@ _: {
           # ==============================================
           # Pane Navigation (Alt + arrows)
           # ==============================================
-          bind -n M-Left  select-pane -L           # Focus pane left
-          bind -n M-Right select-pane -R           # Focus pane right
-          bind -n M-Up    select-pane -U           # Focus pane up
-          bind -n M-Down  select-pane -D           # Focus pane down
+          ${lib.concatMapStringsSep "\n" (
+            d:
+            bindRow {
+              keyField = 8;
+              commentCol = 41;
+            } "M-${d.key}" "select-pane -${d.flag}" "Focus pane ${d.word}"
+          ) directions}
           bind -n M-W     select-pane -t :.+       # Focus next pane
           bind -n M-w     select-pane -t :.-       # Focus previous pane
 
           # ==============================================
           # Pane Resizing (Alt+Ctrl+arrows, mirrors SUPER_CTRL in Hyprland)
           # ==============================================
-          bind -n -r M-C-Left  resize-pane -L      # Resize pane left
-          bind -n -r M-C-Right resize-pane -R      # Resize pane right
-          bind -n -r M-C-Up    resize-pane -U      # Resize pane up
-          bind -n -r M-C-Down  resize-pane -D      # Resize pane down
+          ${lib.concatMapStringsSep "\n" (
+            d:
+            bindRow {
+              prefix = "bind -n -r ";
+              keyField = 10;
+              commentCol = 41;
+            } "M-C-${d.key}" "resize-pane -${d.flag}" "Resize pane ${d.word}"
+          ) directions}
 
           # ==============================================
           # Pane Management
           # ==============================================
           bind -n M-z       resize-pane -Z                                         # Toggle pane zoom
-          bind -n M-S-Left  run-shell -b "#{@stubbe_commands} move_pane L"         # Move pane left
-          bind -n M-S-Right run-shell -b "#{@stubbe_commands} move_pane R"         # Move pane right
-          bind -n M-S-Up    run-shell -b "#{@stubbe_commands} move_pane U"         # Move pane up
-          bind -n M-S-Down  run-shell -b "#{@stubbe_commands} move_pane D"         # Move pane down
+          ${lib.concatMapStringsSep "\n" (
+            d:
+            bindRow {
+              keyField = 10;
+              commentCol = 73;
+            } "M-S-${d.key}" ''run-shell -b "#{@stubbe_commands} move_pane ${d.flag}"'' "Move pane ${d.word}"
+          ) directions}
           bind -n M-|       split-pane -h          -c "#{pane_current_path}"       # Split horizontal (50%)
           bind -n M-\\      split-pane -h -l '30%' -c "#{pane_current_path}"       # Split horizontal (30%)
           bind -n M--       split-pane -v          -c "#{pane_current_path}"       # Split vertical (50%)
@@ -719,30 +792,28 @@ _: {
           # ==============================================
           # Move Pane to Window (Alt+Shift+Number)
           # ==============================================
-          bind -n M-!  run-shell "#{@stubbe_commands} move_pane_to_window 1"       # Move pane to window 1
-          bind -n M-@  run-shell "#{@stubbe_commands} move_pane_to_window 2"       # Move pane to window 2
-          bind -n M-\# run-shell "#{@stubbe_commands} move_pane_to_window 3"       # Move pane to window 3
-          bind -n M-\$ run-shell "#{@stubbe_commands} move_pane_to_window 4"       # Move pane to window 4
-          bind -n M-%  run-shell "#{@stubbe_commands} move_pane_to_window 5"       # Move pane to window 5
-          bind -n M-^  run-shell "#{@stubbe_commands} move_pane_to_window 6"       # Move pane to window 6
-          bind -n M-&  run-shell "#{@stubbe_commands} move_pane_to_window 7"       # Move pane to window 7
-          bind -n M-*  run-shell "#{@stubbe_commands} move_pane_to_window 8"       # Move pane to window 8
-          bind -n M-(  run-shell "#{@stubbe_commands} move_pane_to_window 9"       # Move pane to window 9
-          bind -n M-)  run-shell "#{@stubbe_commands} move_pane_to_window 10"      # Move pane to window 10
+          ${lib.concatMapStringsSep "\n" (
+            w:
+            bindRow
+              {
+                keyField = 5;
+                commentCol = 73;
+              }
+              "M-${w.shift}"
+              ''run-shell "#{@stubbe_commands} move_pane_to_window ${toString w.n}"''
+              "Move pane to window ${toString w.n}"
+          ) windowKeys}
 
           # ==============================================
           # Window Navigation & Management
           # ==============================================
-          bind -n M-1 select-window -t 1                                           # Go to window 1
-          bind -n M-2 select-window -t 2                                           # Go to window 2
-          bind -n M-3 select-window -t 3                                           # Go to window 3
-          bind -n M-4 select-window -t 4                                           # Go to window 4
-          bind -n M-5 select-window -t 5                                           # Go to window 5
-          bind -n M-6 select-window -t 6                                           # Go to window 6
-          bind -n M-7 select-window -t 7                                           # Go to window 7
-          bind -n M-8 select-window -t 8                                           # Go to window 8
-          bind -n M-9 select-window -t 9                                           # Go to window 9
-          bind -n M-0 select-window -t 10                                          # Go to window 10
+          ${lib.concatMapStringsSep "\n" (
+            w:
+            bindRow {
+              keyField = 4;
+              commentCol = 73;
+            } "M-${w.digit}" "select-window -t ${toString w.n}" "Go to window ${toString w.n}"
+          ) windowKeys}
           bind -n M-n if-shell '[ "$(tmux list-windows | wc -l)" -gt 1 ]' next-window     # Next window
           bind -n M-b if-shell '[ "$(tmux list-windows | wc -l)" -gt 1 ]' previous-window # Previous window
           bind -n M-e new-window -c "#{pane_current_path}"                         # New window in current path

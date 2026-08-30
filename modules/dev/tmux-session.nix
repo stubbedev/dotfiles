@@ -250,6 +250,53 @@
               fail "second Alt+f started a fresh session instead of waking the snapshot"
             ok "Alt+f wakes the snapshot on the second run"
 
+            # ---------------------------------------------------------------
+            # 7. move_pane: all four directions, generated from one table in
+            #    modules/tmux.nix. Two panes side by side means the pane is
+            #    always at one horizontal edge and never at a vertical one, so
+            #    L/R exercise the swap path and U/D the full-dimension
+            #    early-return — the two halves of every generated branch.
+            # ---------------------------------------------------------------
+            tmux new-session -d -s move -c "$HOME"
+            tmux split-window -h -t move
+            sleep 1
+
+            # After the split the active pane is the right-hand one.
+            right=$(tmux display-message -p -t move '#{pane_id}')
+            left=$(tmux list-panes -t move -F '#{pane_id}' | grep -vxF "$right")
+
+            tmux run-shell -t move "$commands move_pane L"
+            sleep 1
+            [ "$(tmux list-panes -t move -F '#{pane_id}' | head -1)" = "$right" ] ||
+              fail "move_pane L did not swap the pane leftwards"
+            ok "move_pane L swaps with the left neighbour"
+
+            tmux run-shell -t move "$commands move_pane R"
+            sleep 1
+            [ "$(tmux list-panes -t move -F '#{pane_id}' | head -1)" = "$left" ] ||
+              fail "move_pane R did not swap the pane back"
+            ok "move_pane R swaps with the right neighbour"
+
+            # The other half of each branch: a pane that is already at the edge
+            # it is being pushed towards AND spans the perpendicular dimension
+            # has nowhere to go. A vertical split gives two full-width panes,
+            # so U on the top one and D on the bottom one must both no-op.
+            tmux new-window -t move -c "$HOME"
+            tmux split-window -v -t move
+            sleep 1
+            stacked=$(tmux list-panes -F '#{pane_id}' | tr '\n' ' ')
+            top=$(tmux list-panes -F '#{pane_id}' | head -1)
+            bottom=$(tmux list-panes -F '#{pane_id}' | tail -1)
+
+            tmux select-pane -t "$top"
+            tmux run-shell "$commands move_pane U"
+            tmux select-pane -t "$bottom"
+            tmux run-shell "$commands move_pane D"
+            sleep 1
+            [ "$(tmux list-panes -F '#{pane_id}' | tr '\n' ' ')" = "$stacked" ] ||
+              fail "move_pane U/D moved a pane that already spans the window width"
+            ok "move_pane U/D no-op at the edge they are pushing towards"
+
             touch "$out"
           '';
     };
