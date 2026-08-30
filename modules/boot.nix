@@ -175,6 +175,13 @@ _: {
             # location depends on the bootloader. Both are too host-variable to
             # automate safely, so print the steps; theme files are already in
             # place above.
+            # NOTE: the EOF below is deliberately two columns left of this
+            # block, and must stay there. Nix strips an indented string by its
+            # *minimum* indent — 10 here, set by the PATH= line at the top of
+            # this script — not by each line's own. A terminator aligned with
+            # `cat` therefore renders in column 2, where bash does not accept
+            # it: "here-document delimited by end-of-file", then a syntax
+            # error at the end of the script. Do not tidy the alignment.
             cat >&2 <<'EOF'
 
             INFO: Theme files installed. Three manual steps remain on Arch:
@@ -191,7 +198,7 @@ _: {
                  - systemd-boot: edit /boot/loader/entries/*.conf, append to 'options'
 
               Wiki: https://wiki.archlinux.org/title/Plymouth
-            EOF
+          EOF
 
           else
             echo "Unsupported distribution (no apt-get/dnf/pacman). Theme files staged but boot integration skipped." >&2
