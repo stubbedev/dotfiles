@@ -1,10 +1,5 @@
-// Agent shell calls must never inherit an alias that blocks on a prompt nobody
-// can answer (rm='rm -i', cp='cp -i', mv='mv -i' in modules/shell.nix). Same
-// guard as the claude PreToolUse hook (modules/ai/claude-code.nix): prepend
-// `unalias -a` on its OWN line — zsh expands aliases while parsing a line, so
-// a `;`-joined one comes too late. opencode's bash tool spawns a
-// non-interactive shell today, so this usually has nothing to clear; it exists
-// so a future interactive-shell default cannot hang the agent.
+// Same unalias guard as the claude PreToolUse hook. `unalias -a` must be on its
+// own line: zsh expands aliases while parsing a line.
 //
 // Loaded by ~/.config/opencode/plugins/ (glob: `{plugin,plugins}/*.{ts,js}`,
 // symlinks followed), wired in modules/ai/opencode.nix.

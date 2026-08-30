@@ -1,7 +1,3 @@
-# Language toolchains and the dev-side utilities that go with them.
-#
-# Independent of features.desktop: a headless build box can have
-# development = true, desktop = false.
 { inputs, ... }:
 {
   flake.modules.homeManager.development =
@@ -18,30 +14,25 @@
       home.packages =
         with pkgs;
         [
-          # JavaScript / TypeScript runtimes. nodejs_24, not bare nodejs: the
-          # work monorepo pins engines.node 24.x and yarn 1 hard-fails install on
-          # a mismatch, and yarn must run under the same node — hence the
-          # override on its runtime too.
+          # Pinned: the work monorepo sets engines.node 24.x and yarn 1 hard-fails
+          # on a mismatch, so yarn has to run under the same node.
           nodejs_24
           bun
           pnpm
           (yarn.override { nodejs = nodejs_24; })
           deno
 
-          # JS/TS formatters and linters (these replaced `bun add --global …`).
           prettier
           oxlint
           oxfmt
           stylua
 
-          # Go tools
           gopass
           gotools
           air
           templ
           golangci-lint
 
-          # Database clients
           mongodb-tools
           mongosh
           redis # provides redis-cli
@@ -51,20 +42,16 @@
           freerdp
           openconnect
 
-          # Native/Rust build performance — fast linker plus rustc wrapper. Used
-          # by repos whose .cargo/config.toml wires `linker = "clang"` +
-          # `-fuse-ld=mold`, and by RUSTC_WRAPPER=sccache.
           mold
-          # Lower priority than gcc, which also ships a `cc`.
+          # gcc also ships a `cc`.
           (lib.setPrio 15 clang)
           sccache
           cargo-sweep
           cargo-nextest # preferred test runner: `cargo nextest run`
         ]
         ++ [
-          # gfx.bundle rather than a bare wrap for both of these: it keeps the
-          # .desktop entry and icons on XDG_DATA_DIRS so they show up in rofi on
-          # non-NixOS, where a bare nixGL wrap emits only bin/.
+          # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
+          # the .desktop entry rofi needs.
           (gfx.bundle { pkg = pkgs.neovide; })
         ]
         ++
@@ -75,10 +62,8 @@
         go = {
           enable = true;
           package = pkgs.go_latest;
-          # Relocate the default ~/go to ~/.go so $HOME stays clean. GOBIN is
-          # left unset so it defaults to $GOPATH/bin, which the zsh paths file (modules/shell.nix)
-          # deliberately keeps OFF PATH — `go install` must not shadow
-          # nix-pinned tooling.
+          # GOBIN stays unset so it defaults to $GOPATH/bin, which modules/shell.nix
+          # keeps OFF PATH: `go install` must not shadow nix-pinned tooling.
           env.GOPATH = "${config.home.homeDirectory}/.go";
         };
 
@@ -87,31 +72,20 @@
         direnv = {
           enable = true;
           nix-direnv.enable = true;
-          # Zsh integration is our own zcompiled `direnv hook zsh`
-          # (modules/shell.nix), sourced from the store to avoid a per-shell
-          # eval fork; HM's would inject a second, duplicate hook after ours.
+          # modules/shell.nix already sources a zcompiled hook; HM's would inject
+          # a duplicate after it.
           enableZshIntegration = false;
-          # Silence ALL "direnv: loading/export/…" chatter at the source.
-          # log_filter is an ALLOWLIST — logStatus prints a line only if the
-          # message matches — so a never-matching regex ("$.", a character
-          # after end-of-text, is impossible) suppresses every status line.
-          # Errors go through logError, which ignores log_filter entirely
-          # (hardcoded "direnv: %s"), so real failures still surface.
+          # log_filter is an ALLOWLIST, so a never-matching regex suppresses every
+          # status line. Errors bypass it entirely and still surface.
           config.global.log_filter = "$.";
         };
       };
 
       home.sessionVariables.GOROOT = "${config.programs.go.package}/share/go";
 
-      # Pin pnpm's store dir. pnpm reads this rc itself, so no env var is
-      # needed — and deliberately NOT npm_config_store_dir as a session var:
-      # npm scans every npm_config_* variable and has no `store-dir` key, so it
-      # would print a deprecation warning on every npm invocation.
-      #
-      # force = true lets activation overwrite a pre-existing unmanaged file
-      # (a leftover from a dev container that mounted ~/.config/pnpm and ran
-      # `pnpm config set` inside). Without it, home-manager aborts with
-      # "Existing file ... in the way".
+      # Deliberately not npm_config_store_dir: npm scans every npm_config_*
+      # variable, has no `store-dir` key, and warns on every invocation.
+      # A dev container mounting ~/.config/pnpm can leave an unmanaged file here.
       xdg.configFile."pnpm/rc" = {
         force = true;
         text = ''
@@ -119,18 +93,13 @@
         '';
       };
 
-      # ~/.npmrc holds npm's auth token in plaintext
-      # (//registry.npmjs.org/:_authToken=…), so it is sops-encrypted and the
-      # login survives rebuilds. After `npm login` writes a fresh token,
-      # re-encrypt with `hm secret edit npmrc`.
+      # Holds the auth token in plaintext, so it is sops-encrypted and the login
+      # survives rebuilds. Re-encrypt after `npm login` writes a fresh token.
       sops.secrets.npmrc = pkgs.stubbe.secret {
         name = "npmrc";
         path = "${config.home.homeDirectory}/.npmrc";
       };
 
-      # Node reads NODE_EXTRA_CA_CERTS as a single PEM bundle. Build it from
-      # the OS trust store plus the local mkcert/srv leaf certs, so a
-      # Node-based tool talking to an srv-served https site validates.
       stubbe.setup.nodeCaBundle.script = ''
         # Activations run with a stripped PATH; awk (gawk) and find/xargs
         # (findutils) are not on it, and without them the dedup pass below
@@ -220,24 +189,6 @@
         fi
       '';
 
-      # Reclaim the two dev-artifact sinks that silently balloon /:
-      #
-      #   1. Docker — build cache, dangling images, ANONYMOUS volumes, and
-      #      orphaned buildx builder state. These regularly grow into the
-      #      tens-to-hundreds of GB (a deleted multiarch buildx builder once
-      #      left a 33 GB buildx_buildkit_*_state volume behind). All of it is
-      #      regenerable, so a periodic prune is safe — but only for artifacts
-      #      with no live reference. We deliberately NEVER prune named volumes
-      #      (project DBs hold real data even when "dangling", i.e. merely not
-      #      attached to a running container right now) or tagged images
-      #      (`image prune` without -a only drops untagged layers). Hence the
-      #      restriction to 64-hex anonymous volumes and to buildx state
-      #      volumes whose builder no longer exists.
-      #
-      #   2. Cargo target/ dirs under ~/git — one Rust project's target reached
-      #      166 GB here. Only targets untouched for 30 days are removed (the
-      #      next `cargo build` rebuilds them), and only where a sibling
-      #      Cargo.toml confirms it really is a cargo build dir.
       systemd.user = {
         services.dev-cleanup = {
           Unit.Description = "Prune dev build artifacts (cargo targets, docker cache/volumes)";
@@ -289,10 +240,8 @@
                 fi
               ''}
             '';
-            # Never compete with interactive work.
             Nice = 19;
             IOSchedulingClass = "idle";
-            # A minimal-PATH user unit has to be told where the host docker is.
             Environment = [
               "PATH=/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin"
             ];

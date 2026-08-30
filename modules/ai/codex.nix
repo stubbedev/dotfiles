@@ -25,6 +25,7 @@ _: {
             # unrelated user-defined servers.
             flags = [
               "--yolo"
+              "--dangerously-bypass-hook-trust"
               # Codex's equivalent of Claude's `tui = "fullscreen"`: always
               # use the terminal's alternate screen, including inside Zellij.
               "-c"
