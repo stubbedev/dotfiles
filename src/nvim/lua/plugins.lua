@@ -220,6 +220,11 @@ vim.api.nvim_create_autocmd("UIEnter", {
         engines = { astgrep = { path = "ast-grep" } },
         windowCreationCommand = "lua _G.GrugFarFloat()",
         keymaps = { close = { n = "<esc>" } },
+        -- one line per input instead of label-above-field: 6 header lines
+        -- instead of 15, so results start near the top. Help line stays.
+        showCompactInputs = true,
+        showInputsTopPadding = false,
+        showInputsBottomPadding = false,
       })
     end)
   end,
