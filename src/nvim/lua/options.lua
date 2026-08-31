@@ -72,10 +72,27 @@ o.laststatus = 3 -- one global statusline, not one per window
 o.cmdheight = 0
 
 pcall(function()
-  require("vim._core.ui2").enable()
+  -- messages go to the ephemeral toast window, not the cmdline: with cmdheight=0
+  -- every cmdline message expands into the pager and needs ENTER to dismiss
+  require("vim._core.ui2").enable({
+    msg = {
+      targets = "msg",
+      msg = { timeout = 1500, height = 0.2 },
+    },
+  })
 end)
+
+-- dim the toast so it reads as a footnote, not an alert
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "msg",
+  callback = function()
+    vim.wo.winhighlight = "NormalFloat:Comment,FloatBorder:Comment"
+    vim.wo.winblend = 20
+  end,
+})
 o.showtabline = 1 -- tabline only when lua/statusline.lua says there's something to show
-o.shortmess:append({ W = true, I = true, c = true, C = true })
+o.shortmess:append({ W = true, I = true, c = true, C = true, s = true })
+o.report = 9999 -- no "N lines yanked/deleted" toast
 o.timeoutlen = 300
 o.updatetime = 200
 o.jumpoptions = "view"
