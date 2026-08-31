@@ -186,6 +186,15 @@ _: {
       ...
     }:
     let
+      managedBy = "# managed-by: stubbe suspend-resume-recovery\n";
+
+      sleepTargets = [
+        "suspend.target"
+        "hibernate.target"
+        "hybrid-sleep.target"
+        "suspend-then-hibernate.target"
+      ];
+
       intelHybridModels = {
         alder-lake = [
           151
@@ -448,6 +457,48 @@ _: {
             if command -v systemctl >/dev/null 2>&1; then
               sudo systemctl kill -s HUP systemd-logind.service >/dev/null 2>&1 || true
             fi
+          '';
+        };
+
+        suspendResumeRecovery = {
+          privileged = true;
+          title = "Installing suspend/resume network recovery";
+          body = ''
+            A suspend that stalls past logind's 3min watchdog gets it SIGABRT'd on
+            resume, and the replacement never delivers the PrepareForSleep(false)
+            NetworkManager is waiting on, so NetworkManager stays ASLEEP and
+            manages nothing — no wifi, no wired, until a reboot. Raises the
+            watchdog, and wakes NetworkManager anyway when it still dies.
+          '';
+          stateInputs = [ "/etc/systemd/system/nm-wake-after-resume.service" ];
+          script = ''
+            ${pkgs.stubbe.installText {
+              name = "watchdog.conf";
+              target = "/etc/systemd/system/systemd-logind.service.d/watchdog.conf";
+              text = managedBy + lib.generators.toINI { } { Service.WatchdogSec = "15min"; };
+            }}
+
+            ${pkgs.stubbe.installText {
+              name = "nm-wake-after-resume.service";
+              target = "/etc/systemd/system/nm-wake-after-resume.service";
+              text =
+                managedBy
+                + lib.generators.toINI { listsAsDuplicateKeys = true; } {
+                  Unit = {
+                    Description = "Wake NetworkManager after resume";
+                    After = sleepTargets ++ [ "NetworkManager.service" ];
+                  };
+                  Service = {
+                    Type = "oneshot";
+                    # "-": exits 1 with "Already awake" on every normal resume.
+                    ExecStart = "-/usr/bin/busctl call org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Sleep b false";
+                  };
+                  Install.WantedBy = sleepTargets;
+                };
+            }}
+
+            sudo systemctl daemon-reload
+            sudo systemctl enable nm-wake-after-resume.service >/dev/null
           '';
         };
       };
