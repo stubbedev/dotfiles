@@ -495,7 +495,7 @@ in
                 ${pkgs.stubbe.setup.text {
                   name = unitOf provider;
                   target = "/etc/systemd/system/${unitOf provider}";
-                  text = lib.generators.toINI { listsAsDuplicateKeys = true; } {
+                  text = pkgs.stubbe.gen.unitText {
                     Unit.Description = "openconnect VPN tunnel (${provider})";
                     Service = {
                       Type = "exec";

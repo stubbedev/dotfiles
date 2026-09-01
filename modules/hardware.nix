@@ -247,7 +247,7 @@ in
             ${pkgs.stubbe.setup.text {
               name = "touchpad-rebind.service";
               target = "/etc/systemd/system/touchpad-rebind.service";
-              text = lib.generators.toINI { listsAsDuplicateKeys = true; } {
+              text = pkgs.stubbe.gen.unitText {
                 Unit.Description = "Rebind wedged i2c-hid touchpad after dock undock";
                 Service = {
                   Type = "oneshot";

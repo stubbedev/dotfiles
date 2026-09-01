@@ -113,8 +113,8 @@ _: {
             name = "zram-generator.conf";
             target = "/etc/systemd/zram-generator.conf";
             text =
-              "# managed-by: stubbe zram\n"
-              + lib.generators.toINI { } {
+              pkgs.stubbe.managedBy "zram"
+              + pkgs.stubbe.gen.iniText {
                 zram0 = {
                   zram-size = "ram / 2";
                   compression-algorithm = "zstd";

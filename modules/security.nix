@@ -210,7 +210,7 @@ _: {
             ${pkgs.stubbe.setup.text {
               name = "nix-pam-wrappers.service";
               target = "/etc/systemd/system/nix-pam-wrappers.service";
-              text = lib.generators.toINI { listsAsDuplicateKeys = true; } {
+              text = pkgs.stubbe.gen.unitText {
                 Unit = {
                   Description = "Setup Nix PAM wrappers for non-NixOS systems";
                   DefaultDependencies = "no";

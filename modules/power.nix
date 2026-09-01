@@ -186,7 +186,7 @@ _: {
       ...
     }:
     let
-      managedBy = "# managed-by: stubbe suspend-resume-recovery\n";
+      managedBy = pkgs.stubbe.managedBy "suspend-resume-recovery";
 
       sleepTargets = [
         "suspend.target"
@@ -254,7 +254,7 @@ _: {
           '';
           script =
             let
-              toUnit = lib.generators.toINI { listsAsDuplicateKeys = true; };
+              toUnit = pkgs.stubbe.gen.unitText;
               scriptPath = "/usr/local/sbin/power-source.sh";
             in
             ''
@@ -419,7 +419,7 @@ _: {
                 name = "plocate-ac-only.conf";
                 target = "/etc/systemd/system/plocate-updatedb.service.d/ac-only.conf";
                 text =
-                  "# managed-by: stubbe battery-power\n" + lib.generators.toINI { } { Unit.ConditionACPower = true; };
+                  pkgs.stubbe.managedBy "battery-power" + pkgs.stubbe.gen.iniText { Unit.ConditionACPower = true; };
               }}
               sudo systemctl daemon-reload
             fi
@@ -444,8 +444,8 @@ _: {
               name = "10-lid.conf";
               target = "/etc/systemd/logind.conf.d/10-lid.conf";
               text =
-                "# managed-by: stubbe logind-lid\n"
-                + lib.generators.toINI { } {
+                pkgs.stubbe.managedBy "logind-lid"
+                + pkgs.stubbe.gen.iniText {
                   Login = {
                     HandleLidSwitch = "suspend";
                     HandleLidSwitchExternalPower = "suspend";
@@ -475,7 +475,7 @@ _: {
             ${pkgs.stubbe.setup.text {
               name = "watchdog.conf";
               target = "/etc/systemd/system/systemd-logind.service.d/watchdog.conf";
-              text = managedBy + lib.generators.toINI { } { Service.WatchdogSec = "15min"; };
+              text = managedBy + pkgs.stubbe.gen.iniText { Service.WatchdogSec = "15min"; };
             }}
 
             ${pkgs.stubbe.setup.text {
@@ -483,7 +483,7 @@ _: {
               target = "/etc/systemd/system/nm-wake-after-resume.service";
               text =
                 managedBy
-                + lib.generators.toINI { listsAsDuplicateKeys = true; } {
+                + pkgs.stubbe.gen.unitText {
                   Unit = {
                     Description = "Wake NetworkManager after resume";
                     After = sleepTargets ++ [ "NetworkManager.service" ];
