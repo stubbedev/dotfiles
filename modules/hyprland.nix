@@ -198,9 +198,9 @@ in
           in
           pkgs.stubbe.gen.hyprlang "hyprtoolkit.conf" {
             background = argb.crust;
-            base = argb.base;
+            inherit (argb) base;
             alternate_base = argb.mantle;
-            text = argb.text;
+            inherit (argb) text;
             bright_text = argb.subtext1;
             accent = argb.mauve;
             accent_secondary = argb.lavender;
