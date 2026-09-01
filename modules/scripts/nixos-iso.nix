@@ -3,7 +3,6 @@ _: {
   flake.modules.homeManager.script-nixos-iso =
     {
       config,
-      lib,
       pkgs,
       ...
     }:
