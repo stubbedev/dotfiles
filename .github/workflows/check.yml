@@ -60,4 +60,5 @@ jobs:
             .#checks.x86_64-linux.lint-fmt \
             .#checks.x86_64-linux.lint-shellcheck \
             .#checks.x86_64-linux.eval-nixos-stubbe \
-            .#checks.x86_64-linux.eval-hm-stubbe
+            .#checks.x86_64-linux.eval-hm-stubbe \
+            .#checks.x86_64-linux.rofi-theme
