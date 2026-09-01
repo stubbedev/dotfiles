@@ -336,10 +336,8 @@ in
 
             sudo install -d -m 0755 /var/lib/udisks2
 
-            sudo systemctl daemon-reload
-            if command -v udevadm >/dev/null 2>&1; then
-              sudo udevadm control --reload-rules || true
-            fi
+            ${pkgs.stubbe.setup.reloadUnits}
+            ${pkgs.stubbe.setup.reloadUdev}
             sudo systemctl enable --now udisks2.service
           '';
       };

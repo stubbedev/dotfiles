@@ -328,12 +328,10 @@ _: {
               }}
 
               sudo systemd-tmpfiles --create /etc/tmpfiles.d/power-source.conf >/dev/null 2>&1 || true
-              sudo systemctl daemon-reload
+              ${pkgs.stubbe.setup.reloadUnits}
               sudo systemctl enable --now power-source.timer power-source-full.path >/dev/null 2>&1 || true
 
-              if command -v udevadm >/dev/null 2>&1; then
-                sudo udevadm control --reload-rules >/dev/null 2>&1 || true
-              fi
+              ${pkgs.stubbe.setup.reloadUdev}
             '';
         };
 
@@ -363,9 +361,7 @@ _: {
               '';
             }}
 
-            if command -v udevadm >/dev/null 2>&1; then
-              sudo udevadm control --reload-rules >/dev/null 2>&1 || true
-            fi
+            ${pkgs.stubbe.setup.reloadUdev}
 
             bat=/sys/class/power_supply/BAT0
             if [ -f "$bat/charge_control_end_threshold" ]; then
@@ -421,7 +417,7 @@ _: {
                 text =
                   pkgs.stubbe.managedBy "battery-power" + pkgs.stubbe.gen.iniText { Unit.ConditionACPower = true; };
               }}
-              sudo systemctl daemon-reload
+              ${pkgs.stubbe.setup.reloadUnits}
             fi
           '';
         };
@@ -497,7 +493,7 @@ _: {
                 };
             }}
 
-            sudo systemctl daemon-reload
+            ${pkgs.stubbe.setup.reloadUnits}
             sudo systemctl enable nm-wake-after-resume.service >/dev/null
           '';
         };

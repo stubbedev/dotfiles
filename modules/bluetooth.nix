@@ -131,7 +131,7 @@ _: {
               target = "/etc/polkit-1/rules.d/51-blueman.rules";
             }}
 
-            sudo systemctl daemon-reload
+            ${pkgs.stubbe.setup.reloadUnits}
 
             sudo systemctl reload dbus >/dev/null 2>&1 || true
 

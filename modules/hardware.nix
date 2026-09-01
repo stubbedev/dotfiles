@@ -206,9 +206,7 @@ in
               esac
             done
 
-            if command -v udevadm >/dev/null 2>&1; then
-              sudo udevadm control --reload-rules >/dev/null 2>&1 || true
-            fi
+            ${pkgs.stubbe.setup.reloadUdev}
           '';
         };
 
@@ -256,11 +254,9 @@ in
               };
             }}
 
-            sudo systemctl daemon-reload
+            ${pkgs.stubbe.setup.reloadUnits}
 
-            if command -v udevadm >/dev/null 2>&1; then
-              sudo udevadm control --reload-rules >/dev/null 2>&1 || true
-            fi
+            ${pkgs.stubbe.setup.reloadUdev}
           '';
         };
       };

@@ -45,15 +45,18 @@ _: {
           }
         );
 
+      # `detect` names a command; `have` takes an arbitrary test for cases where
+      # what gets installed is a file rather than something on PATH.
       hostPackage =
         {
-          detect,
+          detect ? null,
+          have ? "command -v ${detect} >/dev/null 2>&1",
           apt,
           dnf,
           pacman,
         }:
         ''
-          if ! command -v ${detect} >/dev/null 2>&1; then
+          if ! { ${have}; }; then
             if command -v apt-get >/dev/null 2>&1; then
               sudo apt-get update
               sudo apt-get install -y --no-install-recommends ${lib.escapeShellArgs apt}
@@ -67,6 +70,20 @@ _: {
             fi
           fi
         '';
+
+      # Both reloads are guarded: setup scripts run under `set -e`, so an
+      # unguarded systemctl aborts the whole entry on a host without systemd.
+      reloadUnits = ''
+        if command -v systemctl >/dev/null 2>&1; then
+          sudo systemctl daemon-reload
+        fi
+      '';
+
+      reloadUdev = ''
+        if command -v udevadm >/dev/null 2>&1; then
+          sudo udevadm control --reload-rules >/dev/null 2>&1 || true
+        fi
+      '';
 
       # Rules want root:polkitd where that group exists, root:root otherwise.
       polkitRule =

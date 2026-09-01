@@ -516,7 +516,7 @@ in
               target = "/etc/polkit-1/rules.d/49-openconnect.rules";
             }}
 
-            sudo systemctl daemon-reload
+            ${pkgs.stubbe.setup.reloadUnits}
           '';
       };
     };

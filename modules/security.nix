@@ -228,7 +228,7 @@ _: {
                 Install.WantedBy = "sysinit.target";
               };
             }}
-            sudo systemctl daemon-reload
+            ${pkgs.stubbe.setup.reloadUnits}
             sudo systemctl enable --now nix-pam-wrappers.service
           '';
         };

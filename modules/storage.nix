@@ -94,20 +94,12 @@ _: {
         script = ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-          if [ ! -e /usr/lib/systemd/system-generators/zram-generator ] \
-             && [ ! -e /lib/systemd/system-generators/zram-generator ]; then
-            if command -v apt-get >/dev/null 2>&1; then
-              sudo apt-get update
-              sudo apt-get install -y --no-install-recommends systemd-zram-generator
-            elif command -v dnf >/dev/null 2>&1; then
-              sudo dnf install -y --setopt=install_weak_deps=False zram-generator
-            elif command -v pacman >/dev/null 2>&1; then
-              sudo pacman -S --needed --noconfirm zram-generator
-            else
-              echo "No supported package manager (apt-get/dnf/pacman) found." >&2
-              exit 1
-            fi
-          fi
+          ${pkgs.stubbe.setup.hostPackage {
+            have = "[ -e /usr/lib/systemd/system-generators/zram-generator ] || [ -e /lib/systemd/system-generators/zram-generator ]";
+            apt = [ "systemd-zram-generator" ];
+            dnf = [ "zram-generator" ];
+            pacman = [ "zram-generator" ];
+          }}
 
           ${pkgs.stubbe.setup.text {
             name = "zram-generator.conf";
@@ -122,7 +114,7 @@ _: {
               };
           }}
 
-          sudo systemctl daemon-reload
+          ${pkgs.stubbe.setup.reloadUnits}
           sudo systemctl restart systemd-zram-setup@zram0.service
         '';
       };

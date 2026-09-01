@@ -427,7 +427,7 @@ in
                   After=plymouth-quit.service plymouth-quit-wait.service
                 '';
               }}
-              sudo systemctl daemon-reload
+              ${pkgs.stubbe.setup.reloadUnits}
 
               current_dm=""
               if [ -L /etc/systemd/system/display-manager.service ]; then
