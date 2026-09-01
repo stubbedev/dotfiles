@@ -74,7 +74,7 @@
       # The contract with aerc: aerc strips this tag on open,
       # maildir.synchronize_flags renames the file to add `S`, and mbsync
       # propagates that to IMAP. Nothing else marks mail as read.
-      notmuchConfig = (pkgs.formats.ini { }).generate "notmuch-config" {
+      notmuchConfig = pkgs.stubbe.gen.ini "notmuch-config" {
         database.path = maildir;
         user = {
           name = "Alexander Bugge Stage";
@@ -139,7 +139,7 @@
 
       # Without maildir-account-path aerc enumerates the shared maildir root and
       # every tab shows both accounts' folders.
-      accountsConf = (pkgs.formats.ini { }).generate "aerc-accounts.conf" {
+      accountsConf = pkgs.stubbe.gen.ini "aerc-accounts.conf" {
         kontainer = {
           source = "notmuch://";
           maildir-account-path = "kontainer";
@@ -333,7 +333,9 @@
           image/*)
             exec less -Rc
             ;;
-          text/html)
+          # text/calendar goes through html-to-md --calendar, which emits
+          # Markdown in the same dialect as the html path — highlight both.
+          text/html|text/calendar)
             syntax=(
               -c 'set filetype=markdown conceallevel=2 concealcursor=nvic'
               -c 'lua pcall(vim.treesitter.start, 0, "markdown")'
@@ -419,8 +421,8 @@
 
           [filters]
           text/html=html-to-md
-          text/plain=cat
-          text/calendar=calendar
+          text/plain=html-to-md --plain
+          text/calendar=html-to-md --calendar
           image/*=chafa --format symbols
 
           [ui]

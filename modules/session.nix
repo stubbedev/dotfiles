@@ -96,7 +96,7 @@
         GTK_THEME_VARIANT = "dark";
       };
 
-      xdg.configFile."starship.toml".source = (pkgs.formats.toml { }).generate "starship.toml" {
+      xdg.configFile."starship.toml".source = pkgs.stubbe.gen.toml "starship.toml" {
         command_timeout = 100;
 
         format = "\${custom.vpn}$all";

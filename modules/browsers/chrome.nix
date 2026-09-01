@@ -219,7 +219,7 @@ _: {
       '';
 
       # Ubuntu 24.04+ gates the userns sandbox on a matching AppArmor profile.
-      stubbe.setup.chromeApparmor = pkgs.stubbe.apparmorSetup {
+      stubbe.setup.chromeApparmor = pkgs.stubbe.setup.apparmor {
         appName = "Chrome";
         profileName = "nix-google-chrome-stable";
         programGlob = "/nix/store/*/share/google/chrome/{chrome,chrome-sandbox}";
@@ -235,8 +235,8 @@ _: {
           (https://start.local, served by srv), and force-installs the managed
           extensions (SurfingKeys, Bitwarden, React DevTools, …).
         '';
-        script = pkgs.stubbe.installFile {
-          source = (pkgs.formats.json { }).generate "stubbedev-newtab.json" (
+        script = pkgs.stubbe.setup.file {
+          source = pkgs.stubbe.gen.json "stubbedev-newtab.json" (
             pkgs.stubbe.chromePolicy pkgs.stubbe.newtabUrl
           );
           target = "/etc/opt/chrome/policies/managed/stubbedev-newtab.json";

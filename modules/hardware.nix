@@ -158,7 +158,7 @@ in
             node_modules trees, causing ENOSPC "file watchers reached" errors.
           '';
           script = ''
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "60-inotify-limits.conf";
               target = "/etc/sysctl.d/60-inotify-limits.conf";
               text = ''
@@ -187,12 +187,12 @@ in
           script = ''
             PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "90-usb-autosuspend-disable.rules";
               target = "/etc/udev/rules.d/90-usb-autosuspend-disable.rules";
               text = usbAutosuspendRules;
             }}
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "90-usb-audio-power.rules";
               target = "/etc/udev/rules.d/90-usb-audio-power.rules";
               text = usbAudioPowerRules;
@@ -223,13 +223,13 @@ in
             the helper script and systemd service they trigger.
           '';
           script = ''
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "90-touchpad-rebind.rules";
               target = "/etc/udev/rules.d/90-touchpad-rebind.rules";
               text = touchpadRebindRules;
             }}
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "91-touchpad-rebind-thunderbolt.rules";
               target = "/etc/udev/rules.d/91-touchpad-rebind-thunderbolt.rules";
               text = ''
@@ -237,14 +237,14 @@ in
               '';
             }}
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "rebind-touchpad.sh";
               target = "/etc/udev/scripts/rebind-touchpad.sh";
               mode = "0755";
               text = "#!/usr/bin/env bash\n" + rebindTouchpadScript;
             }}
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "touchpad-rebind.service";
               target = "/etc/systemd/system/touchpad-rebind.service";
               text = lib.generators.toINI { listsAsDuplicateKeys = true; } {

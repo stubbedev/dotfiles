@@ -48,9 +48,7 @@ _: {
     }:
     let
       theme = pkgs.stubbe.theme;
-      ini = pkgs.formats.ini { };
-
-      qtCtConf = ini.generate "qtct.conf" {
+      qtCtConf = pkgs.stubbe.gen.ini "qtct.conf" {
         Appearance = {
           color_scheme_path = "";
           custom_palette = false;
@@ -138,7 +136,7 @@ _: {
           ".local/share/icons/${theme.cursor}".source = "${pkgs.vimix-cursors}/share/icons/${theme.cursor}";
           ".local/share/icons/Vimix-dark".source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
 
-          ".local/share/flatpak/overrides/global".source = ini.generate "flatpak-global" {
+          ".local/share/flatpak/overrides/global".source = pkgs.stubbe.gen.ini "flatpak-global" {
             Context.filesystems = "xdg-config/gtk-3.0:ro;xdg-config/gtk-4.0:ro;~/.themes:ro;~/.icons:ro;/nix/store:ro";
             Environment = {
               GTK_THEME = "Adwaita-dark";
@@ -149,7 +147,7 @@ _: {
             };
           };
           ".local/share/flatpak/overrides/com.valvesoftware.Steam" = {
-            source = ini.generate "flatpak-steam" {
+            source = pkgs.stubbe.gen.ini "flatpak-steam" {
               Context.filesystems = "/run/user/1000";
             };
             force = true;
@@ -158,7 +156,7 @@ _: {
       };
 
       xdg.configFile = {
-        "Kvantum/kvantum.kvconfig".source = ini.generate "kvantum.kvconfig" {
+        "Kvantum/kvantum.kvconfig".source = pkgs.stubbe.gen.ini "kvantum.kvconfig" {
           General.theme = theme.kvantum;
         };
 
@@ -186,7 +184,7 @@ _: {
               ForegroundVisited = "155,89,182";
             };
           in
-          ini.generate "kdeglobals" {
+          pkgs.stubbe.gen.ini "kdeglobals" {
             General = {
               ColorScheme = "BreezeDark";
               Name = "Breeze Dark";
@@ -270,7 +268,7 @@ _: {
           Snap apps can only see themes installed under /var/lib/snapd/desktop.
           This will install the Vimix icon and cursor themes for snaps.
         '';
-        preCheck = pkgs.stubbe.requirePath "/var/lib/snapd/desktop";
+        preCheck = pkgs.stubbe.setup.requirePath "/var/lib/snapd/desktop";
         script = ''
           ICON_DIR="/var/lib/snapd/desktop/icons"
           sudo mkdir -p "$ICON_DIR"

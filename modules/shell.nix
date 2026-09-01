@@ -1397,7 +1397,7 @@
           " https://github.com/JetBrains/ideavim/blob/master/doc/sethandler.md
           " None, yet.  Possible conflicts: ctrl -6befhjklorsvw
         '';
-        ".prettierrc.json".source = (pkgs.formats.json { }).generate "prettierrc.json" {
+        ".prettierrc.json".source = pkgs.stubbe.gen.json "prettierrc.json" {
           printWidth = 80;
           useTabs = true;
           singleQuote = true;
@@ -1451,7 +1451,7 @@
               let
                 cacheFile = "${config.xdg.cacheHome}/zsh-avahi-hosts";
               in
-              pkgs.writeShellScript "zsh-avahi-hosts-refresh" ''
+              pkgs.stubbe.shellScript "zsh-avahi-hosts-refresh" ''
                 set -u
                 mkdir -p "$(dirname '${cacheFile}')"
                 tmp='${cacheFile}.tmp'

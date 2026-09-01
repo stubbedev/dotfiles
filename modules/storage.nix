@@ -90,7 +90,7 @@ _: {
           OOM threshold is rarely hit.
         '';
         stateInputs = [ "/usr/lib/systemd/system-generators/zram-generator" ];
-        preCheck = pkgs.stubbe.requireCommand "systemctl";
+        preCheck = pkgs.stubbe.setup.requireCommand "systemctl";
         script = ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
@@ -109,7 +109,7 @@ _: {
             fi
           fi
 
-          ${pkgs.stubbe.installText {
+          ${pkgs.stubbe.setup.text {
             name = "zram-generator.conf";
             target = "/etc/systemd/zram-generator.conf";
             text =

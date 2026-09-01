@@ -245,7 +245,9 @@ in
           parted
           rsync
           inputs.disko.packages.${system}.default
-          (pkgs.writeShellScriptBin "stb-install-nixos" (builtins.readFile (self + "/bin/stb-install-nixos")))
+          (pkgs.stubbe.shellScriptBin "stb-install-nixos" (
+            builtins.readFile (self + "/bin/stb-install-nixos")
+          ))
         ];
 
         system.stateVersion = "26.05";

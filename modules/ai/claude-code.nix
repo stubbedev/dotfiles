@@ -165,10 +165,9 @@ _: {
               description = "Language servers for Claude Code's built-in LSP client";
               version = "1.0.0";
             };
-            json = name: value: (pkgs.formats.json { }).generate name value;
           in
           pkgs.linkFarm "claude-lsp-marketplace" {
-            ".claude-plugin/marketplace.json" = json "marketplace.json" {
+            ".claude-plugin/marketplace.json" = pkgs.stubbe.gen.json "marketplace.json" {
               "$schema" = "https://anthropic.com/claude-code/marketplace.json";
               inherit (manifest) name description;
               owner.name = "stubbedev";
@@ -183,8 +182,8 @@ _: {
                 )
               ];
             };
-            "plugins/lsp/.claude-plugin/plugin.json" = json "plugin.json" manifest;
-            "plugins/lsp/.lsp.json" = json "lsp.json" lspServers;
+            "plugins/lsp/.claude-plugin/plugin.json" = pkgs.stubbe.gen.json "plugin.json" manifest;
+            "plugins/lsp/.lsp.json" = pkgs.stubbe.gen.json "lsp.json" lspServers;
           };
       in
       {
@@ -197,7 +196,7 @@ _: {
           pkgs.cship
         ];
 
-        xdg.configFile."cship.toml".source = (pkgs.formats.toml { }).generate "cship.toml" {
+        xdg.configFile."cship.toml".source = pkgs.stubbe.gen.toml "cship.toml" {
           cship = {
             lines = [ "$directory$git_branch$git_status $cship.usage_limits $cship.model.id" ];
             usage_limits = {
@@ -209,7 +208,7 @@ _: {
         };
 
         stubbe.setup.claudeCode.script = ''
-          ${pkgs.stubbe.jsonMerge {
+          ${pkgs.stubbe.setup.jsonMerge {
             name = "claude-settings-patch";
             target = "${config.home.homeDirectory}/.claude/settings.json";
             patch = {
@@ -234,7 +233,7 @@ _: {
             };
           }}
 
-          ${pkgs.stubbe.jsonSet {
+          ${pkgs.stubbe.setup.jsonSet {
             name = "claude-marketplaces";
             target = "${config.home.homeDirectory}/.claude/settings.json";
             key = "extraKnownMarketplaces";
@@ -263,7 +262,7 @@ _: {
             };
           }}
 
-          ${pkgs.stubbe.jsonSet {
+          ${pkgs.stubbe.setup.jsonSet {
             name = "claude-enabled-plugins";
             target = "${config.home.homeDirectory}/.claude/settings.json";
             key = "enabledPlugins";
@@ -287,19 +286,19 @@ _: {
             ] (_: false);
           }}
 
-          ${pkgs.stubbe.jsonMerge {
+          ${pkgs.stubbe.setup.jsonMerge {
             name = "caveman-config";
             target = "${config.home.homeDirectory}/.config/caveman/config.json";
             patch.defaultMode = "full";
           }}
 
-          ${pkgs.stubbe.jsonMerge {
+          ${pkgs.stubbe.setup.jsonMerge {
             name = "ponytail-config";
             target = "${config.home.homeDirectory}/.config/ponytail/config.json";
             patch.defaultMode = "full";
           }}
 
-          ${pkgs.stubbe.jsonSet {
+          ${pkgs.stubbe.setup.jsonSet {
             name = "claude-config-mcp";
             target = "${config.home.homeDirectory}/.claude.json";
             key = "mcpServers";

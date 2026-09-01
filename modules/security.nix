@@ -207,7 +207,7 @@ _: {
             for wayle's session lock. The service will persist across reboots.
           '';
           script = ''
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "nix-pam-wrappers.service";
               target = "/etc/systemd/system/nix-pam-wrappers.service";
               text = lib.generators.toINI { listsAsDuplicateKeys = true; } {

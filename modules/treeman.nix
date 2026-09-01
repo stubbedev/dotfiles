@@ -39,7 +39,7 @@
       ];
 
       xdg.configFile."treeman/config.yaml" = {
-        source = (pkgs.formats.yaml { }).generate "treeman-config.yaml" {
+        source = pkgs.stubbe.gen.yaml "treeman-config.yaml" {
           notifications = {
             enabled = true;
             events = [

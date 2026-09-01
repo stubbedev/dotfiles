@@ -87,7 +87,7 @@ _: {
 
       stubbe.mutable.".config/lazygit/state.yml" = {
         method = "copy";
-        source = (pkgs.formats.yaml { }).generate "lazygit-state.yml" {
+        source = pkgs.stubbe.gen.yaml "lazygit-state.yml" {
           lastupdatecheck = 0;
           startuppopupversion = 5;
           customcommandshistory = [ ];

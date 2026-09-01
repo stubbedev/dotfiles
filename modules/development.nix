@@ -156,7 +156,7 @@
           Unit.Description = "Prune dev build artifacts (cargo targets, docker cache/volumes)";
           Service = {
             Type = "oneshot";
-            ExecStart = pkgs.writeShellScript "dev-cleanup" ''
+            ExecStart = pkgs.stubbe.shellScript "dev-cleanup" ''
               set -u
 
               find="${lib.getExe' pkgs.findutils "find"}"

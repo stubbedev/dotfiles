@@ -653,15 +653,13 @@ _: {
         '';
       };
 
-      xdg.configFile."lazy-tmux/lazy-tmux.toml".source =
-        (pkgs.formats.toml { }).generate "lazy-tmux.toml"
-          {
-            save_interval = "1m";
-            scrollback = {
-              enabled = true;
-              lines = 10000;
-            };
-          };
+      xdg.configFile."lazy-tmux/lazy-tmux.toml".source = pkgs.stubbe.gen.toml "lazy-tmux.toml" {
+        save_interval = "1m";
+        scrollback = {
+          enabled = true;
+          lines = 10000;
+        };
+      };
 
       programs.tmux = {
         enable = true;

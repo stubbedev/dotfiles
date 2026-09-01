@@ -51,9 +51,9 @@ _: {
             ];
           in
           ''
-            ${lib.concatMapStrings pkgs.stubbe.installLink links}
+            ${lib.concatMapStrings pkgs.stubbe.setup.link links}
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "org.blueman.policy";
               target = "/usr/share/polkit-1/actions/org.blueman.policy";
               text = ''
@@ -99,7 +99,7 @@ _: {
               '';
             }}
 
-            ${pkgs.stubbe.installPolkitRule {
+            ${pkgs.stubbe.setup.polkitRule {
               source = pkgs.writeText "51-blueman.rules" ''
                 // blueman's privileged half (blueman-mechanism) guards rfkill, PAN setup,
                 // the DHCP client and pppd behind polkit. Upstream defaults all four to

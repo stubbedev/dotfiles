@@ -494,11 +494,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788182088,
-        "narHash": "sha256-vMDDUCZy1yNqtL/90LnIJ9gAT45YiMc6Px5bpo8jeV0=",
+        "lastModified": 1788284534,
+        "narHash": "sha256-9qXlseu4wUzhPFcaNHZMQxiAVpTZgc3NprXoitfoPfA=",
         "owner": "stubbedev",
         "repo": "html-to-md",
-        "rev": "28d4808882a2d9b63fb36b22b320b53cd0107da1",
+        "rev": "c1410f2448f89e8f34149337543b39e5cca12eca",
         "type": "github"
       },
       "original": {

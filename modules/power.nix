@@ -235,7 +235,7 @@ _: {
         powerSource = {
           privileged = true;
           title = "Installing power-source policy (profile + adaptive charging)";
-          preCheck = pkgs.stubbe.requirePath "/sys/class/power_supply/BAT0/charge_control_end_threshold";
+          preCheck = pkgs.stubbe.setup.requirePath "/sys/class/power_supply/BAT0/charge_control_end_threshold";
           body = ''
             Two things that should follow the charger, and don't on their own:
 
@@ -260,7 +260,7 @@ _: {
             ''
               PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "power-source.sh";
                 target = scriptPath;
                 mode = "0755";
@@ -269,13 +269,13 @@ _: {
                 text = "#!/usr/bin/env bash\n" + pkgs.stubbe.powerSourceScript;
               }}
 
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "power-source-tmpfiles.conf";
                 target = "/etc/tmpfiles.d/power-source.conf";
                 text = "d /run/battery-charge 0775 root users -\n";
               }}
 
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "85-power-source.rules";
                 target = "/etc/udev/rules.d/85-power-source.rules";
                 text = ''
@@ -284,7 +284,7 @@ _: {
                 '';
               }}
 
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "power-source.service";
                 target = "/etc/systemd/system/power-source.service";
                 text = toUnit {
@@ -300,7 +300,7 @@ _: {
                 };
               }}
 
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "power-source.timer";
                 target = "/etc/systemd/system/power-source.timer";
                 text = toUnit {
@@ -314,7 +314,7 @@ _: {
                 };
               }}
 
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "power-source-full.path";
                 target = "/etc/systemd/system/power-source-full.path";
                 text = toUnit {
@@ -353,7 +353,7 @@ _: {
             figure that drifts low.
           '';
           script = ''
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "85-battery-charge-threshold.rules";
               target = "/etc/udev/rules.d/85-battery-charge-threshold.rules";
               text = ''
@@ -383,7 +383,7 @@ _: {
         batteryPower = {
           privileged = true;
           title = "Installing battery power tuning";
-          preCheck = pkgs.stubbe.requirePath "/sys/class/power_supply/BAT0";
+          preCheck = pkgs.stubbe.setup.requirePath "/sys/class/power_supply/BAT0";
           body = ''
             Two unplugged-runtime fixes for this laptop:
 
@@ -404,7 +404,7 @@ _: {
                 lib.sort (a: b: a < b) (lib.concatLists (lib.attrValues intelHybridModels))
               )
             })
-              ${pkgs.stubbe.installHostPackage {
+              ${pkgs.stubbe.setup.hostPackage {
                 detect = "intel_lpmd";
                 apt = [ "intel-lpmd" ];
                 dnf = [ "intel-lpmd" ];
@@ -415,7 +415,7 @@ _: {
             esac
 
             if systemctl list-unit-files plocate-updatedb.service >/dev/null 2>&1; then
-              ${pkgs.stubbe.installText {
+              ${pkgs.stubbe.setup.text {
                 name = "plocate-ac-only.conf";
                 target = "/etc/systemd/system/plocate-updatedb.service.d/ac-only.conf";
                 text =
@@ -440,7 +440,7 @@ _: {
             lid switch edge, not on later display changes (systemd#7690).
           '';
           script = ''
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "10-lid.conf";
               target = "/etc/systemd/logind.conf.d/10-lid.conf";
               text =
@@ -472,13 +472,13 @@ _: {
           '';
           stateInputs = [ "/etc/systemd/system/nm-wake-after-resume.service" ];
           script = ''
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "watchdog.conf";
               target = "/etc/systemd/system/systemd-logind.service.d/watchdog.conf";
               text = managedBy + lib.generators.toINI { } { Service.WatchdogSec = "15min"; };
             }}
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "nm-wake-after-resume.service";
               target = "/etc/systemd/system/nm-wake-after-resume.service";
               text =

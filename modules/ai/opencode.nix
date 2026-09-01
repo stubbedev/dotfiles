@@ -45,7 +45,7 @@ _: {
         # .jsonc wins -- and opencode writes an empty stub there itself.
         xdg.configFile."opencode/opencode.jsonc" = {
           force = true;
-          source = (pkgs.formats.json { }).generate "opencode.jsonc" {
+          source = pkgs.stubbe.gen.json "opencode.jsonc" {
             "$schema" = "https://opencode.ai/config.json";
 
             mcp = config.stubbe.mcp.clients.opencode;
@@ -76,7 +76,7 @@ _: {
           ../../src/opencode/plugins/lsp-warnings.js;
 
         stubbe.setup.opencode.script = ''
-          ${pkgs.stubbe.jsonMerge {
+          ${pkgs.stubbe.setup.jsonMerge {
             name = "opencode-tui-theme";
             target = "${config.home.homeDirectory}/.config/opencode/tui.json";
             patch = {

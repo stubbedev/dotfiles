@@ -15,7 +15,7 @@ _: {
 
       alacrittyGfx = gfx.wrap pkgs.alacritty;
 
-      alacrittyClient = pkgs.writeShellScriptBin "alacritty" ''
+      alacrittyClient = pkgs.stubbe.shellScriptBin "alacritty" ''
         real="${alacrittyGfx}/bin/alacritty"
         socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
 

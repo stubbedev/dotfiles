@@ -238,7 +238,7 @@ in
       # a real file on first run and the next activation refuses to clobber it.
       stubbe.mutable.".config/pcmanfm/default/pcmanfm.conf" = {
         method = "copy";
-        source = (pkgs.formats.ini { }).generate "pcmanfm.conf" {
+        source = pkgs.stubbe.gen.ini "pcmanfm.conf" {
           config.bm_open_method = 0;
           volume = {
             mount_on_startup = 1;
@@ -284,7 +284,7 @@ in
 
       # appimageTools wrappers build their FHS sandbox with bubblewrap, which
       # Ubuntu 24.04+ blocks without a matching AppArmor profile.
-      stubbe.setup.bubblewrapApparmor = pkgs.stubbe.apparmorSetup {
+      stubbe.setup.bubblewrapApparmor = pkgs.stubbe.setup.apparmor {
         appName = "Nix bubblewrap (AppImage/FHS sandbox)";
         profileName = "nix-bubblewrap";
         programGlob = "/nix/store/*/bin/bwrap";
@@ -332,7 +332,7 @@ in
             ];
           in
           ''
-            ${lib.concatMapStrings pkgs.stubbe.installLink links}
+            ${lib.concatMapStrings pkgs.stubbe.setup.link links}
 
             sudo install -d -m 0755 /var/lib/udisks2
 

@@ -80,7 +80,7 @@ _: {
           script = ''
             PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-            ${pkgs.stubbe.installHostPackage {
+            ${pkgs.stubbe.setup.hostPackage {
               detect = "avahi-daemon";
               apt = [
                 "avahi-daemon"
@@ -169,14 +169,14 @@ _: {
           script = ''
             PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-            ${pkgs.stubbe.installHostPackage {
+            ${pkgs.stubbe.setup.hostPackage {
               detect = "sshd";
               apt = [ "openssh-server" ];
               dnf = [ "openssh-server" ];
               pacman = [ "openssh" ];
             }}
 
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "10-stubbedev.conf";
               target = "/etc/ssh/sshd_config.d/10-stubbedev.conf";
               text = ''

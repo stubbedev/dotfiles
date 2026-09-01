@@ -13,7 +13,7 @@ _: {
           actionHash = builtins.hashString "sha256" setup.script;
           statePathsArg = lib.escapeShellArgs setup.stateInputs;
         in
-        pkgs.writeShellScript "setup-${name}" ''
+        pkgs.stubbe.shellScript "setup-${name}" ''
           set -e
 
           if (exec >/dev/tty) 2>/dev/null; then
@@ -35,6 +35,7 @@ _: {
           sudo() { "$SUDO" "$@"; }
 
           stateHash=$(
+            # shellcheck disable=SC2043 # nix-generated list: one path or many
             for p in ${statePathsArg}; do
               if [ -e "$p" ]; then printf '%s:1\n' "$p"; else printf '%s:0\n' "$p"; fi
             done | sha256sum | cut -d' ' -f1
@@ -122,8 +123,8 @@ _: {
                   default = "";
                   description = ''
                     Guard that runs before the banner and the sudo prompt; `exit 0`
-                    to skip this step entirely. See `pkgs.stubbe.requireCommand`
-                    and `pkgs.stubbe.requirePath`.
+                    to skip this step entirely. See `pkgs.stubbe.setup.requireCommand`
+                    and `pkgs.stubbe.setup.requirePath`.
                   '';
                 };
 

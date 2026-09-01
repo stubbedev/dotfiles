@@ -14,7 +14,7 @@ _: {
         })
       ];
 
-      stubbe.setup.slackApparmor = pkgs.stubbe.apparmorSetup {
+      stubbe.setup.slackApparmor = pkgs.stubbe.setup.apparmor {
         appName = "Slack";
         profileName = "nix-slack";
         programGlob = "/nix/store/*/lib/slack/{slack,chrome-sandbox}";

@@ -90,7 +90,7 @@ in
           serviceConfig = {
             Type = "exec";
             LoadCredential = credentialsOf provider home;
-            ExecStart = pkgs.writeShellScript "openconnect-${provider}-run" (runScript {
+            ExecStart = pkgs.stubbe.shellScript "openconnect-${provider}-run" (runScript {
               openconnect = lib.getExe pkgs.openconnect;
               inherit provider;
             });
@@ -480,7 +480,7 @@ in
                 runner = "/usr/local/sbin/openconnect-${provider}-run";
               in
               ''
-                ${pkgs.stubbe.installText {
+                ${pkgs.stubbe.setup.text {
                   name = "openconnect-${provider}-run";
                   target = runner;
                   mode = "0755";
@@ -492,7 +492,7 @@ in
                     };
                 }}
 
-                ${pkgs.stubbe.installText {
+                ${pkgs.stubbe.setup.text {
                   name = unitOf provider;
                   target = "/etc/systemd/system/${unitOf provider}";
                   text = lib.generators.toINI { listsAsDuplicateKeys = true; } {
@@ -511,7 +511,7 @@ in
           ''
             ${perProvider}
 
-            ${pkgs.stubbe.installPolkitRule {
+            ${pkgs.stubbe.setup.polkitRule {
               source = pkgs.writeText "49-openconnect.rules" (polkitRule config.home.username);
               target = "/etc/polkit-1/rules.d/49-openconnect.rules";
             }}

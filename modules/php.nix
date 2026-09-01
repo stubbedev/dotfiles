@@ -79,7 +79,7 @@ _: {
         };
 
       phpFpmBin = lib.hiPrio (
-        pkgs.writeShellScriptBin "php-fpm" ''
+        pkgs.stubbe.shellScriptBin "php-fpm" ''
           exec ${php}/bin/php-fpm -y "''${XDG_CONFIG_HOME:-$HOME/.config}/php/php-fpm.conf" "$@"
         ''
       );
@@ -87,7 +87,7 @@ _: {
       composer = phpPackage.packages.composer.override { inherit php; };
     in
     lib.mkIf config.features.php {
-      xdg.configFile."php/php-fpm.conf".source = (pkgs.formats.ini { }).generate "php-fpm.conf" {
+      xdg.configFile."php/php-fpm.conf".source = pkgs.stubbe.gen.ini "php-fpm.conf" {
         global = {
           pid = "/tmp/php-fpm.pid";
           error_log = "/tmp/php-fpm.log";

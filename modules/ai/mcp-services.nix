@@ -39,7 +39,7 @@
 
         # `type` must be explicit or proxy-mcp defaults to SSE. `addr` is ignored
         # under socket activation but has to stay valid for config validation.
-        proxyConfig = (pkgs.formats.json { }).generate "mcp-proxy.json" {
+        proxyConfig = pkgs.stubbe.gen.json "mcp-proxy.json" {
           mcpProxy = {
             baseURL = "http://${proxyHost}:${toString proxyPort}";
             addr = "${proxyHost}:${toString proxyPort}";

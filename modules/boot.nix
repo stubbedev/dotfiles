@@ -62,7 +62,7 @@ _: {
         script = ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-          ${pkgs.stubbe.installHostPackage {
+          ${pkgs.stubbe.setup.hostPackage {
             detect = "plymouthd";
             apt = [ "plymouth" ];
             dnf = [ "plymouth" ];
@@ -84,7 +84,7 @@ _: {
           fi
 
           if command -v apt-get >/dev/null 2>&1; then
-            ${pkgs.stubbe.installText {
+            ${pkgs.stubbe.setup.text {
               name = "50-plymouth-splash.cfg";
               target = "/etc/default/grub.d/50-plymouth-splash.cfg";
               text = ''

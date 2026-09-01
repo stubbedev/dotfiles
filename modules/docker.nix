@@ -82,7 +82,7 @@ _: {
           fi
 
           _stb_patch=${
-            (pkgs.formats.json { }).generate "docker-daemon-patch.json" {
+            pkgs.stubbe.gen.json "docker-daemon-patch.json" {
               features.containerd-snapshotter = true;
               insecure-registries = [ "localhost:5000" ];
               log-driver = "json-file";
@@ -96,6 +96,8 @@ _: {
           sudo mkdir -p /etc/docker
           _stb_current=$(mktemp)
           if sudo test -f /etc/docker/daemon.json; then
+            # shellcheck disable=SC2024 # sudo is for reading the root-only file;
+            # the redirect target is our own mktemp, written as us.
             sudo cat /etc/docker/daemon.json > "$_stb_current"
           else
             echo '{}' > "$_stb_current"

@@ -159,7 +159,7 @@
 
       sessionTarget = [ "hyprland-session.target" ];
 
-      restartBarIfSessionActive = pkgs.writeShellScript "restart-bar-if-session-active" ''
+      restartBarIfSessionActive = pkgs.stubbe.shellScript "restart-bar-if-session-active" ''
         if ${lib.getExe' pkgs.systemd "systemctl"} --user is-active --quiet ${lib.head sessionTarget}; then
           exec ${lib.getExe' pkgs.systemd "systemctl"} --user restart wayle.service
         fi
@@ -289,7 +289,7 @@
             let
               c = pkgs.stubbe.withHash;
             in
-            (pkgs.formats.toml { }).generate "wayle-config.toml" {
+            pkgs.stubbe.gen.toml "wayle-config.toml" {
               general = {
                 font-sans = "JetBrainsMono Nerd Font";
                 font-mono = "JetBrainsMono Nerd Font";
@@ -555,7 +555,7 @@
           let
             icon = name: "${pkgs.wleave}/share/wleave/icons/${name}.svg";
           in
-          (pkgs.formats.json { }).generate "wleave-layout.json" {
+          pkgs.stubbe.gen.json "wleave-layout.json" {
             css = toString (
               pkgs.writeText "wleave.css" ''
                 window {
@@ -708,7 +708,7 @@
               # cannot dlopen under nix's ld.so anyway.
               pamGnomeKeyring = "${config.home.profileDirectory}/lib/security/pam_gnome_keyring.so";
             in
-            pkgs.stubbe.installText {
+            pkgs.stubbe.setup.text {
               name = "wayle-pam";
               target = "/etc/pam.d/wayle";
               text = ''

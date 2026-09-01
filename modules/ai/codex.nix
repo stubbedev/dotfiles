@@ -22,7 +22,7 @@ _: {
       ];
 
       stubbe.setup.codex.script = ''
-        ${pkgs.stubbe.jsonMerge {
+        ${pkgs.stubbe.setup.jsonMerge {
           name = "codex-hooks";
           target = "${config.home.homeDirectory}/.codex/hooks.json";
           patch = {
