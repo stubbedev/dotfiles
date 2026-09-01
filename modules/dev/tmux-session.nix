@@ -211,15 +211,11 @@
 
             tmux run-shell -t wiring "tmux-pick-project" || true
             sleep 2
-            session_root() {
-              tmux list-sessions -F '#{session_path}' \
-                -f "#{==:#{session_name},$1}"
-            }
-            [ "$(session_root "$proj_session")" = "$repo" ] ||
-              fail "picker did not re-root a session whose directory is gone"
+            tmux has-session -t "=$proj_session" 2>/dev/null ||
+              fail "picker dropped the session instead of switching to it"
             [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}')" = "$repo" ] ||
               fail "idle shell in a deleted directory was not restarted at the project root"
-            ok "dead session root and its stranded pane are repaired"
+            ok "shell stranded in a deleted worktree is restarted in the project"
 
             tmux new-window -t "=$proj_session" -n replayed "tail -f /dev/null"
             sleep 1
@@ -237,6 +233,31 @@
             [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}')" = "$repo" ] ||
               fail "fresh session after a poisoned snapshot did not start in the project"
             ok "poisoned snapshot is discarded instead of replayed"
+
+            # Alt+f runs the picker in a pane of an ATTACHED client. Commands
+            # that refuse to nest there (attach-session: "sessions should be
+            # nested with care") close the window instead of switching, and no
+            # detached-only assertion above notices.
+            script -qfc "tmux attach-session -t =wiring" /dev/null >/dev/null 2>&1 &
+            client_pid=$!
+            client_session() { tmux list-clients -F '#{client_session}' 2>/dev/null; }
+            for _ in $(seq 20); do
+              [ -n "$(client_session)" ] && break
+              sleep 0.5
+            done
+            [ -n "$(client_session)" ] || fail "no client attached — cannot test the nested path"
+
+            tmux kill-session -t "=$proj_session"
+            tmux send-keys -t wiring:1 "tmux-pick-project" Enter
+            for _ in $(seq 20); do
+              client_session | grep -qx "$proj_session" && break
+              sleep 0.5
+            done
+            client_session | grep -qx "$proj_session" ||
+              fail "picker did not switch the attached client to $proj_session"
+            ok "picker switches the client it was invoked from"
+            kill "$client_pid" 2>/dev/null || true
+            sleep 1
 
             tmux new-session -d -s soon -c "$HOME"
             sleep 1

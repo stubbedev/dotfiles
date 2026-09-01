@@ -110,24 +110,17 @@ _: {
         return 0
       }
 
-      # An idle shell whose directory is gone poisons every later
-      # `new-window -c "#{pane_current_path}"`: tmux cannot chdir there and
-      # falls back to its own cwd. Same for shells left in $HOME by a session
-      # whose root died. Nothing is running in them, so restart them at the
-      # project root rather than inherit the drift.
+      # An idle shell whose directory is gone (deleted worktree) poisons every
+      # later `new-window -c "#{pane_current_path}"`: tmux cannot chdir there
+      # and falls back to its own cwd, which is how a project session ends up
+      # opening windows in $HOME. Nothing is running in such a pane, so restart
+      # it at the project root instead of inheriting the drift.
       reroot_dead_panes() {
-        local pane cwd cmd shell root root_gone=0
+        local pane cwd cmd shell
         shell=$(basename "$(tmux show-option -gv default-shell)")
-        # -t on display-message wants a pane, so a session name goes through
-        # a filtered list-sessions instead.
-        root=$(tmux list-sessions -F '#{session_path}' \
-          -f "#{==:#{session_name},$TMUXCLIENTNAME}" 2>/dev/null)
-        [[ -n $root && ! -d $root ]] && root_gone=1
         while IFS=$'\t' read -r pane cwd cmd; do
-          [[ -n $pane && $cmd == "$shell" ]] || continue
-          if [[ ! -d $cwd ]] || [[ $root_gone == 1 && $cwd != "$SELECTED"* ]]; then
-            tmux respawn-pane -k -c "$SELECTED" -t "$pane"
-          fi
+          [[ -n $pane && $cmd == "$shell" && ! -d $cwd ]] || continue
+          tmux respawn-pane -k -c "$SELECTED" -t "$pane"
         done < <(tmux list-panes -s -t "=$TMUXCLIENTNAME" \
           -F $'#{pane_id}\t#{pane_current_path}\t#{pane_current_command}' 2>/dev/null)
       }
@@ -155,10 +148,13 @@ _: {
 
       reroot_dead_panes
 
-      # -c re-roots a session whose original directory is gone; attach-session
-      # switches the calling client when run from inside tmux, so one call
-      # covers both the attached and the detached case.
-      tmux attach-session -t "=$TMUXCLIENTNAME" -c "$SELECTED"
+      # attach-session refuses to run inside a client ("sessions should be
+      # nested with care"), so the two cases stay split.
+      if [[ -n $TMUX ]]; then
+        tmux switch-client -t "=$TMUXCLIENTNAME"
+      else
+        tmux attach-session -t "=$TMUXCLIENTNAME"
+      fi
     '';
     "tmux-new-session" = ''
 
