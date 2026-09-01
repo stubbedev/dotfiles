@@ -408,6 +408,7 @@
           unfunction _settings_init
         '';
         "completions/_denv" = ''
+          #compdef denv
 
           _denv() {
             local -a actions
@@ -468,6 +469,7 @@
           _git_shortcuts "$@"
         '';
         "completions/_hm" = ''
+          #compdef hm
 
           _hm() {
             local context state line
@@ -745,6 +747,10 @@
         ''}
         ${lib.optionalString config.features.docker ''
           cp ${pkgs.docker}/share/zsh/site-functions/_docker $dir/_docker
+        ''}
+        ${lib.optionalString config.features.development ''
+          ${lib.getExe' pkgs.xilo "xilo"} completion zsh > $dir/_xilo
+          ${lib.getExe pkgs.cachix} --zsh-completion-script ${lib.getExe pkgs.cachix} > $dir/_cachix
         ''}
         ${lib.optionalString config.features.php ''
           ${pkgs.frankenphp}/bin/frankenphp completion zsh \

@@ -31,6 +31,7 @@ _: {
         .sk_theme .resultPage { color: ${c.lavender}; }
 
         /* Omnibar — Tridactyl's command line: flat dark, 2px lavender border. */
+        #sk_omnibar {
           background: ${c.base};
           border: 2px solid ${c.lavender};
           box-shadow: 0 0 20px ${c.crust};
@@ -39,10 +40,14 @@ _: {
            width:80%. SurfingKeys' #sk_omnibar is already left:10% width:80%;
            only the vertical offset differs (.sk_omnibar_middle defaults to
            top:10%), so pin it to 25%. ID+class outranks the stock class. */
+        #sk_omnibar.sk_omnibar_middle {
           top: 25%;
         }
+        #sk_omnibarSearchArea {
           border-bottom: 1px solid ${c.surface0};
         }
+        #sk_omnibarSearchArea input,
+        #sk_omnibarSearchArea > input {
           background: transparent;
           color: ${c.text};
           font-size: 1.5rem;          /* Tridactyl #tridactyl-input */
@@ -50,18 +55,25 @@ _: {
 
         /* Result rows — flat list, no favicon icons (Tridactyl hides td.icon).
            0.8rem matches Tridactyl's #completions table (smaller than the input). */
+        #sk_omnibarSearchResult .icon { display: none !important; }
+        #sk_omnibarSearchResult > ul > li,
         .sk_theme #sk_omnibarSearchResult > ul > li:nth-child(odd) {
           background: ${c.base};
           color: ${c.text};
           font-size: 0.8rem;
         }
+        #sk_omnibarSearchResult .title { color: ${c.blue}; }   /* Tridactyl --completions-title (blue) */
+        #sk_omnibarSearchResult .url { color: ${c.green}; }
         .sk_theme #sk_omnibarSearchResult > ul > li.focused {
           background: ${c.mantle};                                /* Tridactyl --currentline (mantle) */
           font-weight: bold;
         }
+        #sk_omnibarSearchResult > ul > li.focused .title { color: ${c.pink}; } /* focused title (pink) */
+        #sk_omnibarSearchResult > ul > li.focused .url { color: ${c.green}; }
 
         /* Mode indicator — bottom-right box, mirroring Tridactyl's status
            indicator. settings.showModeStatus keeps it always visible. */
+        #sk_status {
           position: fixed !important;
           bottom: 0 !important;
           right: 0 !important;
@@ -75,6 +87,7 @@ _: {
 
         /* which-key (pending-key candidates) — full-width bar across the bottom
            with larger text, instead of the stock small bottom-right box. */
+        #sk_keystroke {
           background: ${c.base};
           color: ${c.text};
           left: 0;
@@ -85,8 +98,12 @@ _: {
           font-size: 14pt;
           padding: 0.6em 1em;
         }
+        #sk_keystroke kbd { font-size: 1em; }
 
         /* usage / help / editor popups */
+        #sk_usage,
+        #sk_popup,
+        #sk_editor {
           background: ${c.base};
           color: ${c.text};
         }

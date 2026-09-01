@@ -712,6 +712,7 @@
               name = "wayle-pam";
               target = "/etc/pam.d/wayle";
               text = ''
+                #%PAM-1.0
                 auth       required     pam_unix.so nullok
                 auth       optional     ${pamGnomeKeyring}
 

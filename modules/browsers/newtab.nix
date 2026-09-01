@@ -37,6 +37,8 @@
               justify-content: center;
               gap: 0.25rem;
             }
+            #time { font-size: 5rem; font-weight: 600; letter-spacing: 0.04em; }
+            #date { font-size: 1.2rem; color: ${c.overlay2}; }
           </style>
         </head>
         <body tabindex="-1">
@@ -48,6 +50,10 @@
             class Clock {
               // Private fields — `this` resolves to the instance inside methods
               // because they are real methods called as `clock.tick()`.
+              #timeEl = document.getElementById("time");
+              #dateEl = document.getElementById("date");
+              #lastTime = "";
+              #lastDate = "";
 
               tick() {
                 const now = new Date();
