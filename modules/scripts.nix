@@ -93,6 +93,45 @@ _: {
       SELECTED_NAME=$(basename "$SELECTED" | tr '.' '_')
       TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
 
+      # A snapshot with no pane left under $SELECTED is poisoned: the session
+      # was rooted in a worktree that has since been deleted, tmux fell back to
+      # its own cwd ($HOME), and the next periodic save froze that. Waking it
+      # would reopen the project in $HOME forever, so start fresh instead.
+      snapshot_is_stale() {
+        local snap paths p
+        snap="''${LAZY_TMUX_DATA_DIR:-$HOME/.local/share/lazy-tmux}/sessions/$TMUXCLIENTNAME.json"
+        [[ -f $snap ]] || return 1
+        command -v jq >/dev/null 2>&1 || return 1
+        paths=$(jq -r '.windows[].panes[].current_path // empty' "$snap" 2>/dev/null)
+        [[ -n $paths ]] || return 1
+        while IFS= read -r p; do
+          [[ $p == "$SELECTED"* ]] && return 1
+        done <<< "$paths"
+        return 0
+      }
+
+      # An idle shell whose directory is gone poisons every later
+      # `new-window -c "#{pane_current_path}"`: tmux cannot chdir there and
+      # falls back to its own cwd. Same for shells left in $HOME by a session
+      # whose root died. Nothing is running in them, so restart them at the
+      # project root rather than inherit the drift.
+      reroot_dead_panes() {
+        local pane cwd cmd shell root root_gone=0
+        shell=$(basename "$(tmux show-option -gv default-shell)")
+        # -t on display-message wants a pane, so a session name goes through
+        # a filtered list-sessions instead.
+        root=$(tmux list-sessions -F '#{session_path}' \
+          -f "#{==:#{session_name},$TMUXCLIENTNAME}" 2>/dev/null)
+        [[ -n $root && ! -d $root ]] && root_gone=1
+        while IFS=$'\t' read -r pane cwd cmd; do
+          [[ -n $pane && $cmd == "$shell" ]] || continue
+          if [[ ! -d $cwd ]] || [[ $root_gone == 1 && $cwd != "$SELECTED"* ]]; then
+            tmux respawn-pane -k -c "$SELECTED" -t "$pane"
+          fi
+        done < <(tmux list-panes -s -t "=$TMUXCLIENTNAME" \
+          -F $'#{pane_id}\t#{pane_current_path}\t#{pane_current_command}' 2>/dev/null)
+      }
+
       if command -v direnv >/dev/null 2>&1; then
         if [[ -f "$SELECTED/.envrc" ]] \
             && grep -qxFe 'dotenv_if_exists' -e 'dotenv' "$SELECTED/.envrc"; then
@@ -107,17 +146,19 @@ _: {
         fi
       fi
       if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-        if ! lazy-tmux wakeup --session "$TMUXCLIENTNAME" >/dev/null 2>&1; then
+        if snapshot_is_stale ||
+            ! lazy-tmux wakeup --session "$TMUXCLIENTNAME" >/dev/null 2>&1; then
           tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
           tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
         fi
       fi
 
-      if [[ -n $TMUX ]]; then
-        tmux switch-client -t "$TMUXCLIENTNAME"
-      else
-        tmux attach-session -t "$TMUXCLIENTNAME"
-      fi
+      reroot_dead_panes
+
+      # -c re-roots a session whose original directory is gone; attach-session
+      # switches the calling client when run from inside tmux, so one call
+      # covers both the attached and the detached case.
+      tmux attach-session -t "=$TMUXCLIENTNAME" -c "$SELECTED"
     '';
     "tmux-new-session" = ''
 

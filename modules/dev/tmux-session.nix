@@ -27,6 +27,8 @@
               pkgs.zsh
               pkgs.jq
               pkgs.git
+              pkgs.procps
+              pkgs.util-linux
               lazy-tmux
             ];
           }
@@ -84,6 +86,10 @@
               fail "restore_pins is not hooked to client-session-changed"
             grep -q 'client-detached\[60\].*save_state' <<< "$hooks" ||
               fail "save_state is not hooked to client-detached"
+            for h in after-new-window after-split-window window-unlinked after-rename-window; do
+              grep -q "$h.*save_soon" <<< "$hooks" ||
+                fail "$h does not trigger save_soon — layout changes would wait for the tick"
+            done
             ok "pins and save hooks registered"
 
             tmux new-session -d -s proj -n editor -c "$HOME" \
@@ -191,6 +197,61 @@
             tmux list-windows -t "=$proj_session" -F '#{window_name}' | grep -qx restored ||
               fail "second Alt+f started a fresh session instead of waking the snapshot"
             ok "Alt+f wakes the snapshot on the second run"
+
+            # A session rooted in a deleted worktree used to reopen in $HOME
+            # forever: tmux cannot chdir there, falls back to its own cwd, and
+            # the next save freezes that path into the snapshot.
+            dead="$repo/.worktrees/gone"
+            mkdir -p "$dead"
+            tmux kill-session -t "=$proj_session"
+            lazy-tmux forget --session "$proj_session" >/dev/null 2>&1 || true
+            tmux new-session -ds "$proj_session" -c "$dead"
+            sleep 1
+            rm -rf "$dead"
+
+            tmux run-shell -t wiring "tmux-pick-project" || true
+            sleep 2
+            session_root() {
+              tmux list-sessions -F '#{session_path}' \
+                -f "#{==:#{session_name},$1}"
+            }
+            [ "$(session_root "$proj_session")" = "$repo" ] ||
+              fail "picker did not re-root a session whose directory is gone"
+            [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}')" = "$repo" ] ||
+              fail "idle shell in a deleted directory was not restarted at the project root"
+            ok "dead session root and its stranded pane are repaired"
+
+            tmux new-window -t "=$proj_session" -n replayed "tail -f /dev/null"
+            sleep 1
+            lazy-tmux save --session "$proj_session" >/dev/null
+            tmux kill-session -t "=$proj_session"
+            snap="$LAZY_TMUX_DATA_DIR/sessions/$proj_session.json"
+            jq --arg home "$HOME" \
+              '(.windows[].panes[].current_path) = $home' "$snap" > "$snap.tmp"
+            mv "$snap.tmp" "$snap"
+
+            tmux run-shell -t wiring "tmux-pick-project" || true
+            sleep 3
+            tmux list-windows -t "=$proj_session" -F '#{window_name}' | grep -qx replayed &&
+              fail "picker replayed a snapshot with no pane left in the project"
+            [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}')" = "$repo" ] ||
+              fail "fresh session after a poisoned snapshot did not start in the project"
+            ok "poisoned snapshot is discarded instead of replayed"
+
+            tmux new-session -d -s soon -c "$HOME"
+            sleep 1
+            lazy-tmux save --session soon >/dev/null
+            before=$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/soon.json")
+            tmux new-window -t soon: -n added "tail -f /dev/null"
+            tmux run-shell -t soon "$commands save_soon"
+            tmux run-shell -t soon "$commands save_soon"
+            sleep 1
+            [ "$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/soon.json")" = "$before" ] ||
+              fail "save_soon fired without debouncing the burst"
+            sleep 4
+            [ "$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/soon.json")" != "$before" ] ||
+              fail "save_soon never saved after the debounce window"
+            ok "save_soon debounces the burst then saves"
 
             tmux new-session -d -s move -c "$HOME"
             tmux split-window -h -t move
