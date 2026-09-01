@@ -10,13 +10,6 @@ _: {
     }:
     lib.mkIf config.features.claudeCode (
       let
-        # The unalias must be on its OWN LINE: zsh expands aliases while parsing
-        # a line, so a `;`-joined one comes too late.
-        # No permissionDecision: "allow" here would auto-approve every Bash call.
-        noAliasesHook = pkgs.writeShellScript "claude-hook-no-aliases" ''
-          exec ${lib.getExe pkgs.jq} -c '{hookSpecificOutput:{hookEventName:"PreToolUse",updatedInput:(.tool_input+{command:("unalias -a 2>/dev/null\n"+.tool_input.command)})}}'
-        '';
-
         lspServers =
           let
             vscodeLs = bin: "${pkgs.vscode-langservers-extracted}/bin/${bin}";
@@ -233,21 +226,10 @@ _: {
               cleanupPeriodDays = 14;
               tui = "fullscreen";
               editorMode = "vi";
-              # See noAliasesHook above. Matches the Bash tool and pty-mcp's
-              # one-shot `run` (same `command` field, same login-shell aliases);
-              # interactive pty sessions are left alone — a human may be driving
-              # them and wants their own aliases.
-              hooks.PreToolUse = [
-                {
-                  matcher = "Bash|mcp__pty-mcp__run";
-                  hooks = [
-                    {
-                      type = "command";
-                      command = "${noAliasesHook}";
-                    }
-                  ];
-                }
-              ];
+              # Alias guard lives in zsh: modules/shell.nix sets no_aliases for
+              # non-interactive shells. Empty list prunes the old PreToolUse
+              # hook out of settings.json (jsonMerge replaces arrays).
+              hooks.PreToolUse = [ ];
               model = "claude-opus-5[1m]";
             };
           }}

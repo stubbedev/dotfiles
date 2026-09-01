@@ -826,8 +826,17 @@
           compinit -C -d ${zcompdump}/zcompdump
         '';
         # Sourced from .zshenv, before Ubuntu's /etc/zsh/zshrc can run its own
-        # compinit against the system fpath.
-        envExtra = "skip_global_compinit=1";
+        # compinit against the system fpath. The no_aliases line is the alias
+        # guard for AI agents: their tool shells are non-interactive zsh that
+        # source a snapshot re-defining every alias (rm -i, cp -i, ls=eza, the
+        # treeman git wrappers), which then hijack the commands they run. zshenv
+        # is read before the -c command, and the option survives the snapshot,
+        # so the definitions stay but never expand. Interactive shells - a real
+        # terminal, or a pty the human is driving - keep their aliases.
+        envExtra = ''
+          skip_global_compinit=1
+          [[ -o interactive ]] || setopt no_aliases
+        '';
         history = {
           path = "${config.home.homeDirectory}/.zsh_history";
           size = 10000;

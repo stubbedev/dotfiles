@@ -7,13 +7,6 @@ _: {
       ...
     }:
     lib.mkIf config.features.codex (
-      let
-        # Same unalias guard as the claude PreToolUse hook. permissionDecision
-        # must be "allow" with updatedInput; codex already runs --yolo.
-        noAliasesHook = pkgs.writeShellScript "codex-hook-no-aliases" ''
-          exec ${lib.getExe pkgs.jq} -c '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"allow",updatedInput:(.tool_input+{command:("unalias -a 2>/dev/null\n"+.tool_input.command)})}}'
-        '';
-      in
       {
         home.packages = [
           (config.stubbe.gfx.bundle {
@@ -31,22 +24,12 @@ _: {
 
         stubbe.setup.codex.script = ''
           ${pkgs.stubbe.jsonMerge {
-            name = "codex-hooks-no-aliases";
+            name = "codex-hooks";
             target = "${config.home.homeDirectory}/.codex/hooks.json";
             patch = {
-              hooks.PreToolUse = [
-                {
-                  matcher = "^Bash$";
-                  hooks = [
-                    {
-                      type = "command";
-                      command = "${noAliasesHook}";
-                      timeout = 30;
-                      statusMessage = "Clearing shell aliases";
-                    }
-                  ];
-                }
-              ];
+              # Alias guard lives in zsh: modules/shell.nix sets no_aliases for
+              # non-interactive shells. Empty list prunes the old hook.
+              hooks.PreToolUse = [ ];
             };
           }}
         '';
