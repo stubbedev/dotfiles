@@ -7,8 +7,6 @@ _: {
     gen =
       {
         final,
-        lib,
-        stubbe,
         ...
       }:
       let

@@ -10,7 +10,6 @@ _: {
     nixGL =
       {
         final,
-        lib,
         stubbe,
         ...
       }:

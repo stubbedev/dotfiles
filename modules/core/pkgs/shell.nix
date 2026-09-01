@@ -5,7 +5,6 @@ let
     {
       final,
       lib,
-      stubbe,
       ...
     }:
     {

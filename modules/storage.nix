@@ -73,7 +73,7 @@ _: {
     };
 
   flake.modules.homeManager.storage =
-    { lib, pkgs, ... }:
+    { pkgs, ... }:
     {
       stubbe.setup.zram = {
         privileged = true;
