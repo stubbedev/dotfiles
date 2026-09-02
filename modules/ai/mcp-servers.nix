@@ -112,8 +112,13 @@
           command = "npx";
           args = [
             "-y"
-            "chrome-devtools-mcp@1.5.0"
+            "chrome-devtools-mcp@1.8.0"
             "--autoConnect"
+            # One shared child (mode "shared") serves every window, so two
+            # concurrent sessions would otherwise fight over the server's
+            # implicitly-selected page. pageIdRouting makes pageId required on
+            # page-scoped tools, so each session addresses its own tab.
+            "--pageIdRouting"
             # Telemetry off: the Clearcut watchdog is a detached (setsid) ~180MB
             # node child that escapes group kills and orphans on every idle
             # teardown. No watchdog spawn at all with stats off.
