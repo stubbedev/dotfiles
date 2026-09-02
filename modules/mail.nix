@@ -283,80 +283,165 @@
         '';
       };
 
-      # Injections must be followed explicitly: without ignore_injections=false
-      # the node chain stops at `inline` and never reaches the markdown_inline
-      # nodes that carry the URL.
-      mailPagerLua = pkgs.writeText "mail-pager.lua" ''
-        local function url_at_cursor()
-          local ok, node = pcall(vim.treesitter.get_node, { ignore_injections = false })
-          if not ok or not node then
-            return nil
-          end
-          while node do
-            local kind = node:type()
-            if kind == "uri_autolink" then
-              -- <https://example.com> -- strip the angle brackets the syntax requires.
-              return vim.treesitter.get_node_text(node, 0):match("^<(.*)>$")
-            elseif kind == "inline_link" or kind == "image" then
-              for child in node:iter_children() do
-                if child:type() == "link_destination" then
-                  return vim.treesitter.get_node_text(child, 0)
-                end
-              end
-            end
-            node = node:parent()
-          end
-          return nil
-        end
-
-        -- open_floating_preview closes itself on the next CursorMoved and reuses its
-        -- own window, so moving between two links swaps the contents rather than
-        -- stacking floats.
-        vim.api.nvim_create_autocmd("CursorMoved", {
-          buffer = 0,
-          callback = function()
-            local url = url_at_cursor()
-            if url then
-              vim.lsp.util.open_floating_preview({ url }, "", {
-                focusable = false,
-                border = "rounded",
-              })
-            end
-          end,
-        })
-      '';
+      # glow reads glamour's own JSON dialect; this is catppuccin's macchiato
+      # theme, matching the aerc styleset in mail/stylesets.
+      glowStyle = pkgs.stubbe.gen.json "glow-catppuccin-macchiato.json" {
+        document = {
+          block_prefix = "\n";
+          block_suffix = "\n";
+          color = "#cad3f5";
+          margin = 2;
+        };
+        block_quote = {
+          indent = 1;
+          indent_token = "│ ";
+        };
+        list.level_indent = 2;
+        heading = {
+          block_suffix = "\n";
+          color = "#cad3f5";
+          bold = true;
+        };
+        h1 = {
+          prefix = "▓▓▓ ";
+          suffix = " ";
+          color = "#ed8796";
+          bold = true;
+        };
+        h2 = {
+          prefix = "▓▓▓▓ ";
+          color = "#f5a97f";
+        };
+        h3 = {
+          prefix = "▓▓▓▓▓ ";
+          color = "#eed49f";
+        };
+        h4 = {
+          prefix = "▓▓▓▓▓▓ ";
+          color = "#a6da95";
+        };
+        h5 = {
+          prefix = "▓▓▓▓▓▓▓ ";
+          color = "#7dc4e4";
+        };
+        h6 = {
+          prefix = "▓▓▓▓▓▓▓▓ ";
+          color = "#b7bdf8";
+        };
+        strikethrough.crossed_out = true;
+        emph.italic = true;
+        strong.bold = true;
+        hr = {
+          color = "#6e738d";
+          format = "\n────────\n";
+        };
+        item.block_prefix = "• ";
+        enumeration.block_prefix = ". ";
+        task = {
+          ticked = "[✓] ";
+          unticked = "[ ] ";
+        };
+        # glamour prints the href next to the label and wraps both in the same
+        # OSC 8 hyperlink. The label alone is clickable in alacritty, so blank
+        # the href token out with an empty template and keep just the label.
+        link = {
+          color = "#8aadf4";
+          underline = true;
+          format = "{{\"\"}}";
+        };
+        link_text = {
+          color = "#b7bdf8";
+          bold = true;
+        };
+        image = {
+          color = "#8aadf4";
+          underline = true;
+        };
+        image_text = {
+          color = "#b7bdf8";
+          format = "Image: {{.text}} →";
+        };
+        code = {
+          prefix = " ";
+          suffix = " ";
+          color = "#ee99a0";
+          background_color = "#1e2030";
+        };
+        code_block = {
+          color = "#1e2030";
+          margin = 2;
+          chroma = {
+            text.color = "#cad3f5";
+            error = {
+              color = "#cad3f5";
+              background_color = "#ed8796";
+            };
+            comment.color = "#6e738d";
+            comment_preproc.color = "#8aadf4";
+            keyword.color = "#c6a0f6";
+            keyword_reserved.color = "#c6a0f6";
+            keyword_namespace.color = "#eed49f";
+            keyword_type.color = "#eed49f";
+            operator.color = "#91d7e3";
+            punctuation.color = "#939ab7";
+            name.color = "#b7bdf8";
+            name_builtin.color = "#f5a97f";
+            name_tag.color = "#c6a0f6";
+            name_attribute.color = "#eed49f";
+            name_class.color = "#eed49f";
+            name_constant.color = "#eed49f";
+            name_decorator.color = "#f5bde6";
+            name_function.color = "#8aadf4";
+            literal_number.color = "#f5a97f";
+            literal_string.color = "#a6da95";
+            literal_string_escape.color = "#f5bde6";
+            generic_deleted.color = "#ed8796";
+            generic_inserted.color = "#a6da95";
+            generic_emph = {
+              color = "#cad3f5";
+              italic = true;
+            };
+            generic_strong = {
+              color = "#cad3f5";
+              bold = true;
+            };
+            generic_subheading.color = "#91d7e3";
+            background.background_color = "#1e2030";
+          };
+        };
+        table = {
+          center_separator = "┼";
+          column_separator = "│";
+          row_separator = "─";
+        };
+        definition_description.block_prefix = "\n🠶 ";
+      };
 
       mailPager = pkgs.stubbe.bashApp {
         name = "mail-pager";
+        runtimeInputs = with pkgs; [
+          glow
+          less
+          coreutils
+        ];
         text = ''
-          case "''${AERC_MIME_TYPE:-}" in
-          image/*)
+          if [[ "''${AERC_MIME_TYPE:-}" == image/* ]]; then
             exec less -Rc
-            ;;
-          # text/calendar goes through html-to-md --calendar, which emits
-          # Markdown in the same dialect as the html path — highlight both.
-          text/html|text/calendar)
-            syntax=(
-              -c 'set filetype=markdown conceallevel=2 concealcursor=nvic'
-              -c 'lua pcall(vim.treesitter.start, 0, "markdown")'
-              -c 'silent! source ${mailPagerLua}'
-            )
-            ;;
-          *)
-            syntax=(
-              -c 'syntax enable'
-              -c 'set filetype=mail'
-            )
-            ;;
-          esac
+          fi
 
-          exec nvim -u NONE -U NONE --noplugin -n -i NONE -M \
-            -c 'set mouse= clipboard=unnamedplus' \
-            -c 'set nonumber norelativenumber signcolumn=no nolist laststatus=0 noruler noshowcmd' \
-            -c 'set linebreak termguicolors' \
-            "''${syntax[@]}" \
-            -c 'hi Normal guibg=NONE ctermbg=NONE' \
-            -
+          # glow takes its width and colour profile from stdout, which here is
+          # the pipe into less: without these it wraps at 80 and drops every
+          # escape. The pty is still on /dev/tty, so read the width from there.
+          cols=$(stty size </dev/tty 2>/dev/null | cut -d' ' -f2) || true
+
+          # less, not glow's own output alone: aerc resizes the pager pty after
+          # the child has written, and a finished process cannot repaint, which
+          # left short mails pinned to the bottom of the pane until a scroll
+          # forced a redraw. less redraws on SIGWINCH, and -c draws from the top.
+          # 2>/dev/null is load-bearing: with a tty on stderr glow probes it for
+          # the background colour and blocks on the reply, which aerc's terminal
+          # never sends -- ten seconds of blank pane per mail.
+          COLORTERM=truecolor glow -s ${glowStyle} -w "''${cols:-100}" - 2>/dev/null | less -Rc
         '';
       };
     in
