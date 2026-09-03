@@ -261,6 +261,9 @@
                       start="$(date +%s)"
                       socat -U - "UNIX-CONNECT:$sock" 2>/dev/null | while IFS= read -r line; do
                         case "$line" in
+                          # wtype & friends spawn a throwaway hl-virtual-keyboard-*
+                          # and emit `,none` on teardown: not a layout switch.
+                          activelayout\>\>hl-virtual-keyboard-*) continue ;;
                           activelayout\>\>*)
                             [ "$(($(date +%s) - start))" -lt 3 ] && continue
                             wayle toast "''${line##*,}" --icon ld-keyboard-symbolic --duration 1000 ;;
