@@ -30,6 +30,11 @@ end
 
 local nixd = require("nixd")
 
+-- A panic in phpantom leaves its symbol map unusable rather than exiting the process, so nvim
+-- keeps a client that answers definition and references with nothing for the rest of the session.
+-- Set by the stderr watchdog below, cleared by the server's `on_exit`, which is where the restart
+-- has to happen: re-enabling before the old client is gone just hands the dead one back.
+local phpantom_restarting = false
 
 local servers = {
   nixd = {
@@ -59,6 +64,24 @@ local servers = {
     cmd = { "phpantom_lsp" },
     filetypes = { "php", "blade" },
     root_markers = { ".phpantom.toml", "composer.json", ".git" },
+    -- ponytail: 0.10.0 slices the document with stale symbol-map offsets while serving
+    -- semanticTokens/full after an edit -- `symbol_map/mod.rs:217: start byte index N is out
+    -- of bounds`. The panic is caught, but leaves the map dead, so definition and references
+    -- silently return nothing for the rest of the session. Its tokens are sparse and go empty
+    -- after the first edit anyway; treesitter highlights php. Drop the capability when upstream
+    -- fixes the slice.
+    on_init = function(client)
+      client.server_capabilities.semanticTokensProvider = nil
+    end,
+    on_exit = function()
+      if not phpantom_restarting then
+        return
+      end
+      phpantom_restarting = false
+      vim.schedule(function()
+        vim.lsp.enable("phpantom_lsp")
+      end)
+    end,
   },
 
   tsgo = {
@@ -234,6 +257,29 @@ local servers = {
     },
   },
 }
+
+-- Server stderr reaches nvim only as a log call, so that is where a panic can be noticed.
+local log_error = vim.lsp.log.error
+vim.lsp.log.error = function(...)
+  for i = 1, select("#", ...) do
+    local arg = select(i, ...)
+    if type(arg) == "string" and arg:find("panic", 1, true) and arg:find("phpantom", 1, true) then
+      if not phpantom_restarting then
+        phpantom_restarting = true
+        vim.schedule(function()
+          vim.notify("phpantom_lsp panicked - restarting", vim.log.levels.WARN)
+          -- Forced: phpantom ignores the shutdown handshake, and a client left waiting on it
+          -- stays attached and dead.
+          for _, client in ipairs(vim.lsp.get_clients({ name = "phpantom_lsp" })) do
+            client:stop(true)
+          end
+        end)
+      end
+      break
+    end
+  end
+  return log_error(...)
+end
 
 vim.lsp.config("*", {
   capabilities = require("blink.cmp").get_lsp_capabilities(),
