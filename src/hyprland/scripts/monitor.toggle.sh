@@ -70,38 +70,16 @@ restart_wireplumber() {
   systemctl --user restart wireplumber.service >/dev/null 2>&1 || true
 }
 
-lid_fd=""
-
-open_lid_fd() {
-  local f name event
-  for f in /sys/class/input/event*/device/name; do
-    [ -r "$f" ] || continue
-    read -r name <"$f" || continue
-    case "$name" in
-    *[Ll]id*[Ss]witch*) ;;
-    *) continue ;;
-    esac
-    event=${f#/sys/class/input/}
-    event=${event%%/*}
-    exec 9<"/dev/input/$event" 2>/dev/null && lid_fd=9
-    return 0
-  done
-}
-
-wait_lid() {
-  if [ -n "$lid_fd" ]; then
-    read -r -t "$1" -N 1 -u 9 _
-  else
-    sleep "$1"
-  fi
-  return 0
-}
-
 poll_lid() {
   local prev
   read_lid
   prev=$LID
-  while wait_lid 2; do
+  # ponytail: plain 2s poll, no evdev fd. Watching /dev/input/eventN from bash
+  # needs 24-byte reads; `read -N 1` gets EINVAL, never drains the queue, so the
+  # fd stays readable forever and this loop spins at ~900Hz. Each turn evaluates
+  # ACPI _LID -> an EC transaction -> ~3000 SCI/s on GPE 0x6E (irq/9-acpi at 85%
+  # of a core). Upgrade path if 2s latency ever matters: read 24 bytes at a time.
+  while sleep 2; do
     read_lid
     [ "$LID" = "$prev" ] && continue
     prev=$LID
@@ -130,8 +108,6 @@ listen_events() {
   local last_action=0
 
   react
-
-  open_lid_fd
 
   poll_lid &
   local poll_pid=$!
