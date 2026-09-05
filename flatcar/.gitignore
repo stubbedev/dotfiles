@@ -1,0 +1,4 @@
+# Plaintext butane — the encrypted copy lives at secrets/flatcar-server.bu.
+server.bu
+# Generated from the decrypted butane.
+ignition.json
