@@ -93,7 +93,21 @@ map("n", "<leader>xd", function()
   vim.diagnostic.setqflist({ open = true, bufnr = 0 })
 end, { desc = "Buffer diagnostics to quickfix" })
 map("n", "<leader>xl", "<cmd>lopen<cr>", { desc = "Location list" })
+map("n", "<leader>xq", "<cmd>copen<cr>", { desc = "Quickfix list" })
+map("n", "<leader>xQ", fzf("quickfix"), { desc = "Quickfix list (fzf)" })
 map("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
+
+local function diag_jump(count, severity)
+  return function()
+    vim.diagnostic.jump({ count = count, severity = vim.diagnostic.severity[severity] })
+  end
+end
+map("n", "]e", diag_jump(1, "ERROR"), { desc = "Next error" })
+map("n", "[e", diag_jump(-1, "ERROR"), { desc = "Prev error" })
+map("n", "]w", diag_jump(1, "WARN"), { desc = "Next warning" })
+map("n", "[w", diag_jump(-1, "WARN"), { desc = "Prev warning" })
+
+map("n", "<leader>sn", "<cmd>messages<cr>", { desc = "Message history" })
 
 map("n", "<leader>rr", function()
   require("grug-far").open()

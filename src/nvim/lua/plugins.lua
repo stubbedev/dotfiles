@@ -146,6 +146,8 @@ vim.api.nvim_create_autocmd("UIEnter", {
         { src = "https://github.com/MagicDuck/grug-far.nvim" },
       }, { confirm = false })
 
+      vim.cmd("doautoall FileType")
+
       local fzf = require("fzf-lua")
       fzf.setup({
         fzf_colors = true, -- take colours from the colorscheme, not fzf's defaults
@@ -158,15 +160,11 @@ vim.api.nvim_create_autocmd("UIEnter", {
           preview = {
             default = "builtin",
             border = "rounded",
-            -- Always below the list, never beside it: full window width for
-            -- long lines, and the eye stays on one column.
             layout = "vertical",
             vertical = "down:55%",
             scrollbar = "float",
           },
         },
-        -- Preview scroll. Takes <c-j>/<c-k> away from list navigation --
-        -- <c-n>/<c-p> and the arrows still move the list.
         keymap = {
           builtin = {
             ["<C-j>"] = "preview-down",
@@ -181,7 +179,6 @@ vim.api.nvim_create_autocmd("UIEnter", {
           ["--pointer"] = "",
           ["--marker"] = "",
         },
-        -- A glyph names the picker; the ":: <ctrl-x> to ..." header lines go.
         defaults = { headers = false },
         files = {
           cwd_prompt = false,
@@ -243,9 +240,6 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
       require("grug-far").setup({
         engines = {
-          -- The example placeholders ("ex: foo   foo([a-z0-9]*)   fun\\(")
-          -- are noise once you know the syntax; the input icons label the
-          -- fields on their own.
           ripgrep = { placeholders = { enabled = false } },
           astgrep = { path = "ast-grep", placeholders = { enabled = false } },
           ["astgrep-rules"] = { placeholders = { enabled = false } },

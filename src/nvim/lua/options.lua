@@ -117,9 +117,11 @@ vim.treesitter.language.register("tsx", { "typescriptreact" })
 vim.treesitter.language.register("javascript", { "javascriptreact" })
 vim.treesitter.language.register("bash", { "sh", "zsh", "env" })
 vim.treesitter.language.register("json", { "jsonc" })
+vim.treesitter.language.register("ini", { "dosini", "confini" })
+vim.treesitter.language.register("git_config", { "gitconfig" })
+vim.treesitter.language.register("ssh_config", { "sshconfig" })
 
 vim.filetype.add({
-  -- Butane (Flatcar provisioning) is YAML.
   extension = { caddy = "caddy", bu = "yaml" },
   filename = {
     Caddyfile = "caddy",

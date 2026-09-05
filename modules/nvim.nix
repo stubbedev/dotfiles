@@ -21,35 +21,49 @@
         "c"
         "caddy"
         "comment"
+        "cpp"
         "css"
+        "desktop"
         "diff"
         "dockerfile"
+        "editorconfig"
+        "git_config"
         "git_rebase"
+        "gitattributes"
         "gitcommit"
+        "gitignore"
         "go"
         "gomod"
         "gotmpl"
         "gowork"
         "hcl"
         "html"
+        "ini"
         "javascript"
+        "jsdoc"
         "json"
         "just"
         "lua"
+        "luadoc"
+        "luap"
+        "make"
         "markdown"
         "markdown_inline"
         "nix"
         "php"
         "php_only"
         "phpdoc"
+        "printf"
         "python"
         "query"
         "regex"
         "rust"
         "scss"
         "sql"
+        "ssh_config"
         "svelte"
         "templ"
+        "terraform"
         "toml"
         "tsx"
         "typescript"
@@ -104,7 +118,8 @@
                 typescript-go
                 oxlint
                 oxfmt
-                vue-language-server # v3 bridges to tsgo itself
+                vue-language-server
+                vtsls
                 svelte-language-server
 
                 phpantom_lsp
@@ -119,6 +134,9 @@
                 postgres-language-server # deeper postgres semantics when a project wants it
 
                 docker-language-server
+                clang-tools
+                lemminx
+                terraform-ls
 
                 stylua
                 nixfmt

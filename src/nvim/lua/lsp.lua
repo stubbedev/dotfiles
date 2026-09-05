@@ -28,6 +28,16 @@ local function project_bin(name, args)
   end
 end
 
+local function vue_typescript_plugin()
+  local exe = vim.fn.exepath("vue-language-server")
+  if exe == "" then
+    return nil
+  end
+  local root = vim.fs.dirname(vim.fs.dirname(vim.uv.fs_realpath(exe) or exe))
+  local dir = vim.fs.joinpath(root, "lib/language-tools/packages/language-server")
+  return vim.fn.isdirectory(dir) == 1 and dir or nil
+end
+
 local nixd = require("nixd")
 
 -- A panic in phpantom leaves its symbol map unusable rather than exiting the process, so nvim
@@ -101,6 +111,44 @@ local servers = {
     cmd = { "vue-language-server", "--stdio" },
     filetypes = { "vue" },
     root_markers = { "package.json", ".git" },
+    on_init = function(client)
+      client.handlers["tsserver/request"] = function(_, result, context)
+        local ts = vim.lsp.get_clients({ bufnr = context.bufnr, name = "vtsls" })[1]
+        if not ts then
+          vim.notify("vue_ls needs the vtsls client to answer TypeScript requests", vim.log.levels.ERROR)
+          return
+        end
+        local param = type(result[1]) == "table" and result[1] or result
+        local id, command, payload = unpack(param)
+        ts:exec_cmd({
+          title = "vue_request_forward",
+          command = "typescript.tsserverRequest",
+          arguments = { command, payload },
+        }, { bufnr = context.bufnr }, function(_, r)
+          client:notify("tsserver/response", { id, r and r.body })
+        end)
+      end
+    end,
+  },
+
+  vtsls = {
+    cmd = { "vtsls", "--stdio" },
+    filetypes = { "vue" },
+    root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
+    settings = {
+      vtsls = {
+        tsserver = {
+          globalPlugins = {
+            {
+              name = "@vue/typescript-plugin",
+              location = vue_typescript_plugin(),
+              languages = { "vue" },
+              configNamespace = "typescript",
+            },
+          },
+        },
+      },
+    },
   },
 
   svelte = {
@@ -243,6 +291,23 @@ local servers = {
       ".git",
     },
   },
+  clangd = {
+    cmd = { "clangd", "--background-index", "--clang-tidy", "--header-insertion=iwyu" },
+    filetypes = { "c", "cpp", "objc", "objcpp", "cuda" },
+    root_markers = { "compile_commands.json", "compile_flags.txt", ".clangd", ".git" },
+  },
+  lemminx = {
+    cmd = { "lemminx" },
+    filetypes = { "xml", "xsd", "xsl", "xslt", "svg" },
+    root_markers = { ".git" },
+    settings = { xml = { format = { enabled = false } } },
+  },
+  terraformls = {
+    cmd = { "terraform-ls", "serve" },
+    filetypes = { "terraform", "terraform-vars" },
+    root_markers = { ".terraform", "main.tf", ".git" },
+  },
+
   lua_ls = {
     cmd = { "lua-language-server" },
     filetypes = { "lua" },
@@ -295,7 +360,8 @@ vim.g.rustaceanvim = {
     default_settings = {
       ["rust-analyzer"] = {
         cargo = { allFeatures = true },
-        checkOnSave = { command = "clippy" },
+        checkOnSave = true,
+        check = { command = "clippy" },
       },
     },
   },

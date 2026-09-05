@@ -128,17 +128,31 @@ _: {
           }
 
 
+          sudo_keepalive_pid=""
+          start_sudo_keepalive() {
+            has_cmd sudo || return 0
+            [ -n "$sudo_keepalive_pid" ] && return 0
+            echo "Requesting sudo..."
+            sudo -v || return 1
+            while true; do
+              sleep 50
+              kill -0 "$$" 2>/dev/null || exit 0
+              sudo -n true 2>/dev/null || true
+            done </dev/null >/dev/null 2>&1 &
+            sudo_keepalive_pid=$!
+            # shellcheck disable=SC2064
+            trap "kill $sudo_keepalive_pid 2>/dev/null || true" EXIT
+          }
+
           ensure_sudo() {
             if [[ "''${1:-}" == "true" ]]; then
-              echo "Requesting sudo..."
-              sudo -v
+              start_sudo_keepalive
             fi
           }
 
           prime_sudo_nixos() {
-            if is_nixos && has_cmd sudo; then
-              echo "Requesting sudo..."
-              sudo -v
+            if is_nixos; then
+              start_sudo_keepalive
             fi
           }
 
@@ -540,9 +554,6 @@ _: {
               return 2
             fi
             local path="$hm_flake_dir/secrets/$name"
-            # Secrets carry the extension of their plaintext (npmrc.ini,
-            # ds-mcp.json) so $EDITOR gets a filetype. Resolve a bare name to
-            # it, or `edit` would silently create an extensionless duplicate.
             if [ ! -e "$path" ]; then
               local -a hits=()
               local hit
