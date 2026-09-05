@@ -136,6 +136,7 @@
         stubbe.setup.restartMcpServices = {
           after = [ "reloadSystemd" ];
           script = ''
+            PATH="${pkgs.systemd}/bin:$PATH"
             if command -v systemctl >/dev/null 2>&1; then
               systemctl --user restart ${
                 lib.concatMapStringsSep " " (n: "${n}.service") (lib.attrNames servers.httpServices)

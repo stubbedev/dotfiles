@@ -108,6 +108,7 @@
             kontainerCmsRepo
             kontainerSiteRepo
             kontainerHelpdeskRepo
+            "git@github.com:stubbedev/xilo.git"
           ];
           command = "npx";
           args = [
