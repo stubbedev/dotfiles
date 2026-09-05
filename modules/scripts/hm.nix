@@ -540,6 +540,23 @@ _: {
               return 2
             fi
             local path="$hm_flake_dir/secrets/$name"
+            # Secrets carry the extension of their plaintext (npmrc.ini,
+            # ds-mcp.json) so $EDITOR gets a filetype. Resolve a bare name to
+            # it, or `edit` would silently create an extensionless duplicate.
+            if [ ! -e "$path" ]; then
+              local -a hits=()
+              local hit
+              for hit in "$hm_flake_dir/secrets/$name".*; do
+                [ -e "$hit" ] && hits+=("$hit")
+              done
+              if [ "''${#hits[@]}" -eq 1 ]; then
+                path="''${hits[0]}"
+                name="''${path##*/}"
+              elif [ "''${#hits[@]}" -gt 1 ]; then
+                echo "hm secret: '$name' is ambiguous: ''${hits[*]##*/}" >&2
+                return 2
+              fi
+            fi
             case "$action" in
               edit)
                 ${lib.getExe pkgs.sops} --input-type binary --output-type binary "$path"

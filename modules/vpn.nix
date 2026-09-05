@@ -450,7 +450,7 @@ in
     lib.mkIf config.features.vpn {
       sops.secrets = {
         vpn-konform-config = pkgs.stubbe.secret {
-          name = "vpn-konform-config";
+          name = "vpn-konform-config.env";
           path = "${config.home.homeDirectory}/.config/vpn/konform/config";
         };
         vpn-konform = pkgs.stubbe.secret {

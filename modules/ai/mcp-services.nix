@@ -102,7 +102,7 @@
       {
         sops.secrets = {
           mcp-proxy-env = pkgs.stubbe.secret {
-            name = "mcp-proxy-env";
+            name = "mcp-proxy-env.env";
             path = proxyEnvPath;
           };
         }
@@ -112,7 +112,7 @@
               provider:
               lib.nameValuePair "${provider}_mcp" (
                 pkgs.stubbe.secret {
-                  name = "${provider}-mcp";
+                  name = "${provider}-mcp.json";
                   path = "${config.home.homeDirectory}/.config/${provider}-mcp/config.json";
                 }
               )

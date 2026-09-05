@@ -115,11 +115,12 @@ vim.treesitter.language.register("templ", { "templ", "tmpl" })
 
 vim.treesitter.language.register("tsx", { "typescriptreact" })
 vim.treesitter.language.register("javascript", { "javascriptreact" })
-vim.treesitter.language.register("bash", { "sh", "zsh" })
+vim.treesitter.language.register("bash", { "sh", "zsh", "env" })
 vim.treesitter.language.register("json", { "jsonc" })
 
 vim.filetype.add({
-  extension = { caddy = "caddy" },
+  -- Butane (Flatcar provisioning) is YAML.
+  extension = { caddy = "caddy", bu = "yaml" },
   filename = {
     Caddyfile = "caddy",
     ["docker-compose.yml"] = "yaml.docker-compose",

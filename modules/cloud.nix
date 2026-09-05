@@ -27,7 +27,7 @@ _: {
       # NOT auto-unlock — so the token effectively vanishes on every reboot.
       # Pinning hosts.yml through sops sidesteps the keyring entirely.
       sops.secrets.gh_hosts = pkgs.stubbe.secret {
-        name = "gh-hosts";
+        name = "gh-hosts.yaml";
         path = "${config.home.homeDirectory}/.config/gh/hosts.yml";
       };
     };

@@ -86,7 +86,7 @@
       };
 
       sops.secrets.npmrc = pkgs.stubbe.secret {
-        name = "npmrc";
+        name = "npmrc.ini";
         path = "${config.home.homeDirectory}/.npmrc";
       };
 
