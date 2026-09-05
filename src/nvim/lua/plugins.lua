@@ -158,19 +158,44 @@ vim.api.nvim_create_autocmd("UIEnter", {
           preview = {
             default = "builtin",
             border = "rounded",
-            layout = "flex",
-            horizontal = "right:55%",
+            -- Always below the list, never beside it: full window width for
+            -- long lines, and the eye stays on one column.
+            layout = "vertical",
+            vertical = "down:55%",
             scrollbar = "float",
           },
         },
-        fzf_opts = { ["--info"] = "inline-right", ["--layout"] = "reverse" },
+        -- Preview scroll. Takes <c-j>/<c-k> away from list navigation --
+        -- <c-n>/<c-p> and the arrows still move the list.
+        keymap = {
+          builtin = {
+            ["<C-j>"] = "preview-down",
+            ["<C-k>"] = "preview-up",
+            ["<C-Down>"] = "preview-down",
+            ["<C-Up>"] = "preview-up",
+          },
+        },
+        fzf_opts = {
+          ["--info"] = "inline-right",
+          ["--layout"] = "reverse",
+          ["--pointer"] = "",
+          ["--marker"] = "",
+        },
+        -- A glyph names the picker; the ":: <ctrl-x> to ..." header lines go.
+        defaults = { headers = false },
         files = {
           cwd_prompt = false,
-          prompt = "Files  ",
+          prompt = "  ",
           git_icons = true,
         },
-        grep = { prompt = "Grep  " },
-        buffers = { prompt = "Buffers  " },
+        git = { files = { prompt = "  " } },
+        oldfiles = { prompt = "  " },
+        buffers = { prompt = "  " },
+        helptags = { prompt = "  " },
+        keymaps = { prompt = "  " },
+        diagnostics = { prompt = "  " },
+        grep = { prompt = "  " },
+        lsp = { symbols = { prompt = "  " } },
       })
 
       require("treesitter-context").setup({ max_lines = 3, mode = "cursor" })
@@ -217,7 +242,14 @@ vim.api.nvim_create_autocmd("UIEnter", {
       end
 
       require("grug-far").setup({
-        engines = { astgrep = { path = "ast-grep" } },
+        engines = {
+          -- The example placeholders ("ex: foo   foo([a-z0-9]*)   fun\\(")
+          -- are noise once you know the syntax; the input icons label the
+          -- fields on their own.
+          ripgrep = { placeholders = { enabled = false } },
+          astgrep = { path = "ast-grep", placeholders = { enabled = false } },
+          ["astgrep-rules"] = { placeholders = { enabled = false } },
+        },
         windowCreationCommand = "lua _G.GrugFarFloat()",
         keymaps = { close = { n = "<esc>" } },
         -- one line per input instead of label-above-field: 6 header lines
