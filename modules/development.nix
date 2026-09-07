@@ -85,11 +85,6 @@
         '';
       };
 
-      sops.secrets.npmrc = pkgs.stubbe.secret {
-        name = "npmrc.ini";
-        path = "${config.home.homeDirectory}/.npmrc";
-      };
-
       stubbe.setup.nodeCaBundle.script = ''
         export PATH="${
           lib.makeBinPath [
