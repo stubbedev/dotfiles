@@ -37,9 +37,18 @@
       };
 
       nix = lib.mkIf (config.host.platform != "nixos") {
-        package = lib.mkDefault pkgs.nix;
+        package = lib.mkDefault inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
         settings = {
           inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
+
+          # ~/.config/nix/nix.conf shadows /etc/nix/nix.conf for this user, so
+          # nix-command/flakes must be repeated here or flakes stop working.
+          experimental-features = [
+            "nix-command"
+            "flakes"
+            "parallel-eval"
+          ];
+          eval-cores = 0;
 
           max-jobs = "auto";
           cores = 2;

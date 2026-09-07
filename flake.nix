@@ -9,6 +9,13 @@
       url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Parallel evaluator: upstream nix has no `eval-cores` setting at all (checked
+    # 2.34 and 2.35), so a no-op rebuild burns ~26s on one core. Deliberately does
+    # NOT follow our nixpkgs: it builds against DeterminateSystems/nixpkgs-weekly,
+    # and rebasing it onto ours would rebuild ~50 derivations on every flake.lock
+    # bump instead of only when this input moves.
+    determinate-nix.url = "https://flakehub.com/f/DeterminateSystems/nix-src/*";
+
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 
