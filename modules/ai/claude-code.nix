@@ -188,10 +188,18 @@ _: {
       in
       {
         home.packages = [
-          (config.stubbe.gfx.bundle {
+          (pkgs.stubbe.headroomWrap {
+            tool = "claude";
             pkg = pkgs.claude-code;
-            gfx = false;
-            flags = [ "--dangerously-skip-permissions" ];
+            flags = [
+              "--no-mcp"
+              "--code-memory"
+              "none"
+              "--1m"
+              "--tool-search"
+              "true"
+            ];
+            toolFlags = [ "--dangerously-skip-permissions" ];
           })
           pkgs.cship
         ];
@@ -208,6 +216,29 @@ _: {
         };
 
         stubbe.setup.claudeCode.script = ''
+          ${
+            let
+              retired = [
+                "caveman"
+                "ponytail"
+              ];
+              known = "${config.home.homeDirectory}/.claude/plugins/known_marketplaces.json";
+              stalePaths = lib.concatMap (plugin: [
+                "${config.home.homeDirectory}/.config/${plugin}"
+                "${config.home.homeDirectory}/.claude/plugins/marketplaces/${plugin}"
+                "${config.home.homeDirectory}/.claude/plugins/cache/${plugin}"
+              ]) retired;
+            in
+            ''
+              rm -rf ${lib.escapeShellArgs stalePaths}
+
+              if [ -f ${known} ]; then
+                ${lib.getExe pkgs.jq} 'del(${lib.concatMapStringsSep ", " (p: ".\"${p}\"") retired})' \
+                  ${known} > ${known}.hm-tmp && mv ${known}.hm-tmp ${known}
+              fi
+            ''
+          }
+
           ${pkgs.stubbe.setup.jsonMerge {
             name = "claude-settings-patch";
             target = "${config.home.homeDirectory}/.claude/settings.json";
@@ -242,23 +273,6 @@ _: {
                 source = "directory";
                 path = "${lspMarketplace}";
               };
-              # Caveman: ultra-compressed comms mode. Plugin self-registers
-              # its SessionStart/UserPromptSubmit hooks via plugin.json
-              # (''${CLAUDE_PLUGIN_ROOT}), so enabling it here is enough — no
-              # need to wire hooks in settings.json. Default mode is "full"
-              # (caveman-config.js), so every session starts caveman-on.
-              caveman.source = {
-                source = "github";
-                repo = "JuliusBrussee/caveman";
-              };
-              # Ponytail: minimal-code-gen discipline (YAGNI decision ladder,
-              # fewer LOC). Orthogonal to caveman — caveman compresses prose,
-              # ponytail constrains the code written. Self-registers its
-              # lifecycle hooks via the plugin manifest; needs node on PATH.
-              ponytail.source = {
-                source = "github";
-                repo = "DietrichGebert/ponytail";
-              };
             };
           }}
 
@@ -268,8 +282,6 @@ _: {
             key = "enabledPlugins";
             value = {
               "lsp@lsp" = true;
-              "caveman@caveman" = true;
-              "ponytail@ponytail" = true;
             }
             # The official LSP plugins fight the generated one for the same
             # extensions -- first registered wins and the loser never starts --
@@ -284,18 +296,6 @@ _: {
               "rust-analyzer-lsp@claude-plugins-official"
               "typescript-lsp@claude-plugins-official"
             ] (_: false);
-          }}
-
-          ${pkgs.stubbe.setup.jsonMerge {
-            name = "caveman-config";
-            target = "${config.home.homeDirectory}/.config/caveman/config.json";
-            patch.defaultMode = "full";
-          }}
-
-          ${pkgs.stubbe.setup.jsonMerge {
-            name = "ponytail-config";
-            target = "${config.home.homeDirectory}/.config/ponytail/config.json";
-            patch.defaultMode = "full";
           }}
 
           ${pkgs.stubbe.setup.jsonSet {

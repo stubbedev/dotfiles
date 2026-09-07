@@ -8,10 +8,15 @@ _: {
     }:
     lib.mkIf config.features.codex {
       home.packages = [
-        (config.stubbe.gfx.bundle {
+        (pkgs.stubbe.headroomWrap {
+          tool = "codex";
           pkg = pkgs.codex;
-          gfx = false;
           flags = [
+            "--no-mcp"
+            "--code-memory"
+            "none"
+          ];
+          toolFlags = [
             "--yolo"
             "--dangerously-bypass-hook-trust"
             "-c"
