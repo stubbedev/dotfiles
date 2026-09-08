@@ -39,16 +39,7 @@ _: {
         };
       in
       {
-        home.packages = [
-          (pkgs.stubbe.headroomWrap {
-            tool = "opencode";
-            pkg = opencode;
-            flags = [
-              "--no-mcp"
-              "--no-serena"
-            ];
-          })
-        ];
+        home.packages = [ opencode ];
 
         # opencode merges config.json, opencode.json, then opencode.jsonc, so the
         # .jsonc wins -- and opencode writes an empty stub there itself.

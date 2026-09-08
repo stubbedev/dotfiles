@@ -188,18 +188,10 @@ _: {
       in
       {
         home.packages = [
-          (pkgs.stubbe.headroomWrap {
-            tool = "claude";
+          (config.stubbe.gfx.bundle {
             pkg = pkgs.claude-code;
-            flags = [
-              "--no-mcp"
-              "--code-memory"
-              "none"
-              "--1m"
-              "--tool-search"
-              "true"
-            ];
-            toolFlags = [ "--dangerously-skip-permissions" ];
+            gfx = false;
+            flags = [ "--dangerously-skip-permissions" ];
           })
           pkgs.cship
         ];
