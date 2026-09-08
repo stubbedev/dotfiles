@@ -118,6 +118,27 @@
       };
 
       stubbe.setup = {
+        # No metrics stack, ever. `srv metrics disable` only downs the two
+        # containers -- it leaves the rendered compose file behind, and both
+        # its `restart: unless-stopped` policy and `srv install`'s "re-up a
+        # previously-enabled stack" step put grafana/prometheus back on the
+        # next boot. Deleting the rendered stack is what makes srv's
+        # metrics.IsConfigured() false, so nothing resurrects it.
+        srvMetricsOff = {
+          script = ''
+            metricsDir="${config.xdg.configHome}/srv/metrics"
+            if [ -e "$metricsDir/docker-compose.yml" ]; then
+              export PATH="/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+              export XDG_CONFIG_HOME="${config.xdg.configHome}"
+              if ${lib.getExe' srvPkg "srv"} metrics disable; then
+                rm -rf "$metricsDir"
+              else
+                echo "srv-metrics-off: 'srv metrics disable' failed (docker not up?); retrying on the next switch." >&2
+              fi
+            fi
+          '';
+        };
+
         mkcertTrust = {
           privileged = true;
           title = "Installing the mkcert root CA into the system & browser trust stores";
