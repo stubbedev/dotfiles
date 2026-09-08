@@ -21,8 +21,8 @@ _: {
               settings.nixd.nixpkgs.expr = "import <nixpkgs> { }";
             };
 
-            tsgo = {
-              command = lib.getExe' pkgs.typescript-go "tsgo";
+            tsc = {
+              command = lib.getExe pkgs.typescript;
               args = [
                 "--lsp"
                 "--stdio"

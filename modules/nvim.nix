@@ -113,9 +113,9 @@
                 yaml-language-server
                 marksman
 
-                # tsgo has no tsserver *plugin* support, which is why vue and
+                # tsc (the Go compiler) has no tsserver *plugin* support, which is why vue and
                 # svelte each run a self-contained server below.
-                typescript-go
+                typescript
                 oxlint
                 oxfmt
                 vue-language-server

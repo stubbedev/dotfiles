@@ -94,8 +94,8 @@ local servers = {
     end,
   },
 
-  tsgo = {
-    cmd = { "tsgo", "--lsp", "--stdio" },
+  tsc = {
+    cmd = { "tsc", "--lsp", "--stdio" },
     filetypes = {
       "javascript",
       "javascriptreact",
