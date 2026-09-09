@@ -14,6 +14,8 @@
       home.packages =
         with pkgs;
         [
+          devenv
+
           nodejs_24
           pnpm
 

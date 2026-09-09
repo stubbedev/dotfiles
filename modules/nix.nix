@@ -133,6 +133,7 @@ in
     let
       onNixOS = config.host.platform == "nixos";
       profilesDir = "${config.home.homeDirectory}/.local/state/nix/profiles";
+      accessTokensFile = "${config.home.homeDirectory}/.config/nix/access-tokens.conf";
     in
     {
       home.packages = lib.mkIf config.features.development (
@@ -189,60 +190,25 @@ in
       # Anonymous api.github.com allows 60 requests/hr, and `nix flake update`
       # resolves every input HEAD against it, so one run exhausts the budget and
       # silently falls back to stale cached revs.
-      stubbe.setup.nixGithubToken = {
-        privileged = true;
-        title = "GitHub access token for Nix flake fetches";
-        body = ''
-          Writes `access-tokens = github.com=<token>` to
-          /etc/nix/nix-access-tokens.conf (root:<your-group>, 0640) and pulls it
-          into /etc/nix/nix.conf via `!include`, so `nix flake update`
-          authenticates to the GitHub API (60 req/hr anonymous → 5000 req/hr).
-
-          The token is decrypted from secrets/github-token at activation; it
-          never lands in the Nix store or in the activation script.
-        '';
-        preCheck = ''
-          PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-          if ! command -v nix >/dev/null 2>&1; then
-            exit 0
-          fi
-          if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
-            exit 0
-          fi
-        '';
-        # This text is hashed to gate the sudo re-prompt, so it must embed
-        # nothing that churns between switches -- notably not `${pkgs.sops}`,
-        # which moves on every nixpkgs bump.
-        script =
-          let
-            secret = pkgs.stubbe.file "secrets/github-token";
-            profileBin = config.stubbe.paths.nixBin;
-          in
-          ''
-            ageKey=$(${profileBin}/ssh-to-age -private-key -i "$HOME/.ssh/id_ed25519")
-            token=$(SOPS_AGE_KEY="$ageKey" ${profileBin}/sops --decrypt \
-              --input-type binary --output-type binary \
-              "${secret}" | tr -d '\n')
-            unset ageKey
-
-            if [ -z "$token" ]; then
-              echo "nix-github-token: decrypted token is empty, aborting." >&2
-              exit 1
-            fi
-
-            grp=$(id -gn)
-            umask 077
-            tmp=$(mktemp)
-            printf 'access-tokens = github.com=%s\n' "$token" > "$tmp"
-            unset token
-            sudo install -m 0640 -o root -g "$grp" "$tmp" /etc/nix/nix-access-tokens.conf
-            rm -f "$tmp"
-
-            if ! grep -qxF '!include nix-access-tokens.conf' /etc/nix/nix.conf 2>/dev/null; then
-              printf '\n# managed-by: stubbe nix-github-token\n!include nix-access-tokens.conf\n' \
-                | sudo tee -a /etc/nix/nix.conf >/dev/null
-            fi
-          '';
+      #
+      # Pulled in by reference, not through `nix.settings.access-tokens`: that
+      # would put the token in the world-readable store copy of nix.conf.
+      # `!include` is the optional form, so a nix call before the first sops
+      # render -- or after a reboot wipes $XDG_RUNTIME_DIR, until
+      # sops-nix.service re-renders -- is fine rather than a hard error.
+      #
+      # On NixOS the system nix.conf carries the same line (see the nixos
+      # module above) and generating a user nix.conf here would shadow it.
+      sops = lib.mkIf (!onNixOS) {
+        secrets.github-token = pkgs.stubbe.secret { name = "github-token"; };
+        templates."nix-access-tokens.conf" = {
+          content = "access-tokens = github.com=${config.sops.placeholder.github-token}";
+          path = accessTokensFile;
+        };
       };
+
+      nix.extraOptions = lib.mkIf (!onNixOS) ''
+        !include ${accessTokensFile}
+      '';
     };
 }
