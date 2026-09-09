@@ -1,4 +1,4 @@
-_:
+{ inputs, ... }:
 let
   # The PHP for CLI, FPM, composer and the interpreter FrankenPHP embeds. Named
   # once here because the overlay below and the module have to agree; the assert
@@ -79,8 +79,40 @@ in
         zendMaxExecutionTimersSupport = pkgs.stdenv.hostPlatform.isLinux;
       };
 
+      # nixpkgs pins the mongodb driver well behind upstream. `mongodb-php-src`
+      # is the *unversioned* PECL URL, so it always resolves to the newest
+      # release and `nix flake update mongodb-php-src` is the only thing that
+      # moves it - no hash or version is written down here. The version is read
+      # back off the tarball's own `mongodb-<ver>/` directory.
+      #
+      # Overridden on the extension set handed to buildEnv rather than via
+      # `packageOverrides`, which the buildEnv passthru chain drops, so it still
+      # builds against the ZTS php above.
+      mongodbLatest =
+        ext:
+        ext.overrideAttrs (_: rec {
+          version =
+            let
+              names = builtins.attrNames (builtins.readDir inputs.mongodb-php-src);
+              dirs = builtins.filter (n: builtins.match "mongodb-[0-9].*" n != null) names;
+            in
+            assert lib.assertMsg (dirs != [ ]) "no mongodb-<version>/ dir in mongodb-php-src";
+            lib.removePrefix "mongodb-" (builtins.head dirs);
+
+          # buildPecl bakes `name` from its *argument* version, so overriding
+          # `version` alone leaves a store path claiming the nixpkgs version.
+          name = "php-mongodb-${version}";
+          src = inputs.mongodb-php-src;
+
+          # The PECL tarball unpacks to two top-level entries (mongodb-<ver>/
+          # and package.xml), so nix's fetcher strips no component.
+          sourceRoot = "source/mongodb-${version}";
+        });
+
       php = phpPackageZts.buildEnv {
-        extensions = { all, ... }: builtins.attrValues (removeAttrs all excludedExts);
+        extensions =
+          { all, ... }:
+          builtins.attrValues (removeAttrs all excludedExts // { mongodb = mongodbLatest all.mongodb; });
         extraConfig = extraIni;
       };
 

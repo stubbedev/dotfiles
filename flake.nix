@@ -123,6 +123,15 @@
       url = "github:Embroidermodder/libembroidery";
       flake = false;
     };
+    # Unversioned PECL URL: always resolves to the newest mongodb release, so
+    # the version is whatever `nix flake update mongodb-php-src` last pulled
+    # rather than a hand-written hash. The PECL release tarball bundles
+    # libmongoc/libmongocrypt, so it needs no submodule fetch.
+    mongodb-php-src = {
+      url = "https://pecl.php.net/get/mongodb";
+      type = "tarball";
+      flake = false;
+    };
     tridactyl-theme-src = {
       url = "github:devnullvoid/tridactyl";
       flake = false;

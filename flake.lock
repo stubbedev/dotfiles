@@ -897,6 +897,19 @@
         "type": "github"
       }
     },
+    "mongodb-php-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788455489,
+        "narHash": "sha256-XwXQUe4QY+Pn3dKVtUfCK/V3AHLRe0z3XsEFe6hFSfM=",
+        "type": "tarball",
+        "url": "https://pecl.php.net/get/mongodb"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://pecl.php.net/get/mongodb"
+      }
+    },
     "nix-mcp": {
       "inputs": {
         "flake-utils": "flake-utils_3",
@@ -1256,6 +1269,7 @@
         "jenkins-mcp": "jenkins-mcp",
         "lanzaboote": "lanzaboote",
         "libembroidery-src": "libembroidery-src",
+        "mongodb-php-src": "mongodb-php-src",
         "nix-mcp": "nix-mcp",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_4",
