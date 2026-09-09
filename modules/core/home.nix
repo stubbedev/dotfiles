@@ -41,7 +41,9 @@
       # `config.nix.package` for nix-env/nix-collect-garbage. Only `settings`
       # below generates ~/.config/nix/nix.conf, which must stay off NixOS where
       # it would shadow the system /etc/nix/nix.conf.
-      nix.package = lib.mkDefault inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      nix.package =
+        lib.mkDefault
+          inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
       # home-manager reads `nix.package` only to generate and validate
       # nix.conf; it never puts that client on PATH, so every nix call kept
