@@ -155,7 +155,7 @@ in
         lib.concatMapStrings
           (profile: ''
             if [ -e ${lib.escapeShellArg "${profilesDir}/${profile}"} ]; then
-              $DRY_RUN_CMD ${lib.getExe' pkgs.nix "nix-env"} \
+              $DRY_RUN_CMD ${lib.getExe' config.nix.package "nix-env"} \
                 --profile ${lib.escapeShellArg "${profilesDir}/${profile}"} --delete-generations +2 || true
             fi
           '')
@@ -170,7 +170,7 @@ in
           Unit.Description = "Collect unreachable nix store paths";
           Service = {
             Type = "oneshot";
-            ExecStart = lib.getExe' pkgs.nix "nix-collect-garbage";
+            ExecStart = lib.getExe' config.nix.package "nix-collect-garbage";
           };
         };
 

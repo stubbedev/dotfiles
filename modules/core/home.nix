@@ -36,6 +36,13 @@
         nixGL.packages = pkgs.nixgl;
       };
 
+      # Set on every platform, not just non-NixOS: home-manager defaults
+      # `nix.package` to null, and the homeManager nix module reads it as
+      # `config.nix.package` for nix-env/nix-collect-garbage. Only `settings`
+      # below generates ~/.config/nix/nix.conf, which must stay off NixOS where
+      # it would shadow the system /etc/nix/nix.conf.
+      nix.package = lib.mkDefault inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+
       # home-manager reads `nix.package` only to generate and validate
       # nix.conf; it never puts that client on PATH, so every nix call kept
       # resolving to the installer's 2.34.6 in /nix/var/nix/profiles/default/bin
@@ -44,25 +51,22 @@
       # comes first in sessionPath, so installing it here shadows that client.
       home.packages = lib.mkIf (config.host.platform != "nixos") [ config.nix.package ];
 
-      nix = lib.mkIf (config.host.platform != "nixos") {
-        package = lib.mkDefault inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
-        settings = {
-          inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
+      nix.settings = lib.mkIf (config.host.platform != "nixos") {
+        inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
 
-          # ~/.config/nix/nix.conf shadows /etc/nix/nix.conf for this user, so
-          # nix-command/flakes must be repeated here or flakes stop working.
-          experimental-features = [
-            "nix-command"
-            "flakes"
-            "parallel-eval"
-          ];
-          eval-cores = 0;
+        # ~/.config/nix/nix.conf shadows /etc/nix/nix.conf for this user, so
+        # nix-command/flakes must be repeated here or flakes stop working.
+        experimental-features = [
+          "nix-command"
+          "flakes"
+          "parallel-eval"
+        ];
+        eval-cores = 0;
 
-          max-jobs = "auto";
-          cores = 2;
+        max-jobs = "auto";
+        cores = 2;
 
-          download-buffer-size = 128 * 1024 * 1024;
-        };
+        download-buffer-size = 128 * 1024 * 1024;
       };
     };
 
