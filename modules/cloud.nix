@@ -4,6 +4,7 @@ _: {
     {
       environment.systemPackages = with pkgs; [
         vultr-cli
+        hcloud
         s5cmd
       ];
     };
@@ -13,6 +14,7 @@ _: {
     {
       home.packages = with pkgs; [
         vultr-cli
+        hcloud
         s5cmd
       ];
 
@@ -20,6 +22,20 @@ _: {
       sops.templates."vultr-cli.yaml" = {
         content = "api-key: ${config.sops.placeholder.vultr}";
         path = "${config.home.homeDirectory}/.vultr-cli.yaml";
+      };
+
+      # The secret holds the raw token with no trailing newline: it lands inside
+      # a quoted TOML string, so a newline would break the parse.
+      sops.secrets.hetzner = pkgs.stubbe.secret { name = "hetzner"; };
+      sops.templates."hcloud-cli.toml" = {
+        content = ''
+          active_context = "default"
+
+          [[contexts]]
+            name = "default"
+            token = "${config.sops.placeholder.hetzner}"
+        '';
+        path = "${config.xdg.configHome}/hcloud/cli.toml";
       };
 
       # ~/.config/gh/hosts.yml carries the GitHub CLI oauth_token. By default gh
