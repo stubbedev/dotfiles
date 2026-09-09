@@ -10,6 +10,14 @@
     {
       programs.home-manager.enable = true;
 
+      # home-configuration.nix(5). Its options.json is built by nixpkgs'
+      # `nixosOptionsDoc`, which `unsafeDiscardStringContext`s the options
+      # JSON; home-manager's docs only rewrite declaration paths under its own
+      # tree, so nixpkgs' lib/modules/generic/meta-maintainers.nix leaks
+      # through as a bare store path and every eval warns about a derivation
+      # with no proper context. nix-mcp covers option lookup, so drop it.
+      manual.manpages.enable = false;
+
       home = {
         # mkDefault so the NixOS bridge can set these from
         # users.users.<name>.home without a priority conflict; on standalone HM
