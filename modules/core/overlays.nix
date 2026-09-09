@@ -48,6 +48,34 @@ in
         };
       };
 
+    gddy =
+      final: _prev:
+      let
+        src = inputs.gddy;
+        cargoMeta = (fromTOML (builtins.readFile "${src}/rust/Cargo.toml")).package;
+      in
+      {
+        gddy = final.rustPlatform.buildRustPackage {
+          pname = "gddy";
+          inherit (cargoMeta) version;
+          inherit src;
+          sourceRoot = "source/rust";
+          cargoLock.lockFile = src + "/rust/Cargo.lock";
+          cargoBuildFlags = [
+            "--bin"
+            "gddy"
+          ];
+          doCheck = false;
+          meta = {
+            description = "Agent-first CLI for the GoDaddy developer platform";
+            homepage = "https://github.com/godaddy/cli";
+            license = final.lib.licenses.mit;
+            mainProgram = "gddy";
+            platforms = final.lib.platforms.unix;
+          };
+        };
+      };
+
     # `packages.default`, never its `overlays.default`: that overlay rebuilds via
     # callPackage against OUR nixpkgs, so no store hash matches the CI cache.
     wayle = _final: prev: {

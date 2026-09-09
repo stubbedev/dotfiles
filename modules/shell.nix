@@ -738,6 +738,7 @@
         ${lib.getExe pkgs.lazygit} completion zsh > $dir/_lazygit
         cp ${pkgs.hcloud}/share/zsh/site-functions/_hcloud $dir/_hcloud
         ${lib.getExe pkgs.vultr-cli} completion zsh > $dir/_vultr-cli
+        ${lib.getExe pkgs.gddy} completion zsh > $dir/_gddy
         ${lib.optionalString config.features.srv ''
           ${inputs.srv.packages.${system}.srv}/bin/srv completion zsh > $dir/_srv
         ''}

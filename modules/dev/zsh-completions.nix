@@ -18,7 +18,7 @@
             dump=$(grep -o '/nix/store/[^ ]*-stubbe-zcompdump/zcompdump' "$zshrc" | head -1)
             [ -n "$dump" ] || { echo ".zshrc loads no zcompdump" >&2; exit 1; }
 
-            for cmd in hm denv hcloud vultr-cli; do
+            for cmd in hm denv hcloud vultr-cli gddy; do
               grep -q "'$cmd' '_$cmd'" "$dump" ||
                 { echo "compinit did not index _$cmd — missing '#compdef $cmd' first line?" >&2; exit 1; }
             done

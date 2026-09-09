@@ -482,6 +482,22 @@
         "type": "github"
       }
     },
+    "gddy": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788554229,
+        "narHash": "sha256-GF+v9wV1eZDUhglVYipFHlYpDisNTxbh79pU7sPyaNQ=",
+        "owner": "godaddy",
+        "repo": "cli",
+        "rev": "d5bb34dbcb978e36acb7a3df1de05eb0564e486e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "godaddy",
+        "repo": "cli",
+        "type": "github"
+      }
+    },
     "ghostscript-src": {
       "flake": false,
       "locked": {
@@ -1259,6 +1275,7 @@
         "ds-mcp": "ds-mcp",
         "fenix": "fenix",
         "flake-parts": "flake-parts_2",
+        "gddy": "gddy",
         "ghostscript-src": "ghostscript-src",
         "home-manager": "home-manager",
         "html-to-md": "html-to-md",
