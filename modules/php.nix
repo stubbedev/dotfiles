@@ -1,4 +1,20 @@
-_: {
+_:
+let
+  # The PHP for CLI, FPM, composer and the interpreter FrankenPHP embeds. Named
+  # once here because the overlay below and the module have to agree; the assert
+  # next to the `frankenphp` binding proves they still do.
+  phpAttr = "php85";
+in
+{
+  # FrankenPHP compiles its PHP in, so nixpkgs' default (still 8.4) cannot be
+  # re-pointed at the use site - the Go binary itself has to be rebuilt. As an
+  # overlay rather than a local `override` so shell.nix's completion generator
+  # reuses this build instead of pulling the 8.4 one (and its whole php closure)
+  # from the cache.
+  flake.overlays.frankenphp-php = final: prev: {
+    frankenphp = prev.frankenphp.override { php = final.${phpAttr}; };
+  };
+
   flake.modules.homeManager.php =
     {
       pkgs,
@@ -7,17 +23,21 @@ _: {
       ...
     }:
     let
-      phpPackage = pkgs.php84;
+      phpPackage = pkgs.${phpAttr};
 
       excludedExts = [
         "blackfire" # proprietary, requires license
         "couchbase" # broken
         "datadog_trace" # broken
+        "igbinary" # marked broken on PHP >= 8.5 in nixpkgs
         "ioncube-loader" # proprietary loader
+        "memcache" # marked broken on PHP >= 8.5 in nixpkgs
         "oci8" # requires Oracle client
         "openssl-legacy" # removed from nixpkgs
         "parallel" # broken
         "pdo_oci" # requires Oracle client
+        "pdo_sqlsrv" # marked broken on PHP >= 8.5 in nixpkgs
+        "phalcon" # marked broken on PHP >= 8.5 in nixpkgs
         "php-spx" # deprecated alias for spx
         "relay" # proprietary
         "tideways" # unsupported PHP version
@@ -64,9 +84,11 @@ _: {
         extraConfig = extraIni;
       };
 
-      # Deliberately NOT `frankenphp.override { inherit php; }`: that only
-      # changes which php.ini the binary symlinks, yet rebuilds the whole Go
-      # binary (plus a 300M+ go-modules fetch) on every nixpkgs bump. Since
+      # The php swap already happened in the overlay above; all that is left
+      # here is pointing the binary at OUR ini dir (extensions + extraIni). A
+      # wrapper rather than a second `.override`, which would only change the
+      # ini symlink yet rebuild the whole Go binary (plus a 300M+ go-modules
+      # fetch) a second time.
       frankenphp =
         assert pkgs.frankenphp.php.unwrapped.drvPath == phpPackageZts.unwrapped.drvPath;
         pkgs.symlinkJoin {
