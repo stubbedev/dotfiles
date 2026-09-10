@@ -42,6 +42,17 @@ _: {
         headers."X-Repo-Root" = "{env:PWD}";
       };
 
+      # `type` is mandatory here -- crush's schema defaults it to "stdio", so a
+      # url-only entry is parsed as a command. Header values go through crush's
+      # embedded shell, hence the bare $PWD. The 15s default connect timeout is
+      # too tight for a cold socket-activated mcp-proxy (TimeoutStartSec=120).
+      toCrush = _: server: {
+        type = "http";
+        inherit (server) url;
+        headers."X-Repo-Root" = "$PWD";
+        timeout = 120;
+      };
+
       toCodex = name: server: [
         "-c"
         (lib.escapeShellArg "mcp_servers.${name}=${tomlInlineTable (toCodexTable server)}")
@@ -51,12 +62,13 @@ _: {
       options.stubbe.mcp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Per-agent renderings of the MCP inventory: `claude` and `opencode` (JSON) and `codexFlags` (argv).";
+        description = "Per-agent renderings of the MCP inventory: `claude`, `opencode` and `crush` (JSON) and `codexFlags` (argv).";
       };
 
       config.stubbe.mcp.clients = {
         claude = lib.mapAttrs toClaude clientServers;
         opencode = lib.mapAttrs toOpencode clientServers;
+        crush = lib.mapAttrs toCrush clientServers;
         codexFlags = lib.concatLists (lib.mapAttrsToList toCodex clientServers);
       };
     };
