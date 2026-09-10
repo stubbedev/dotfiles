@@ -195,6 +195,14 @@ _: {
 
           mcp = config.stubbe.mcp.clients.crush;
 
+          # The same language server inventory Claude Code's LSP plugin ships,
+          # in crush's dialect: `filetypes` entries match as ".<ext>" suffixes
+          # and server settings live under `options`/`init_options`. The
+          # commands are store paths, which crush needs: user-configured
+          # servers skip its PATH probe, and crush runs without nvim's
+          # wrapper PATH to find the binaries by name.
+          lsp = config.stubbe.lsp.clients.crush;
+
           # `crush --yolo` is a flag on the ROOT command only, so baking it into
           # a wrapper would make `crush run`/`crush logs` die with "unknown
           # flag". allowed_tools is the config-level equivalent and applies to
