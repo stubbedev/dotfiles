@@ -3,34 +3,10 @@ _: {
     { lib, pkgs, ... }:
     {
       networking = {
-        # The ISP's resolvers hold records well past their TTL — during the
-        # Vultr -> Hetzner move a 300s A record was still stale hours later,
-        # while 1.1.1.1 and the authoritative servers had long since updated.
-        # Take DNS from here, not from DHCP.
-        #
-        # This does NOT disturb srv: modules/srv.nix writes a resolved dropin
-        # routing its own domains to the dnsmasq container as `~domain`
-        # entries, and a specific routing domain always wins over the default
-        # route, so *.test / *.local sites keep resolving locally.
-        nameservers = [
-          "1.1.1.1"
-          "1.0.0.1"
-          "2606:4700:4700::1111"
-          "2606:4700:4700::1001"
-        ];
-
         networkmanager = {
           enable = true;
           plugins = with pkgs; [ networkmanager-openconnect ];
           wifi.powersave = true;
-          # Without these, NetworkManager keeps handing the DHCP-supplied
-          # resolvers to systemd-resolved as per-link DNS, and link DNS beats
-          # the global `nameservers` above for anything not covered by a
-          # routing domain.
-          connectionConfig = {
-            "ipv4.ignore-auto-dns" = true;
-            "ipv6.ignore-auto-dns" = true;
-          };
         };
         firewall = {
           enable = true;
