@@ -254,6 +254,19 @@ _: {
             exec claude --dangerously-skip-permissions "$@"
           fi
         '';
+        "tmux-crush" = ''
+
+          if ! command -v crush &>/dev/null; then
+            exit 0
+          fi
+
+          if [[ -z "$TMUX" ]]; then
+            crush --yolo "$@"
+          else
+            tmux renamew "crush"
+            exec crush --yolo "$@"
+          fi
+        '';
         "tmux-lazy-docker" = ''
 
           if ! command -v lazydocker &>/dev/null; then

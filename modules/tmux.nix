@@ -97,6 +97,7 @@ _: {
           #!/usr/bin/env bash
 
           CLAUDE_WINDOW_NAME="claude"
+          CRUSH_WINDOW_NAME="crush"
           PINNED_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/tmux/pinned"
           SAVE_LOCK="''${XDG_RUNTIME_DIR:-/tmp}/tmux-save-soon.lock"
 
@@ -231,10 +232,13 @@ _: {
             toggle_window "lazydocker" tmux-lazy-docker
           }
 
-          toggle_claude_window() {
-            if ! command -v tmux-claude >/dev/null 2>&1; then
-              return
-            fi
+          # Worktree-aware window toggle shared by the agent launchers: an
+          # existing window over the same git worktree (any session) is
+          # switched to, otherwise a fresh one is opened in the current pane's
+          # directory.
+          toggle_agent_window() {
+            local window_name="$1"
+            local agent_cmd="$2"
 
             local current_path worktree current_window
             current_path=$(tmux display-message -p -F "#{pane_current_path}")
@@ -242,18 +246,18 @@ _: {
             worktree=$(git -C "$current_path" rev-parse --show-toplevel 2>/dev/null)
 
             if [ -z "$worktree" ]; then
-              toggle_window "$CLAUDE_WINDOW_NAME" tmux-claude
+              toggle_window "$window_name" "$agent_cmd"
               return
             fi
 
-            if [ "$current_window" = "$CLAUDE_WINDOW_NAME" ]; then
+            if [ "$current_window" = "$window_name" ]; then
               tmux last-window 2>/dev/null || true
               return 0
             fi
 
             local target sess win wname wpath wt
             while IFS=$'\t' read -r sess win wname wpath; do
-              [ "$wname" = "$CLAUDE_WINDOW_NAME" ] || continue
+              [ "$wname" = "$window_name" ] || continue
               wt=$(git -C "$wpath" rev-parse --show-toplevel 2>/dev/null)
               if [ "$wt" = "$worktree" ]; then
                 target="''${sess}:''${win}"
@@ -273,17 +277,23 @@ _: {
               return 0
             fi
 
-            tmux new-window -c "$current_path" -n "$CLAUDE_WINDOW_NAME" tmux-claude
+            tmux new-window -c "$current_path" -n "$window_name" "$agent_cmd"
           }
 
-          claude_inline_pane() {
+          toggle_claude_window() {
             if ! command -v tmux-claude >/dev/null 2>&1; then
               return
             fi
-            local current_path
-            current_path=$(tmux display-message -p -F "#{pane_current_path}")
-            tmux respawn-pane -k -c "$current_path" \
-              "zsh -ic 'tmux rename-window ''${CLAUDE_WINDOW_NAME}; tmux-claude --inline; tmux set-window-option automatic-rename on; exec zsh -i'"
+
+            toggle_agent_window "$CLAUDE_WINDOW_NAME" tmux-claude
+          }
+
+          toggle_crush_window() {
+            if ! command -v tmux-crush >/dev/null 2>&1; then
+              return
+            fi
+
+            toggle_agent_window "$CRUSH_WINDOW_NAME" tmux-crush
           }
 
           pane_is_pinned() {
@@ -640,7 +650,7 @@ _: {
           "toggle_sysmon_window")     toggle_sysmon_window ;;
           "toggle_lazydocker_window") toggle_lazydocker_window ;;
           "toggle_claude_window")     toggle_claude_window ;;
-          "claude_inline_pane")       claude_inline_pane ;;
+          "toggle_crush_window")      toggle_crush_window ;;
           "move_pane")                move_pane "$2" ;;
           "move_pane_to_window")      move_pane_to_window "$2" ;;
           "session_init")             session_init ;;
@@ -759,7 +769,7 @@ _: {
           bind -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"       # FZF project picker
           bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
           bind -n M-h run-shell -b "#{@stubbe_commands} toggle_claude_window"        # Toggle claude window
-          bind -n M-H run-shell -b "#{@stubbe_commands} claude_inline_pane"          # Run claude in current pane
+          bind -n M-H run-shell -b "#{@stubbe_commands} toggle_crush_window"         # Toggle crush window
 
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
           set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""

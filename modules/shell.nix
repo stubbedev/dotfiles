@@ -381,7 +381,7 @@
             _bind_run "^[g" "tmux-lazy-git"
             _bind_run "^[a" "tmux-system-monitor"
             _bind_run "^[h" "tmux-claude"
-            _bind_run "^[H" "tmux-claude --inline"
+            _bind_run "^[H" "tmux-crush"
 
             if is_binary fzf; then
                 _bind_run "^[f" "tmux-pick-project"
