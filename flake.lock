@@ -485,11 +485,11 @@
     "gddy": {
       "flake": false,
       "locked": {
-        "lastModified": 1788990898,
-        "narHash": "sha256-563h473xCRedK9xhDnhDc99tsIQQxcWp2KbDidJe/zM=",
+        "lastModified": 1789067535,
+        "narHash": "sha256-CKKcMQFEmATry//BbewtEi3dMD0djpFu/lXlacvFlXc=",
         "owner": "godaddy",
         "repo": "cli",
-        "rev": "ba6eace045f9944a81c4be103f3bb0a38b68b6d8",
+        "rev": "2d55cd17832640ee2d0391ed4f0b9c1be5b1275d",
         "type": "github"
       },
       "original": {
@@ -561,11 +561,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789047607,
-        "narHash": "sha256-TvkqeCjWyQvQs7jZ/2WcOWF1GMSgKtAP3qrw7eKpp1k=",
+        "lastModified": 1789099078,
+        "narHash": "sha256-zzHj2wl69724lzx7DLAVziWbL75wRIk+xJ3duD0Bgrc=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "f7f333f04ff6e2f94f955642a1b4956d4fcd3010",
+        "rev": "f10b3f2ad4aae9259617a1ff518cc921e3394228",
         "type": "github"
       },
       "original": {
