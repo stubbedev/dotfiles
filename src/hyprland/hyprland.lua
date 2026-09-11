@@ -219,7 +219,9 @@ local function setup_keybinds()
     hl.bind("Print", hl.dsp.exec_cmd("wayle screenshot region"))
     hl.bind(mod .. " + Print", hl.dsp.exec_cmd("wayle screenshot window"))
     hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("wayle recorder toggle"))
-    hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v && notify-send "Pasted selection"]]))
+    -- wtype's -M holds the modifier past exit; -m releases it again so Ctrl
+    -- does not stay pressed until the next physical Ctrl press.
+    hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl && notify-send "Pasted selection"]]))
     hl.bind(mod .. " + C", hl.dsp.exec_cmd([[wl-copy "$(wl-paste -p)" && notify-send "Copied selection"]]))
     hl.bind(mod .. " + M", hl.dsp.exec_cmd("mail-open"))
 
