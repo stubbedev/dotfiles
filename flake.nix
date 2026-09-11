@@ -54,6 +54,12 @@
       url = "github:stubbedev/atlassian-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # The Crush fork: config-driven theming, git header, thinking toggle and
+    # prompt height, so nothing has to be patched into the Go source here.
+    harness = {
+      url = "github:stubbedev/harness";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     ds-mcp.url = "github:stubbedev/ds-mcp";
     html-to-md = {
       url = "github:stubbedev/html-to-md";

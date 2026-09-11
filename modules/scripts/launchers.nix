@@ -254,17 +254,17 @@ _: {
             exec claude --dangerously-skip-permissions "$@"
           fi
         '';
-        "tmux-crush" = ''
+        "tmux-harness" = ''
 
-          if ! command -v crush &>/dev/null; then
+          if ! command -v harness &>/dev/null; then
             exit 0
           fi
 
           if [[ -z "$TMUX" ]]; then
-            crush --yolo "$@"
+            harness --yolo "$@"
           else
-            tmux renamew "crush"
-            exec crush --yolo "$@"
+            tmux renamew "harness"
+            exec harness --yolo "$@"
           fi
         '';
         "tmux-lazy-docker" = ''

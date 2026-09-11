@@ -97,7 +97,7 @@ _: {
           #!/usr/bin/env bash
 
           CLAUDE_WINDOW_NAME="claude"
-          CRUSH_WINDOW_NAME="crush"
+          HARNESS_WINDOW_NAME="harness"
           PINNED_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/tmux/pinned"
           SAVE_LOCK="''${XDG_RUNTIME_DIR:-/tmp}/tmux-save-soon.lock"
 
@@ -288,12 +288,12 @@ _: {
             toggle_agent_window "$CLAUDE_WINDOW_NAME" tmux-claude
           }
 
-          toggle_crush_window() {
-            if ! command -v tmux-crush >/dev/null 2>&1; then
+          toggle_harness_window() {
+            if ! command -v tmux-harness >/dev/null 2>&1; then
               return
             fi
 
-            toggle_agent_window "$CRUSH_WINDOW_NAME" tmux-crush
+            toggle_agent_window "$HARNESS_WINDOW_NAME" tmux-harness
           }
 
           pane_is_pinned() {
@@ -650,7 +650,7 @@ _: {
           "toggle_sysmon_window")     toggle_sysmon_window ;;
           "toggle_lazydocker_window") toggle_lazydocker_window ;;
           "toggle_claude_window")     toggle_claude_window ;;
-          "toggle_crush_window")      toggle_crush_window ;;
+          "toggle_harness_window")      toggle_harness_window ;;
           "move_pane")                move_pane "$2" ;;
           "move_pane_to_window")      move_pane_to_window "$2" ;;
           "session_init")             session_init ;;
@@ -769,7 +769,7 @@ _: {
           bind -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"       # FZF project picker
           bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
           bind -n M-h run-shell -b "#{@stubbe_commands} toggle_claude_window"        # Toggle claude window
-          bind -n M-H run-shell -b "#{@stubbe_commands} toggle_crush_window"         # Toggle crush window
+          bind -n M-H run-shell -b "#{@stubbe_commands} toggle_harness_window"         # Toggle harness window
 
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
           set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""

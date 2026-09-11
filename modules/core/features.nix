@@ -19,7 +19,7 @@ let
     claudeCode = "Claude Code CLI, its managed settings, and the MCP inventory.";
     codex = "Codex CLI, wired to the same MCP inventory.";
     opencode = "opencode CLI.";
-    crush = "Crush CLI, wired to the same MCP inventory and the Z.ai provider.";
+    harness = "Harness CLI (the stubbedev Crush fork), wired to the same MCP inventory and the Z.ai provider.";
     browsers = "Web browsers (Firefox, Google Chrome) and their managed policies.";
     slack = "Slack desktop client.";
   };

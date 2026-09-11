@@ -15,7 +15,7 @@ _: {
 
       # Neutral shape per server: `languages` maps a file extension (sans dot)
       # to the LSP language id -- every consumer needs both halves, claude as
-      # extensionToLanguage, crush as filetypes (extensions match by suffix).
+      # extensionToLanguage, harness as filetypes (extensions match by suffix).
       servers = {
         nixd = {
           command = lib.getExe' pkgs.nixd "nixd";
@@ -175,11 +175,11 @@ _: {
         // lib.optionalAttrs (s ? settings) { inherit (s) settings; }
         // lib.optionalAttrs (s ? initOptions) { initializationOptions = s.initOptions; };
 
-      # crush's `lsp` map: filetypes match as ".<ext>" suffixes on the file
+      # harness's `lsp` map: filetypes match as ".<ext>" suffixes on the file
       # name, and the settings move to `options`. Commands must be store paths:
-      # user-configured servers skip crush's PATH probe, and crush runs without
+      # user-configured servers skip harness's PATH probe, and harness runs without
       # nvim's wrapper PATH to find binaries by name.
-      toCrush =
+      toHarness =
         _: s:
         {
           inherit (s) command;
@@ -195,13 +195,13 @@ _: {
       options.stubbe.lsp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Per-agent renderings of the language server inventory: `claude` (.lsp.json plugin) and `crush` (lsp map).";
+        description = "Per-agent renderings of the language server inventory: `claude` (.lsp.json plugin) and `harness` (lsp map).";
       };
 
       config.stubbe.lsp.clients =
         # Rendered only for CLIs that are actually enabled -- and it keeps
         # `config` in an expression, which deadnix requires to see it used.
         lib.optionalAttrs config.features.claudeCode { claude = lib.mapAttrs toClaude servers; }
-        // lib.optionalAttrs config.features.crush { crush = lib.mapAttrs toCrush servers; };
+        // lib.optionalAttrs config.features.harness { harness = lib.mapAttrs toHarness servers; };
     };
 }
