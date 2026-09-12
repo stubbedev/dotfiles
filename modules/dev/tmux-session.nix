@@ -259,6 +259,34 @@
             kill "$client_pid" 2>/dev/null || true
             sleep 1
 
+            # Alt+h runs the agent picker in a popup; a selection dispatches
+            # the same toggle the popup bind would. The picker itself needs
+            # fzf, so the stub stands in for one made selection.
+            cat > "$HOME/bin/codex" <<EOF
+            #!/bin/sh
+            exec tail -f /dev/null
+            EOF
+            cat > "$HOME/bin/tmux-codex" <<EOF
+            #!/bin/sh
+            exec codex "\$@"
+            EOF
+            cat > "$HOME/bin/tmux-pick-agent" <<EOF
+            #!/bin/sh
+            exec "$commands" toggle_agent_window codex tmux-codex
+            EOF
+            chmod +x "$HOME/bin/codex" "$HOME/bin/tmux-codex" "$HOME/bin/tmux-pick-agent"
+
+            tmux run-shell -t wiring "tmux-pick-agent"
+            sleep 1
+            tmux list-windows -t wiring -F '#{window_name}' | grep -qx codex ||
+              fail "agent picker dispatch did not open the codex window"
+
+            tmux run-shell -t wiring "tmux-pick-agent"
+            sleep 1
+            [ "$(tmux list-windows -t wiring -F '#{window_name}' | grep -cx codex)" = "1" ] ||
+              fail "second agent dispatch opened a duplicate window"
+            ok "agent picker opens one window per agent and reuses it"
+
             tmux new-session -d -s soon -c "$HOME"
             sleep 1
             lazy-tmux save --session soon >/dev/null
