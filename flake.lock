@@ -40,11 +40,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789118637,
-        "narHash": "sha256-5wJdY3eNWSRYvyRS2HbF6cS6BW8VlTSYHU2L7fbd51o=",
+        "lastModified": 1789223325,
+        "narHash": "sha256-XaQUPa8eA7o1DoXIsYL3f2GAwYsbXbUciR90orGM3xU=",
         "owner": "stubbedev",
         "repo": "atlassian-mcp",
-        "rev": "4124810e4b70488f6b7a493b8a3f46f1907895ca",
+        "rev": "58a35cc80d0e0ca0adc918d3121a34cbfd3a11d3",
         "type": "github"
       },
       "original": {
@@ -580,11 +580,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789218017,
-        "narHash": "sha256-9DYvXOG9QZqZ/q/R2MFrSIna98zVfBIFtX9RCV+JLik=",
+        "lastModified": 1789232318,
+        "narHash": "sha256-ffk7wzAKbhdsFoEz+/YkoU8DjNfRTwZb0gNqS8wr0uw=",
         "owner": "stubbedev",
         "repo": "harness",
-        "rev": "af5b163ab4450e50bd84c8219d669635524efc37",
+        "rev": "ce0e6d3968d478ca7de2fa9523e6ee0a1e9a5f86",
         "type": "github"
       },
       "original": {
@@ -600,11 +600,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789183968,
-        "narHash": "sha256-pEWnYdIF1pBMZwarp/rEPzl+Lknhm5hhjSfeLxH8nAA=",
+        "lastModified": 1789230132,
+        "narHash": "sha256-u7aiV01Iu11NGOjXbxoCCrew6n0vo/LnULqOvZa+Agc=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "cd1c9e552f41894aeb5cc5cb353d5a1d61550357",
+        "rev": "17bf375751d457efa3897c7c3d68106616b1d469",
         "type": "github"
       },
       "original": {
