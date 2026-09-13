@@ -54,13 +54,12 @@
             # the documented base URL, and the muse-spark line listed by hand
             # because there is no registry to inherit limits from. Every
             # variant: 1M context, 128k output, reasoning, tool calls, and
-            # text/image/video/audio/PDF input. The -contributor SKUs are the
-            # same checkpoint on the same key, ~12x cheaper ($0.10/$0.20 vs
-            # $1.25/$4.25 per M) in exchange for Meta training on the traffic
-            # and a 60 req/min ceiling instead of the standard tier's 3000 --
-            # fine for solo sessions, throttle-y for a fast agent loop. There
-            # is no 1.1-contributor, and the muse-image/voice siblings are not
-            # chat models.
+            # text/image/video/audio/PDF input. Only the -contributor SKUs are
+            # listed -- same checkpoint on the same key, ~12x cheaper
+            # ($0.10/$0.20 vs $1.25/$4.25 per M) in exchange for Meta training
+            # on the traffic and a 60 req/min ceiling instead of the standard
+            # tier's 3000, which is fine for solo sessions. There is no
+            # 1.1-contributor.
             meta = {
               type = "openai-compat";
               base_url = "https://api.meta.ai/v1";
@@ -76,11 +75,8 @@
                     supports_attachments = true;
                   })
                   [
-                    "1.3"
                     "1.3-contributor"
-                    "1.2"
                     "1.2-contributor"
-                    "1.1"
                   ];
             };
           };
