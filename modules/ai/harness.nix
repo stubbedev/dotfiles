@@ -26,17 +26,64 @@
         home.packages = [ harness ];
 
         sops.secrets.z-ai-token = pkgs.stubbe.secret { name = "z-ai-token"; };
+        sops.secrets.opencode-api-token = pkgs.stubbe.secret { name = "opencode-api-token"; };
+        sops.secrets.meta-muse-spark-api-token = pkgs.stubbe.secret {
+          name = "meta-muse-spark-api-token";
+        };
 
         # YAML, not JSON: the fork reads $XDG_CONFIG_HOME/harness/config.yaml
         # (hand-written, never written back to) and keeps its own writes in
         # $XDG_DATA_HOME/harness/state.yaml.
         xdg.configFile."harness/config.yaml".source = pkgs.stubbe.gen.yaml "harness-config.yaml" {
-          # Only the credential is ours: catwalk's built-in `zai` provider
-          # carries the endpoint and the model list, and a user entry under the
-          # same id overrides field by field instead of replacing it. The token
-          # stays out of the world-readable store because Harness expands config
+          # Only the credentials are ours: catwalk's built-in providers carry
+          # the endpoints and the model lists, and a user entry under the same
+          # id overrides field by field instead of replacing it. The tokens
+          # stay out of the world-readable store because Harness expands config
           # values through its embedded shell, so $(...) runs at load time.
-          providers.zai.api_key = "$(cat ${config.sops.secrets.z-ai-token.path})";
+          providers = {
+            zai.api_key = "$(cat ${config.sops.secrets.z-ai-token.path})";
+
+            # One OpenCode token authorises both of its gateways: zen is the
+            # full pay-per-token catalogue, go the flat-rate coding plan riding
+            # the same account.
+            "opencode-zen".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
+            "opencode-go".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
+
+            # Meta's Model API (dev.meta.ai) has no catwalk entry, so this one
+            # is spelled out in full: OpenAI-compatible chat completions behind
+            # the documented base URL, and the muse-spark line listed by hand
+            # because there is no registry to inherit limits from. Every
+            # variant: 1M context, 128k output, reasoning, tool calls, and
+            # text/image/video/audio/PDF input. The -contributor SKUs are the
+            # same checkpoint on the same key, ~12x cheaper ($0.10/$0.20 vs
+            # $1.25/$4.25 per M) in exchange for Meta training on the traffic
+            # and a 60 req/min ceiling instead of the standard tier's 3000 --
+            # fine for solo sessions, throttle-y for a fast agent loop. There
+            # is no 1.1-contributor, and the muse-image/voice siblings are not
+            # chat models.
+            meta = {
+              type = "openai-compat";
+              base_url = "https://api.meta.ai/v1";
+              api_key = "$(cat ${config.sops.secrets.meta-muse-spark-api-token.path})";
+              models =
+                map
+                  (v: {
+                    id = "muse-spark-${v}";
+                    name = "Muse Spark ${v}";
+                    context_window = 1048576;
+                    default_max_tokens = 131072;
+                    can_reason = true;
+                    supports_attachments = true;
+                  })
+                  [
+                    "1.3"
+                    "1.3-contributor"
+                    "1.2"
+                    "1.2-contributor"
+                    "1.1"
+                  ];
+            };
+          };
 
           # The pair to start from on a machine with no state yet. The state
           # file is loaded after this one, so switching model in-app still
