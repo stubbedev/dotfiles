@@ -1,4 +1,3 @@
-
 -- nvim only sends the LSP shutdown handshake on a clean exit, and not every
 -- server honours the `processId` it is given, so some outlive it. PR_SET_PDEATHSIG
 -- needs no cooperation and still fires on SIGKILL. Patched here rather than in
@@ -367,12 +366,136 @@ vim.g.rustaceanvim = {
   },
 }
 
+local function code_action(only, apply)
+  return function()
+    vim.lsp.buf.code_action({
+      apply = apply,
+      context = { only = { only }, diagnostics = {} },
+    })
+  end
+end
+
+local function rename_file()
+  local buf = vim.api.nvim_get_current_buf()
+  local old = vim.api.nvim_buf_get_name(buf)
+  if old == "" or vim.bo[buf].buftype ~= "" then
+    return
+  end
+
+  vim.ui.input({ prompt = "New file name: ", default = old, completion = "file" }, function(input)
+    if not input or input == "" or input == old then
+      return
+    end
+
+    local new = vim.fs.normalize(input)
+    vim.fn.mkdir(vim.fs.dirname(new), "p")
+
+    local clients = vim.lsp.get_clients({ bufnr = buf })
+    local files = { { oldUri = vim.uri_from_fname(old), newUri = vim.uri_from_fname(new) } }
+
+    for _, client in ipairs(clients) do
+      if client:supports_method("workspace/willRenameFiles") then
+        local res = client:request_sync("workspace/willRenameFiles", { files = files }, 1000, buf)
+        if res and res.result then
+          vim.lsp.util.apply_workspace_edit(res.result, client.offset_encoding)
+        end
+      end
+    end
+
+    vim.api.nvim_buf_call(buf, function()
+      vim.cmd("silent! write")
+    end)
+
+    local ok, err = vim.uv.fs_rename(old, new)
+    if not ok then
+      vim.notify("rename failed: " .. tostring(err), vim.log.levels.ERROR)
+      return
+    end
+
+    vim.api.nvim_buf_set_name(buf, new)
+    vim.api.nvim_buf_call(buf, function()
+      vim.cmd("silent! write!")
+      vim.cmd("silent! edit")
+    end)
+
+    for _, client in ipairs(clients) do
+      if client:supports_method("workspace/didRenameFiles") then
+        client:notify("workspace/didRenameFiles", { files = files })
+      end
+    end
+  end)
+end
+
+-- Snacks.words without snacks: documentHighlight gives the ranges, so jumping
+-- between them is a sort and an index.
+local function reference_jump(count, cycle)
+  return function()
+    local win = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_win_get_buf(win)
+    local client = vim.lsp.get_clients({ bufnr = buf, method = "textDocument/documentHighlight" })[1]
+    if not client then
+      return
+    end
+
+    local function byte(line, character)
+      local text = vim.api.nvim_buf_get_lines(buf, line, line + 1, false)[1] or ""
+      local ok, col = pcall(vim.str_byteindex, text, client.offset_encoding, character, false)
+      return ok and col or character
+    end
+
+    client:request(
+      "textDocument/documentHighlight",
+      vim.lsp.util.make_position_params(win, client.offset_encoding),
+      function(_, result)
+        if not result or #result == 0 then
+          return
+        end
+
+        local positions = vim.tbl_map(function(hl)
+          return hl.range.start
+        end, result)
+        table.sort(positions, function(a, b)
+          if a.line == b.line then
+            return a.character < b.character
+          end
+          return a.line < b.line
+        end)
+
+        local cursor = vim.api.nvim_win_get_cursor(win)
+        local current = 1
+        for i, pos in ipairs(positions) do
+          if pos.line < cursor[1] - 1 or (pos.line == cursor[1] - 1 and byte(pos.line, pos.character) <= cursor[2]) then
+            current = i
+          end
+        end
+
+        local target = current + count * vim.v.count1
+        if cycle then
+          target = (target - 1) % #positions + 1
+        else
+          target = math.min(math.max(target, 1), #positions)
+        end
+
+        local pos = positions[target]
+        vim.api.nvim_win_set_cursor(win, { pos.line + 1, byte(pos.line, pos.character) })
+      end,
+      buf
+    )
+  end
+end
+
 vim.api.nvim_create_autocmd("LspAttach", {
   group = vim.api.nvim_create_augroup("lsp_attach", { clear = true }),
   callback = function(args)
     local buf = args.buf
-    local function map(mode, lhs, rhs, desc)
-      vim.keymap.set(mode, lhs, rhs, { buffer = buf, desc = desc })
+    local function map(mode, lhs, rhs, desc, opts)
+      vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", { buffer = buf, desc = desc }, opts or {}))
+    end
+
+    local function pick(fn, opts)
+      return function()
+        require("fzf-lua")[fn](opts)
+      end
     end
 
     local client = vim.lsp.get_client_by_id(args.data.client_id)
@@ -389,15 +512,40 @@ vim.api.nvim_create_autocmd("LspAttach", {
       vim.lsp.linked_editing_range.enable(true, { bufnr = buf })
     end
 
-    map("n", "grd", vim.lsp.buf.definition, "Go to definition")
+    map("n", "gd", pick("lsp_definitions", { jump1 = true }), "Goto definition")
+    map("n", "gD", vim.lsp.buf.declaration, "Goto declaration")
+    map("n", "gr", pick("lsp_references", { ignore_current_line = true }), "References", { nowait = true })
+    map("n", "gI", pick("lsp_implementations", { jump1 = true }), "Goto implementation")
+    map("n", "gy", pick("lsp_typedefs", { jump1 = true }), "Goto type definition")
     map("n", "K", vim.lsp.buf.hover, "Hover") -- border comes from 'winborder'
 
+    if client and client:supports_method("textDocument/signatureHelp") then
+      map("n", "gK", vim.lsp.buf.signature_help, "Signature help")
+      map("i", "<c-k>", vim.lsp.buf.signature_help, "Signature help")
+    end
+
+    map("n", "<leader>cl", "<cmd>checkhealth vim.lsp<cr>", "LSP info")
+    map({ "n", "x" }, "<leader>ca", vim.lsp.buf.code_action, "Code action")
+    map("n", "<leader>cA", code_action("source", false), "Source action")
+    map("n", "<leader>co", code_action("source.organizeImports", true), "Organize imports")
+    map("n", "<leader>cr", vim.lsp.buf.rename, "Rename symbol")
+    map("n", "<leader>cR", rename_file, "Rename file")
+    map("n", "<leader>cs", "<cmd>Trouble symbols toggle<cr>", "Symbols (Trouble)")
+    map("n", "<leader>cS", "<cmd>Trouble lsp toggle<cr>", "LSP references/definitions (Trouble)")
+
+    if client and client:supports_method("textDocument/codeLens") then
+      map({ "n", "x" }, "<leader>cc", vim.lsp.codelens.run, "Run codelens")
+      map("n", "<leader>cC", vim.lsp.codelens.refresh, "Refresh codelens")
+    end
+
     vim.lsp.inlay_hint.enable(false, { bufnr = buf })
-    map("n", "<leader>uh", function()
-      vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }), { bufnr = buf })
-    end, "Toggle inlay hints")
 
     if client and client:supports_method("textDocument/documentHighlight") then
+      map("n", "]]", reference_jump(1), "Next reference")
+      map("n", "[[", reference_jump(-1), "Prev reference")
+      map("n", "<a-n>", reference_jump(1, true), "Next reference")
+      map("n", "<a-p>", reference_jump(-1, true), "Prev reference")
+
       local group = vim.api.nvim_create_augroup("lsp_highlight_" .. buf, { clear = true })
       vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
         buffer = buf,
