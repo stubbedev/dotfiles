@@ -35,21 +35,26 @@
         # (hand-written, never written back to) and keeps its own writes in
         # $XDG_DATA_HOME/harness/state.yaml.
         xdg.configFile."harness/config.yaml".source = pkgs.stubbe.gen.yaml "harness-config.yaml" {
-          # Only the credentials are ours: catwalk's built-in providers carry
+          # Only the credentials are ours: the models.dev catalogue carries
           # the endpoints and the model lists, and a user entry under the same
           # id overrides field by field instead of replacing it. The tokens
           # stay out of the world-readable store because Harness expands config
           # values through its embedded shell, so $(...) runs at load time.
+          #
+          # The ids are models.dev's, which are not catwalk's: the GLM coding
+          # subscription is "zai-coding-plan" (api.z.ai/api/coding/paas/v4),
+          # while plain "zai" is the pay-per-token API on the same host and
+          # answers a subscription token with 429 "Insufficient balance".
           providers = {
-            zai.api_key = "$(cat ${config.sops.secrets.z-ai-token.path})";
+            "zai-coding-plan".api_key = "$(cat ${config.sops.secrets.z-ai-token.path})";
 
-            # One OpenCode token authorises both of its gateways: zen is the
-            # full pay-per-token catalogue, go the flat-rate coding plan riding
-            # the same account.
-            "opencode-zen".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
+            # One OpenCode token authorises both of its gateways: opencode is
+            # the full pay-per-token catalogue (zen), opencode-go the
+            # flat-rate coding plan riding the same account.
+            opencode.api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
             "opencode-go".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
 
-            # Meta's Model API (dev.meta.ai) has no catwalk entry, so this one
+            # Meta's Model API (dev.meta.ai) has no models.dev entry, so this one
             # is spelled out in full: OpenAI-compatible chat completions behind
             # the documented base URL, and the muse-spark line listed by hand
             # because there is no registry to inherit limits from. Every
@@ -86,18 +91,18 @@
           # sticks; this only decides what a fresh checkout opens with.
           models = {
             large = {
-              provider = "zai";
+              provider = "zai-coding-plan";
               model = "glm-5.3";
-              reasoning_effort = "xhigh";
+              reasoning_effort = "max";
               max_tokens = 131072;
             };
             # The small model runs titles, summaries and the cheap internal
             # calls, so it gets the flash sibling: same 1M context and 131072
             # output cap, a fraction of the cost.
             small = {
-              provider = "zai";
+              provider = "zai-coding-plan";
               model = "glm-5.3-flash";
-              reasoning_effort = "xhigh";
+              reasoning_effort = "max";
               max_tokens = 131072;
             };
           };
