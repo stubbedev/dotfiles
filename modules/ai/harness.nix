@@ -31,6 +31,7 @@
           name = "meta-muse-spark-api-token";
         };
         sops.secrets.openai-token = pkgs.stubbe.secret { name = "openai-token"; };
+        sops.secrets.cortiai-token = pkgs.stubbe.secret { name = "cortiai-token"; };
 
         # YAML, not JSON: the fork reads $XDG_CONFIG_HOME/harness/config.yaml
         # (hand-written, never written back to) and keeps its own writes in
@@ -59,6 +60,80 @@
             # endpoint and the model list under the "openai" id, so the
             # credential is the only thing missing.
             openai.api_key = "$(cat ${config.sops.secrets.openai-token.path})";
+
+            # Corti's OpenAI-compatible gateway (ai.eu.corti.app), no models.dev
+            # entry, so the S1 family is spelled out in full: s1 and s1-mini
+            # come in reasoning and instant (non-reasoning) variants, plus
+            # embedding and tiny siblings carried over for completeness. The
+            # token is the static Models API key from the Corti console.
+            corti = {
+              type = "openai-compat";
+              base_url = "https://ai.eu.corti.app/v1";
+              api_key = "$(cat ${config.sops.secrets.cortiai-token.path})";
+              models = [
+                {
+                  id = "corti-s1";
+                  name = "Corti S1";
+                  context_window = 262144;
+                  cost_per_1m_in = 2;
+                  cost_per_1m_out = 8;
+                  cost_per_1m_in_cached = 0.2;
+                  can_reason = true;
+                  supports_attachments = false;
+                  reasoning_levels = [
+                    "high"
+                    "max"
+                  ];
+                  default_reasoning_effort = "high";
+                }
+                {
+                  id = "corti-s1-instant";
+                  name = "Corti S1 Instant";
+                  context_window = 262144;
+                  cost_per_1m_in = 2;
+                  cost_per_1m_out = 8;
+                  cost_per_1m_in_cached = 0.2;
+                  can_reason = false;
+                  supports_attachments = false;
+                }
+                {
+                  id = "corti-s1-mini";
+                  name = "Corti S1 Mini";
+                  context_window = 262144;
+                  cost_per_1m_in = 1;
+                  cost_per_1m_out = 4;
+                  cost_per_1m_in_cached = 0.1;
+                  can_reason = true;
+                  supports_attachments = true;
+                }
+                {
+                  id = "corti-s1-mini-instant";
+                  name = "Corti S1 Mini Instant";
+                  context_window = 262144;
+                  cost_per_1m_in = 1;
+                  cost_per_1m_out = 4;
+                  cost_per_1m_in_cached = 0.1;
+                  can_reason = false;
+                  supports_attachments = true;
+                }
+                {
+                  id = "corti-s1-embedding";
+                  name = "Corti S1 Embedding";
+                  context_window = 16384;
+                  cost_per_1m_in = 0.03;
+                }
+                {
+                  id = "corti-s1-tiny";
+                  name = "Corti S1 Tiny";
+                  context_window = 32768;
+                }
+                {
+                  id = "corti-s1-tiny-instant";
+                  name = "Corti S1 Tiny Instant";
+                  context_window = 32768;
+                }
+              ];
+            };
 
             # Meta's Model API (dev.meta.ai) has no models.dev entry, so this one
             # is spelled out in full: OpenAI-compatible chat completions behind
