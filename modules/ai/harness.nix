@@ -30,6 +30,7 @@
         sops.secrets.meta-muse-spark-api-token = pkgs.stubbe.secret {
           name = "meta-muse-spark-api-token";
         };
+        sops.secrets.openai-token = pkgs.stubbe.secret { name = "openai-token"; };
 
         # YAML, not JSON: the fork reads $XDG_CONFIG_HOME/harness/config.yaml
         # (hand-written, never written back to) and keeps its own writes in
@@ -53,6 +54,11 @@
             # flat-rate coding plan riding the same account.
             opencode.api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
             "opencode-go".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
+
+            # Plain platform.openai.com key: models.dev already carries the
+            # endpoint and the model list under the "openai" id, so the
+            # credential is the only thing missing.
+            openai.api_key = "$(cat ${config.sops.secrets.openai-token.path})";
 
             # Meta's Model API (dev.meta.ai) has no models.dev entry, so this one
             # is spelled out in full: OpenAI-compatible chat completions behind
