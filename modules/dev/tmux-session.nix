@@ -3,8 +3,6 @@
   perSystem =
     { pkgs, lib, ... }:
     let
-      inherit (pkgs) lazy-tmux;
-
       deployedFiles = self.homeConfigurations.stubbe.config.xdg.configFile;
       tmuxConf = deployedFiles."tmux/tmux.conf".source;
       commandsSh =
@@ -25,11 +23,8 @@
             nativeBuildInputs = [
               pkgs.tmux
               pkgs.zsh
-              pkgs.jq
               pkgs.git
-              pkgs.procps
               pkgs.util-linux
-              lazy-tmux
             ];
           }
           ''
@@ -39,8 +34,7 @@
             export TMUX_TMPDIR="$(mktemp -d)"
             export XDG_RUNTIME_DIR="$(mktemp -d)"
             export XDG_STATE_HOME="$HOME/.local/state"
-            export LAZY_TMUX_DATA_DIR="$HOME/snapshots"
-            mkdir -p "$HOME/.config/tmux/scripts" "$LAZY_TMUX_DATA_DIR"
+            mkdir -p "$HOME/.config/tmux/scripts"
 
             # commands.sh carries the deployed `#!/usr/bin/env bash` shebang,
             commands="$HOME/.config/tmux/scripts/commands.sh"
@@ -59,15 +53,6 @@
             patchShebangs "$HOME/bin" "$commands"
             export PATH="$HOME/bin:$PATH"
 
-            cat > "$HOME/.config/lazy-tmux.toml" <<EOF
-            data_dir = "$LAZY_TMUX_DATA_DIR"
-            save_interval = "1h"
-            [scrollback]
-            enabled = true
-            lines = 500
-            EOF
-            export LAZY_TMUX_CONFIG="$HOME/.config/lazy-tmux.toml"
-
             fail() { echo "FAIL: $*" >&2; exit 1; }
             ok() { echo "ok - $*"; }
 
@@ -75,136 +60,79 @@
               fail "generated tmux.conf did not load"
 
             keys=$(tmux list-keys -T root)
-            grep -q 'M-x .*sleep_session' <<< "$keys" || fail "M-x is not bound to sleep_session"
-            grep -q 'M-i .*lazy-tmux picker' <<< "$keys" || fail "M-i is not bound to the picker"
-            ok "config loads with the lazy-tmux bindings"
+            grep -q 'M-x .*kill-session' <<< "$keys" || fail "M-x is not bound to kill-session"
+            grep -q 'M-i .*tmux-pick-session' <<< "$keys" || fail "M-i is not bound to the picker"
+            ok "config loads with the bindings"
 
             hooks=$(tmux show-hooks -g)
             grep -q 'client-attached\[55\].*restore_pins' <<< "$hooks" ||
               fail "restore_pins is not hooked to client-attached"
             grep -q 'client-session-changed\[55\].*restore_pins' <<< "$hooks" ||
               fail "restore_pins is not hooked to client-session-changed"
-            grep -q 'client-detached\[60\].*save_state' <<< "$hooks" ||
-              fail "save_state is not hooked to client-detached"
-            for h in after-new-window after-split-window window-unlinked after-rename-window; do
-              grep -q "$h.*save_soon" <<< "$hooks" ||
-                fail "$h does not trigger save_soon — layout changes would wait for the tick"
-            done
-            ok "pins and save hooks registered"
+            grep -q 'window-unlinked\[55\].*save_pins' <<< "$hooks" ||
+              fail "save_pins is not hooked to window-unlinked"
+            ok "pins hooks registered"
 
-            tmux new-session -d -s proj -n editor -c "$HOME" \
-              "sh -c 'echo SCROLLBACK_MARKER; exec sh'"
+            tmux new-session -d -s proj -n editor -c "$HOME" "tail -f /dev/null"
             tmux new-window -t proj: -n mon "tail -f /dev/null"
-            sleep 2
-
-            lazy-tmux save --session proj >/dev/null
-            tmux kill-session -t =proj
             sleep 1
-            lazy-tmux wakeup --session proj >/dev/null || fail "wakeup failed"
-            sleep 2
 
-            names=$(tmux list-windows -t proj -F '#{window_index}:#{window_name}' | sort | tr '\n' ' ')
-            [ "$names" = "1:editor 2:mon " ] || fail "window names not restored (got: $names)"
-            ok "window names restored"
-
-            for w in 1 2; do
-              [ "$(tmux show-options -t proj:$w -wqv automatic-rename)" = "off" ] ||
-                fail "automatic-rename still on for window $w — names would drift"
-            done
-            ok "automatic-rename disabled on restored windows"
-
-            [ "$(tmux display-message -p -t proj:mon '#{pane_current_command}')" = "tail" ] ||
-              fail "pane command not replayed"
-            ok "pane command replayed"
-
-            tmux capture-pane -p -S - -t proj:editor | grep -q SCROLLBACK_MARKER ||
-              fail "scrollback not replayed"
-            ok "scrollback replayed"
-
-            tmux set -p -t proj:editor.1 @pinned 1
+            # Pin the second window's pane, dump it, then kill the first
+            # window so indexes shift before restoring: the pin must follow
+            # the pane, not land on whatever pane now holds the old index.
+            pinned_pane=$(tmux display-message -p -t proj:mon '#{pane_id}')
+            tmux set -p -t "$pinned_pane" @pinned 1
             tmux run-shell -t proj "$commands save_pins"
             sleep 1
-            grep -q '^proj' "$XDG_STATE_HOME/tmux/pinned" || fail "save_pins wrote no dump"
+            awk -F'\t' -v p="$pinned_pane" '$1=="proj" && $NF==p{f=1} END{exit !f}' \
+              "$XDG_STATE_HOME/tmux/pinned" ||
+              fail "save_pins wrote no pane_id-keyed dump"
 
-            lazy-tmux save --session proj >/dev/null
-            tmux kill-session -t =proj
-            sleep 1
-            lazy-tmux wakeup --session proj >/dev/null
-            sleep 2
-
-            [ -z "$(tmux show-options -t proj:1.1 -pqv @pinned)" ] ||
-              fail "test assumes restore drops pane options, but @pinned survived"
+            tmux kill-window -t proj:editor
+            for pane_id in $(tmux list-panes -a -F '#{pane_id}'); do
+              tmux set -p -t "$pane_id" @pinned 0 2>/dev/null || true
+            done
             tmux run-shell -t proj "$commands restore_pins"
             sleep 1
-            [ "$(tmux show-options -t proj:1.1 -pqv @pinned)" = "1" ] ||
-              fail "restore_pins did not replay @pinned"
-            ok "@pinned round-trips through save_pins/restore_pins"
-
-            before=$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/proj.json")
-            sleep 1
-            tmux run-shell -t proj "$commands sleep_session"
-            sleep 3
-
-            tmux has-session -t =proj 2>/dev/null && fail "sleep_session left the session running"
-            after=$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/proj.json")
-            [ "$after" != "$before" ] || fail "sleep_session did not re-save before killing"
-            ok "sleep_session saves then closes"
+            [ "$(tmux show-options -t "$pinned_pane" -pqv @pinned)" = "1" ] ||
+              fail "restore_pins did not replay @pinned on the pinned pane"
+            pinned_count=0
+            for pane_id in $(tmux list-panes -a -F '#{pane_id}'); do
+              [ "$(tmux show-options -t "$pane_id" -pqv @pinned)" = "1" ] &&
+                pinned_count=$((pinned_count + 1))
+            done
+            [ "$pinned_count" = "1" ] ||
+              fail "restore_pins pinned a pane other than the pinned one (count=$pinned_count)"
+            ok "@pinned round-trips and follows the pane, not the index"
 
             user=$(whoami)
-            gone="$HOME/worktree-gone"
-            mkdir -p "$gone"
-            tmux new-session -d -s "$user(gone)" -c "$gone"
             tmux new-session -d -s "$user(kept)" -c "$HOME"
-            sleep 1
-            lazy-tmux save --all >/dev/null
-            tmux kill-session -t "=$user(gone)"
-            tmux kill-session -t "=$user(kept)"
-            rm -rf "$gone"
             sleep 1
 
             rows=$(tmux-pick-session --lines)
             [ -n "$rows" ] || fail "picker rendered no rows"
-            grep -q "^$user(kept)"$'\t' <<< "$rows" || fail "sleeping session missing from picker"
-            grep -q "^$user(gone)" <<< "$rows" &&
-              fail "snapshot whose directory is gone is still offered"
+            grep -q "^$user(kept)"$'\t' <<< "$rows" || fail "session missing from picker"
             grep -q 'kept' <<< "$(cut -f2- <<< "$rows")" || fail "label missing"
             grep -qE '^\S*\t.*\(kept\)' <<< "$rows" &&
               fail "label still carries the $user(...) wrapper"
-            grep -q '󰒲' <<< "$rows" || fail "sleeping row has no sleep glyph"
-            ok "picker hides dead snapshots and strips name wrappers"
-
-            lazy-tmux wakeup --session "$user(kept)" >/dev/null
-            sleep 2
-            live_row=$(tmux-pick-session --lines | grep "^$user(kept)")
-            grep -q '󰒲' <<< "$live_row" && fail "live session rendered as sleeping"
-            ok "live session rendered as live"
+            grep -q '󰒲' <<< "$rows" && fail "live session rendered as sleeping"
+            ok "picker lists live sessions and strips name wrappers"
 
             proj_session="$(whoami)($(basename "$repo"))"
             tmux run-shell -t wiring "tmux-pick-project" || true
             sleep 2
             tmux has-session -t "=$proj_session" 2>/dev/null ||
               fail "tmux-pick-project did not create $proj_session"
-            ok "Alt+f cold start creates the session"
+            [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}' | head -1)" = "$repo" ] ||
+              fail "cold start did not open in the project (got: $(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}'), want: $repo)"
+            ok "Alt+f cold start creates the session in the project"
 
-            tmux new-window -t "=$proj_session" -n restored "tail -f /dev/null"
-            sleep 1
-            lazy-tmux save --session "$proj_session" >/dev/null
-            tmux kill-session -t "=$proj_session"
-            sleep 1
-
-            tmux run-shell -t wiring "tmux-pick-project" || true
-            sleep 3
-            tmux list-windows -t "=$proj_session" -F '#{window_name}' | grep -qx restored ||
-              fail "second Alt+f started a fresh session instead of waking the snapshot"
-            ok "Alt+f wakes the snapshot on the second run"
-
-            # A session rooted in a deleted worktree used to reopen in $HOME
-            # forever: tmux cannot chdir there, falls back to its own cwd, and
-            # the next save freezes that path into the snapshot.
+            # A session rooted in a deleted worktree used to end up with idle
+            # shells stranded in a dead directory; they get restarted at the
+            # project root instead of inheriting the drift.
             dead="$repo/.worktrees/gone"
             mkdir -p "$dead"
             tmux kill-session -t "=$proj_session"
-            lazy-tmux forget --session "$proj_session" >/dev/null 2>&1 || true
             tmux new-session -ds "$proj_session" -c "$dead"
             sleep 1
             rm -rf "$dead"
@@ -216,23 +144,6 @@
             [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}')" = "$repo" ] ||
               fail "idle shell in a deleted directory was not restarted at the project root"
             ok "shell stranded in a deleted worktree is restarted in the project"
-
-            tmux new-window -t "=$proj_session" -n replayed "tail -f /dev/null"
-            sleep 1
-            lazy-tmux save --session "$proj_session" >/dev/null
-            tmux kill-session -t "=$proj_session"
-            snap="$LAZY_TMUX_DATA_DIR/sessions/$proj_session.json"
-            jq --arg home "$HOME" \
-              '(.windows[].panes[].current_path) = $home' "$snap" > "$snap.tmp"
-            mv "$snap.tmp" "$snap"
-
-            tmux run-shell -t wiring "tmux-pick-project" || true
-            sleep 3
-            tmux list-windows -t "=$proj_session" -F '#{window_name}' | grep -qx replayed &&
-              fail "picker replayed a snapshot with no pane left in the project"
-            [ "$(tmux list-panes -s -t "=$proj_session" -F '#{pane_current_path}')" = "$repo" ] ||
-              fail "fresh session after a poisoned snapshot did not start in the project"
-            ok "poisoned snapshot is discarded instead of replayed"
 
             # Alt+f runs the picker in a pane of an ATTACHED client. Commands
             # that refuse to nest there (attach-session: "sessions should be
@@ -286,21 +197,6 @@
             [ "$(tmux list-windows -t wiring -F '#{window_name}' | grep -cx codex)" = "1" ] ||
               fail "second agent dispatch opened a duplicate window"
             ok "agent picker opens one window per agent and reuses it"
-
-            tmux new-session -d -s soon -c "$HOME"
-            sleep 1
-            lazy-tmux save --session soon >/dev/null
-            before=$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/soon.json")
-            tmux new-window -t soon: -n added "tail -f /dev/null"
-            tmux run-shell -t soon "$commands save_soon"
-            tmux run-shell -t soon "$commands save_soon"
-            sleep 1
-            [ "$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/soon.json")" = "$before" ] ||
-              fail "save_soon fired without debouncing the burst"
-            sleep 4
-            [ "$(jq -r .captured_at "$LAZY_TMUX_DATA_DIR/sessions/soon.json")" != "$before" ] ||
-              fail "save_soon never saved after the debounce window"
-            ok "save_soon debounces the burst then saves"
 
             tmux new-session -d -s move -c "$HOME"
             tmux split-window -h -t move

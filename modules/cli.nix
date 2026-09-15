@@ -11,15 +11,19 @@ _: {
         starship
 
         fd
+        sd
         eza
         bat
         fzf
         ripgrep
+        ast-grep
         zoxide
+        difftastic
         just
 
         curl
         wget
+        tokei
 
         jq
         yq
@@ -56,6 +60,7 @@ _: {
         autoconf
         automake
 
+        hyprfine
         tabiew
         nushell
         gum

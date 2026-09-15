@@ -6,80 +6,48 @@ _: {
     "tmux-pick-session" = ''
 
 
-      DATA_DIR="''${LAZY_TMUX_DATA_DIR:-$HOME/.local/share/lazy-tmux}"
-      SELF=''${0:A}
+    SELF=''${0:A}
 
-      typeset -A SNAPSHOT_PATH
-      snapshot_paths() {
-        [[ -d $DATA_DIR/sessions ]] || return 0
-        command -v jq >/dev/null 2>&1 || return 0
-        jq -r '[.session_name, ([.windows[].panes[].current_path] | first // "")] | @tsv' \
-          "$DATA_DIR"/sessions/*.json 2>/dev/null
-      }
-
-      label_of() {
-        local name="$1" user="''${USER:-$(whoami)}"
-        if [[ $name == "$user("*")" ]]; then
-          name=''${name#"$user("}
-          name=''${name%")"}
-        fi
-        print -r -- "$name"
-      }
-
-      picker_lines() {
-        local live name ts size cwd
-        live=$(tmux list-sessions -F "#{session_name}" 2>/dev/null)
-
-        while IFS= read -r name; do
-          [[ -n $name ]] && printf '%s\t  %s\n' "$name" "$(label_of "$name")"
-        done <<< "$live"
-
-        command -v lazy-tmux >/dev/null 2>&1 || return 0
-
-        SNAPSHOT_PATH=()
-        while IFS=$'\t' read -r name cwd; do
-          [[ -n $name ]] && SNAPSHOT_PATH[$name]="$cwd"
-        done < <(snapshot_paths)
-
-        while IFS=$'\t' read -r name ts size; do
-          [[ -n $name ]] || continue
-          grep -qxF "$name" <<< "$live" && continue
-          cwd="''${SNAPSHOT_PATH[$name]}"
-          [[ -n $cwd && ! -d $cwd ]] && continue
-          printf '%s\t󰒲 %-28s %s  %s\n' \
-            "$name" "$(label_of "$name")" "$size" "''${''${ts:0:16}/T/ }"
-        done < <(lazy-tmux list 2>/dev/null)
-      }
-
-      if [[ $1 == --lines ]]; then
-        picker_lines
-        exit 0
+    label_of() {
+      local name="$1" user="''${USER:-$(whoami)}"
+      if [[ $name == "$user("*")" ]]; then
+      name=''${name#"$user("}
+      name=''${name%")"}
       fi
+      print -r -- "$name"
+    }
 
-      LINES_OUT=$(picker_lines)
+    picker_lines() {
+      local name
+      while IFS= read -r name; do
+      [[ -n $name ]] && printf '%s\t  %s\n' "$name" "$(label_of "$name")"
+      done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
+    }
 
-      if [[ -z $LINES_OUT ]]; then
-        clear
-        exit 0
-      fi
+    if [[ $1 == --lines ]]; then
+      picker_lines
+      exit 0
+    fi
 
-      SELECTED=$(print -r -- "$LINES_OUT" |
-        fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
-          --header='ctrl-x: forget snapshot   tab: copy name' \
-          --bind "ctrl-x:execute-silent(lazy-tmux forget --session {1} 2>/dev/null)+reload($SELF --lines)")
+    LINES_OUT=$(picker_lines)
 
-      SESSION=''${SELECTED%%$'\t'*}
-      [[ -z $SESSION ]] && exit 0
+    if [[ -z $LINES_OUT ]]; then
+      clear
+      exit 0
+    fi
 
-      if ! tmux has-session -t="$SESSION" 2>/dev/null; then
-        lazy-tmux wakeup --session "$SESSION" >/dev/null 2>&1 || exit 1
-      fi
+    SELECTED=$(print -r -- "$LINES_OUT" |
+      fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
+        --header='tab: copy name')
 
-      if [[ -n $TMUX ]]; then
-        tmux switch-client -t "=$SESSION"
-      else
-        tmux attach-session -t "=$SESSION"
-      fi
+    SESSION=''${SELECTED%%$'\t'*}
+    [[ -z $SESSION ]] && exit 0
+
+    if [[ -n $TMUX ]]; then
+      tmux switch-client -t "=$SESSION"
+    else
+      tmux attach-session -t "=$SESSION"
+    fi
     '';
     "tmux-pick-project" = ''
 
@@ -91,23 +59,6 @@ _: {
 
       SELECTED_NAME=$(basename "$SELECTED" | tr '.' '_')
       TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
-
-      # A snapshot with no pane left under $SELECTED is poisoned: the session
-      # was rooted in a worktree that has since been deleted, tmux fell back to
-      # its own cwd ($HOME), and the next periodic save froze that. Waking it
-      # would reopen the project in $HOME forever, so start fresh instead.
-      snapshot_is_stale() {
-        local snap paths p
-        snap="''${LAZY_TMUX_DATA_DIR:-$HOME/.local/share/lazy-tmux}/sessions/$TMUXCLIENTNAME.json"
-        [[ -f $snap ]] || return 1
-        command -v jq >/dev/null 2>&1 || return 1
-        paths=$(jq -r '.windows[].panes[].current_path // empty' "$snap" 2>/dev/null)
-        [[ -n $paths ]] || return 1
-        while IFS= read -r p; do
-          [[ $p == "$SELECTED"* ]] && return 1
-        done <<< "$paths"
-        return 0
-      }
 
       # An idle shell whose directory is gone (deleted worktree) poisons every
       # later `new-window -c "#{pane_current_path}"`: tmux cannot chdir there
@@ -138,11 +89,8 @@ _: {
         fi
       fi
       if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-        if snapshot_is_stale ||
-            ! lazy-tmux wakeup --session "$TMUXCLIENTNAME" >/dev/null 2>&1; then
-          tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
-          tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
-        fi
+        tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+        tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
       fi
 
       reroot_dead_panes
@@ -162,10 +110,6 @@ _: {
       else
         TMUXCLIENTNAME="$1"
       fi
-      if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-        lazy-tmux wakeup --session "$TMUXCLIENTNAME" >/dev/null 2>&1
-      fi
-
       tmux new -As "$TMUXCLIENTNAME"
     '';
   };

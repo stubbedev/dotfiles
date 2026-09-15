@@ -184,6 +184,8 @@
       home.sessionVariables = {
         EDITOR = lib.getExe nvim;
         VISUAL = lib.getExe nvim;
+        # Consumed by src/nvim/.luarc.json so lua_ls can type the `vim` API
+        NVIM_RUNTIME = "${pkgs.neovim-unwrapped}/share/nvim/runtime";
       };
       stubbe.mutable.".config/nvim".src = "nvim";
     };

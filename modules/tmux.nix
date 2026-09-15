@@ -86,8 +86,6 @@ _: {
         padTo commentCol (prefix + padTo keyField key + body) + "# " + comment;
     in
     lib.mkIf config.features.desktop {
-      home.packages = [ pkgs.lazy-tmux ];
-
       # The command palette every bind and hook in tmux.conf dispatches to.
       # The tmux-session check reads this deployed file back out of
       # `xdg.configFile`, so the tested bytes are the shipped bytes.
@@ -97,7 +95,6 @@ _: {
           #!/usr/bin/env bash
 
           PINNED_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/tmux/pinned"
-          SAVE_LOCK="''${XDG_RUNTIME_DIR:-/tmp}/tmux-save-soon.lock"
 
           toggle_window() {
             local window_name="$1"
@@ -294,55 +291,21 @@ _: {
 
           save_pins() {
             mkdir -p "''${PINNED_STATE%/*}"
-            tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}' |
+            # Keyed by pane_id: window/pane indexes shift when windows are
+            # killed, and an index-only dump would re-pin the wrong pane on
+            # the next restore.
+            tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}	#{pane_id}' |
               sed -n 's/^1	//p' > "$PINNED_STATE.tmp"
             mv "$PINNED_STATE.tmp" "$PINNED_STATE"
           }
 
           restore_pins() {
             [ -f "$PINNED_STATE" ] || return 0
-            local sess win pane
-            while IFS=$'\t' read -r sess win pane; do
+            local sess win pane pane_id
+            while IFS=$'\t' read -r sess win pane pane_id; do
               [ -n "$pane" ] || continue
-              tmux set -p -t "=$sess:$win.$pane" @pinned 1 2>/dev/null || true
+              tmux set -p -t "$pane_id" @pinned 1 2>/dev/null || true
             done < "$PINNED_STATE"
-          }
-
-          save_state() {
-            command -v lazy-tmux >/dev/null 2>&1 || return 0
-            lazy-tmux save --all >/dev/null 2>&1
-          }
-
-          # Layout changes (new/closed window, split, rename) save right away
-          # instead of waiting out the daemon tick. The first caller takes the
-          # lock and sleeps out the burst, the rest drop; a save is skipped
-          # while lazy-tmux is mid-restore so a half-built session never
-          # overwrites its own snapshot.
-          save_soon() {
-            command -v lazy-tmux >/dev/null 2>&1 || return 0
-            flock -n "$SAVE_LOCK" bash -c '
-              sleep 2
-              if command -v pgrep >/dev/null 2>&1 &&
-                  pgrep -f "lazy-tmux (wakeup|sleep)" >/dev/null; then
-                exit 0
-              fi
-              lazy-tmux save --all >/dev/null 2>&1
-            ' >/dev/null 2>&1 &
-          }
-
-          sleep_session() {
-            local current other
-            if ! command -v lazy-tmux >/dev/null 2>&1; then
-              return 0
-            fi
-
-            current=$(tmux display-message -p '#S')
-            other=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -vxF "$current" | head -1)
-            [ -n "$other" ] && tmux switch-client -t "=$other"
-
-            if ! lazy-tmux sleep --session "$current" >/dev/null 2>&1; then
-              tmux display-message "lazy-tmux: could not sleep $current"
-            fi
           }
 
           kill_pane() {
@@ -398,7 +361,6 @@ _: {
             local pending
             pending=$(tmux show-option -gv @kill_server_pending 2>/dev/null)
             if [ "$pending" = "1" ]; then
-              save_state
               tmux kill-server
               return
             fi
@@ -620,9 +582,6 @@ _: {
           "toggle_pin")               toggle_pin ;;
           "save_pins")                save_pins ;;
           "restore_pins")             restore_pins ;;
-          "save_state")               save_state ;;
-          "save_soon")                save_soon ;;
-          "sleep_session")            sleep_session ;;
           "kill_pane")                kill_pane ;;
           "kill_window")              kill_window ;;
           "kill_server_confirm")      kill_server_confirm ;;
@@ -641,14 +600,6 @@ _: {
           esac
 
         '';
-      };
-
-      xdg.configFile."lazy-tmux/lazy-tmux.toml".source = pkgs.stubbe.gen.toml "lazy-tmux.toml" {
-        save_interval = "1m";
-        scrollback = {
-          enabled = true;
-          lines = 10000;
-        };
       };
 
       programs.tmux = {
@@ -737,7 +688,7 @@ _: {
           bind -n M-S choose-session                                                                                # Session picker
           bind -n M-N if-shell '[ "$(tmux list-sessions -F "#{session_name}" | wc -l)" -gt 1 ]' 'switch-client -n'  # Next session
           bind -n M-B if-shell '[ "$(tmux list-sessions -F "#{session_name}" | wc -l)" -gt 1 ]' 'switch-client -p'  # Previous session
-          bind -n M-x run-shell -b "#{@stubbe_commands} sleep_session"                                              # Sleep session (save + close)
+          bind -n M-x kill-session                                                   # Kill session
 
           bind -n M-t next-layout                                                  # Next layout
           bind -n M-T previous-layout                                              # Previous layout
@@ -754,11 +705,7 @@ _: {
           set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
           set-hook -g client-session-changed "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
           set-hook -g client-detached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
-          set-hook -g client-detached[60] "run-shell -b \"#{@stubbe_commands} save_state\""
-          set-hook -g after-new-window "run-shell -b \"#{@stubbe_commands} save_soon\""
-          set-hook -g after-split-window "run-shell -b \"#{@stubbe_commands} save_soon\""
-          set-hook -g window-unlinked "run-shell -b \"#{@stubbe_commands} save_soon\""
-          set-hook -g after-rename-window "run-shell -b \"#{@stubbe_commands} save_soon\""
+          set-hook -g window-unlinked[55] "run-shell -b \"#{@stubbe_commands} save_pins\""
           set-hook -g client-attached[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
           set-hook -g client-session-changed[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
           run-shell -b "#{@stubbe_commands} session_init"
@@ -802,11 +749,7 @@ _: {
           setw -g mode-keys         vi         # Vi mode for copy mode
           set -g  visual-activity   off        # Don't show activity message
           set -g  monitor-activity  on         # Monitor background window activity
-
-
-          run-shell -b '${lib.getExe pkgs.lazy-tmux} daemon >/dev/null 2>&1 || true'
-
-          bind -n M-i display-popup -B -w 70% -h 75% -E '${lib.getExe pkgs.lazy-tmux} picker'
+          bind -n M-i display-popup -B -w 70% -h 75% -E "tmux-pick-session"
         '';
       };
     };

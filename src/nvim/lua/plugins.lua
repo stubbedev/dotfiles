@@ -96,6 +96,7 @@ require("recorder").setup({
 })
 
 require("blink.cmp").setup({
+  keymap = { preset = "default" },
   enabled = function()
     return vim.bo.filetype ~= "grug-far"
   end,
