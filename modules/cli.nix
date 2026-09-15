@@ -60,7 +60,7 @@ _: {
         autoconf
         automake
 
-        hyprfine
+        hyperfine
         tabiew
         nushell
         gum
