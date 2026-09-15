@@ -126,7 +126,7 @@ in
       ];
     };
 
-    stubbe-packages = final: prev: {
+    stubbe-packages = _final: prev: {
       # nixpkgs hardcodes catppuccin-plymouth to the macchiato flavour; upstream
       # ships all four.
       catppuccin-mocha-plymouth = prev.catppuccin-plymouth.overrideAttrs (_: {

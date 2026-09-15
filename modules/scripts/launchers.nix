@@ -6,48 +6,48 @@ _: {
     "tmux-pick-session" = ''
 
 
-    SELF=''${0:A}
+      SELF=''${0:A}
 
-    label_of() {
-      local name="$1" user="''${USER:-$(whoami)}"
-      if [[ $name == "$user("*")" ]]; then
-      name=''${name#"$user("}
-      name=''${name%")"}
+      label_of() {
+        local name="$1" user="''${USER:-$(whoami)}"
+        if [[ $name == "$user("*")" ]]; then
+        name=''${name#"$user("}
+        name=''${name%")"}
+        fi
+        print -r -- "$name"
+      }
+
+      picker_lines() {
+        local name
+        while IFS= read -r name; do
+        [[ -n $name ]] && printf '%s\t  %s\n' "$name" "$(label_of "$name")"
+        done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
+      }
+
+      if [[ $1 == --lines ]]; then
+        picker_lines
+        exit 0
       fi
-      print -r -- "$name"
-    }
 
-    picker_lines() {
-      local name
-      while IFS= read -r name; do
-      [[ -n $name ]] && printf '%s\t  %s\n' "$name" "$(label_of "$name")"
-      done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
-    }
+      LINES_OUT=$(picker_lines)
 
-    if [[ $1 == --lines ]]; then
-      picker_lines
-      exit 0
-    fi
+      if [[ -z $LINES_OUT ]]; then
+        clear
+        exit 0
+      fi
 
-    LINES_OUT=$(picker_lines)
+      SELECTED=$(print -r -- "$LINES_OUT" |
+        fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
+          --header='tab: copy name')
 
-    if [[ -z $LINES_OUT ]]; then
-      clear
-      exit 0
-    fi
+      SESSION=''${SELECTED%%$'\t'*}
+      [[ -z $SESSION ]] && exit 0
 
-    SELECTED=$(print -r -- "$LINES_OUT" |
-      fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
-        --header='tab: copy name')
-
-    SESSION=''${SELECTED%%$'\t'*}
-    [[ -z $SESSION ]] && exit 0
-
-    if [[ -n $TMUX ]]; then
-      tmux switch-client -t "=$SESSION"
-    else
-      tmux attach-session -t "=$SESSION"
-    fi
+      if [[ -n $TMUX ]]; then
+        tmux switch-client -t "=$SESSION"
+      else
+        tmux attach-session -t "=$SESSION"
+      fi
     '';
     "tmux-pick-project" = ''
 
