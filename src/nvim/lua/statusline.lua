@@ -160,6 +160,91 @@ function M.tabline()
   return table.concat(parts) .. "%#TabLineFill#"
 end
 
+function M.setup_lualine()
+  if not pcall(require, "lualine") then
+    return
+  end
+
+  local function filename()
+    if vim.bo.buftype == "terminal" then
+      return "terminal"
+    end
+    if vim.bo.filetype == "oil" then
+      local ok, oil = pcall(require, "oil")
+      local dir = ok and oil.get_current_dir()
+      return dir and vim.fn.fnamemodify(dir, ":~") or "oil"
+    end
+    if vim.bo.buftype ~= "" then
+      return vim.bo.filetype ~= "" and vim.bo.filetype or "[scratch]"
+    end
+    local name = vim.fn.expand("%:~:.")
+    if name == "" then
+      name = "[No Name]"
+    end
+    if vim.bo.modified then
+      name = name .. " ●"
+    end
+    if vim.bo.readonly then
+      name = name .. " \u{f023}"
+    end
+    return name
+  end
+
+  local function progress()
+    local ok, status = pcall(vim.ui.progress_status)
+    if not ok or not status or status == "" then
+      return nil
+    end
+    return status:sub(1, 40)
+  end
+
+  local function macros()
+    local ok, recorder = pcall(require, "recorder")
+    if ok then
+      local recording = recorder.recordingStatus()
+      if recording ~= "" then
+        return "\u{f031d} " .. recording
+      end
+      local slots = recorder.displaySlots()
+      return slots ~= "" and "\u{f00fd} " .. slots or nil
+    end
+    local reg = vim.fn.reg_recording()
+    return reg ~= "" and "\u{f031d} @" .. reg or nil
+  end
+
+  require("lualine").setup({
+    options = {
+      theme = "catppuccin",
+      globalstatus = true,
+      component_separators = { left = "\u{e0b1}", right = "\u{e0b3}" },
+      section_separators = { left = "\u{e0b0}", right = "\u{e0b2}" },
+    },
+    sections = {
+      lualine_a = { { "mode", icons_enabled = true } },
+      lualine_b = {
+        { "branch", icon = "\u{e0a0}" },
+        { "diff", symbols = { added = "\u{f0672} ", modified = "\u{f06e5} ", removed = "\u{f0686} " } },
+      },
+      lualine_c = {
+        filename,
+        { "diagnostics", symbols = { error = "\u{f00d} ", warn = "\u{f12a} ", info = "\u{f129} ", hint = "\u{f002} " } },
+      },
+      lualine_x = { { macros, color = { fg = c.red, gui = "bold" } }, progress },
+      lualine_y = { { "filetype", colored = true, icon_only = false } },
+      lualine_z = { "location", "progress" },
+    },
+    tabline = {
+      lualine_a = {
+        {
+          "buffers",
+          show_filename_only = true,
+          symbols = { alternate_file = "", modified = " ●", directory = "\u{f115}" },
+        },
+      },
+    },
+  })
+end
+
 vim.o.statusline = "%!v:lua.require'statusline'.render()"
 vim.o.tabline = "%!v:lua.require'statusline'.tabline()"
 

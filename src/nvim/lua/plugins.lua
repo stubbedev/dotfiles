@@ -146,6 +146,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
         { src = "https://github.com/nvim-mini/mini.surround" },
         { src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects", version = "main" },
         { src = "https://github.com/monaqa/dial.nvim" },
+        { src = "https://github.com/MunifTanjim/nui.nvim" },
+        { src = "https://github.com/folke/noice.nvim" },
+        { src = "https://github.com/nvim-lualine/lualine.nvim" },
       }, { confirm = false })
 
       vim.cmd("doautoall FileType")
@@ -250,6 +253,22 @@ vim.api.nvim_create_autocmd("UIEnter", {
       require("lazydev").setup({
         library = { { path = "${3rd}/luv/library", words = { "vim%.uv" } } },
       })
+
+      require("noice").setup({
+        presets = {
+          bottom_search = true, -- keep / and :s at the cmdline like LazyVim
+          command_palette = true, -- : commands in a centered floating box
+          long_message_to_split = true,
+        },
+        lsp = {
+          -- hover/signature are handled by lsp.lua and blink.cmp already
+          override = {},
+          hover = { enabled = false },
+          signature = { enabled = false },
+        },
+      })
+
+      require("statusline").setup_lualine()
       require("format").setup()
 
       local textobjects = {
