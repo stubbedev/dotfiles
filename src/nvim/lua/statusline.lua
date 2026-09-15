@@ -193,7 +193,7 @@ function M.setup_lualine()
   local function progress()
     local ok, status = pcall(vim.ui.progress_status)
     if not ok or not status or status == "" then
-      return nil
+      return ""
     end
     return status:sub(1, 40)
   end
@@ -205,11 +205,10 @@ function M.setup_lualine()
       if recording ~= "" then
         return "\u{f031d} " .. recording
       end
-      local slots = recorder.displaySlots()
-      return slots ~= "" and "\u{f00fd} " .. slots or nil
+      return recorder.displaySlots()
     end
     local reg = vim.fn.reg_recording()
-    return reg ~= "" and "\u{f031d} @" .. reg or nil
+    return reg ~= "" and "\u{f031d} @" .. reg or ""
   end
 
   require("lualine").setup({
