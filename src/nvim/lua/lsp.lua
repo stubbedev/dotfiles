@@ -525,7 +525,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end
 
     map("n", "<leader>cl", "<cmd>checkhealth vim.lsp<cr>", "LSP info")
-    map({ "n", "x" }, "<leader>ca", vim.lsp.buf.code_action, "Code action")
+    map({ "n", "x" }, "<leader>ca", pick("lsp_code_actions"), "Code action")
     map("n", "<leader>cA", code_action("source", false), "Source action")
     map("n", "<leader>co", code_action("source.organizeImports", true), "Organize imports")
     map("n", "<leader>cr", vim.lsp.buf.rename, "Rename symbol")

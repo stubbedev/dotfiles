@@ -144,11 +144,13 @@ vim.api.nvim_create_autocmd("UIEnter", {
         { src = "https://github.com/folke/todo-comments.nvim" },
         { src = "https://github.com/nvim-mini/mini.ai" },
         { src = "https://github.com/nvim-mini/mini.surround" },
+        { src = "https://github.com/nvim-mini/mini.input" },
         { src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects", version = "main" },
         { src = "https://github.com/monaqa/dial.nvim" },
         { src = "https://github.com/MunifTanjim/nui.nvim" },
         { src = "https://github.com/folke/noice.nvim" },
         { src = "https://github.com/nvim-lualine/lualine.nvim" },
+        { src = "https://github.com/elanmed/fzf-lua-frecency.nvim", name = "fzf-lua-frecency" },
       }, { confirm = false })
 
       vim.cmd("doautoall FileType")
@@ -192,6 +194,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
         },
         git = { files = { prompt = "  " } },
         oldfiles = { prompt = "  " },
+        frecency = { prompt = "  " },
         buffers = { prompt = "  " },
         helptags = { prompt = "  " },
         keymaps = { prompt = "  " },
@@ -199,6 +202,10 @@ vim.api.nvim_create_autocmd("UIEnter", {
         grep = { prompt = "  " },
         lsp = { symbols = { prompt = "  " } },
       })
+
+      require("fzf-lua-frecency").setup({ cwd_only = true })
+
+      fzf.register_ui_select() -- route every vim.ui.select through the floating picker
 
       require("treesitter-context").setup({ max_lines = 3, mode = "cursor" })
 
@@ -443,6 +450,8 @@ vim.api.nvim_create_autocmd("UIEnter", {
           update_n_lines = "gsn",
         },
       })
+
+      require("mini.input").setup({}) -- floating vim.ui.input (rename prompts etc.)
 
       require("nvim-treesitter-textobjects").setup({ move = { set_jumps = true } })
 
