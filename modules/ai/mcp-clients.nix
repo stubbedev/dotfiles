@@ -19,29 +19,6 @@ _: {
         headers."X-Repo-Root" = "\${PWD}";
       };
 
-      # TOML inline tables are the one shape pkgs.formats.toml cannot emit, so
-      # Codex's dotted `-c` overrides need this serialiser.
-      tomlValue = v: if builtins.isAttrs v then tomlInlineTable v else builtins.toJSON v;
-      tomlKey = k: if builtins.match "[A-Za-z0-9_-]+" k != null then k else builtins.toJSON k;
-      tomlInlineTable =
-        attrs:
-        "{${
-          lib.concatStringsSep "," (
-            lib.mapAttrsToList (key: value: "${tomlKey key}=${tomlValue value}") attrs
-          )
-        }}";
-
-      toCodexTable = server: {
-        inherit (server) url;
-        env_http_headers."X-Repo-Root" = "PWD";
-      };
-
-      toOpencode = _: server: {
-        type = "remote";
-        inherit (server) url;
-        headers."X-Repo-Root" = "{env:PWD}";
-      };
-
       # `type` is mandatory here -- harness's schema defaults it to "stdio", so a
       # url-only entry is parsed as a command. Header values go through harness's
       # embedded shell, hence the bare $PWD. The 15s default connect timeout is
@@ -52,24 +29,17 @@ _: {
         headers."X-Repo-Root" = "$PWD";
         timeout = 120;
       };
-
-      toCodex = name: server: [
-        "-c"
-        (lib.escapeShellArg "mcp_servers.${name}=${tomlInlineTable (toCodexTable server)}")
-      ];
     in
     {
       options.stubbe.mcp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Per-agent renderings of the MCP inventory: `claude`, `opencode` and `harness` (JSON) and `codexFlags` (argv).";
+        description = "Per-agent renderings of the MCP inventory: `claude` and `harness` (JSON).";
       };
 
       config.stubbe.mcp.clients = {
         claude = lib.mapAttrs toClaude clientServers;
-        opencode = lib.mapAttrs toOpencode clientServers;
         harness = lib.mapAttrs toHarness clientServers;
-        codexFlags = lib.concatLists (lib.mapAttrsToList toCodex clientServers);
       };
     };
 }

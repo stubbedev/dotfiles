@@ -17,8 +17,6 @@ let
     php = "PHP: one build serving the CLI, php-fpm and FrankenPHP.";
     k8s = "Kubernetes tools (kubectl, minikube).";
     claudeCode = "Claude Code CLI, its managed settings, and the MCP inventory.";
-    codex = "Codex CLI, wired to the same MCP inventory.";
-    opencode = "opencode CLI.";
     harness = "Harness CLI (the stubbedev Crush fork), wired to the same MCP inventory and the Z.ai provider.";
     browsers = "Web browsers (Firefox, Google Chrome) and their managed policies.";
     slack = "Slack desktop client.";

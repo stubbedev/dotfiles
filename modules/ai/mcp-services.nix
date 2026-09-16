@@ -7,7 +7,7 @@
       pkgs,
       ...
     }:
-    lib.mkIf (config.features.claudeCode || config.features.codex) (
+    lib.mkIf config.features.claudeCode (
       let
         system = pkgs.stdenv.hostPlatform.system;
         proxyEnvPath = "${config.home.homeDirectory}/.config/mcp-proxy/proxy.env";

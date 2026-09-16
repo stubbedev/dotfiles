@@ -198,19 +198,6 @@ _: {
             exec claude --dangerously-skip-permissions "$@"
           fi
         '';
-        "tmux-codex" = ''
-
-          if ! command -v codex &>/dev/null; then
-            exit 0
-          fi
-
-          if [[ -z "$TMUX" ]]; then
-            codex "$@"
-          else
-            tmux renamew "codex"
-            exec codex "$@"
-          fi
-        '';
         "tmux-harness" = ''
 
           if ! command -v harness &>/dev/null; then
@@ -224,26 +211,13 @@ _: {
             exec harness --yolo "$@"
           fi
         '';
-        "tmux-opencode" = ''
-
-          if ! command -v opencode &>/dev/null; then
-            exit 0
-          fi
-
-          if [[ -z "$TMUX" ]]; then
-            opencode "$@"
-          else
-            tmux renamew "opencode"
-            exec opencode "$@"
-          fi
-        '';
         # Fzf picker over the installed agents. Default mode (the tmux bind's
         # popup) hands the selection to commands.sh, which toggles a
         # worktree-aware window for it; --inline runs the agent's own launcher
         # in the current shell instead (the zsh bind).
         "tmux-pick-agent" = ''
 
-          AGENTS=(codex claude opencode harness)
+          AGENTS=(claude harness)
 
           AVAILABLE=()
           for agent in $AGENTS; do

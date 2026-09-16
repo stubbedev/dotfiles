@@ -1,7 +1,5 @@
 # One inventory of language servers, rendered into each CLI's dialect -- the
 # same idea as mcp-clients.nix, so adding a server is a one-place edit.
-# opencode is deliberately absent: its built-ins resolve binaries off a wrapper
-# PATH instead (see modules/ai/opencode.nix).
 _: {
   flake.modules.homeManager.lspClients =
     {

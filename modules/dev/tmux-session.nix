@@ -173,28 +173,28 @@
             # Alt+h runs the agent picker in a popup; a selection dispatches
             # the same toggle the popup bind would. The picker itself needs
             # fzf, so the stub stands in for one made selection.
-            cat > "$HOME/bin/codex" <<EOF
+            cat > "$HOME/bin/harness" <<EOF
             #!/bin/sh
             exec tail -f /dev/null
             EOF
-            cat > "$HOME/bin/tmux-codex" <<EOF
+            cat > "$HOME/bin/tmux-harness" <<EOF
             #!/bin/sh
-            exec codex "\$@"
+            exec harness "\$@"
             EOF
             cat > "$HOME/bin/tmux-pick-agent" <<EOF
             #!/bin/sh
-            exec "$commands" toggle_agent_window codex tmux-codex
+            exec "$commands" toggle_agent_window harness tmux-harness
             EOF
-            chmod +x "$HOME/bin/codex" "$HOME/bin/tmux-codex" "$HOME/bin/tmux-pick-agent"
+            chmod +x "$HOME/bin/harness" "$HOME/bin/tmux-harness" "$HOME/bin/tmux-pick-agent"
 
             tmux run-shell -t wiring "tmux-pick-agent"
             sleep 1
-            tmux list-windows -t wiring -F '#{window_name}' | grep -qx codex ||
-              fail "agent picker dispatch did not open the codex window"
+            tmux list-windows -t wiring -F '#{window_name}' | grep -qx harness ||
+              fail "agent picker dispatch did not open the harness window"
 
             tmux run-shell -t wiring "tmux-pick-agent"
             sleep 1
-            [ "$(tmux list-windows -t wiring -F '#{window_name}' | grep -cx codex)" = "1" ] ||
+            [ "$(tmux list-windows -t wiring -F '#{window_name}' | grep -cx harness)" = "1" ] ||
               fail "second agent dispatch opened a duplicate window"
             ok "agent picker opens one window per agent and reuses it"
 

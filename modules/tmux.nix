@@ -699,7 +699,7 @@ _: {
 
           bind -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"       # FZF project picker
           bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
-          bind -n M-h display-popup -B -w 30% -h 25% -E "tmux-pick-agent"            # FZF agent picker (codex/claude/opencode/harness)
+          bind -n M-h display-popup -B -w 30% -h 25% -E "tmux-pick-agent"            # FZF agent picker (claude/harness)
 
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
           set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
