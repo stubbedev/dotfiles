@@ -40,11 +40,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789477171,
-        "narHash": "sha256-UZ1hGqeuWkG8rbl9j2QJhJ6Lps714gfBZzNulu3ECyI=",
+        "lastModified": 1789527031,
+        "narHash": "sha256-1QDpMK61Mvs4xz6UDsbd9VEXpHIx++lad0bB/pIeGZM=",
         "owner": "stubbedev",
         "repo": "atlassian-mcp",
-        "rev": "5841c68a26024885478546631efe86603509b3e7",
+        "rev": "927cb0a285730fd3c3670bf7b341e280ac639747",
         "type": "github"
       },
       "original": {
@@ -503,11 +503,11 @@
     "gddy": {
       "flake": false,
       "locked": {
-        "lastModified": 1789067535,
-        "narHash": "sha256-CKKcMQFEmATry//BbewtEi3dMD0djpFu/lXlacvFlXc=",
+        "lastModified": 1789513226,
+        "narHash": "sha256-t6QMsTbT+ZMFJmCD9hkC8RcqyaV9XeVjFJQe8bht6+A=",
         "owner": "godaddy",
         "repo": "cli",
-        "rev": "2d55cd17832640ee2d0391ed4f0b9c1be5b1275d",
+        "rev": "499b65689f6d396f5b91277fcd00b5acb078ccbd",
         "type": "github"
       },
       "original": {
@@ -580,11 +580,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789494211,
-        "narHash": "sha256-c/JPSTcP2xd0gkqiMt8K5X52lgiCZ8EQvqrn4z9vhxw=",
+        "lastModified": 1789495201,
+        "narHash": "sha256-R6uUO4/KylrG2Mn9/MubydcaMpU7CXHXI6ziKmr0Hg8=",
         "owner": "stubbedev",
         "repo": "harness",
-        "rev": "c4bd441d2f0670b9a4ccd4381bd483e78b3df11e",
+        "rev": "aab8cd86484933d8552c16ad69858f9f3333d560",
         "type": "github"
       },
       "original": {
