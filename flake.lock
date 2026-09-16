@@ -161,11 +161,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1789386765,
-        "narHash": "sha256-qMaoKRTkUrx+bOEFIwP4hAPIqkzZB5PyinwpmWtF0kc=",
+        "lastModified": 1789540359,
+        "narHash": "sha256-eYhog0xrEAn+Gu0eR1Zy3SSKXF3kzeooNAy6OVHzFXY=",
         "owner": "stubbedev",
         "repo": "ds-mcp",
-        "rev": "8586acc2a3e7379acd4653beac3532b69b790226",
+        "rev": "8bb5d61d96597ae1818a2bcb7393bc5a6e9c2a50",
         "type": "github"
       },
       "original": {
@@ -1273,11 +1273,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789409171,
-        "narHash": "sha256-WpQMdohetrPTduFhvgbQ9CKtyyRdR/99TDcLUcNwmjw=",
+        "lastModified": 1789538670,
+        "narHash": "sha256-SvUZJHVoz12WVXabWLIA7XGRRH+SHxBJRnLdIwscwEA=",
         "owner": "stubbedev",
         "repo": "proxy-mcp",
-        "rev": "6759cd8cecc0faaeee32830b2d7dedcdfae8b1e6",
+        "rev": "8e5f2254b1724cf3cd0ac9a82462fe0557eebece",
         "type": "github"
       },
       "original": {
@@ -1292,11 +1292,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1789384723,
-        "narHash": "sha256-BK0col9kcymOEso+zVh2PvydYzm6zt2d+nSBkhF0lhI=",
+        "lastModified": 1789538360,
+        "narHash": "sha256-azM/GpIInFxnHh+8ODURNCWuia4noqvZqJNXOrBuzyI=",
         "owner": "stubbedev",
         "repo": "pty-mcp",
-        "rev": "dcaf95b7c89b87940efa46e085e0bb6941a97467",
+        "rev": "19d3c8a369c61e0b80ccfdd6c37c14b826edeed1",
         "type": "github"
       },
       "original": {
@@ -1431,11 +1431,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1789385322,
-        "narHash": "sha256-1HbmbmRA3qPG1ty88kpkL3SUPi3KsGefOr2Fo6znneA=",
+        "lastModified": 1789538668,
+        "narHash": "sha256-TeRH9QToT/e/TXqJUC42O5e+45013fjzZJ6BEHDos7A=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "69b5614c364dd03e10192614c5e38b2ffecbe207",
+        "rev": "05b166b351d124eacbba9efe83a94385eefe45eb",
         "type": "github"
       },
       "original": {
@@ -1647,11 +1647,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789387835,
-        "narHash": "sha256-+5/Ev4xwkA4p5akAPlBincv0rUmZ6rXGHPqfej2X0ZA=",
+        "lastModified": 1789538356,
+        "narHash": "sha256-XtCpuyogO5bCud9V0KbZc2CprvpBRPb9dQHVvg2XNHo=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "214a82f82d14d875b5be380d98b6d89e90e58173",
+        "rev": "c6f51275c6c398c4f767142582823c79da81578f",
         "type": "github"
       },
       "original": {
