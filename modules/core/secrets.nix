@@ -1,4 +1,17 @@
 { inputs, ... }:
+let
+  sopsInstallSecrets =
+    pkgs:
+    (
+      (pkgs.extend (
+        _final: prev: {
+          buildGo125Module = prev.buildGo127Module;
+        }
+      )).callPackage
+        "${inputs.sops-nix}"
+        { }
+    ).sops-install-secrets;
+in
 {
   flake.modules.homeManager.secrets =
     {
@@ -9,6 +22,8 @@
     }:
     {
       imports = [ inputs.sops-nix.homeManagerModules.sops ];
+
+      sops.package = sopsInstallSecrets pkgs;
 
       sops.age.sshKeyPaths = [ "${config.home.homeDirectory}/.ssh/id_ed25519" ];
 
@@ -30,9 +45,11 @@
     };
 
   flake.modules.nixos.secrets =
-    { ... }:
+    { pkgs, ... }:
     {
       imports = [ inputs.sops-nix.nixosModules.sops ];
+
+      sops.package = sopsInstallSecrets pkgs;
 
       sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     };
