@@ -81,7 +81,6 @@
       url = "github:stubbedev/proxy-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    pty-mcp.url = "github:stubbedev/pty-mcp";
     notmuch-mcp.url = "github:stubbedev/notmuch-mcp";
     wayle = {
       # ?submodules=1: the github fetcher skips submodules, leaving the vendored

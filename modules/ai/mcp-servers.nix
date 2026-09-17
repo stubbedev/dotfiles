@@ -19,7 +19,6 @@
       atlassianMcp = flakeBin "atlassian-mcp" "atlassian-mcp";
       nixMcp = flakeBin "nix-mcp" "nix-mcp";
       dsMcp = flakeBin "ds-mcp" "ds-mcp";
-      ptyMcp = flakeBin "pty-mcp" "pty-mcp";
       notmuchMcp = flakeBin "notmuch-mcp" "notmuch-mcp";
 
       enableChrome = config.features.browsers;
@@ -150,20 +149,6 @@
             "--config"
             "${homeDirectory}/.config/ds-mcp/config.json"
           ];
-        };
-        # idleSec matches pty-mcp's own session idle-timeout: a shorter proxy
-        # clock would tear down live ssh/vim/REPL sessions the server still
-        pty-mcp = {
-          host = "127.0.0.1";
-          port = proxiedPort;
-          path = "/pty-mcp/mcp";
-          idleSec = 1800;
-          command = ptyMcp;
-          args = [
-            "--askpass"
-            "rofi -dmenu -password -p sudo"
-          ];
-          repoScoped = true;
         };
       }
       // lib.optionalAttrs enableMail {
