@@ -205,10 +205,10 @@ _: {
           fi
 
           if [[ -z "$TMUX" ]]; then
-            harness --yolo "$@"
+            harness "$@"
           else
             tmux renamew "harness"
-            exec harness --yolo "$@"
+            exec harness "$@"
           fi
         '';
         # Fzf picker over the installed agents. Default mode (the tmux bind's
