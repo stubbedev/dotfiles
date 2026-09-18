@@ -5,7 +5,6 @@ _: {
       environment.systemPackages = with pkgs; [
         vultr-cli
         hcloud
-        gddy
         s5cmd
       ];
     };
@@ -16,7 +15,6 @@ _: {
       home.packages = with pkgs; [
         vultr-cli
         hcloud
-        gddy
         s5cmd
       ];
 
@@ -41,15 +39,6 @@ _: {
       };
 
       sops.secrets.godaddy = pkgs.stubbe.secret { name = "godaddy"; };
-      sops.templates."gddy-pat.toml" = {
-        content = ''
-          [tokens.prod]
-            token = "${config.sops.placeholder.godaddy}"
-            name = "sops"
-        '';
-        path = "${config.xdg.configHome}/gddy/pat.toml";
-      };
-
       # ~/.config/gh/hosts.yml carries the GitHub CLI oauth_token. By default gh
       # stashes the token in libsecret under "Default_Keyring", which PAM does
       # NOT auto-unlock — so the token effectively vanishes on every reboot.

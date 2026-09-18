@@ -73,10 +73,6 @@
       url = "github:stephenleo/cship";
       flake = false;
     };
-    gddy = {
-      url = "github:godaddy/cli";
-      flake = false;
-    };
     proxy-mcp = {
       url = "github:stubbedev/proxy-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
