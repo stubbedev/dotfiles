@@ -205,46 +205,9 @@
           # to find the binaries by name.
           lsp = config.stubbe.lsp.clients.harness;
 
-          # `harness --yolo` is a flag on the ROOT command only, so baking it
-          # into a wrapper would make `harness run`/`harness logs` die with
-          # "unknown flag". allowed_tools is the config-level equivalent and
-          # applies to both the TUI and `harness run`. MCP tool calls never
-          # reach the permission service at all, so this list only needs
-          # Harness's own tools -- mirrored from allToolNames() in
-          # internal/config/config.go. A tool added upstream after this list
-          # simply prompts once.
-          permissions.allowed_tools = [
-            "agent"
-            "bash"
-            "harness_info"
-            "harness_logs"
-            "job_output"
-            "job_kill"
-            "download"
-            "edit"
-            "multiedit"
-            "lsp_diagnostics"
-            "lsp_references"
-            "lsp_restart"
-            "lsp_symbols"
-            "lsp_definition"
-            "lsp_call_hierarchy"
-            "lsp_rename"
-            "lsp_replace_symbol"
-            "fetch"
-            "agentic_fetch"
-            "glob"
-            "grep"
-            "ls"
-            "question"
-            "sourcegraph"
-            "todos"
-            "view"
-            "write"
-            "list_mcp_resources"
-            "read_mcp_resource"
-          ];
-
+          # Full trust: the fork removed the permission system outright (and
+          # with it the `permissions.allowed_tools` this block used to set), so
+          # there is nothing left to configure here.
           options = {
             tui = {
               # The palette that used to be a generated catppuccin.go dropped
