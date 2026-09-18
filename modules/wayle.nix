@@ -686,6 +686,12 @@
               # and time the unit out if wayle claims it late or not at all.
               Type = "simple";
               ExecStart = lib.getExe launcher;
+              # A restart kills the ext-session-lock client living in the
+              # shell, and Hyprland then holds the session in the crashed
+              # lockscreen state until cleared by hand. Re-lock as soon as the
+              # shell is back; a no-op unless the session was actually locked.
+              # The leading "-" keeps a failed re-lock from restarting wayle.
+              ExecStartPost = [ "-${config.stubbe.paths.nixBin}/lock-recover relock" ];
               ExecStopPost = "-${lib.getExe pkgs.bash} -c '${lib.getExe' pkgs.procps "pkill"} -9 wayle || true; sleep 0.5'";
               Restart = "on-failure";
               RestartSec = "3s";
