@@ -267,6 +267,12 @@ vim.api.nvim_create_autocmd("UIEnter", {
           command_palette = true, -- : commands in a centered floating box
           long_message_to_split = true,
         },
+        views = {
+          mini = {
+            timeout = 1500,
+            win_options = { winblend = 20, winhighlight = { Normal = "Comment", IncSearch = "", Search = "" } },
+          },
+        },
         lsp = {
           -- hover/signature are handled by lsp.lua and blink.cmp already
           override = {},
