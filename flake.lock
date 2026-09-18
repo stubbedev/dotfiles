@@ -485,11 +485,11 @@
     "gddy": {
       "flake": false,
       "locked": {
-        "lastModified": 1789677245,
-        "narHash": "sha256-mxV1zfTcHpAbMiWsQsqDh3aaJNfgNFBJ2wDNrPUuNHU=",
+        "lastModified": 1789744379,
+        "narHash": "sha256-UbrZpggFSOjtIWfCNLENewBSh/m1kHhnPAAiL8rq+/k=",
         "owner": "godaddy",
         "repo": "cli",
-        "rev": "c59c7c95bc6b9beae8b2315095df8e88b7968abc",
+        "rev": "38a2424b86fb8ef3e9447045b086330af006de35",
         "type": "github"
       },
       "original": {
