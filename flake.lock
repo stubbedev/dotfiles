@@ -546,11 +546,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789736731,
-        "narHash": "sha256-+8LV60WKTeIhegeeQfbZMtxJaT6fMZmPZ8FREwkHVsw=",
+        "lastModified": 1789757981,
+        "narHash": "sha256-mQM1ptw9AtmRK90N/w61Es7+rb52RtvrGisPqqxITUo=",
         "owner": "stubbedev",
         "repo": "harness",
-        "rev": "aad443324cf37bdd3e3ff92c6608516871991927",
+        "rev": "f3ced9b861f395ac3da6c98fa805f0eb2715db27",
         "type": "github"
       },
       "original": {
@@ -1640,11 +1640,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789703466,
-        "narHash": "sha256-7u2cvfvO9FhPR3XV+xsmdOo6AkTFXTF+ljHiqU5tAVk=",
+        "lastModified": 1789747385,
+        "narHash": "sha256-ufuV1Icto+PhcO8R2PtMxW5bOLeDtq4/TrfFm6kDonI=",
         "owner": "stubbedev",
         "repo": "xilo",
-        "rev": "8204eccc0953546ac9c8b7d3b0d45b92d0c191fe",
+        "rev": "210e2869c5d99534b3d36432ad73dd840fc38649",
         "type": "github"
       },
       "original": {
