@@ -1,8 +1,8 @@
 { inputs, ... }:
 let
-  # The PHP for CLI, FPM, composer and the interpreter FrankenPHP embeds. Named
-  # once here because the overlay below and the module have to agree; the assert
-  # next to the `frankenphp` binding proves they still do.
+  # The PHP for the static CLI, composer and the interpreter FrankenPHP embeds.
+  # Named once here because the overlay below and the module have to agree; the
+  # assert next to the `frankenphp` binding proves they still do.
   phpAttr = "php85";
 in
 {
@@ -61,14 +61,13 @@ in
         ; Performance defaults. xdebug stays loaded but inert (xdebug.mode=off)
         ; — set XDEBUG_MODE=debug,develop in the shell to turn it on per
         ; session. pcov same idea: loaded but inert until a coverage run
-        ; passes -dpcov.enabled=1. opcache in CLI keeps validate_timestamps=1
-        ; so source edits are picked up immediately.
+        ; passes -dpcov.enabled=1.
         xdebug.mode = off
         pcov.enabled = 0
         opcache.enable_cli = 1
       '';
 
-      # ONE php build serves CLI, FPM and FrankenPHP. phpPackageZts replicates
+      # The php build FrankenPHP embeds. phpPackageZts replicates
       # frankenphp's internal override *exactly* (pkgs/by-name/fr/frankenphp:
       # phpEmbedWithZts) so its re-override on our buildEnv is a genuine no-op
       phpPackageZts = phpPackage.override {
@@ -116,6 +115,8 @@ in
         extraConfig = extraIni;
       };
 
+      phpStatic = phpPackage.override { staticSupport = true; };
+
       # The php swap already happened in the overlay above; all that is left
       # here is pointing the binary at OUR ini dir (extensions + extraIni). A
       # wrapper rather than a second `.override`, which would only change the
@@ -132,38 +133,14 @@ in
           '';
         };
 
-      phpFpmBin = lib.hiPrio (
-        pkgs.stubbe.shellScriptBin "php-fpm" ''
-          exec ${php}/bin/php-fpm -y "''${XDG_CONFIG_HOME:-$HOME/.config}/php/php-fpm.conf" "$@"
-        ''
-      );
-
       composer = phpPackage.packages.composer.override { inherit php; };
     in
     lib.mkIf config.features.php {
-      xdg.configFile."php/php-fpm.conf".source = pkgs.stubbe.gen.ini "php-fpm.conf" {
-        global = {
-          pid = "/tmp/php-fpm.pid";
-          error_log = "/tmp/php-fpm.log";
-          daemonize = "no";
-        };
-        www = {
-          listen = "127.0.0.1:9000";
-          pm = "dynamic";
-          "pm.max_children" = 5;
-          "pm.start_servers" = 2;
-          "pm.min_spare_servers" = 1;
-          "pm.max_spare_servers" = 3;
-        };
-      };
-
       home.packages = with pkgs; [
-        php
-        phpFpmBin
+        phpStatic
         frankenphp
         composer
         mago
-        tesseract
         phpantom_lsp
       ];
     };

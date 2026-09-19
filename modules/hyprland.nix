@@ -243,7 +243,6 @@ in
         hyprlang
         hyprkeys
         hyprtoolkit
-        hyprlauncher
         hyprutils
         hyprprop
         hyprsysteminfo
