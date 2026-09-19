@@ -15,7 +15,7 @@ _: {
           export POWER_SOURCE_SUPPLY_DIR="$root/ps"
           export POWER_SOURCE_STATE_DIR="$root/state"
           export POWER_SOURCE_RUNTIME_DIR="$root/run"
-          mkdir -p "$root/ps/AC" "$root/ps/BAT0" "$root/state" "$root/bin"
+          mkdir -p "$root/ps/AC" "$root/ps/BAT0" "$root/state" "$root/bin" "$root/run"
 
           printf 'Mains' >"$root/ps/AC/type"
           printf 'Battery' >"$root/ps/BAT0/type"
