@@ -14,20 +14,23 @@ _: {
       '';
     in
     {
-      checks.hyprland-config = pkgs.runCommand "check-hyprland-config" { } ''
-        export HOME="$(mktemp -d)"
-        export XDG_RUNTIME_DIR="$(mktemp -d)"
-        mkdir -p "$HOME/.config/hypr"
-        cp ${../../src/hyprland/hyprland.lua} "$HOME/.config/hypr/hyprland.lua"
-        cp ${testNixLua} "$HOME/.config/hypr/nix.lua"
+      checks.hyprland-config = pkgs.stubbe.check {
+        name = "hyprland-config";
+        text = ''
+          export HOME="$(mktemp -d)"
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          mkdir -p "$HOME/.config/hypr"
+          cp ${../../src/hyprland/hyprland.lua} "$HOME/.config/hypr/hyprland.lua"
+          cp ${testNixLua} "$HOME/.config/hypr/nix.lua"
 
-        if ${hyprland}/bin/Hyprland --verify-config 2>&1 | tee log.txt | grep -q "config ok"; then
-          touch "$out"
-        else
-          echo "hyprland.lua failed Hyprland --verify-config:" >&2
-          cat log.txt >&2
-          exit 1
-        fi
-      '';
+          if ${hyprland}/bin/Hyprland --verify-config 2>&1 | tee log.txt | grep -q "config ok"; then
+            touch "$out"
+          else
+            echo "hyprland.lua failed Hyprland --verify-config:" >&2
+            cat log.txt >&2
+            exit 1
+          fi
+        '';
+      };
     };
 }

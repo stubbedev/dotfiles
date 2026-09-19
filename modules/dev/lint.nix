@@ -26,25 +26,41 @@
       checks = {
         # -c is required: statix reads statix.toml from the config path only,
         # and does not discover it inside the target directory.
-        lint-statix = pkgs.runCommand "lint-statix" { nativeBuildInputs = [ pkgs.statix ]; } ''
-          statix check -c ${self} ${self}
-          touch "$out"
-        '';
+        lint-statix = pkgs.stubbe.check {
+          name = "lint-statix";
+          nativeBuildInputs = [ pkgs.statix ];
+          text = ''
+            statix check -c ${self} ${self}
+            touch "$out"
+          '';
+        };
 
-        lint-deadnix = pkgs.runCommand "lint-deadnix" { nativeBuildInputs = [ pkgs.deadnix ]; } ''
-          deadnix --fail -- ${self}
-          touch "$out"
-        '';
+        lint-deadnix = pkgs.stubbe.check {
+          name = "lint-deadnix";
+          nativeBuildInputs = [ pkgs.deadnix ];
+          text = ''
+            deadnix --fail -- ${self}
+            touch "$out"
+          '';
+        };
 
-        lint-fmt = pkgs.runCommand "lint-fmt" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
-          find ${self} -name '*.nix' -print0 | xargs -0 nixfmt --check
-          touch "$out"
-        '';
+        lint-fmt = pkgs.stubbe.check {
+          name = "lint-fmt";
+          nativeBuildInputs = [ pkgs.nixfmt ];
+          text = ''
+            find ${self} -name '*.nix' -print0 | xargs -0 nixfmt --check
+            touch "$out"
+          '';
+        };
 
-        lint-shellcheck = pkgs.runCommand "lint-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
-          shellcheck -S warning ${self}/bin/stb-install ${self}/bin/stb-install-nixos
-          touch "$out"
-        '';
+        lint-shellcheck = pkgs.stubbe.check {
+          name = "lint-shellcheck";
+          nativeBuildInputs = [ pkgs.shellcheck ];
+          text = ''
+            shellcheck -S warning ${self}/bin/stb-install ${self}/bin/stb-install-nixos
+            touch "$out"
+          '';
+        };
       };
     };
 }

@@ -6,23 +6,21 @@
     { pkgs, ... }:
     {
       checks = {
-        eval-nixos-stubbe =
-          pkgs.runCommand "eval-nixos-stubbe"
-            {
-              toplevel = builtins.unsafeDiscardStringContext self.nixosConfigurations.stubbe-nixos.config.system.build.toplevel.drvPath;
-            }
-            ''
-              echo "evaluated: $toplevel" > "$out"
-            '';
+        eval-nixos-stubbe = pkgs.stubbe.check {
+          name = "eval-nixos-stubbe";
+          env.toplevel = builtins.unsafeDiscardStringContext self.nixosConfigurations.stubbe-nixos.config.system.build.toplevel.drvPath;
+          text = ''
+            echo "evaluated: $toplevel" > "$out"
+          '';
+        };
 
-        eval-hm-stubbe =
-          pkgs.runCommand "eval-hm-stubbe"
-            {
-              toplevel = builtins.unsafeDiscardStringContext self.homeConfigurations.stubbe.activationPackage.drvPath;
-            }
-            ''
-              echo "evaluated: $toplevel" > "$out"
-            '';
+        eval-hm-stubbe = pkgs.stubbe.check {
+          name = "eval-hm-stubbe";
+          env.toplevel = builtins.unsafeDiscardStringContext self.homeConfigurations.stubbe.activationPackage.drvPath;
+          text = ''
+            echo "evaluated: $toplevel" > "$out"
+          '';
+        };
       };
     };
 }

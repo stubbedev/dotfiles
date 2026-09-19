@@ -87,8 +87,6 @@ _: {
     in
     lib.mkIf config.features.desktop {
       # The command palette every bind and hook in tmux.conf dispatches to.
-      # The tmux-session check reads this deployed file back out of
-      # `xdg.configFile`, so the tested bytes are the shipped bytes.
       home.file.".config/tmux/scripts/commands.sh" = {
         executable = true;
         text = ''

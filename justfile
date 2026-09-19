@@ -3,7 +3,8 @@ lint-fix:
     nix run .#lint-fix
 
 # Full check set. --impure: modules/graphics.nix reads /proc for GPU
-# detection and throws under pure eval. Skips hyprland-config, which builds
-# Hyprland from source (CI excludes it for the same reason).
+# detection and throws under pure eval. Hard-capped so nothing can wedge the
+# run: checks bound their own scripts via pkgs.stubbe.check, this is the
+# backstop for everything around them.
 check:
-    nix flake check --impure
+    timeout 2700 nix flake check --impure

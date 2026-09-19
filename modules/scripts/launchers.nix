@@ -1,7 +1,7 @@
 # The tmux/fzf pickers every session binding dispatches to.
 _: {
-  # Exposed via `stubbe.lib` so the tmux-session check and the installed bins
-  # are built from the same bytes.
+  # Exposed via `stubbe.lib` so the bins tmux.nix installs are built from
+  # these bytes.
   stubbe.lib.tmuxLaunchers = {
     "tmux-pick-session" = ''
 
