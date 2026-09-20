@@ -108,6 +108,7 @@
             kontainerSiteRepo
             kontainerHelpdeskRepo
             "git@github.com:stubbedev/xilo.git"
+            "git@github.com:stubbedev/elementor-calendar.git"
           ];
           command = "npx";
           args = [
