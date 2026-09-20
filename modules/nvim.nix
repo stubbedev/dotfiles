@@ -107,7 +107,8 @@
               runtimePkgs = with pkgs; [
                 nixd
                 lua-language-server
-                vscode-langservers-extracted # html, cssls (scss), jsonls, eslint
+                superhtml # html
+                biome # css, json
                 bash-language-server
                 taplo
                 yaml-language-server

@@ -9,8 +9,6 @@ _: {
       ...
     }:
     let
-      vscodeLs = bin: "${pkgs.vscode-langservers-extracted}/bin/${bin}";
-
       # Neutral shape per server: `languages` maps a file extension (sans dot)
       # to the LSP language id -- every consumer needs both halves, claude as
       # extensionToLanguage, harness as filetypes (extensions match by suffix).
@@ -107,28 +105,19 @@ _: {
           };
         };
 
-        jsonls = {
-          command = vscodeLs "vscode-json-language-server";
-          args = [ "--stdio" ];
-          languages = {
-            json = "json";
-            jsonc = "jsonc";
-          };
-          initOptions.provideFormatter = false;
+        superhtml = {
+          command = lib.getExe' pkgs.superhtml "superhtml";
+          args = [ "lsp" ];
+          languages.html = "html";
         };
 
-        cssls = {
-          command = vscodeLs "vscode-css-language-server";
-          args = [ "--stdio" ];
+        biome = {
+          command = lib.getExe' pkgs.biome "biome";
+          args = [ "lsp-proxy" ];
           languages = {
             css = "css";
-            scss = "scss";
-            less = "less";
-          };
-          initOptions.provideFormatter = false;
-          settings = {
-            css.validate = true;
-            scss.validate = true;
+            json = "json";
+            jsonc = "jsonc";
           };
         };
 

@@ -188,31 +188,15 @@ local servers = {
     root_markers = { "package.json", ".git" },
   },
 
-  html = {
-    cmd = { "vscode-html-language-server", "--stdio" },
-    filetypes = { "html", "htm", "templ", "tmpl", "blade", "twig" },
-    root_markers = { "package.json", ".git" },
-    init_options = {
-      provideFormatter = false, -- prettier does this
-      embeddedLanguages = { css = true, javascript = true },
-      configurationSection = { "html", "css", "javascript" },
-    },
-  },
-  cssls = {
-    cmd = { "vscode-css-language-server", "--stdio" },
-    filetypes = { "css", "scss", "less" },
-    root_markers = { "package.json", ".git" },
-    init_options = { provideFormatter = false },
-    settings = {
-      css = { validate = true, lint = { unknownAtRules = "ignore" } },
-      scss = { validate = true, lint = { unknownAtRules = "ignore" } },
-    },
-  },
-  jsonls = {
-    cmd = { "vscode-json-language-server", "--stdio" },
-    filetypes = { "json", "jsonc" },
+  superhtml = {
+    cmd = { "superhtml", "lsp" },
+    filetypes = { "html", "htm" },
     root_markers = { ".git" },
-    init_options = { provideFormatter = false },
+  },
+  biome = {
+    cmd = { "biome", "lsp-proxy" },
+    filetypes = { "css", "json", "jsonc" },
+    root_markers = { "biome.json", "biome.jsonc", "package.json", ".git" },
   },
   yamlls = {
     cmd = { "yaml-language-server", "--stdio" },
