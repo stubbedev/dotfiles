@@ -51,12 +51,14 @@ in
         "event"
       ];
 
+      # 0 and -1 mean "no limit": php-src guards every size check with a
+      # `> 0` comparison, so post_max_size = 0 is not "no posts".
       extraIni = ''
-        memory_limit = 4G
-        post_max_size = 2G
-        upload_max_filesize = 2G
-        max_input_time = 300
-        max_execution_time = 300
+        memory_limit = -1
+        post_max_size = 0
+        upload_max_filesize = 0
+        max_input_time = -1
+        max_execution_time = 0
 
         ; Performance defaults. xdebug stays loaded but inert (xdebug.mode=off)
         ; — set XDEBUG_MODE=debug,develop in the shell to turn it on per
@@ -108,14 +110,20 @@ in
           sourceRoot = "source/mongodb-${version}";
         });
 
-      php = phpPackageZts.buildEnv {
-        extensions =
-          { all, ... }:
-          builtins.attrValues (removeAttrs all excludedExts // { mongodb = mongodbLatest all.mongodb; });
-        extraConfig = extraIni;
-      };
+      phpEnv =
+        php:
+        php.buildEnv {
+          extensions =
+            { all, ... }:
+            builtins.attrValues (removeAttrs all excludedExts // { mongodb = mongodbLatest all.mongodb; });
+          extraConfig = extraIni;
+        };
 
-      phpStatic = phpPackage.override { staticSupport = true; };
+      php = phpEnv phpPackageZts;
+
+      # buildEnv, not the bare override: the override ships no ini (PHP's
+      # built-in 128M memory_limit) and no extensions.
+      phpStatic = phpEnv (phpPackage.override { staticSupport = true; });
 
       # The php swap already happened in the overlay above; all that is left
       # here is pointing the binary at OUR ini dir (extensions + extraIni). A
