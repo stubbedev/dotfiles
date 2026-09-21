@@ -71,6 +71,7 @@
       kontainerCmsRepo = "\${KONTAINER_CMS_REMOTE}";
       kontainerSiteRepo = "\${KONTAINER_SITE_REMOTE}";
       kontainerHelpdeskRepo = "\${KONTAINER_HELPDESK_REMOTE}";
+      kontainerStoryblokRepo = "\${KONTAINER_STORYBLOK_REMOTE}";
       # A whitelist entry with no path component gates a whole git host: every repo
       # cloned from it matches, across ssh/https and regardless of port (proxy-mcp
       # >= 0.0.21). Set KONFORM_HOST to the bare hostname — a value WITH a path
@@ -107,6 +108,7 @@
             kontainerCmsRepo
             kontainerSiteRepo
             kontainerHelpdeskRepo
+            kontainerStoryblokRepo
             "git@github.com:stubbedev/xilo.git"
             "git@github.com:stubbedev/elementor-calendar.git"
           ];
