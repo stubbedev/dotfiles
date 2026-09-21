@@ -95,7 +95,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" and vim.fn.line2byte(vim.fn.line("$")) == -1 then
       vim.schedule(function()
-        require("oil").open()
+        require("plugins").open_oil()
       end)
     end
   end,

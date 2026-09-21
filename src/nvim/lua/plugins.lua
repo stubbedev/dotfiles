@@ -3,124 +3,166 @@ vim.pack.add({
 
   { src = "https://github.com/saghen/blink.lib" },
   { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("1") },
-
-  { src = "https://github.com/stevearc/oil.nvim" },
-  { src = "https://github.com/refractalize/oil-git-status.nvim" },
-  { src = "https://github.com/nvim-tree/nvim-web-devicons" },
-  { src = "https://github.com/chrisgrieser/nvim-recorder" },
-  { src = "https://github.com/windwp/nvim-ts-autotag" },
 }, { confirm = false })
 
 require("catppuccin").setup({
   flavour = "mocha",
   term_colors = false,
+  -- The exact set auto_integrations would detect for vim.pack's plugin list;
+  -- spelled out so detection (a vim.pack.get scan) never runs at startup.
+  auto_integrations = false,
   integrations = {
     blink_cmp = true,
+    flash = true,
+    fzf = true,
     gitsigns = true,
+    grug_far = true,
+    lsp_trouble = true,
+    mini = true,
+    native_lsp = { enabled = true },
     treesitter = true,
     treesitter_context = true,
-    fzf = true,
-    native_lsp = { enabled = true },
+    which_key = true,
   },
 })
 vim.cmd.colorscheme("catppuccin-mocha")
 
+local M = {}
+
 local ignore_cache = {}
 
-local function ignored_in(dir)
-  local cached = ignore_cache[dir]
-  if cached then
-    return cached
-  end
+-- Loaded on first use: only the completion stack and colorscheme must exist before
+-- first draw, and bare `nvim` opens oil after VimEnter anyway.
+local oil_configured = false
 
-  local set = {}
-  ignore_cache[dir] = set
-  if vim.fn.executable("git") == 0 then
-    return set
-  end
+function M.open_oil(path)
+  vim.pack.add({
+    { src = "https://github.com/nvim-tree/nvim-web-devicons" },
+    { src = "https://github.com/stevearc/oil.nvim" },
+    { src = "https://github.com/refractalize/oil-git-status.nvim" },
+  }, { confirm = false })
 
-  local names, scan = {}, vim.uv.fs_scandir(dir)
-  if scan then
-    while true do
-      local name = vim.uv.fs_scandir_next(scan)
-      if not name then
-        break
+  if not oil_configured then
+    oil_configured = true
+
+    local function ignored_in(dir)
+      local cached = ignore_cache[dir]
+      if cached then
+        return cached
       end
-      names[#names + 1] = name
+
+      local set = {}
+      ignore_cache[dir] = set
+      if vim.fn.executable("git") == 0 then
+        return set
+      end
+
+      local names, scan = {}, vim.uv.fs_scandir(dir)
+      if scan then
+        while true do
+          local name = vim.uv.fs_scandir_next(scan)
+          if not name then
+            break
+          end
+          names[#names + 1] = name
+        end
+      end
+      if #names == 0 then
+        return set
+      end
+
+      local res = vim
+        .system({ "git", "-C", dir, "check-ignore", "--stdin" }, { stdin = table.concat(names, "\n") .. "\n", text = true })
+        :wait()
+      for line in (res.stdout or ""):gmatch("[^\r\n]+") do
+        set[line] = true
+      end
+      return set
     end
-  end
-  if #names == 0 then
-    return set
+
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "OilActionsPost",
+      group = vim.api.nvim_create_augroup("oil_ignore_cache", { clear = true }),
+      callback = function()
+        ignore_cache = {}
+      end,
+    })
+
+    require("oil").setup({
+      win_options = { signcolumn = "yes:2" },
+      keymaps = {
+        ["<leader>e"] = "actions.close",
+        ["~"] = { "actions.cd", opts = { scope = "tab" }, mode = "n" },
+      },
+      view_options = {
+        show_hidden = true,
+        is_always_hidden = function(name, bufnr)
+          local dir = require("oil").get_current_dir(bufnr)
+          return dir ~= nil and ignored_in(dir)[name] == true
+        end,
+      },
+    })
+    require("nvim-web-devicons").setup()
+    require("oil-git-status").setup()
   end
 
-  local res = vim
-    .system({ "git", "-C", dir, "check-ignore", "--stdin" }, { stdin = table.concat(names, "\n") .. "\n", text = true })
-    :wait()
-  for line in (res.stdout or ""):gmatch("[^\r\n]+") do
-    set[line] = true
-  end
-  return set
+  require("oil").open(path)
 end
 
-vim.api.nvim_create_autocmd("User", {
-  pattern = "OilActionsPost",
-  group = vim.api.nvim_create_augroup("oil_ignore_cache", { clear = true }),
-  callback = function()
-    ignore_cache = {}
-  end,
-})
+-- Stand-in until the real plugin defines its own on load.
+vim.api.nvim_create_user_command("Oil", function(opts)
+  M.open_oil(opts.args ~= "" and opts.args or nil)
+end, { nargs = "?", complete = "dir" })
 
-require("oil").setup({
-  win_options = { signcolumn = "yes:2" },
-  keymaps = {
-    ["<leader>e"] = "actions.close",
-    ["~"] = { "actions.cd", opts = { scope = "tab" }, mode = "n" },
-  },
-  view_options = {
-    show_hidden = true,
-    is_always_hidden = function(name, bufnr)
-      local dir = require("oil").get_current_dir(bufnr)
-      return dir ~= nil and ignored_in(dir)[name] == true
-    end,
-  },
-})
-require("oil-git-status").setup()
+-- The lockfile guarantees installation at the session's first vim.pack.add, so
+-- this only ever `:packadd`s on first use.
+function M.undotree()
+  vim.pack.add({ "https://github.com/mbbill/undotree" }, { confirm = false })
+  vim.cmd.UndotreeToggle()
+end
 
-require("nvim-ts-autotag").setup()
-
-require("recorder").setup({
-  slots = { "a", "b", "c" },
-  dynamicSlots = "rotate",
-  lessNotifications = true,
-  mapping = { addBreakPoint = "^^" },
-})
-
-require("blink.cmp").setup({
-  keymap = {
-    preset = "default",
-    ["<CR>"] = { "accept", "fallback" },
-  },
-  enabled = function()
-    return vim.bo.filetype ~= "grug-far"
-  end,
-  completion = {
-    documentation = { auto_show = true, auto_show_delay_ms = 500 },
-  },
-  signature = { enabled = true, window = { show_documentation = false } },
-  sources = {
-    default = { "lsp", "buffer", "snippets", "path", "lazydev" },
-    providers = {
-      lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
-    },
-  },
-})
-
-vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-  pattern = "Cargo.toml",
+-- Completion is needed at first insert, not first draw. The module itself is
+-- already loaded (pack.add above) so lsp.lua can pull LSP capabilities from it.
+vim.api.nvim_create_autocmd("InsertEnter", {
   once = true,
-  group = vim.api.nvim_create_augroup("crates_lazy", { clear = true }),
+  group = vim.api.nvim_create_augroup("blink_lazy", { clear = true }),
   callback = function()
-    require("crates").setup({ completion = { crates = { enabled = true } } })
+    require("blink.cmp").setup({
+      keymap = {
+        preset = "default",
+        ["<CR>"] = { "accept", "fallback" },
+      },
+      enabled = function()
+        return vim.bo.filetype ~= "grug-far"
+      end,
+      completion = {
+        documentation = { auto_show = true, auto_show_delay_ms = 500 },
+      },
+      signature = { enabled = true, window = { show_documentation = false } },
+      sources = {
+        default = { "lsp", "buffer", "snippets", "path", "lazydev" },
+        providers = {
+          lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
+        },
+      },
+    })
+  end,
+})
+
+local crates_setup = false
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "toml",
+  group = vim.api.nvim_create_augroup("crates_lazy", { clear = true }),
+  callback = function(args)
+    if crates_setup or not vim.api.nvim_buf_get_name(args.buf):match("Cargo%.toml$") then
+      return
+    end
+    local ok, crates = pcall(require, "crates")
+    if not ok then
+      return -- crates.nvim arrives with the deferred plugin block, whose doautoall FileType re-fires this
+    end
+    crates_setup = true
+    crates.setup({ completion = { crates = { enabled = true } } })
   end,
 })
 
@@ -154,7 +196,20 @@ vim.api.nvim_create_autocmd("UIEnter", {
         { src = "https://github.com/folke/noice.nvim" },
         { src = "https://github.com/nvim-lualine/lualine.nvim" },
         { src = "https://github.com/elanmed/fzf-lua-frecency.nvim", name = "fzf-lua-frecency" },
+        { src = "https://github.com/nvim-tree/nvim-web-devicons" },
+        { src = "https://github.com/windwp/nvim-ts-autotag" },
+        { src = "https://github.com/chrisgrieser/nvim-recorder" },
       }, { confirm = false })
+
+      -- Before the FileType re-fire below: statusline.lua renders recorder slots from
+      -- diagnostic redraws, which crates.nvim's attach triggers.
+      require("recorder").setup({
+        slots = { "a", "b", "c" },
+        dynamicSlots = "rotate",
+        lessNotifications = true,
+        mapping = { addBreakPoint = "^^" },
+      })
+      require("nvim-ts-autotag").setup()
 
       vim.cmd("doautoall FileType")
 
@@ -506,3 +561,5 @@ vim.api.nvim_create_autocmd("UIEnter", {
     end)
   end,
 })
+
+return M

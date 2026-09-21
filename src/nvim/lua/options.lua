@@ -19,6 +19,7 @@ for _, plugin in ipairs({
   "rrhelper",
   "vimball",
   "vimballPlugin",
+  "fzf", -- the fzf.vim shipped on the nix profile's rtp; pickers go through fzf-lua
 }) do
   vim.g["loaded_" .. plugin] = 1
 end
