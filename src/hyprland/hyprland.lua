@@ -87,6 +87,7 @@ local function setup_config()
             focus_on_activate = false,
             disable_autoreload = true,
             lockdead_screen_delay = 5000,
+            allow_session_lock_restore = true,
         },
         xwayland = { force_zero_scaling = true },
     })

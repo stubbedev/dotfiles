@@ -130,83 +130,6 @@ in
         exec ${pkgs.hyprland}/bin/hyprctl "$@"
       '';
 
-      # Self-heal the session lock after its ext-session-lock client (the
-      # wayle shell) dies. Hyprland keeps the session locked and shows the
-      # "crashed lockscreen" that normally needs manual clearing from a TTY;
-      # this clears it and immediately re-locks, so an hm switch (sd-switch
-      # restarts wayle.service, killing the lock client) or a shell crash
-      # recovers by itself. Also owns dpms: `hyprctl dispatch dpms on/off` is
-      # a Lua parse error on the Lua config manager, i.e. a silent no-op.
-      lockRecover = pkgs.stubbe.shellScriptBin "lock-recover" ''
-        set -u
-
-        hyprctl="${config.stubbe.paths.nixBin}/hyprctl"
-        wayle_lock=${lib.getExe' pkgs.wayle "wayle-lock"}
-        systemctl=${lib.getExe' pkgs.systemd "systemctl"}
-        sleeper=${lib.getExe' pkgs.coreutils "sleep"}
-
-        usage() {
-          echo "usage: lock-recover relock|resume|screens-off|screens-on" >&2
-          exit 2
-        }
-
-        dpms() {
-          case "''${1:-}" in
-            on | off) ;;
-            *) return 0 ;;
-          esac
-          "$hyprctl" dispatch "hl.dsp.dpms({action=\"$1\"})" >/dev/null 2>&1 || true
-        }
-
-        # Probe for the crashed-lockscreen state. Hyprland only accepts the
-        # clear while the lock is held with no live client, so a passing probe
-        # means the dead lock has just been cleared — the caller must re-lock
-        # immediately.
-        crashed_lockscreen() {
-          "$hyprctl" eval 'return pcall(hl.clear_crashed_lockscreen)' >/dev/null 2>&1
-        }
-
-        # The shell must be up before we clear anything: if it cannot re-lock
-        # right away, the session stays as-is (crashed-lockscreen) instead of
-        # unlocked. "activating" counts: from ExecStartPost the start job is
-        # still running, so is-active reports activating until we finish.
-        shell_up() {
-          state="$("$systemctl" --user is-active wayle.service 2>/dev/null)" || true
-          case "$state" in
-            active | activating) return 0 ;;
-            *) return 1 ;;
-          esac
-        }
-
-        relock() {
-          shell_up || return 0
-
-          crashed_lockscreen || return 0
-
-          n=0
-          while [ "$n" -lt 40 ]; do
-            "$wayle_lock" >/dev/null 2>&1 && return 0
-            n=$((n + 1))
-            "$sleeper" 0.25
-          done
-
-          echo "lock-recover: re-lock failed, session left unlocked" >&2
-          return 1
-        }
-
-        case "''${1:-}" in
-          relock) relock ;;
-          resume)
-            # s2idle resume can leave DPMS off; force displays back on.
-            dpms on
-            relock
-            ;;
-          screens-off) dpms off ;;
-          screens-on) dpms on ;;
-          *) usage ;;
-        esac
-      '';
-
       compositorSession = pkgs.stubbe.shellScriptBin "compositor-session" ''
         set -eu
         self="''${1:?compositor name required (hyprland)}"
@@ -223,7 +146,6 @@ in
       home.packages = [
         hyprlandBothCases
         hyprctl
-        lockRecover
         startHyprland
         compositorSession
         (gfx.wrapExe "Xwayland" pkgs.xwayland)
