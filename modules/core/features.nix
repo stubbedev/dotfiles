@@ -10,7 +10,7 @@ let
     wayle = "The wayle desktop shell — bar, notifications, OSD, wallpaper, lock, portal. The default and only shell; disabling leaves no bar.";
     theming = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, Plymouth).";
     media = "Image, video and audio tooling, plus the office suite.";
-    vpn = "The openconnect VPN: systemd tunnel units, their secrets, and the systemctl polkit rule.";
+    vpn = "The GlobalProtect VPN: a NetworkManager openconnect profile provisioned from sops, signed into and toggled from wayle's network widget, plus a suspend/resume restore hook.";
     rust = "The rust toolchain (fenix stable).";
     srv = "The srv local-site server and the mkcert CA trust that goes with it.";
     treeman = "treeman per-worktree DB orchestrator plus the treemand user daemon.";

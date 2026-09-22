@@ -213,10 +213,6 @@
                 printf '%s\n' "$(printf '%s' "$out" | jq -c "$filt" 2>/dev/null)"
               }
 
-              vpn_line() {
-                emit_line '{alt: (if .class == "connected" then "on" elif .class == "connecting" then "connecting" else "off" end), tooltip}' vpn-konform-bar status
-              }
-
               treeman_line() { emit_line '.' treeman-status; }
 
               rt="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
@@ -226,19 +222,6 @@
                   treeman_line
                   treeman logs tail --follow --all --json --since 1s 2>/dev/null |
                     while IFS= read -r _; do treeman_line; done
-                  ;;
-
-                vpn-watch)
-                  vpn_line
-                  {
-                    inotifywait -q -m -e create,delete,close_write,moved_to,moved_from --format '%f' "$rt" 2>/dev/null &
-                    ip monitor link 2>/dev/null &
-                    wait
-                  } | while IFS= read -r line; do
-                    case "$line" in
-                      openconnect-*.connecting | *oc-konform*) vpn_line ;;
-                    esac
-                  done
                   ;;
 
                 submap-watch)
@@ -281,7 +264,6 @@
         ++ (with pkgs; [
           hyprsunset
           inotify-tools
-          iproute2
           brightnessctl
         ]);
 
@@ -366,7 +348,6 @@
                       "hyprsunset"
                       "power-profiles"
                       "systray"
-                      "custom-vpn"
                       "notifications"
                       "power"
                     ];
@@ -525,28 +506,6 @@
                     icon-show = false;
                     left-click = "treeman worktree list";
                     hide-if-empty = true;
-                  }
-                  {
-                    id = "vpn";
-                    mode = "watch";
-                    restart-policy = "on-exit";
-                    command = "wayle-widget vpn-watch";
-                    label-show = false;
-                    left-click = "vpn-konform-bar toggle";
-                    icon-name = "ld-unplug-symbolic";
-                    icon-map = {
-                      on = "ld-lock-symbolic";
-                      connecting = "ld-refresh-cw-symbolic";
-                      off = "ld-unplug-symbolic";
-                    };
-                    color-map = {
-                      on.icon-color = "green";
-                      connecting = {
-                        button-bg-color = "yellow";
-                        icon-color = "bg-base";
-                      };
-                      off.icon-color = "fg-muted";
-                    };
                   }
                 ];
               };

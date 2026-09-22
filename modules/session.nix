@@ -98,14 +98,6 @@
 
       xdg.configFile."starship.toml".source = pkgs.stubbe.gen.toml "starship.toml" {
         command_timeout = 100;
-
-        format = "\${custom.vpn}$all";
-
-        custom.vpn = {
-          when = ''ls -A $HOME | grep -q ".vpn_active-*"'';
-          style = "green";
-          format = "[\\[vpn\\] ]($style)";
-        };
       };
     };
 }
