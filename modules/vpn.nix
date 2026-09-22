@@ -229,8 +229,12 @@ in
 
                   if [ ! -e "${profileTarget provider}" ]; then
                   sudo install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
-                  nmcli connection reload >/dev/null 2>&1 || true
                   fi
+                  # NM's keyfile plugin does not watch the directory, and an
+                  # unprivileged reload is refused by polkit: load it as root,
+                  # on every run, so a profile written earlier but never picked
+                  # up still gets registered.
+                  sudo nmcli connection load "${profileTarget provider}"
 
                   sudo systemctl disable --now openconnect-${provider}.service >/dev/null 2>&1 || true
                   sudo rm -f \
