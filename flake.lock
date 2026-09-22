@@ -161,11 +161,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1789991250,
-        "narHash": "sha256-0sQIlCQ+v8UjQaeyvH6ury5hDDhBDUp4rw0HZNwMDAk=",
+        "lastModified": 1790062075,
+        "narHash": "sha256-1kYf4R/3EDneZ+jy9tLexM/eTIyZ2Ap/iR9piDgq70M=",
         "owner": "stubbedev",
         "repo": "ds-mcp",
-        "rev": "6df67fa8b735e7304d74c6074dde2ee05e7ce176",
+        "rev": "f3e05fc8ccc6bb6e098537330205407ab6244492",
         "type": "github"
       },
       "original": {
