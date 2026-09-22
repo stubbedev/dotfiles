@@ -64,6 +64,12 @@ in
       phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
     };
 
+    # packages.default, not overlays.default: the overlay callPackages against
+    # OUR nixpkgs, so the derivation differs from the cachix cache.
+    claude-code = final: _prev: {
+      claude-code = inputs.claude-code.packages.${final.stdenv.hostPlatform.system}.default;
+    };
+
     xilo = final: _prev: {
       xilo = inputs.xilo.packages.${final.stdenv.hostPlatform.system}.default;
     };

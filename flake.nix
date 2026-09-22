@@ -73,6 +73,11 @@
       url = "github:stephenleo/cship";
       flake = false;
     };
+    claude-code = {
+      # Tracks npm latest within ~1h of release; nixpkgs' claude-code lags.
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     proxy-mcp = {
       url = "github:stubbedev/proxy-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
