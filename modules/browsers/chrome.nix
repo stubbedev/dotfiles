@@ -116,6 +116,28 @@ _: {
 
       # The SUID sandbox cannot work from the read-only store, so pointing
       # CHROME_DEVEL_SANDBOX at /dev/null forces the userns sandbox instead.
+      # @playwright/mcp finds the Nix Chrome via PLAYWRIGHT_MCP_EXECUTABLE_PATH
+      # below (standalone HM hosts have no /opt symlink).
+      chrome = config.stubbe.gfx.bundle {
+        # Chrome keeps only the LAST --enable-features, and chrome://flags is
+        # appended after the command line, so this list is authoritative only
+        # while that page stays at defaults.
+        # Tried and reverted: SkiaGraphite is refused by a platform safety
+        # guard the flag cannot override; RawDraw, EnableDrDc and TreesInViz
+        # each rendered the viewport blank white.
+        # Vulkan stays CPU-fallback because Chrome will not composite via
+        # Vulkan on Wayland. GL is hardware-accelerated, so do not add
+        # --ozone-platform=x11 to "fix" it.
+        pkg = pkgs.google-chrome.override {
+          commandLineArgs = lib.concatStringsSep " " [
+            "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
+            "--enable-zero-copy"
+            "--ignore-gpu-blocklist"
+          ];
+        };
+        env.CHROME_DEVEL_SANDBOX = "/dev/null";
+        includeUpstream = false;
+      };
       chromeDesktop = pkgs.makeDesktopItem {
         name = "com.google.Chrome";
         desktopName = "Google Chrome";
@@ -161,28 +183,11 @@ _: {
     in
     lib.mkIf config.features.browsers {
       home.packages = [
-        (config.stubbe.gfx.bundle {
-          # Chrome keeps only the LAST --enable-features, and chrome://flags is
-          # appended after the command line, so this list is authoritative only
-          # while that page stays at defaults.
-          # Tried and reverted: SkiaGraphite is refused by a platform safety
-          # guard the flag cannot override; RawDraw, EnableDrDc and TreesInViz
-          # each rendered the viewport blank white.
-          # Vulkan stays CPU-fallback because Chrome will not composite via
-          # Vulkan on Wayland. GL is hardware-accelerated, so do not add
-          # --ozone-platform=x11 to "fix" it.
-          pkg = pkgs.google-chrome.override {
-            commandLineArgs = lib.concatStringsSep " " [
-              "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
-              "--enable-zero-copy"
-              "--ignore-gpu-blocklist"
-            ];
-          };
-          env.CHROME_DEVEL_SANDBOX = "/dev/null";
-          includeUpstream = false;
-          extraPaths = [ chromeDesktop ];
-        })
+        chrome
+        chromeDesktop
       ];
+
+      home.sessionVariables.PLAYWRIGHT_MCP_EXECUTABLE_PATH = "${chrome}/bin/google-chrome-stable";
 
       xdg.configFile."surfingkeys/config.js".text = ''
         // Managed by home-manager — modules/browsers/chrome.nix

@@ -21,7 +21,6 @@
       dsMcp = flakeBin "ds-mcp" "ds-mcp";
       notmuchMcp = flakeBin "notmuch-mcp" "notmuch-mcp";
 
-      enableChrome = config.features.browsers;
       enableMail = config.features.desktop;
       mkHttpServer =
         {
@@ -68,10 +67,6 @@
       # gates every client out, so a missing secret hides the tools rather than
       # exposing them everywhere.
       kontainerRepo = "\${KONTAINER_REMOTE}";
-      kontainerCmsRepo = "\${KONTAINER_CMS_REMOTE}";
-      kontainerSiteRepo = "\${KONTAINER_SITE_REMOTE}";
-      kontainerHelpdeskRepo = "\${KONTAINER_HELPDESK_REMOTE}";
-      kontainerStoryblokRepo = "\${KONTAINER_STORYBLOK_REMOTE}";
       # A whitelist entry with no path component gates a whole git host: every repo
       # cloned from it matches, across ssh/https and regardless of port (proxy-mcp
       # >= 0.0.21). Set KONFORM_HOST to the bare hostname — a value WITH a path
@@ -96,38 +91,6 @@
         atlassian-mcp = gateThroughProxy "atlassian-mcp" [ konformHost ];
         jenkins-mcp = gateThroughProxy "jenkins-mcp" [ kontainerRepo ];
         sentry-mcp = gateThroughProxy "sentry-mcp" [ kontainerRepo ];
-      }
-      // lib.optionalAttrs enableChrome {
-        chrome-devtools = {
-          host = "127.0.0.1";
-          port = proxiedPort;
-          path = "/chrome-devtools/mcp";
-          idleSec = 300;
-          repoWhitelist = [
-            kontainerRepo
-            kontainerCmsRepo
-            kontainerSiteRepo
-            kontainerHelpdeskRepo
-            kontainerStoryblokRepo
-            "git@github.com:stubbedev/xilo.git"
-            "git@github.com:stubbedev/elementor-calendar.git"
-          ];
-          command = "npx";
-          args = [
-            "-y"
-            "chrome-devtools-mcp@1.8.0"
-            "--autoConnect"
-            # One shared child (mode "shared") serves every window, so two
-            # concurrent sessions would otherwise fight over the server's
-            # implicitly-selected page. pageIdRouting makes pageId required on
-            # page-scoped tools, so each session addresses its own tab.
-            "--pageIdRouting"
-            # Telemetry off: the Clearcut watchdog is a detached (setsid) ~180MB
-            # node child that escapes group kills and orphans on every idle
-            # teardown. No watchdog spawn at all with stats off.
-            "--no-usage-statistics"
-          ];
-        };
       }
       // {
         nix-mcp = {
