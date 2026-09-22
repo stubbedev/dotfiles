@@ -104,7 +104,7 @@ _: {
               # non-interactive shells. Empty list prunes the old PreToolUse
               # hook out of settings.json (jsonMerge replaces arrays).
               hooks.PreToolUse = [ ];
-              model = "claude-opus-5[1m]";
+              model = "claude-opus-5-5";
             };
           }}
 
