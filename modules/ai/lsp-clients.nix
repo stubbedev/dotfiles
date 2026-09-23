@@ -121,14 +121,12 @@ _: {
           };
         };
 
-        yamlls = {
-          command = lib.getExe' pkgs.yaml-language-server "yaml-language-server";
-          args = [ "--stdio" ];
+        yayamlls = {
+          command = lib.getExe' pkgs.yayamlls "yayamlls";
           languages = {
             yaml = "yaml";
             yml = "yaml";
           };
-          settings.yaml.keyOrdering = false;
         };
 
         taplo = {

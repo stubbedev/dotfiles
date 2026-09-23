@@ -60,6 +60,51 @@ in
       };
     };
 
+    # Go YAML language server, replacing node's yaml-language-server: consumed
+    # as the upstream release binary -- the same prebuilt pattern as wayle and
+    # claude-code. The latest tag is scraped at eval time from the releases
+    # atom feed, and the asset download rides the github.com web tier, so
+    # neither touches the api.github.com quota the github-token in secrets
+    # exists for (that one serves `nix flake update` daemon-side, where nix.conf
+    # access-tokens apply; the evaluator cannot authenticate: builtins.fetchurl
+    # has no headers support and query-param tokens are long rejected). This
+    # only works because every switch and check runs --impure (see README); the
+    # fetcher cache pins a tag for an hour. Building from source instead is
+    # what forces a vendorHash: go.sum carries no hashes nix can use. Delete
+    # once nixpkgs packages it.
+    yayamlls =
+      final: _prev:
+      let
+        feed = builtins.readFile (
+          builtins.fetchurl {
+            url = "https://github.com/home-operations/yayamlls/releases.atom";
+            name = "releases.xml";
+          }
+        );
+        # splitString "<title>" yields [ prelude, feedTitle, tag0, tag1, ... ];
+        # entries are newest-first, so tag0 is the latest release.
+        tag = final.lib.head (
+          final.lib.splitString "</title>" (
+            final.lib.head (final.lib.tail (final.lib.tail (final.lib.splitString "<title>" feed)))
+          )
+        );
+        assetArch =
+          {
+            x86_64-linux = "amd64";
+            aarch64-linux = "arm64";
+          }
+          .${final.stdenv.hostPlatform.system}
+            or (throw "yayamlls: no release asset for ${final.stdenv.hostPlatform.system}");
+        bin = builtins.fetchTarball {
+          url = "https://github.com/home-operations/yayamlls/releases/download/${tag}/yayamlls_${tag}_linux_${assetArch}.tar.gz";
+        };
+      in
+      {
+        yayamlls = final.runCommand "yayamlls-${tag}" { meta.mainProgram = "yayamlls"; } ''
+          install -Dm555 ${bin}/yayamlls $out/bin/yayamlls
+        '';
+      };
+
     phpantom_lsp = final: _prev: {
       phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
     };

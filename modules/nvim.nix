@@ -111,7 +111,7 @@
                 biome # css, json
                 bash-language-server
                 taplo
-                yaml-language-server
+                yayamlls
                 marksman
 
                 # tsc (the Go compiler) has no tsserver *plugin* support, which is why vue and

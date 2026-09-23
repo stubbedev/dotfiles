@@ -198,11 +198,10 @@ local servers = {
     filetypes = { "css", "json", "jsonc" },
     root_markers = { "biome.json", "biome.jsonc", "package.json", ".git" },
   },
-  yamlls = {
-    cmd = { "yaml-language-server", "--stdio" },
+  yayamlls = {
+    cmd = { "yayamlls" },
     filetypes = { "yaml", "yaml.docker-compose" },
-    root_markers = { ".git" },
-    settings = { yaml = { keyOrdering = false } },
+    root_markers = { ".yayamlls.yaml", ".git" },
   },
   taplo = {
     cmd = { "taplo", "lsp", "stdio" },
