@@ -222,30 +222,6 @@ _: {
             exec harness "$@"
           fi
         '';
-        # Fzf agent picker for shells outside tmux; the tmux M-h bind uses a
-        # display-menu instead and toggles the worktree-aware agent window via
-        # commands.sh.
-        "tmux-pick-agent" = ''
-
-          AGENTS=(claude harness)
-
-          AVAILABLE=()
-          for agent in $AGENTS; do
-            command -v $agent &>/dev/null && AVAILABLE+=($agent)
-          done
-
-          if (( $#AVAILABLE == 0 )) || ! command -v fzf &>/dev/null; then
-            exit 0
-          fi
-
-          SELECTED=$(printf '%s\n' $AVAILABLE | fzf --prompt="select agent: ")
-
-          if [[ -z $SELECTED ]]; then
-            exit 0
-          fi
-
-          tmux-$SELECTED
-        '';
         "tmux-lazy-docker" = ''
 
           if ! command -v lazydocker &>/dev/null; then

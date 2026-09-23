@@ -225,53 +225,6 @@ _: {
             toggle_window "lazydocker" tmux-lazy-docker
           }
 
-          # Worktree-aware window toggle behind the agent picker: an existing
-          # window over the same git worktree (any session) is switched to,
-          # otherwise a fresh one is opened in the current pane's directory.
-          toggle_agent_window() {
-            local window_name="$1"
-            local agent_cmd="$2"
-
-            local current_path worktree current_window
-            current_path=$(tmux display-message -p -F "#{pane_current_path}")
-            current_window=$(tmux display-message -p '#W')
-            worktree=$(git -C "$current_path" rev-parse --show-toplevel 2>/dev/null)
-
-            if [ -z "$worktree" ]; then
-              toggle_window "$window_name" "$agent_cmd"
-              return
-            fi
-
-            if [ "$current_window" = "$window_name" ]; then
-              tmux last-window 2>/dev/null || true
-              return 0
-            fi
-
-            local target sess win wname wpath wt
-            while IFS=$'\t' read -r sess win wname wpath; do
-              [ "$wname" = "$window_name" ] || continue
-              wt=$(git -C "$wpath" rev-parse --show-toplevel 2>/dev/null)
-              if [ "$wt" = "$worktree" ]; then
-                target="''${sess}:''${win}"
-                break
-              fi
-            done < <(tmux list-windows -a -F '#{session_name}	#{window_index}	#{window_name}	#{pane_current_path}')
-
-            if [ -n "$target" ]; then
-              local current_session target_session
-              current_session=$(tmux display-message -p '#S')
-              target_session="''${target%%:*}"
-              if [ "$target_session" = "$current_session" ]; then
-                tmux select-window -t "$target"
-              else
-                tmux switch-client -t "$target"
-              fi
-              return 0
-            fi
-
-            tmux new-window -c "$current_path" -n "$window_name" "$agent_cmd"
-          }
-
           pane_is_pinned() {
             [ "$(tmux show-options -t "$1" -pqv @pinned)" = "1" ]
           }
@@ -587,7 +540,6 @@ _: {
           "toggle_lazygit_window")    toggle_lazygit_window ;;
           "toggle_sysmon_window")     toggle_sysmon_window ;;
           "toggle_lazydocker_window") toggle_lazydocker_window ;;
-          "toggle_agent_window")     toggle_agent_window "$2" "$3" ;;
           "move_pane")                move_pane "$2" ;;
           "move_pane_to_window")      move_pane_to_window "$2" ;;
           "session_init")             session_init ;;
@@ -697,7 +649,6 @@ _: {
 
           bind -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"       # FZF project picker
           bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
-          bind -n M-h display-menu -x C -y C -T " agent " "claude code" c "run-shell -b \"#{@stubbe_commands} toggle_agent_window claude tmux-claude\"" "harness" h "run-shell -b \"#{@stubbe_commands} toggle_agent_window harness tmux-harness\"" # Agent menu (claude code / harness)
 
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
           set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""

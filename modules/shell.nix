@@ -380,7 +380,6 @@
             _bind_run "^[t" "tmux-new-session"
             _bind_run "^[g" "tmux-lazy-git"
             _bind_run "^[a" "tmux-system-monitor"
-            _bind_run "^[h" "tmux-pick-agent"
 
             if is_binary fzf; then
                 _bind_run "^[f" "tmux-pick-project"
