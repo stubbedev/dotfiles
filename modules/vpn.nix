@@ -4,15 +4,17 @@
 # dropdown, and the session cookie plus password are cached under
 # ~/.local/state/wayle/vpn keyed by the profile's NM UUID, so a reconnect
 # after a dropped tunnel or a resume from suspend costs no second factor.
-# That replaces this aspect's previous root openconnect unit, the polkit rule
-# that let the user start/stop it, the connect/disconnect/status scripts, and
-# the bar widget they fed.
+# wayle also brings back, on wake, the tunnels that were up when the machine
+# slept, and ships the NetworkManager hook that keeps the gateway session
+# alive across a disconnect. That replaces this aspect's previous root
+# openconnect unit, the polkit rule that let the user start/stop it, the
+# connect/disconnect/status scripts, and the bar widget they fed.
 #
 # What is left is provisioning: one NetworkManager profile per provider,
 # written at activation from the sops-managed config so the gateway and
-# username never enter the Nix store, and a resume hook that brings the
-# tunnel back when it was up before the machine slept.
-_:
+# username never enter the Nix store, and — on non-NixOS hosts, where wayle's
+# NixOS module cannot — installing wayle's hook into /etc.
+{ inputs, ... }:
 let
   providers = [ "konform" ];
 
@@ -70,61 +72,12 @@ let
     } > "$keyfile_tmp"
   '';
 
-  # Watches login1's PrepareForSleep: records which tunnels were up on the
-  # way down and brings exactly those back once the machine wakes. The
-  # markers live in $XDG_RUNTIME_DIR, which is wiped on boot, so this can
-  # never become a VPN that dials itself unattended.
-  resumeWatch =
-    { lib, pkgs }:
-    pkgs.stubbe.bashApp {
-      name = "vpn-resume-watch";
-      runtimeInputs = [
-        pkgs.dbus
-        pkgs.networkmanager
-      ];
-      text = ''
-        set -uo pipefail
+  # Read from wayle's source, not its package: the text is what the setup
+  # step hashes, so a wayle release that leaves the hook alone does not
+  # re-run the step and ask for sudo again.
+  detachHook = builtins.readFile "${inputs.wayle}/resources/90-wayle-openconnect-detach";
 
-        readonly PROVIDERS="${lib.concatStringsSep " " providers}"
-        runtime="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-
-        record() {
-          for provider in $PROVIDERS; do
-            if nmcli --terse --field NAME,TYPE connection show --active 2>/dev/null |
-              awk -F: -v p="$provider" '$2 == "vpn" && $1 == p { found = 1 } END { exit !found }'
-            then
-              : > "$runtime/vpn-was-up-$provider"
-            else
-              rm -f "$runtime/vpn-was-up-$provider"
-            fi
-          done
-        }
-
-        restore() {
-          for provider in $PROVIDERS; do
-            [ -f "$runtime/vpn-was-up-$provider" ] || continue
-            # NetworkManager may itself still be waking, and the wifi with
-            # it: retry while the carrier settles rather than treat the
-            # first refusal as final.
-            for _ in 1 2 3 4 5 6 7 8 9 10; do
-              if nmcli connection up "$provider" >/dev/null 2>&1; then
-                break
-              fi
-              sleep 3
-            done
-          done
-        }
-
-        dbus-monitor --system \
-          "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'" |
-          while IFS= read -r line; do
-            case "$line" in
-              *boolean\ true*) record ;;
-              *boolean\ false*) restore & ;;
-            esac
-          done
-      '';
-    };
+  detachHookTarget = "/etc/NetworkManager/dispatcher.d/pre-down.d/90-wayle-openconnect-detach";
 in
 {
   flake.modules.nixos.vpn =
@@ -206,8 +159,13 @@ in
             and stopping it. Credential caches keyed by profile UUIDs that
             no longer exist are dropped along the way.
 
-            The profile is written only when absent; after that it is user
-            state, owned by NetworkManager and the wayle widget that edits it.
+            Also installs wayle's NetworkManager vpn-pre-down hook, which
+            detaches openconnect instead of logging the gateway session off,
+            so the cached cookie survives a disconnect or a suspend.
+
+            The profile is written only when NetworkManager does not know it;
+            after that it is user state, owned by NetworkManager and the wayle
+            widget that edits it.
           '';
           script =
             let
@@ -227,14 +185,21 @@ in
                   source "${cfg}"
                   ${keyfileBody provider uuid}
 
+                  # Asked of NM, not of the keyfile: on a netplan host (Ubuntu)
+                  # NM moves a profile it saves into /etc/netplan and deletes
+                  # the keyfile, so "no keyfile" does not mean "no profile".
+                  # Rewriting and loading it then replaced the live profile
+                  # with this bare one on the next run of this step.
+                  if ! nmcli -g connection.uuid connection show ${uuid} >/dev/null 2>&1; then
                   if [ ! -e "${profileTarget provider}" ]; then
                   sudo install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
                   fi
                   # NM's keyfile plugin does not watch the directory, and an
                   # unprivileged reload is refused by polkit: load it as root,
-                  # on every run, so a profile written earlier but never picked
-                  # up still gets registered.
+                  # so a profile written earlier but never picked up still
+                  # gets registered.
                   sudo nmcli connection load "${profileTarget provider}"
+                  fi
 
                   sudo systemctl disable --now openconnect-${provider}.service >/dev/null 2>&1 || true
                   sudo rm -f \
@@ -250,6 +215,13 @@ in
 
               ${perProvider}
 
+              ${pkgs.stubbe.setup.text {
+                name = "90-wayle-openconnect-detach";
+                target = detachHookTarget;
+                mode = "0755";
+                text = detachHook;
+              }}
+
               # Credential caches keyed by NM profile UUIDs that no longer
               # exist — the pre-migration pair above all, whose password the
               # gateway has since changed. Caches for live profiles are kept:
@@ -264,21 +236,5 @@ in
               ${pkgs.stubbe.setup.reloadUnits}
             '';
         };
-
-      systemd.user.services.vpn-resume = lib.mkIf config.features.hyprland {
-        Unit = {
-          Description = "Restore VPN tunnels after suspend";
-          After = [ "hyprland-session.target" ];
-          PartOf = [ "hyprland-session.target" ];
-        };
-        Install.WantedBy = [ "hyprland-session.target" ];
-        Service = {
-          ExecStart = lib.getExe (resumeWatch {
-            inherit lib pkgs;
-          });
-          Restart = "on-failure";
-          RestartSec = "5s";
-        };
-      };
     };
 }
