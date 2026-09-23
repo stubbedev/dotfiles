@@ -1633,11 +1633,11 @@
         "nixpkgs": "nixpkgs_7"
       },
       "locked": {
-        "lastModified": 1790142572,
-        "narHash": "sha256-RTnBoqIHDCa46lmlCqCOF8bBTq8dj7WWEtIAjdaxb0Q=",
+        "lastModified": 1790164247,
+        "narHash": "sha256-x+J7Gv9DNrCh9N2Lch2ey/Ts/e1Vs8ILimnVMZ7eqtk=",
         "ref": "master",
-        "rev": "182fec7498419f88d8e7a29d8645e96ee44db205",
-        "revCount": 950,
+        "rev": "3629c8d77ede5f51978eef72420e2987cb611719",
+        "revCount": 954,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
