@@ -171,24 +171,13 @@ _: {
             nixos_results
           }
 
-          picker_entries() {
-            local p display
-            while IFS= read -r p; do
-              display="''${p#"$HOME"/}"
-              display="''${display#git/}"
-              print -r -- "$p"$'\t'"$display"
-            done
-          }
-
-          FZF_ARGS=(--no-multi --query="$INITIAL_QUERY" --delimiter=$'\t' --with-nth=2 --nth=2)
-
           if [[ -n "$AWK_FILTER" ]]; then
-            SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | picker_entries | fzf $FZF_ARGS)"
+            SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | fzf --no-multi --query="$INITIAL_QUERY")"
           else
-            SELECTED_PATH="$(all_results | picker_entries | fzf $FZF_ARGS)"
+            SELECTED_PATH="$(all_results | fzf --no-multi --query="$INITIAL_QUERY")"
           fi
 
-          echo "''${SELECTED_PATH%%$'\t'*}"
+          echo "''${SELECTED_PATH:-}"
         '';
         "tmux-claude" = ''
 
