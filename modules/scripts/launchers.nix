@@ -171,13 +171,24 @@ _: {
             nixos_results
           }
 
+          picker_entries() {
+            local p display
+            while IFS= read -r p; do
+              display="''${p#"$HOME"/}"
+              display="''${display#git/}"
+              print -r -- "$p"$'\t'"$display"
+            done
+          }
+
+          FZF_ARGS=(--no-multi --query="$INITIAL_QUERY" --delimiter=$'\t' --with-nth=2 --nth=2)
+
           if [[ -n "$AWK_FILTER" ]]; then
-            SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | fzf --no-multi --query="$INITIAL_QUERY")"
+            SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | picker_entries | fzf $FZF_ARGS)"
           else
-            SELECTED_PATH="$(all_results | fzf --no-multi --query="$INITIAL_QUERY")"
+            SELECTED_PATH="$(all_results | picker_entries | fzf $FZF_ARGS)"
           fi
 
-          echo "''${SELECTED_PATH:-}"
+          echo "''${SELECTED_PATH%%$'\t'*}"
         '';
         "tmux-claude" = ''
 
@@ -211,10 +222,9 @@ _: {
             exec harness "$@"
           fi
         '';
-        # Fzf picker over the installed agents. Default mode (the tmux bind's
-        # popup) hands the selection to commands.sh, which toggles a
-        # worktree-aware window for it; --inline runs the agent's own launcher
-        # in the current shell instead (the zsh bind).
+        # Fzf agent picker for shells outside tmux; the tmux M-h bind uses a
+        # display-menu instead and toggles the worktree-aware agent window via
+        # commands.sh.
         "tmux-pick-agent" = ''
 
           AGENTS=(claude harness)
@@ -234,11 +244,7 @@ _: {
             exit 0
           fi
 
-          if [[ $1 == --inline ]]; then
-            tmux-$SELECTED
-          else
-            "$HOME/.config/tmux/scripts/commands.sh" toggle_agent_window "$SELECTED" "tmux-$SELECTED"
-          fi
+          tmux-$SELECTED
         '';
         "tmux-lazy-docker" = ''
 
