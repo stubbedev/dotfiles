@@ -20,7 +20,7 @@ _: {
       picker_lines() {
         local name
         while IFS= read -r name; do
-        [[ -n $name ]] && printf '%s\t  %s\n' "$name" "$(label_of "$name")"
+        [[ -n $name ]] && printf '%s\t%s\n' "$name" "$(label_of "$name")"
         done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
       }
 
