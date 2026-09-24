@@ -78,6 +78,18 @@ let
   detachHook = builtins.readFile "${inputs.wayle}/resources/90-wayle-openconnect-detach";
 
   detachHookTarget = "/etc/NetworkManager/dispatcher.d/pre-down.d/90-wayle-openconnect-detach";
+
+  # wayle's NetworkManager.service drop-in, which runs the same hook as
+  # ExecStop= so an NM restart (an apt upgrade of network-manager) detaches the
+  # tunnel instead of logging it off. It names the packaged hook path; point it
+  # at the copy installed above.
+  detachDropIn =
+    builtins.replaceStrings
+      [ "/usr/lib/NetworkManager/dispatcher.d/pre-down.d/90-wayle-openconnect-detach" ]
+      [ detachHookTarget ]
+      (builtins.readFile "${inputs.wayle}/resources/90-wayle-openconnect-detach.conf");
+
+  detachDropInTarget = "/etc/systemd/system/NetworkManager.service.d/90-wayle-openconnect-detach.conf";
 in
 {
   flake.modules.nixos.vpn =
@@ -159,9 +171,11 @@ in
             and stopping it. Credential caches keyed by profile UUIDs that
             no longer exist are dropped along the way.
 
-            Also installs wayle's NetworkManager vpn-pre-down hook, which
+            Also installs wayle's NetworkManager pre-down hook, which
             detaches openconnect instead of logging the gateway session off,
-            so the cached cookie survives a disconnect or a suspend.
+            so the cached cookie survives a disconnect or a suspend, and the
+            NetworkManager.service drop-in that runs it before NetworkManager
+            stops, so a restart of NetworkManager does not log it off either.
 
             The profile is written only when NetworkManager does not know it;
             after that it is user state, owned by NetworkManager and the wayle
@@ -220,6 +234,13 @@ in
                 target = detachHookTarget;
                 mode = "0755";
                 text = detachHook;
+              }}
+
+              ${pkgs.stubbe.setup.text {
+                name = "90-wayle-openconnect-detach.conf";
+                target = detachDropInTarget;
+                mode = "0644";
+                text = detachDropIn;
               }}
 
               # Credential caches keyed by NM profile UUIDs that no longer
