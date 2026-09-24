@@ -567,11 +567,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790255106,
-        "narHash": "sha256-YrY9N1vreTGJ/wTFE7C683nOtTEIISrz8dGqepf/em8=",
+        "lastModified": 1790257191,
+        "narHash": "sha256-z2zDRpdzytff4mdaCdU7NmHP6CLPnBfG89EI9EMimoM=",
         "owner": "stubbedev",
         "repo": "harness",
-        "rev": "d6172c0670f2d349508d2afe0329cdde9e868a5b",
+        "rev": "f6f6073bd48c9ff2d755c78e152544bc67194583",
         "type": "github"
       },
       "original": {
@@ -587,11 +587,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790225410,
-        "narHash": "sha256-BOyZoliWfm/beS4m3FxFKlu5at6npZen1PsWtvzzihk=",
+        "lastModified": 1790265244,
+        "narHash": "sha256-PFNTZbWRxWk5/JreN2mB8e2ED3s/KiwGuBjl0Vg9pbw=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "4900baf1e219645e4a2acba35723852b2091bc20",
+        "rev": "e3b0881f91f42bea70bcc516220880cce9daf122",
         "type": "github"
       },
       "original": {
@@ -942,8 +942,8 @@
     "mongodb-php-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1788455489,
-        "narHash": "sha256-XwXQUe4QY+Pn3dKVtUfCK/V3AHLRe0z3XsEFe6hFSfM=",
+        "lastModified": 1790264447,
+        "narHash": "sha256-U7ZrVbLeoRZsmkkNqazFyUcI/SDtW2gPoNpHC2Z2sLM=",
         "type": "tarball",
         "url": "https://pecl.php.net/get/mongodb"
       },
