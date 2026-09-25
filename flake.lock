@@ -567,11 +567,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790314779,
-        "narHash": "sha256-aX3xvbXWX9Wnsh1NhRnXaZSLIRFMMkGc8z7ZWdRt/dc=",
+        "lastModified": 1790318616,
+        "narHash": "sha256-tdFwL4h9Pa4vubMAlM3XaalAyFuNLa9qso5LbDCJDQI=",
         "owner": "stubbedev",
         "repo": "harness",
-        "rev": "e9759120fb88de784c2aeb5d2e6f012815a92a93",
+        "rev": "d430f8fceaca08dcc607695a9479fbb3cae9bde1",
         "type": "github"
       },
       "original": {
