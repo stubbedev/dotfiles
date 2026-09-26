@@ -115,8 +115,16 @@
 
           if ! ${srvBin} info start-local >/dev/null 2>&1; then
             ${srvBin} add ${lib.escapeShellArg root} \
-              --domain start.local --name start-local --local </dev/null >/dev/null \
+              --domain start.local --name start-local --local --daemon </dev/null >/dev/null \
               || echo "srv-newtab: 'srv add' failed; will retry next switch." >&2
+          elif ${srvBin} add --help 2>/dev/null | grep -q -- '--daemon'; then
+            # One-time migration off the nginx container: re-add the site
+            # daemon-served. The --daemon support check first keeps the nginx
+            # site serving until the new srv binary is in the system closure.
+            ${srvBin} remove start-local </dev/null >/dev/null 2>&1 || true
+            ${srvBin} add ${lib.escapeShellArg root} \
+              --domain start.local --name start-local --local --daemon </dev/null >/dev/null \
+              || echo "srv-newtab: daemon migration failed; will retry next switch." >&2
           fi
 
           ${srvBin} start start-local </dev/null >/dev/null 2>&1 || true
