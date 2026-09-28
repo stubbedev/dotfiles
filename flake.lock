@@ -1382,11 +1382,11 @@
         "nixpkgs": "nixpkgs_6"
       },
       "locked": {
-        "lastModified": 1790580027,
-        "narHash": "sha256-TRJNC/oc+x6qaNQFJ4PpCkP7IYcH1fU2AxCmhMjOTow=",
+        "lastModified": 1790583991,
+        "narHash": "sha256-FLcDgqpOD7Wr0xU2+c29PjvBvkT2c+kl3IfYcNnutmM=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "bd581a3fae8f0a95452756b8aa17eb61c2af4f67",
+        "rev": "38c64adaca5b22097df76f72a4878c6bfa58eefb",
         "type": "github"
       },
       "original": {
