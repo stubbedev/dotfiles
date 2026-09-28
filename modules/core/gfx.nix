@@ -65,6 +65,7 @@ _: {
           env ? { },
           unset ? [ ],
           prefix ? { },
+          run ? [ ],
           includeUpstream ? true,
           extraPaths ? [ ],
           mainProgram ? null,
@@ -82,9 +83,10 @@ _: {
               (lib.mapAttrsToList (k: v: "--set ${k} ${lib.escapeShellArg v}") env)
               (map (k: "--unset ${k}") unset)
               (lib.mapAttrsToList (k: v: "--prefix ${k} : ${lib.escapeShellArg v}") prefix)
+              (map (c: "--run ${lib.escapeShellArg c}") run)
             ]
           );
-          needsWrapper = flags != [ ] || env != { } || unset != [ ] || prefix != { };
+          needsWrapper = flags != [ ] || env != { } || unset != [ ] || prefix != { } || run != [ ];
 
           wrapOne =
             exe:

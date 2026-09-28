@@ -114,6 +114,81 @@ _: {
         }
       '';
 
+      playwrightTokenPath = config.sops.secrets.playwright-mcp-extension-token.path;
+
+      # Playwright MCP Bridge keeps its token in its own localStorage and reads
+      # no policy, so the only way to pin it is to write Chrome's Local Storage
+      # LevelDB directly. That is only possible while Chrome is closed (it holds
+      # the LevelDB LOCK), so this runs from the launcher, before exec. On-disk
+      # layout, read back from a live profile:
+      #   _chrome-extension://<id>\x00\x01<key>  ->  \x01 + latin-1 value
+      #   META:chrome-extension://<id>           ->  proto {1: mtime, 2: size}
+      seedPlaywrightToken =
+        pkgs.writers.writePython3 "seed-playwright-mcp-token"
+          {
+            libraries = [ pkgs.python3Packages.plyvel ];
+          }
+          ''
+            import glob
+            import os
+            import sys
+            import time
+
+            import plyvel
+
+            ORIGIN = b"chrome-extension://mmlmfjhmonkocbjadbfplnigmagldckm"
+            PREFIX = b"_" + ORIGIN + b"\x00"
+            KEY = PREFIX + b"\x01auth-token"
+            # Chrome timestamps count microseconds from 1601-01-01.
+            EPOCH_1601_US = 11644473600 * 1000000
+
+
+            def varint(n):
+                out = bytearray()
+                while True:
+                    b = n & 0x7F
+                    n >>= 7
+                    if n:
+                        out.append(b | 0x80)
+                    else:
+                        out.append(b)
+                        return bytes(out)
+
+
+            def seed(path, want):
+                try:
+                    db = plyvel.DB(path, create_if_missing=False)
+                except (plyvel.Error, IOError):
+                    return  # Chrome is running, or the profile has no DB yet.
+                try:
+                    if db.get(KEY) == want:
+                        return
+                    size = len(want) + len(KEY) - len(PREFIX)
+                    for k, v in db.iterator(prefix=PREFIX):
+                        if k != KEY:
+                            size += len(k) - len(PREFIX) + len(v)
+                    mtime = int(time.time() * 1000000) + EPOCH_1601_US
+                    meta = b"\x08" + varint(mtime) + b"\x10" + varint(size)
+                    with db.write_batch(sync=True) as wb:
+                        wb.put(KEY, want)
+                        wb.put(b"META:" + ORIGIN, meta)
+                finally:
+                    db.close()
+
+
+            try:
+                with open(sys.argv[1], "rb") as f:
+                    token = f.read().strip()
+            except OSError:
+                sys.exit(0)
+            if not token:
+                sys.exit(0)
+
+            home = os.path.expanduser("~/.config/google-chrome")
+            for path in glob.glob(home + "/*/Local Storage/leveldb"):
+                seed(path, b"\x01" + token)
+          '';
+
       # The SUID sandbox cannot work from the read-only store, so pointing
       # CHROME_DEVEL_SANDBOX at /dev/null forces the userns sandbox instead.
       # @playwright/mcp finds the Nix Chrome via PLAYWRIGHT_MCP_EXECUTABLE_PATH
@@ -136,6 +211,11 @@ _: {
           ];
         };
         env.CHROME_DEVEL_SANDBOX = "/dev/null";
+        # SingletonLock is a dangling symlink while Chrome runs; skip the seeder
+        # then, so opening a link in a running Chrome costs nothing.
+        run = [
+          "[ -L \"$HOME/.config/google-chrome/SingletonLock\" ] || ${seedPlaywrightToken} ${playwrightTokenPath} || true"
+        ];
         includeUpstream = false;
       };
       chromeDesktop = pkgs.makeDesktopItem {
@@ -188,6 +268,15 @@ _: {
       ];
 
       home.sessionVariables.PLAYWRIGHT_MCP_EXECUTABLE_PATH = "${chrome}/bin/google-chrome-stable";
+
+      # --extension clients skip the Playwright MCP Bridge approval dialog when
+      # this matches the extension's token; the launcher seeds it (see
+      # seedPlaywrightToken above). Regenerating it in the extension UI is undone
+      # on the next cold start.
+      sops.secrets.playwright-mcp-extension-token = pkgs.stubbe.secret {
+        name = "playwright-mcp-extension-token";
+      };
+      home.sessionVariables.PLAYWRIGHT_MCP_EXTENSION_TOKEN = "$(cat ${playwrightTokenPath} 2>/dev/null)";
 
       xdg.configFile."surfingkeys/config.js".text = ''
         // Managed by home-manager — modules/browsers/chrome.nix
