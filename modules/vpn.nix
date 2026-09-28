@@ -4,17 +4,23 @@
 # dropdown, and the session cookie plus password are cached under
 # ~/.local/state/wayle/vpn keyed by the profile's NM UUID, so a reconnect
 # after a dropped tunnel or a resume from suspend costs no second factor.
-# wayle also brings back, on wake, the tunnels that were up when the machine
-# slept, and ships the NetworkManager hook that keeps the gateway session
-# alive across a disconnect. That replaces this aspect's previous root
-# openconnect unit, the polkit rule that let the user start/stop it, the
-# connect/disconnect/status scripts, and the bar widget they fed.
+# That replaces this aspect's previous root openconnect unit, the polkit rule
+# that let the user start/stop it, the connect/disconnect/status scripts, and
+# the bar widget they fed.
+#
+# The profile is the user's own and persistent. Owned (connection.permissions),
+# so NM checks settings.modify.own — which it grants the active user — for
+# every edit wayle makes, instead of an administrator's settings.modify.system.
+# Persistent (vpn.persistent), so NM keeps the tunnel through a suspend or a
+# change of wifi and openconnect reconnects on the same session, instead of the
+# plugin stopping it with the SIGINT that logs the gateway session off. That
+# is what wayle's NetworkManager detach hook used to paper over; wayle no
+# longer ships it, and non-NixOS hosts have it removed from /etc.
 #
 # What is left is provisioning: one NetworkManager profile per provider,
 # written at activation from the sops-managed config so the gateway and
-# username never enter the Nix store, and — on non-NixOS hosts, where wayle's
-# NixOS module cannot — installing wayle's hook into /etc.
-{ inputs, ... }:
+# username never enter the Nix store, and kept owned and persistent after that.
+_:
 let
   providers = [ "konform" ];
 
@@ -39,8 +45,10 @@ let
   # The keyfile NetworkManager reads, written from the sourced VPN config.
   # `wayle-username` is wayle's own data key (the plugin has none for it);
   # the `*-flags=2` triple marks the plugin's minted secrets not-saved, so NM
-  # always asks the agent — wayle — rather than a stored value.
-  keyfileBody = provider: uuid: ''
+  # always asks the agent — wayle — rather than a stored value. The permission
+  # is in NM's own form, reserved field and all: `user:NAME:` is what it
+  # stores whatever it is given.
+  keyfileBody = provider: uuid: owner: ''
     usergroup="''${VPN_USERGROUP-gateway}"
     {
       printf '%s\n' \
@@ -48,10 +56,12 @@ let
         'id=${provider}' \
         'uuid=${uuid}' \
         'type=vpn' \
-        'autoconnect=false'
+        'autoconnect=false' \
+        'permissions=user:${owner}:;'
       printf '%s\n' \
         '[vpn]' \
         'service-type=org.freedesktop.NetworkManager.openconnect' \
+        'persistent=true' \
         "gateway=$VPN_GATEWAY" \
         'protocol=gp' \
         "wayle-username=$VPN_USERNAME"
@@ -72,22 +82,16 @@ let
     } > "$keyfile_tmp"
   '';
 
-  # Read from wayle's source, not its package: the text is what the setup
-  # step hashes, so a wayle release that leaves the hook alone does not
-  # re-run the step and ask for sudo again.
-  detachHook = builtins.readFile "${inputs.wayle}/resources/90-wayle-openconnect-detach";
+  # The two settings that make the profile the user's to run, applied to one
+  # that already exists: written by this aspect before it wrote them, or by
+  # hand. Everything else in it stays user state.
+  ownAndPersist = nmcli: uuid: owner: ''
+    ${nmcli} connection modify ${uuid} connection.permissions "user:${owner}" vpn.persistent yes
+  '';
 
+  # Where the retired detach hook and its NetworkManager.service drop-in were
+  # installed on non-NixOS hosts.
   detachHookTarget = "/etc/NetworkManager/dispatcher.d/pre-down.d/90-wayle-openconnect-detach";
-
-  # wayle's NetworkManager.service drop-in, which runs the same hook as
-  # ExecStop= so an NM restart (an apt upgrade of network-manager) detaches the
-  # tunnel instead of logging it off. It names the packaged hook path; point it
-  # at the copy installed above.
-  detachDropIn =
-    builtins.replaceStrings
-      [ "/usr/lib/NetworkManager/dispatcher.d/pre-down.d/90-wayle-openconnect-detach" ]
-      [ detachHookTarget ]
-      (builtins.readFile "${inputs.wayle}/resources/90-wayle-openconnect-detach.conf");
 
   detachDropInTarget = "/etc/systemd/system/NetworkManager.service.d/90-wayle-openconnect-detach.conf";
 in
@@ -102,6 +106,7 @@ in
     let
       username = config.host.primaryUser;
       home = config.users.users.${username}.home;
+      nmcli = lib.getExe' pkgs.networkmanager "nmcli";
     in
     lib.mkIf config.stubbe.userFeatures.vpn {
       systemd.services = lib.genAttrs (map unitOf providers) (
@@ -109,33 +114,35 @@ in
         let
           provider = lib.removePrefix "nm-vpn-profile-" name;
           configPath = configOf provider home;
+          uuid = uuidOf provider;
         in
         {
           description = "Provision the ${provider} NetworkManager VPN profile";
           wantedBy = [ "multi-user.target" ];
           after = [ "NetworkManager.service" ];
-          # Skip when the profile already exists: once written it is user
-          # state, owned by NetworkManager and the wayle widget that edits
-          # it, not something a switch gets to clobber.
-          unitConfig.ConditionPathExists = [
-            "!${profileTarget provider}"
-            configPath
-          ];
+          unitConfig.ConditionPathExists = configPath;
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
             ExecStart = pkgs.stubbe.shellScript "nm-vpn-profile-${provider}" ''
               set -euo pipefail
 
-              keyfile_tmp=$(mktemp)
-              trap 'rm -f "$keyfile_tmp"' EXIT
+              # Written only when it is missing: once written the profile is
+              # user state, owned by NetworkManager and the wayle widget that
+              # edits it, not something a switch gets to clobber.
+              if [ ! -e "${profileTarget provider}" ]; then
+                keyfile_tmp=$(mktemp)
+                trap 'rm -f "$keyfile_tmp"' EXIT
 
-              # shellcheck source=/dev/null
-              source "${configPath}"
-              ${keyfileBody provider (uuidOf provider)}
+                # shellcheck source=/dev/null
+                source "${configPath}"
+                ${keyfileBody provider uuid username}
 
-              install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
-              ${lib.getExe' pkgs.networkmanager "nmcli"} connection reload >/dev/null 2>&1 || true
+                install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
+                ${nmcli} connection reload >/dev/null 2>&1 || true
+              fi
+
+              ${ownAndPersist nmcli uuid username}
             '';
           };
         }
@@ -158,6 +165,7 @@ in
       stubbe.setup.vpnProfile =
         let
           home = config.home.homeDirectory;
+          owner = config.home.username;
         in
         {
           privileged = true;
@@ -165,21 +173,22 @@ in
           body = ''
             Writes /etc/NetworkManager/system-connections/<provider>.nmconnection
             from the sops-decrypted VPN config, so the gateway and username never
-            enter the Nix store, and retires the pre-wayle machinery this aspect
-            used to install: the root openconnect systemd unit, its
-            /usr/local/sbin runner, and the polkit rule that allowed starting
-            and stopping it. Credential caches keyed by profile UUIDs that
-            no longer exist are dropped along the way.
+            enter the Nix store, and makes the profile ${owner}'s own and
+            persistent: NM then lets ${owner} edit it without an administrator,
+            and keeps the tunnel through a suspend or a change of wifi instead
+            of logging the gateway session off.
 
-            Also installs wayle's NetworkManager pre-down hook, which
-            detaches openconnect instead of logging the gateway session off,
-            so the cached cookie survives a disconnect or a suspend, and the
-            NetworkManager.service drop-in that runs it before NetworkManager
-            stops, so a restart of NetworkManager does not log it off either.
+            Also retires what came before: the root openconnect systemd unit,
+            its /usr/local/sbin runner, the polkit rule that allowed starting
+            and stopping it, and wayle's old NetworkManager detach hook with its
+            NetworkManager.service drop-in, which persistence replaces.
+            Credential caches keyed by profile UUIDs that no longer exist are
+            dropped along the way.
 
             The profile is written only when NetworkManager does not know it;
             after that it is user state, owned by NetworkManager and the wayle
-            widget that edits it.
+            widget that edits it, and only its ownership and persistence are
+            kept in line.
           '';
           script =
             let
@@ -197,7 +206,7 @@ in
 
                   # shellcheck source=/dev/null
                   source "${cfg}"
-                  ${keyfileBody provider uuid}
+                  ${keyfileBody provider uuid owner}
 
                   # Asked of NM, not of the keyfile: on a netplan host (Ubuntu)
                   # NM moves a profile it saves into /etc/netplan and deletes
@@ -215,6 +224,9 @@ in
                   sudo nmcli connection load "${profileTarget provider}"
                   fi
 
+                  # Through NM rather than the file, for the same netplan reason.
+                  ${ownAndPersist "sudo nmcli" uuid owner}
+
                   sudo systemctl disable --now openconnect-${provider}.service >/dev/null 2>&1 || true
                   sudo rm -f \
                   /etc/systemd/system/openconnect-${provider}.service \
@@ -229,19 +241,10 @@ in
 
               ${perProvider}
 
-              ${pkgs.stubbe.setup.text {
-                name = "90-wayle-openconnect-detach";
-                target = detachHookTarget;
-                mode = "0755";
-                text = detachHook;
-              }}
-
-              ${pkgs.stubbe.setup.text {
-                name = "90-wayle-openconnect-detach.conf";
-                target = detachDropInTarget;
-                mode = "0644";
-                text = detachDropIn;
-              }}
+              # The detach hook and its drop-in, from before persistence made
+              # them unnecessary. The drop-in is an ExecStop= of
+              # NetworkManager.service, so the daemon-reload below matters.
+              sudo rm -f ${detachHookTarget} ${detachDropInTarget}
 
               # Credential caches keyed by NM profile UUIDs that no longer
               # exist — the pre-migration pair above all, whose password the
