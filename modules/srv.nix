@@ -42,23 +42,31 @@
         wantedBy = [ "multi-user.target" ];
         after = [ "systemd-resolved.service" ];
         serviceConfig.Type = "oneshot";
+        # Mirrors srv's own drop-in (internal/traefik/dns.go) byte for byte, so
+        # `srv install`/`srv add` see it unchanged and never need sudo here. srv
+        # routes .test/.localhost wholesale and every other domain by name; the
+        # embedded DNS server is a user service on an unprivileged port.
         script = ''
           src=${domainsFile}
-          out=/etc/systemd/resolved.conf.d/srv.conf
+          out=/etc/systemd/resolved.conf.d/srv-local.conf
           mkdir -p /etc/systemd/resolved.conf.d
-          domains=""
+          # Sorts after srv-local.conf and overrode it (port-less DNS=) -- srv
+          # deletes it too, but this unit used to write it.
+          rm -f /etc/systemd/resolved.conf.d/srv.conf
+          domains="~test ~localhost"
           if [ -r "$src" ]; then
             while IFS= read -r name || [ -n "$name" ]; do
+              name=$(printf '%s' "$name" | tr -d '[:space:]')
               [ -n "$name" ] || continue
               case "$name" in \#*) continue ;; esac
+              name=''${name#\*.}
+              case "$name" in
+                test | *.test | localhost | *.localhost) continue ;;
+              esac
               domains="$domains ~$name"
             done < "$src"
           fi
-          if [ -n "$domains" ]; then
-            printf '[Resolve]\nDNS=127.0.0.1\nDomains=%s\n' "$domains" > "$out"
-          else
-            rm -f "$out"
-          fi
+          printf '[Resolve]\nDNS=127.0.0.1:15353\nDomains=%s\n' "$domains" > "$out"
           if systemctl is-active --quiet systemd-resolved.service; then
             systemctl reload systemd-resolved.service || true
           fi
@@ -118,49 +126,41 @@
       };
 
       stubbe.setup = {
-        # No metrics stack, ever. `srv metrics disable` only downs the two
-        # containers -- it leaves the rendered compose file behind, and both
-        # its `restart: unless-stopped` policy and `srv install`'s "re-up a
-        # previously-enabled stack" step put grafana/prometheus back on the
-        # next boot. Deleting the rendered stack is what makes srv's
-        # metrics.IsConfigured() false, so nothing resurrects it.
-        srvMetricsOff = {
-          script = ''
-            metricsDir="${config.xdg.configHome}/srv/metrics"
-            if [ -e "$metricsDir/docker-compose.yml" ]; then
-              export PATH="/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
-              export XDG_CONFIG_HOME="${config.xdg.configHome}"
-              if ${lib.getExe' srvPkg "srv"} metrics disable; then
-                rm -rf "$metricsDir"
-              else
-                echo "srv-metrics-off: 'srv metrics disable' failed (docker not up?); retrying on the next switch." >&2
-              fi
-            fi
-          '';
-        };
-
-        mkcertTrust = {
+        # srv's routing is a resolved drop-in, which only applies to clients that
+        # ask resolved's stub on 127.0.0.53. Valet on Linux sets
+        # DNSStubListener=no in resolved.conf (its dnsmasq wanted :53); with the
+        # listener off, resolved writes the upstream servers into
+        # stub-resolv.conf as well, so re-pointing /etc/resolv.conf -- what
+        # `srv install --yes` does -- changes nothing. A drop-in overrides the
+        # main file; srv's own DNS is on :15353, so nothing needs :53 any more.
+        resolvedStubListener = lib.mkIf (config.host.platform != "nixos") {
           privileged = true;
-          title = "Installing the mkcert root CA into the system & browser trust stores";
+          title = "Re-enabling the systemd-resolved stub listener";
           body = ''
-            Run `mkcert -install` to trust the mkcert development root CA
-            (${rootCA}). This adds it to the system trust store
-            (/usr/local/share/ca-certificates, via update-ca-certificates) and
-            the browser NSS databases, so srv-served sites like
-            https://start.local validate instead of failing with "unable to
-            get local issuer certificate".
+            Write /etc/systemd/resolved.conf.d/stub-listener.conf
+            (DNSStubListener=yes), restart systemd-resolved, and link
+            /etc/resolv.conf to /run/systemd/resolve/stub-resolv.conf, so every
+            lookup goes through resolved at 127.0.0.53 and srv's local domains
+            resolve locally. Upstream DNS servers are unchanged.
           '';
           preCheck = ''
-            if [ ! -f "${rootCA}" ]; then
-              echo "mkcert-trust: root CA not generated yet (run 'srv install'); skipping."
+            stub=/run/systemd/resolve/stub-resolv.conf
+            if [ ! -e "$stub" ]; then
+              echo "resolved-stub-listener: systemd-resolved not running; skipping."
+              exit 0
+            fi
+            if grep -q '^nameserver 127\.0\.0\.53$' "$stub" \
+              && [ "$(readlink /etc/resolv.conf)" = "$stub" ]; then
               exit 0
             fi
           '';
           script = ''
-            export PATH="${pkgs.nss.tools}/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
-            ${lib.getExe pkgs.mkcert} -install
+            sudo mkdir -p /etc/systemd/resolved.conf.d
+            printf '[Resolve]\nDNSStubListener=yes\n' \
+              | sudo tee /etc/systemd/resolved.conf.d/stub-listener.conf >/dev/null
+            sudo systemctl restart systemd-resolved.service
+            sudo ln -sfn /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
           '';
-          stateInputs = [ rootCA ];
         };
 
         # security.pki seeds only the system store, so without this a local site

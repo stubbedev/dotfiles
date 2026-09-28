@@ -96,24 +96,39 @@ _: {
               ];
             }}
 
-            if [ -f /etc/nsswitch.conf ] && \
-               ! grep -qE '^hosts:[^#]*\bmdns[46]?(_minimal)?\b' /etc/nsswitch.conf; then
-              if [ ! -f /etc/nsswitch.conf.stubbedev-bak ]; then
-                sudo cp -a /etc/nsswitch.conf /etc/nsswitch.conf.stubbedev-bak
+            # mDNS goes *after* dns, never ahead of it with [NOTFOUND=return]
+            # (what libnss-mdns installs): that answers every `*.local` from
+            # multicast alone, so srv's .local sites never reach resolved. Behind
+            # dns, resolved answers srv's routed names and fails other .local
+            # names at once (its own mDNS is off), and avahi takes over from there.
+            if [ -f /etc/nsswitch.conf ]; then
+              _stb_tmp=$(mktemp)
+              awk '
+                /^hosts:/ {
+                  out = "hosts:"; n = 0; skip = 0; placed = 0; comment = ""
+                  if (match($0, /#.*/)) comment = " " substr($0, RSTART)
+                  for (i = 2; i <= NF; i++) {
+                    if ($i ~ /^#/) break
+                    if ($i ~ /^mdns/) { skip = 1; continue }
+                    if (skip && $i ~ /^\[/) continue
+                    skip = 0; tok[++n] = $i
+                  }
+                  for (i = 1; i <= n; i++) {
+                    out = out " " tok[i]
+                    if (tok[i] == "dns" && !placed) { out = out " mdns4_minimal"; placed = 1 }
+                  }
+                  if (!placed) out = out " mdns4_minimal"
+                  print out comment; next
+                }
+                { print }
+              ' /etc/nsswitch.conf > "$_stb_tmp"
+              if ! cmp -s "$_stb_tmp" /etc/nsswitch.conf; then
+                if [ ! -f /etc/nsswitch.conf.stubbedev-bak ]; then
+                  sudo cp -a /etc/nsswitch.conf /etc/nsswitch.conf.stubbedev-bak
+                fi
+                sudo install -m 0644 -o root -g root "$_stb_tmp" /etc/nsswitch.conf
               fi
-              if grep -qE '^hosts:[^#]*\bresolve\b' /etc/nsswitch.conf; then
-                sudo sed -i -E \
-                  's/^(hosts:[^#]*)\bresolve\b/\1mdns4_minimal [NOTFOUND=return] resolve/' \
-                  /etc/nsswitch.conf
-              elif grep -qE '^hosts:[^#]*\bdns\b' /etc/nsswitch.conf; then
-                sudo sed -i -E \
-                  's/^(hosts:[^#]*)\bdns\b/\1mdns4_minimal [NOTFOUND=return] dns/' \
-                  /etc/nsswitch.conf
-              else
-                sudo sed -i -E \
-                  's/^(hosts:[[:space:]]+)/\1mdns4_minimal [NOTFOUND=return] /' \
-                  /etc/nsswitch.conf
-              fi
+              rm -f "$_stb_tmp"
             fi
 
             ifaces=$(ip -br link show 2>/dev/null \
