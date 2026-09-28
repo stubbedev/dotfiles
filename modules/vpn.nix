@@ -8,10 +8,7 @@
 # that let the user start/stop it, the connect/disconnect/status scripts, and
 # the bar widget they fed.
 #
-# The profile is the user's own and persistent. Owned (connection.permissions),
-# so NM checks settings.modify.own — which it grants the active user — for
-# every edit wayle makes, instead of an administrator's settings.modify.system.
-# Persistent (vpn.persistent), so NM keeps the tunnel through a suspend or a
+# The profile is persistent (vpn.persistent), so NM keeps the tunnel through a suspend or a
 # change of wifi and openconnect reconnects on the same session, instead of the
 # plugin stopping it with the SIGINT that logs the gateway session off. That
 # is what wayle's NetworkManager detach hook used to paper over; wayle no
@@ -19,7 +16,10 @@
 #
 # What is left is provisioning: one NetworkManager profile per provider,
 # written at activation from the sops-managed config so the gateway and
-# username never enter the Nix store, and kept owned and persistent after that.
+# username never enter the Nix store, and kept persistent after that. It stays
+# system-wide: NM refuses to activate a user-owned (connection.permissions)
+# profile of a plugin that does not declare supports-safe-private-file-access,
+# and NetworkManager-openconnect does not.
 _:
 let
   providers = [ "konform" ];
@@ -45,10 +45,8 @@ let
   # The keyfile NetworkManager reads, written from the sourced VPN config.
   # `wayle-username` is wayle's own data key (the plugin has none for it);
   # the `*-flags=2` triple marks the plugin's minted secrets not-saved, so NM
-  # always asks the agent — wayle — rather than a stored value. The permission
-  # is in NM's own form, reserved field and all: `user:NAME:` is what it
-  # stores whatever it is given.
-  keyfileBody = provider: uuid: owner: ''
+  # always asks the agent — wayle — rather than a stored value.
+  keyfileBody = provider: uuid: ''
     usergroup="''${VPN_USERGROUP-gateway}"
     {
       printf '%s\n' \
@@ -56,8 +54,7 @@ let
         'id=${provider}' \
         'uuid=${uuid}' \
         'type=vpn' \
-        'autoconnect=false' \
-        'permissions=user:${owner}:;'
+        'autoconnect=false'
       printf '%s\n' \
         '[vpn]' \
         'service-type=org.freedesktop.NetworkManager.openconnect' \
@@ -82,11 +79,12 @@ let
     } > "$keyfile_tmp"
   '';
 
-  # The two settings that make the profile the user's to run, applied to one
-  # that already exists: written by this aspect before it wrote them, or by
-  # hand. Everything else in it stays user state.
-  ownAndPersist = nmcli: uuid: owner: ''
-    ${nmcli} connection modify ${uuid} connection.permissions "user:${owner}" vpn.persistent yes
+  # Persistence, applied to a profile that already exists: written by this
+  # aspect before it asked for it, or by hand. A permission list is cleared
+  # too — v0.8.52 of wayle made profiles user-owned, which NM then refused to
+  # activate. Everything else in it stays user state.
+  persist = nmcli: uuid: ''
+    ${nmcli} connection modify ${uuid} connection.permissions "" vpn.persistent yes
   '';
 
   # Where the retired detach hook and its NetworkManager.service drop-in were
@@ -136,13 +134,13 @@ in
 
                 # shellcheck source=/dev/null
                 source "${configPath}"
-                ${keyfileBody provider uuid username}
+                ${keyfileBody provider uuid}
 
                 install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
                 ${nmcli} connection reload >/dev/null 2>&1 || true
               fi
 
-              ${ownAndPersist nmcli uuid username}
+              ${persist nmcli uuid}
             '';
           };
         }
@@ -165,7 +163,6 @@ in
       stubbe.setup.vpnProfile =
         let
           home = config.home.homeDirectory;
-          owner = config.home.username;
         in
         {
           privileged = true;
@@ -173,10 +170,9 @@ in
           body = ''
             Writes /etc/NetworkManager/system-connections/<provider>.nmconnection
             from the sops-decrypted VPN config, so the gateway and username never
-            enter the Nix store, and makes the profile ${owner}'s own and
-            persistent: NM then lets ${owner} edit it without an administrator,
-            and keeps the tunnel through a suspend or a change of wifi instead
-            of logging the gateway session off.
+            enter the Nix store, and makes it persistent, so NM keeps the tunnel
+            through a suspend or a change of wifi instead of logging the gateway
+            session off.
 
             Also retires what came before: the root openconnect systemd unit,
             its /usr/local/sbin runner, the polkit rule that allowed starting
@@ -187,8 +183,7 @@ in
 
             The profile is written only when NetworkManager does not know it;
             after that it is user state, owned by NetworkManager and the wayle
-            widget that edits it, and only its ownership and persistence are
-            kept in line.
+            widget that edits it, and only its persistence is kept in line.
           '';
           script =
             let
@@ -206,7 +201,7 @@ in
 
                   # shellcheck source=/dev/null
                   source "${cfg}"
-                  ${keyfileBody provider uuid owner}
+                  ${keyfileBody provider uuid}
 
                   # Asked of NM, not of the keyfile: on a netplan host (Ubuntu)
                   # NM moves a profile it saves into /etc/netplan and deletes
@@ -225,7 +220,7 @@ in
                   fi
 
                   # Through NM rather than the file, for the same netplan reason.
-                  ${ownAndPersist "sudo nmcli" uuid owner}
+                  ${persist "sudo nmcli" uuid}
 
                   sudo systemctl disable --now openconnect-${provider}.service >/dev/null 2>&1 || true
                   sudo rm -f \
