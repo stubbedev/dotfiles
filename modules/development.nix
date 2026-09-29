@@ -18,6 +18,7 @@
 
           nodejs_24
           pnpm
+          shopify-cli
 
           prettier
           oxlint
