@@ -17,12 +17,33 @@
       pkgs,
       ...
     }:
-    lib.mkIf config.features.harness (
-      let
-        inherit (pkgs.stdenv.hostPlatform) system;
-        harness = inputs.harness.packages.${system}.harness;
-      in
-      {
+    let
+      inherit (pkgs.stdenv.hostPlatform) system;
+      harness = inputs.harness.packages.${system}.harness;
+    in
+    {
+      # Merge points so other aspects (modules/ai/ollama.nix) can contribute
+      # providers and default model pairs without touching this file. Same
+      # idea as stubbe.mcp.clients / stubbe.lsp.clients: the option is always
+      # declared, the defaults live in config below, and the yaml gen reads the
+      # merged result.
+      options.stubbe.harness = {
+        providers = lib.mkOption {
+          type = lib.types.attrsOf lib.types.raw;
+          internal = true;
+          default = { };
+          description = "Provider entries rendered into Harness's config.yaml `providers` block. Other aspects merge in via `config.stubbe.harness.providers.<id>`.";
+        };
+
+        models = lib.mkOption {
+          type = lib.types.attrsOf lib.types.raw;
+          internal = true;
+          default = { };
+          description = "Default model-pair entries rendered into Harness's config.yaml `models` block.";
+        };
+      };
+
+      config = lib.mkIf config.features.harness {
         home.packages = [ harness ];
 
         sops.secrets.z-ai-token = pkgs.stubbe.secret { name = "z-ai-token"; };
@@ -47,153 +68,12 @@
           # subscription is "zai-coding-plan" (api.z.ai/api/coding/paas/v4),
           # while plain "zai" is the pay-per-token API on the same host and
           # answers a subscription token with 429 "Insufficient balance".
-          providers = {
-            "zai-coding-plan".api_key = "$(cat ${config.sops.secrets.z-ai-token.path})";
-
-            # One OpenCode token authorises both of its gateways: opencode is
-            # the full pay-per-token catalogue (zen), opencode-go the
-            # flat-rate coding plan riding the same account.
-            opencode.api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
-            "opencode-go".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
-
-            # Plain platform.openai.com key: models.dev already carries the
-            # endpoint and the model list under the "openai" id, so the
-            # credential is the only thing missing.
-            openai.api_key = "$(cat ${config.sops.secrets.openai-token.path})";
-
-            # Corti's OpenAI-compatible gateway (ai.eu.corti.app), no models.dev
-            # entry, so the S1 family is spelled out in full: s1 and s1-mini
-            # come in reasoning and instant (non-reasoning) variants, plus the
-            # tiny siblings. corti-s1-embedding is listed by /v1/models but 404s
-            # on /v1/chat/completions, so it is deliberately absent here.
-            #
-            # disable_http2 is load-bearing. Only the gateway's HTTP/2 path is
-            # broken: it answers 413 "Payload Too Large" to any body over ~64KB
-            # and now and then accepts one and never replies at all, while the
-            # same bodies go through over HTTP/1.1 up to the model's real
-            # 262144-token context (2MB gets a proper vLLM context-length 400).
-            # A Harness turn opens at ~76KB, 53KB of it tool schemas, so every
-            # request lands above that line and Go negotiates h2 by default.
-            #
-            # The token is the static Models API key from the Corti console. It
-            # is a base64 blob of colon-separated OAuth2 fields but the gateway
-            # takes it verbatim as a bearer token; no exchange step is needed.
-            corti = {
-              type = "openai-compat";
-              base_url = "https://ai.eu.corti.app/v1";
-              api_key = "$(cat ${config.sops.secrets.cortiai-token.path})";
-              disable_http2 = true;
-              models = [
-                {
-                  id = "corti-s1";
-                  name = "Corti S1";
-                  context_window = 262144;
-                  cost_per_1m_in = 2;
-                  cost_per_1m_out = 8;
-                  cost_per_1m_in_cached = 0.2;
-                  can_reason = true;
-                  supports_attachments = false;
-                  reasoning_levels = [
-                    "high"
-                    "max"
-                  ];
-                  default_reasoning_effort = "high";
-                }
-                {
-                  id = "corti-s1-instant";
-                  name = "Corti S1 Instant";
-                  context_window = 262144;
-                  cost_per_1m_in = 2;
-                  cost_per_1m_out = 8;
-                  cost_per_1m_in_cached = 0.2;
-                  can_reason = false;
-                  supports_attachments = false;
-                }
-                {
-                  id = "corti-s1-mini";
-                  name = "Corti S1 Mini";
-                  context_window = 262144;
-                  cost_per_1m_in = 1;
-                  cost_per_1m_out = 4;
-                  cost_per_1m_in_cached = 0.1;
-                  can_reason = true;
-                  supports_attachments = true;
-                }
-                {
-                  id = "corti-s1-mini-instant";
-                  name = "Corti S1 Mini Instant";
-                  context_window = 262144;
-                  cost_per_1m_in = 1;
-                  cost_per_1m_out = 4;
-                  cost_per_1m_in_cached = 0.1;
-                  can_reason = false;
-                  supports_attachments = true;
-                }
-                {
-                  id = "corti-s1-tiny";
-                  name = "Corti S1 Tiny";
-                  context_window = 32768;
-                }
-                {
-                  id = "corti-s1-tiny-instant";
-                  name = "Corti S1 Tiny Instant";
-                  context_window = 32768;
-                }
-              ];
-            };
-
-            # Meta's Model API (dev.meta.ai) has no models.dev entry, so this one
-            # is spelled out in full: OpenAI-compatible chat completions behind
-            # the documented base URL, and the muse-spark line listed by hand
-            # because there is no registry to inherit limits from. Every
-            # variant: 1M context, 128k output, reasoning, tool calls, and
-            # text/image/video/audio/PDF input. Only the -contributor SKUs are
-            # listed -- same checkpoint on the same key, ~12x cheaper
-            # ($0.10/$0.20 vs $1.25/$4.25 per M) in exchange for Meta training
-            # on the traffic and a 60 req/min ceiling instead of the standard
-            # tier's 3000, which is fine for solo sessions. There is no
-            # 1.1-contributor.
-            meta = {
-              type = "openai-compat";
-              base_url = "https://api.meta.ai/v1";
-              api_key = "$(cat ${config.sops.secrets.meta-muse-spark-api-token.path})";
-              models =
-                map
-                  (v: {
-                    id = "muse-spark-${v}";
-                    name = "Muse Spark ${v}";
-                    context_window = 1048576;
-                    default_max_tokens = 131072;
-                    can_reason = true;
-                    supports_attachments = true;
-                  })
-                  [
-                    "1.3-contributor"
-                    "1.2-contributor"
-                  ];
-            };
-          };
+          providers = config.stubbe.harness.providers;
 
           # The pair to start from on a machine with no state yet. The state
           # file is loaded after this one, so switching model in-app still
           # sticks; this only decides what a fresh checkout opens with.
-          models = {
-            large = {
-              provider = "zai-coding-plan";
-              model = "glm-5.3";
-              reasoning_effort = "max";
-              max_tokens = 131072;
-            };
-            # The small model runs titles, summaries and the cheap internal
-            # calls, so it gets the flash sibling: same 1M context and 131072
-            # output cap, a fraction of the cost.
-            small = {
-              provider = "zai-coding-plan";
-              model = "glm-5.3-flash";
-              reasoning_effort = "max";
-              max_tokens = 131072;
-            };
-          };
+          models = config.stubbe.harness.models;
 
           mcp = config.stubbe.mcp.clients.harness;
 
@@ -259,6 +139,151 @@
             };
           };
         };
-      }
-    );
+
+        stubbe.harness.providers = {
+          "zai-coding-plan".api_key = "$(cat ${config.sops.secrets.z-ai-token.path})";
+
+          # One OpenCode token authorises both of its gateways: opencode is
+          # the full pay-per-token catalogue (zen), opencode-go the
+          # flat-rate coding plan riding the same account.
+          opencode.api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
+          "opencode-go".api_key = "$(cat ${config.sops.secrets.opencode-api-token.path})";
+
+          # Plain platform.openai.com key: models.dev already carries the
+          # endpoint and the model list under the "openai" id, so the
+          # credential is the only thing missing.
+          openai.api_key = "$(cat ${config.sops.secrets.openai-token.path})";
+
+          # Corti's OpenAI-compatible gateway (ai.eu.corti.app), no models.dev
+          # entry, so the S1 family is spelled out in full: s1 and s1-mini
+          # come in reasoning and instant (non-reasoning) variants, plus the
+          # tiny siblings. corti-s1-embedding is listed by /v1/models but 404s
+          # on /v1/chat/completions, so it is deliberately absent here.
+          #
+          # disable_http2 is load-bearing. Only the gateway's HTTP/2 path is
+          # broken: it answers 413 "Payload Too Large" to any body over ~64KB
+          # and now and then accepts one and never replies at all, while the
+          # same bodies go through over HTTP/1.1 up to the model's real
+          # 262144-token context (2MB gets a proper vLLM context-length 400).
+          # A Harness turn opens at ~76KB, 53KB of it tool schemas, so every
+          # request lands above that line and Go negotiates h2 by default.
+          #
+          # The token is the static Models API key from the Corti console. It
+          # is a base64 blob of colon-separated OAuth2 fields but the gateway
+          # takes it verbatim as a bearer token; no exchange step is needed.
+          corti = {
+            type = "openai-compat";
+            base_url = "https://ai.eu.corti.app/v1";
+            api_key = "$(cat ${config.sops.secrets.cortiai-token.path})";
+            disable_http2 = true;
+            models = [
+              {
+                id = "corti-s1";
+                name = "Corti S1";
+                context_window = 262144;
+                cost_per_1m_in = 2;
+                cost_per_1m_out = 8;
+                cost_per_1m_in_cached = 0.2;
+                can_reason = true;
+                supports_attachments = false;
+                reasoning_levels = [
+                  "high"
+                  "max"
+                ];
+                default_reasoning_effort = "high";
+              }
+              {
+                id = "corti-s1-instant";
+                name = "Corti S1 Instant";
+                context_window = 262144;
+                cost_per_1m_in = 2;
+                cost_per_1m_out = 8;
+                cost_per_1m_in_cached = 0.2;
+                can_reason = false;
+                supports_attachments = false;
+              }
+              {
+                id = "corti-s1-mini";
+                name = "Corti S1 Mini";
+                context_window = 262144;
+                cost_per_1m_in = 1;
+                cost_per_1m_out = 4;
+                cost_per_1m_in_cached = 0.1;
+                can_reason = true;
+                supports_attachments = true;
+              }
+              {
+                id = "corti-s1-mini-instant";
+                name = "Corti S1 Mini Instant";
+                context_window = 262144;
+                cost_per_1m_in = 1;
+                cost_per_1m_out = 4;
+                cost_per_1m_in_cached = 0.1;
+                can_reason = false;
+                supports_attachments = true;
+              }
+              {
+                id = "corti-s1-tiny";
+                name = "Corti S1 Tiny";
+                context_window = 32768;
+              }
+              {
+                id = "corti-s1-tiny-instant";
+                name = "Corti S1 Tiny Instant";
+                context_window = 32768;
+              }
+            ];
+          };
+
+          # Meta's Model API (dev.meta.ai) has no models.dev entry, so this one
+          # is spelled out in full: OpenAI-compatible chat completions behind
+          # the documented base URL, and the muse-spark line listed by hand
+          # because there is no registry to inherit limits from. Every
+          # variant: 1M context, 128k output, reasoning, tool calls, and
+          # text/image/video/audio/PDF input. Only the -contributor SKUs are
+          # listed -- same checkpoint on the same key, ~12x cheaper
+          # ($0.10/$0.20 vs $1.25/$4.25 per M) in exchange for Meta training
+          # on the traffic and a 60 req/min ceiling instead of the standard
+          # tier's 3000, which is fine for solo sessions. There is no
+          # 1.1-contributor.
+          meta = {
+            type = "openai-compat";
+            base_url = "https://api.meta.ai/v1";
+            api_key = "$(cat ${config.sops.secrets.meta-muse-spark-api-token.path})";
+            models =
+              map
+                (v: {
+                  id = "muse-spark-${v}";
+                  name = "Muse Spark ${v}";
+                  context_window = 1048576;
+                  default_max_tokens = 131072;
+                  can_reason = true;
+                  supports_attachments = true;
+                })
+                [
+                  "1.3-contributor"
+                  "1.2-contributor"
+                ];
+          };
+        };
+
+        stubbe.harness.models = {
+          large = {
+            provider = "zai-coding-plan";
+            model = "glm-5.3";
+            reasoning_effort = "max";
+            max_tokens = 131072;
+          };
+          # The small model runs titles, summaries and the cheap internal
+          # calls, so it gets the flash sibling: same 1M context and 131072
+          # output cap, a fraction of the cost.
+          small = {
+            provider = "zai-coding-plan";
+            model = "glm-5.3-flash";
+            reasoning_effort = "max";
+            max_tokens = 131072;
+          };
+        };
+      };
+    };
 }
