@@ -678,6 +678,9 @@
 
       sourceableZshFiles = lib.filter (n: !(lib.hasPrefix "completions/" n)) (lib.attrNames zshFiles);
 
+      # The profile path, not a store path: stable across switches and GC.
+      zshBin = "${config.home.profileDirectory}/bin/zsh";
+
       zshConfig =
         pkgs.runCommandLocal "stubbe-zsh-config"
           {
@@ -824,6 +827,11 @@
       ) pluginSpecs;
     in
     lib.mkIf config.features.desktop {
+      # Terminals and tmux spawn $SHELL. Pointing it at the nix zsh skips the
+      # distro-zsh hop through the .zshenv exec below; logins via passwd
+      # (TTY, ssh) still take that hop.
+      home.sessionVariables.SHELL = zshBin;
+
       programs.zsh = {
         enable = true;
         enableCompletion = true;
@@ -839,7 +847,16 @@
         # is read before the -c command, and the option survives the snapshot,
         # so the definitions stay but never expand. Interactive shells - a real
         # terminal, or a pty the human is driving - keep their aliases.
+        #
+        # The exec swaps an interactive distro zsh for the nix one: fzf-tab's
+        # compiled module links nix glibc and fails to load into a host-glibc
+        # zsh. Done here, not via chsh, so a broken profile leaves you in the
+        # distro zsh instead of locked out. argv0 carries login-ness across.
+        # No-op on NixOS, where the running zsh is already a store path.
         envExtra = ''
+          [[ -o interactive && -z $ZSH_EXECUTION_STRING && -x ${zshBin} \
+            && ''${''${:-/proc/$$/exe}:A} != /nix/store/* ]] &&
+            exec -a "$ZSH_ARGZERO" ${zshBin} -i
           skip_global_compinit=1
           [[ -o interactive ]] || setopt no_aliases
         '';
