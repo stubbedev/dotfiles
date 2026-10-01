@@ -87,6 +87,7 @@
       # ?submodules=1: the github fetcher skips submodules, leaving the vendored
       # cava C sources missing.
       url = "git+https://github.com/stubbedev/wayle.git?ref=master&submodules=1";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
