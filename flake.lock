@@ -61,11 +61,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1790712110,
-        "narHash": "sha256-cdbWitXVBgXb4g+I8uEyTOS3VAj4XlOzZI5kDisdJ0c=",
+        "lastModified": 1790798517,
+        "narHash": "sha256-KUudJ87dsfhnM2LVa4QXJdrLSjCNbuWOLFZGtiDDrtE=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "82ee196c58667c5f76fdd4ac646e2e2c05778e86",
+        "rev": "cf73bd2bece41565ca483050a3a7385ef3663aec",
         "type": "github"
       },
       "original": {
@@ -587,11 +587,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790796511,
-        "narHash": "sha256-NYZrfuc57iiqsjknMPSyzKfwccOrCyuSCcdTJr/CcyU=",
+        "lastModified": 1790819692,
+        "narHash": "sha256-rvubAPbh3QCliic3sAK+CXTrPCGgJstY52OTs/5H1J4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "40dbd9ebc87ec756cd50770a086e31030edc48bc",
+        "rev": "c8ecc29e5175452bee4a2aa1ba2383856d795338",
         "type": "github"
       },
       "original": {
@@ -1598,11 +1598,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790606152,
-        "narHash": "sha256-svA476AFPZfVfDueH1CDWa3CTYv+clanviRNAu/IvRE=",
+        "lastModified": 1790835288,
+        "narHash": "sha256-S+oiXA3TyGrZ0Xhf8EVz/Hcpde22+OYYqL8QM3CHuiE=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "055498351a62fafc94dce658340185a990ef9d05",
+        "rev": "fb85ad1027470c04fa189a75f53c4fa2ad85af14",
         "type": "github"
       },
       "original": {
