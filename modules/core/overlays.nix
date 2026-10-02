@@ -95,7 +95,7 @@ in
           }
           .${final.stdenv.hostPlatform.system}
             or (throw "yayamlls: no release asset for ${final.stdenv.hostPlatform.system}");
-        bin = builtins.fetchTarball {
+        bin = fetchTarball {
           url = "https://github.com/home-operations/yayamlls/releases/download/${tag}/yayamlls_${tag}_linux_${assetArch}.tar.gz";
         };
       in
