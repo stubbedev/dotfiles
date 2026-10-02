@@ -56,7 +56,7 @@ in
 
     vue-language-server-node = _final: prev: {
       vue-language-server = prev.vue-language-server.override {
-        nodejs-slim_latest = prev.nodejs-slim_24;
+        nodejs-slim = prev.nodejs-slim_24;
       };
     };
 
