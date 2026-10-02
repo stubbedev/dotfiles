@@ -34,6 +34,20 @@ read_lid() {
   done
 }
 
+# Both Mains and USB: a USB-C-only charger may never register as Mains.
+on_ac() {
+  local ps
+  for ps in /sys/class/power_supply/*; do
+    [ -r "$ps/type" ] && [ -r "$ps/online" ] || continue
+    case "$(cat "$ps/type")" in
+    Mains | USB) ;;
+    *) continue ;;
+    esac
+    [ "$(cat "$ps/online")" = "1" ] && return 0
+  done
+  return 1
+}
+
 apply_lid() {
   sleep 0.3
 
@@ -58,6 +72,7 @@ suspend_if_closed_undocked() {
     case "$c" in *eDP*) continue ;; esac
     [ "$(cat "$c" 2>/dev/null)" = "connected" ] && return 0
   done
+  on_ac && return 0
   systemctl suspend >/dev/null 2>&1 || true
 }
 
@@ -104,6 +119,15 @@ listen_lid() {
   done
 }
 
+watch_power() {
+  udevadm monitor --property --udev --subsystem-match=power_supply 2>/dev/null \
+    | grep --line-buffered '^UDEV .*power_supply' \
+    | while IFS= read -r _; do
+      sleep 2
+      suspend_if_closed_undocked
+    done
+}
+
 listen_events() {
   local last_action=0
 
@@ -113,7 +137,9 @@ listen_events() {
   local poll_pid=$!
   listen_lid &
   local lid_pid=$!
-  trap 'kill "$poll_pid" "$lid_pid" 2>/dev/null' EXIT INT TERM
+  watch_power &
+  local power_pid=$!
+  trap 'kill "$poll_pid" "$lid_pid" "$power_pid" 2>/dev/null' EXIT INT TERM
 
   while IFS= read -r line; do
     [ "$line" = "HOTPLUG=1" ] || continue

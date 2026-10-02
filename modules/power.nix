@@ -120,12 +120,12 @@ _: {
     {
       services.power-profiles-daemon.enable = true;
 
-      # Undocking with the lid already closed is handled in
+      # Undocking or unplugging with the lid already closed is handled in
       # src/hyprland/scripts/monitor.toggle.sh instead: logind only acts on the
       # lid switch edge (systemd#7690).
       services.logind.settings.Login = {
         HandleLidSwitch = "suspend";
-        HandleLidSwitchExternalPower = "suspend";
+        HandleLidSwitchExternalPower = "ignore";
         HandleLidSwitchDocked = "ignore";
       };
 
@@ -427,13 +427,15 @@ _: {
           title = "Installing systemd-logind lid switch handler";
           body = ''
             macOS-style lid behaviour: closing the lid suspends (s2idle) on
-            battery and on AC, but the machine stays awake in clamshell mode
-            when an external display is connected (logind's "docked" state
-            counts connected non-eDP DRM connectors). Opening the lid wakes.
+            battery, but stays awake on AC — clamshell with an external
+            display (logind's "docked" state counts connected non-eDP DRM
+            connectors) or headless, so SSH sessions and long builds survive.
+            Opening the lid wakes.
 
-            Undocking with the lid already closed is handled separately by
-            src/hyprland/scripts/monitor.toggle.sh — logind only acts on the
-            lid switch edge, not on later display changes (systemd#7690).
+            Undocking or unplugging with the lid already closed is handled
+            separately by src/hyprland/scripts/monitor.toggle.sh — logind
+            only acts on the lid switch edge, not on later display or power
+            changes (systemd#7690).
           '';
           script = ''
             ${pkgs.stubbe.setup.text {
@@ -444,7 +446,7 @@ _: {
                 + pkgs.stubbe.gen.iniText {
                   Login = {
                     HandleLidSwitch = "suspend";
-                    HandleLidSwitchExternalPower = "suspend";
+                    HandleLidSwitchExternalPower = "ignore";
                     HandleLidSwitchDocked = "ignore";
                   };
                 };

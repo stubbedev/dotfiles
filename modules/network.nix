@@ -24,6 +24,8 @@ _: {
           # mkDefault so the live ISO can override to "prohibit-password" —
           # root login over SSH is the only way to remote-debug a stuck install.
           PermitRootLogin = lib.mkDefault "no";
+          ClientAliveInterval = 60;
+          ClientAliveCountMax = 3;
         };
       };
 
@@ -198,6 +200,8 @@ _: {
                 PasswordAuthentication no
                 KbdInteractiveAuthentication no
                 PermitRootLogin no
+                ClientAliveInterval 60
+                ClientAliveCountMax 3
               '';
             }}
 

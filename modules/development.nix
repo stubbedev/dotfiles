@@ -35,6 +35,8 @@
           mongosh
           redis # provides redis-cli
 
+          python3
+
           caddy
           freerdp
           openconnect
