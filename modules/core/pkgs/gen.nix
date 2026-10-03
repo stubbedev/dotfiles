@@ -91,6 +91,9 @@ _: {
         toml = viaFormat (final.formats.toml { });
         yaml = viaFormat (final.formats.yaml { });
         ini = viaText (lib.generators.toINI { });
+        # systemd/udev units: repeated keys are lists (After = a; After = b),
+        # and bare true/false render as 1/0, which systemd accepts.
+        systemd = viaText (lib.generators.toINI { listsAsDuplicateKeys = true; });
         # nixpkgs has no writer for these two: hyprlang lives in home-manager's
         # module lib and rasi is private to its rofi module, so neither is
         # reachable from an overlay.
