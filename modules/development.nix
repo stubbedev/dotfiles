@@ -85,14 +85,8 @@ _: {
 
         add_file "${config.home.sessionVariables.SSL_CERT_FILE}"
 
-        if [ -n "''${CAROOT-}" ]; then
-          add_file "''${CAROOT}/rootCA.pem"
-        fi
-        if command -v mkcert >/dev/null 2>&1; then
-          caroot="$(mkcert -CAROOT 2>/dev/null || true)"
-          [ -n "$caroot" ] && add_file "$caroot/rootCA.pem"
-        fi
-
+        # The srv CA rides in via add_srv_paths below: srv vendors mkcert (same
+        # CAROOT layout), so no standalone mkcert binary exists on PATH.
         ${lib.optionalString config.features.srv "add_srv_paths"}
 
         awk '
