@@ -24,7 +24,7 @@
     {
       # Merge points so other aspects (modules/ai/ollama.nix) can contribute
       # providers and default model pairs without touching this file. Same
-      # idea as stubbe.mcp.clients / stubbe.lsp.clients: the option is always
+      # idea as stubbe.lsp.clients: the option is always
       # declared, the defaults live in config below, and the yaml gen reads the
       # merged result.
       options.stubbe.harness = {
@@ -75,10 +75,18 @@
           # sticks; this only decides what a fresh checkout opens with.
           models = config.stubbe.harness.models;
 
-          mcp = config.stubbe.mcp.clients.harness;
+          # One global MCP: notmuch. Everything else is registered per repo
+          # via .mcp.json, which Harness reads from the project root.
+          mcp = lib.optionalAttrs config.features.desktop {
+            notmuch-mcp = {
+              type = "stdio";
+              command = "notmuch-mcp";
+              args = [ ];
+            };
+          };
 
-          # The same language server inventory Claude Code's LSP plugin ships,
-          # in Harness's dialect: `filetypes` entries match as ".<ext>" suffixes
+          # The same language server inventory as nvim, in Harness's dialect:
+          # `filetypes` entries match as ".<ext>" suffixes
           # and server settings live under `options`/`init_options`. The
           # commands are store paths, which Harness needs: user-configured
           # servers skip its PATH probe, and it runs without nvim's wrapper PATH

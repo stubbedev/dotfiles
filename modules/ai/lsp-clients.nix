@@ -1,5 +1,5 @@
-# One inventory of language servers, rendered into each CLI's dialect -- the
-# same idea as mcp-clients.nix, so adding a server is a one-place edit.
+# The language server inventory for Harness's `lsp` config block: one list
+# of servers, one renderer.
 _: {
   flake.modules.homeManager.lspClients =
     {
@@ -145,21 +145,6 @@ _: {
         };
       };
 
-      # Claude Code's .lsp.json: settings keep their names, initialization
-      # options become initializationOptions, and language ids are keyed on
-      # dotted extensions.
-      toClaude =
-        _: s:
-        {
-          inherit (s) command;
-        }
-        // lib.optionalAttrs (s ? args) { inherit (s) args; }
-        // {
-          extensionToLanguage = lib.mapAttrs' (ext: lang: lib.nameValuePair ".${ext}" lang) s.languages;
-        }
-        // lib.optionalAttrs (s ? settings) { inherit (s) settings; }
-        // lib.optionalAttrs (s ? initOptions) { initializationOptions = s.initOptions; };
-
       # harness's `lsp` map: filetypes match as ".<ext>" suffixes on the file
       # name, and the settings move to `options`. Commands must be store paths:
       # user-configured servers skip harness's PATH probe, and harness runs without
@@ -180,13 +165,11 @@ _: {
       options.stubbe.lsp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Per-agent renderings of the language server inventory: `claude` (.lsp.json plugin) and `harness` (lsp map).";
+        description = "Harness's `lsp` map, rendered from the shared inventory.";
       };
 
       config.stubbe.lsp.clients =
-        # Rendered only for CLIs that are actually enabled -- and it keeps
-        # `config` in an expression, which deadnix requires to see it used.
-        lib.optionalAttrs config.features.claudeCode { claude = lib.mapAttrs toClaude servers; }
-        // lib.optionalAttrs config.features.harness { harness = lib.mapAttrs toHarness servers; };
+        # Keeps `config` in an expression, which deadnix requires to see used.
+        lib.optionalAttrs config.features.harness { harness = lib.mapAttrs toHarness servers; };
     };
 }

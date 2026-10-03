@@ -14,8 +14,8 @@ let
     srv = "The srv local-site server; 'srv install' owns CA trust and DNS.";
     treeman = "treeman per-worktree DB orchestrator plus the treemand user daemon.";
     php = "PHP: static CLI interpreter plus FrankenPHP and composer.";
-    claudeCode = "Claude Code CLI, its managed settings, and the MCP inventory.";
-    harness = "Harness CLI (the stubbedev Crush fork), wired to the same MCP inventory and the Z.ai provider.";
+    claudeCode = "Claude Code CLI and its managed settings. Per-repo .mcp.json adds servers; notmuch is the only global one.";
+    harness = "Harness CLI (the stubbedev Crush fork) with the Z.ai provider and the shared LSP inventory.";
     browsers = "Web browsers (Firefox, Google Chrome) and their managed policies.";
     slack = "Slack desktop client.";
   };
