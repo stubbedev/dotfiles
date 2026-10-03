@@ -42,35 +42,38 @@ _: {
       ...
     }:
     {
+      # Client tooling from nix: pinned by flake.lock, same on every host.
+      # The ENGINE is a host prerequisite (root daemon, distro unit) — the
+      # setup below requires it and tells you how to get it, rather than
+      # guessing a package manager.
+      home.packages = [
+        pkgs.docker
+        pkgs.docker-compose
+      ];
+
       stubbe.setup.docker = lib.mkIf config.features.docker {
         privileged = true;
-        title = "Installing Docker";
+        title = "Configuring Docker";
         body = ''
-          Install Docker (engine + compose) via the host's package manager,
-          enable the docker.service systemd unit, add ${config.home.username}
-          to the docker group so non-root containers work without sudo,
-          merge required keys into /etc/docker/daemon.json
-          (features.containerd-snapshotter, log rotation, insecure-registries for
-          localhost:5000; drops legacy storage-driver), and start a local
-          registry:3 container on :5000 backed by the registry-data volume.
+          Requires the docker engine already installed and running (host
+          prerequisite; the script fails with the exact install command if
+          not). Adds ${config.home.username} to the docker group so non-root
+          containers work without sudo, merges required keys into
+          /etc/docker/daemon.json (features.containerd-snapshotter, log
+          rotation, insecure-registries for localhost:5000; drops legacy
+          storage-driver), and starts a local registry:3 container on :5000
+          backed by the registry-data volume. Client tooling (docker,
+          docker-compose) comes from nix.
         '';
         script = ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-          if ! command -v docker >/dev/null 2>&1; then
-            if command -v pacman >/dev/null 2>&1; then
-              sudo pacman -S --needed --noconfirm docker docker-compose docker-buildx
-            elif command -v dnf >/dev/null 2>&1; then
-              sudo dnf install -y docker docker-compose
-            elif command -v apt-get >/dev/null 2>&1; then
-              tmp=$(mktemp -d)
-              trap 'rm -rf "$tmp"' RETURN
-              curl -fsSL https://get.docker.com -o "$tmp/get-docker.sh"
-              sudo sh "$tmp/get-docker.sh"
-            else
-              echo "No supported package manager (pacman/dnf/apt-get) found." >&2
-              exit 1
-            fi
+          if ! sudo systemctl is-active --quiet docker.service 2>/dev/null; then
+            echo "docker engine not running on this host - install it first:" >&2
+            echo "  arch/endeavouros: sudo pacman -S docker docker-compose docker-buildx && sudo systemctl enable --now docker" >&2
+            echo "  fedora:           sudo dnf install -y docker && sudo systemctl enable --now docker" >&2
+            echo "  debian/ubuntu:    curl -fsSL https://get.docker.com | sudo sh" >&2
+            exit 1
           fi
 
           sudo groupadd -f docker
@@ -114,9 +117,7 @@ _: {
           if ! sudo test -f /etc/docker/daemon.json || \
              ! sudo cmp -s "$_stb_new" /etc/docker/daemon.json; then
             sudo install -m 0644 -o root -g root "$_stb_new" /etc/docker/daemon.json
-            if command -v systemctl >/dev/null 2>&1; then
-              sudo systemctl restart docker.service >/dev/null 2>&1 || true
-            fi
+            sudo systemctl restart docker.service >/dev/null 2>&1 || true
           fi
           rm -f "$_stb_current" "$_stb_new"
 
