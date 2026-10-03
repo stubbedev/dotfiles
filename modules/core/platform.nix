@@ -24,23 +24,15 @@ _: {
           default = false;
           description = ''
             The machine's display GPU is NVIDIA. Drives the standalone
-            home-manager GL wiring: modules/core/pkgs/gl.nix picks the NVIDIA
-            nixGL variant and its EGL platform libs when true, the Intel/AMD
-            one when false. NixOS hosts carry the same option on the NixOS
-            side, where modules/graphics.nix selects the kernel driver stack
-            from it. Replaces the /proc probe, which pure eval silently
-            answered false.
-          '';
-        };
-
-        graphicsNvidiaVersion = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = ''
-            Version of the NVIDIA driver the host OS runs - on NixOS whatever
-            hardware.nvidia.package resolves to (e.g. "595.104.02"), elsewhere
-            the distro package's version. nixGL's NVIDIA GLX/EGL libraries
-            must match it. Read only when host.graphicsNvidia is true.
+            home-manager GL wiring: modules/core/pkgs/gl.nix wraps programs
+            for glvnd NVIDIA vendor dispatch against the host's own driver
+            libraries when true, and uses nixGLIntel when false. NixOS hosts
+            carry the same option on the NixOS side, where
+            modules/graphics.nix selects the kernel driver stack from it.
+            Replaces the /proc probe, which pure eval silently answered
+            false. The one GPU decision a host makes; everything else -
+            versions, kernel modules, userspace - follows from nixpkgs and
+            the distro driver package on their own.
           '';
         };
       };

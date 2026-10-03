@@ -10,11 +10,10 @@ _: {
       onNixOS = config.host.platform == "nixos";
 
       # Host-driven, not probed: the /proc check silently answered false under
-      # pure eval and downgraded every wrapper on NVIDIA machines.
-      gl = pkgs.stubbe.gl {
-        hasNvidia = config.host.graphicsNvidia;
-        nvidiaVersion = config.host.graphicsNvidiaVersion;
-      };
+      # pure eval and downgraded every wrapper on NVIDIA machines. The NVIDIA
+      # wrapper is version-free - it dispatches to the host's own glvnd vendor
+      # libs (see modules/core/pkgs/gl.nix).
+      gl = pkgs.stubbe.gl { hasNvidia = config.host.graphicsNvidia; };
       mkGLWrapper = gl.wrap;
 
       linkAs =

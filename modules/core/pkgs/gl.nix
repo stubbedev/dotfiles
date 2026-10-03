@@ -1,51 +1,28 @@
 # Branch of the pkgs.stubbe helper tree (see ./default.nix).
-# GL/NVIDIA plumbing: nixGL wrappers and the driver paths they inject.
+# GL plumbing for standalone home-manager hosts: wraps GL programs so they
+# find working drivers on a foreign distro.
 #
-# The NVIDIA decision comes from the host options (host.graphicsNvidia,
-# host.graphicsNvidiaVersion) and is passed in by the caller -
-# modules/core/gfx.nix. It used to probe /proc/driver/nvidia/version, which
-# pure eval silently answered false, downgrading every GL wrapper on NVIDIA
-# machines to the Intel path.
-{ inputs, ... }:
-{
+# The NVIDIA-vs-else decision comes from the host option host.graphicsNvidia
+# (modules/core/platform.nix), passed in by modules/core/gfx.nix. It used to
+# be a /proc probe, which pure eval silently answered false and downgraded
+# NVIDIA machines to the Intel path.
+#
+# No driver version appears anywhere by design: on NVIDIA hosts the wrapper
+# points glvnd at the host's own vendor libraries under /usr - the same files
+# the OS driver package installed - so they match the running kernel module
+# by construction and follow every driver update on their own.
+_: {
   stubbe.pkgsLib.gl =
     {
       final,
       lib,
       ...
     }:
-    {
-      hasNvidia,
-      nvidiaVersion,
-    }:
+    { hasNvidia }:
     let
-      isIntelX86 = final.stdenv.hostPlatform.system == "x86_64-linux";
-
-      # nixgl's NVIDIA GLX/EGL libraries must match the driver the host OS
-      # actually runs, hence the explicit version; the overlay's plain
-      # `final.nixgl` builds without one.
-      nixgl =
-        if hasNvidia && nvidiaVersion != null then
-          import "${inputs.nixgl}/default.nix" (
-            {
-              pkgs = final;
-              enable32bits = isIntelX86;
-              enableIntelX86Extensions = isIntelX86;
-            }
-            // {
-              inherit nvidiaVersion;
-            }
-          )
-        else
-          final.nixgl;
-
-      nixGL = if hasNvidia then (nixgl.nixGLNvidia or nixgl.auto.nixGLNvidia) else nixgl.nixGLIntel;
-
-      nixGLBin = "${nixGL}/bin/${nixGL.name}";
-
       # `--suffix` lets user-set values win; missing paths are skipped by the
       # loader, but if NONE of a list exists EGL/GBM init fails — hence the
-      # RHEL/Arch (lib64), generic (lib) and Debian multiarch layouts below.
+      # Debian multiarch, RHEL/Arch (lib64) and generic (lib) layouts below.
       gbmBackendsPath = lib.concatStringsSep ":" [
         "/usr/lib/x86_64-linux-gnu/gbm"
         "/usr/lib64/gbm"
@@ -61,36 +38,49 @@
         "/run/opengl-driver-32/lib/dri"
       ];
 
-      # nixGL's NVIDIA bundle ships no external EGL platform libs, so Nix-built
-      # Wayland clients fail with "provided display handle is not supported".
-      eglLibs = lib.optionalString hasNvidia (
-        lib.concatStringsSep ":" [
-          "${final.egl-wayland}/lib"
-          "${final.egl-gbm}/lib"
-        ]
-      );
+      # NVIDIA vendor userspace (libGLX_nvidia, libEGL_nvidia, libnvidia-ml, …)
+      # lives in the distro's /usr, matched to the kernel module because it IS
+      # the driver package's own files.
+      hostDriverLibs = "/usr/lib/x86_64-linux-gnu:/usr/lib64:/usr/lib";
 
-      eglConfigs = lib.optionalString hasNvidia (
-        lib.concatStringsSep ":" [
-          "${final.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json"
-          "${final.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json"
-        ]
-      );
+      # NVIDIA's external EGL platform descriptors: the host's first
+      # (driver-matched), nixpkgs' copies as fallback for distros that split
+      # them out of the driver package.
+      eglExternalPlatforms = lib.concatStringsSep ":" [
+        "/usr/share/egl/egl_external_platform.d"
+        "${final.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json"
+        "${final.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json"
+      ];
     in
     {
-      inherit nixGL nixGLBin;
       nvidia = hasNvidia;
 
       wrap =
         name: programPath:
-        final.runCommand name { nativeBuildInputs = [ final.makeWrapper ]; } ''
-          makeWrapper ${nixGLBin} $out/bin/${name} \
-            --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
-            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" \
-            ${lib.optionalString hasNvidia ''
-              --suffix LD_LIBRARY_PATH : "${eglLibs}" \
-              --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${eglConfigs}" \
-            ''}--add-flag "${programPath}"
-        '';
+        final.runCommand name { nativeBuildInputs = [ final.makeWrapper ]; } (
+          if hasNvidia then
+            ''
+              # glvnd (linked by the program itself) dispatches to the NVIDIA
+              # vendor ICD from the host OS. Nothing bundled, nothing to keep
+              # in version lockstep.
+              makeWrapper ${programPath} $out/bin/${name} \
+                --set __GLX_VENDOR_LIBRARY_NAME nvidia \
+                --suffix __EGL_VENDOR_LIBRARY_FILENAMES : /usr/share/glvnd/egl_vendor.d/10_nvidia.json \
+                --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${eglExternalPlatforms}" \
+                --suffix LD_LIBRARY_PATH : "${hostDriverLibs}" \
+                --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
+                --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}"
+            ''
+          else
+            let
+              nixGL = final.nixgl.nixGLIntel;
+            in
+            ''
+              makeWrapper ${nixGL}/bin/${nixGL.name} $out/bin/${name} \
+                --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
+                --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" \
+                --add-flag "${programPath}"
+            ''
+        );
     };
 }
