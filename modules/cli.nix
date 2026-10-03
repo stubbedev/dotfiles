@@ -61,7 +61,6 @@ _: {
         automake
 
         hyperfine
-        nushell
       ];
     };
 }

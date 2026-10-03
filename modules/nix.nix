@@ -132,7 +132,6 @@ in
         with pkgs;
         [
           nix-zsh-completions
-          pass
           cachix
           attic-client
           xilo

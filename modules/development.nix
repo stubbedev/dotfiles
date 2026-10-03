@@ -18,16 +18,13 @@
 
           nodejs_24
           pnpm
-          shopify-cli
 
           prettier
           oxlint
           oxfmt
           stylua
 
-          gopass
           gotools
-          air
           templ
           golangci-lint
 

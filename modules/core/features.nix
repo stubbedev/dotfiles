@@ -15,7 +15,6 @@ let
     srv = "The srv local-site server and the mkcert CA trust that goes with it.";
     treeman = "treeman per-worktree DB orchestrator plus the treemand user daemon.";
     php = "PHP: static CLI interpreter plus FrankenPHP and composer.";
-    k8s = "Kubernetes tools (kubectl, minikube).";
     claudeCode = "Claude Code CLI, its managed settings, and the MCP inventory.";
     harness = "Harness CLI (the stubbedev Crush fork), wired to the same MCP inventory and the Z.ai provider.";
     browsers = "Web browsers (Firefox, Google Chrome) and their managed policies.";

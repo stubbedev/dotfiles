@@ -68,45 +68,6 @@ in
       pkgs,
       ...
     }:
-    let
-      vifmHighlight = [
-        { Border = "none default default"; }
-        null
-        { TopLine = "none 002 default"; }
-        { TopLineSel = "bold 002 default"; }
-        null
-        { Win = "none 251 default"; }
-        { Directory = "bold 004 default"; }
-        { CurrLine = "bold,inverse default default"; }
-        { OtherLine = "bold default default"; }
-        { Selected = "none 003 008"; }
-        null
-        { JobLine = "bold 251 008"; }
-        { StatusLine = "none 008 default"; }
-        { ErrorMsg = "bold 001 default"; }
-        { WildMenu = "bold 015 008"; }
-        { CmdLine = "none 007 default"; }
-        null
-        { Executable = "bold 002 default"; }
-        { Link = "bold 006 default"; }
-        { BrokenLink = "bold 001 default"; }
-        { Device = "bold,standout 000 011"; }
-        { Fifo = "none 003 default"; }
-        { Socket = "bold 005 default"; }
-      ];
-      renderHighlight =
-        entry:
-        if entry == null then
-          ""
-        else
-          let
-            group = builtins.head (lib.attrNames entry);
-            parts = lib.splitString " " entry.${group};
-            pad = n: str: str + lib.concatStrings (lib.genList (_: " ") (lib.max 1 (n - lib.stringLength str)));
-          in
-          "highlight ${pad 14 group}${pad 22 "cterm=${builtins.elemAt parts 0}"}"
-          + "${pad 18 "ctermfg=${builtins.elemAt parts 1}"}ctermbg=${builtins.elemAt parts 2}";
-    in
     lib.mkIf config.features.desktop {
       home.packages =
         with pkgs;
@@ -126,25 +87,12 @@ in
 
           util-linux
 
-          yazi
           pcmanfm
         ]
         ++ lib.optionals (config.host.platform != "nixos") [
           pkgs.gvfs
           pkgs.udisks2
         ];
-
-      programs.vifm = {
-        enable = true;
-        extraConfig = ''
-          " palenight color scheme for vifm
-
-          " Reset all styles first
-          highlight clear
-
-          ${lib.concatMapStringsSep "\n" renderHighlight vifmHighlight}
-        '';
-      };
 
       xdg = {
         desktopEntries = {
