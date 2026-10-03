@@ -78,10 +78,6 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    proxy-mcp = {
-      url = "github:stubbedev/proxy-mcp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     notmuch-mcp.url = "github:stubbedev/notmuch-mcp";
     wayle = {
       # ?submodules=1: the github fetcher skips submodules, leaving the vendored

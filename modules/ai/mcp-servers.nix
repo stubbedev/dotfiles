@@ -1,5 +1,6 @@
-# httpServices stay native HTTP rather than bridged: a stdio->HTTP bridge would
-# collapse every window onto one upstream session, losing the per-request repo.
+# Everything except notmuch is registered per repo (.mcp.json): these are
+# stdio commands — one process per client session, resolved off PATH. No
+# ports, no shared instances, no systemd units.
 { inputs, ... }:
 {
   flake.modules.homeManager.mcpServers =
@@ -13,117 +14,41 @@
       system = pkgs.stdenv.hostPlatform.system;
       inherit (config.home) homeDirectory;
 
-      flakeBin = input: bin: "${inputs.${input}.packages.${system}.default}/bin/${bin}";
-      jenkinsMcp = flakeBin "jenkins-mcp" "jenkins-mcp";
-      sentryMcp = flakeBin "sentry-mcp" "sentry-mcp";
-      atlassianMcp = flakeBin "atlassian-mcp" "atlassian-mcp";
-      nixMcp = flakeBin "nix-mcp" "nix-mcp";
-      dsMcp = flakeBin "ds-mcp" "ds-mcp";
-      notmuchMcp = flakeBin "notmuch-mcp" "notmuch-mcp";
+      pkg = input: inputs.${input}.packages.${system}.default;
 
       enableMail = config.features.desktop;
-      mkHttpServer =
-        {
-          exe,
-          port,
-          name,
-        }:
-        {
-          inherit exe port;
-          host = "127.0.0.1";
-          path = "/mcp";
-          env = { };
-          args = [
-            "--http=127.0.0.1:${toString port}"
-            "--config"
-            "${homeDirectory}/.config/${name}/config.json"
-          ];
-        };
 
-      httpServices = {
-        atlassian-mcp = mkHttpServer {
-          exe = atlassianMcp;
-          port = 39102;
-          name = "atlassian-mcp";
-        };
-        jenkins-mcp = mkHttpServer {
-          exe = jenkinsMcp;
-          port = 39103;
-          name = "jenkins-mcp";
-        };
-        sentry-mcp = mkHttpServer {
-          exe = sentryMcp;
-          port = 39104;
-          name = "sentry-mcp";
-        };
+      # `repoScoped` entries are kept out of the global client sets: a repo
+      # that wants one lists it in .mcp.json, whose bare command resolves off
+      # PATH — every binary below rides in home.packages.
+      mkStdio = name: extraArgs: {
+        command = "${pkg name}/bin/${name}";
+        args = [
+          "--config"
+          "${homeDirectory}/.config/${name}/config.json"
+        ]
+        ++ extraArgs;
+        repoScoped = true;
       };
-      # 39107/39108 are retired (srv-mcp / treeman-mcp). Do not reuse them without
-      # checking for a stale unit on an un-switched host.
 
-      proxiedPort = 39105;
-      # "perSession" is required: a "shared" session would collapse every window's
-      # roots onto one upstream and break per-repo resolution. Reusing the
-      # Placeholders, not literals: this repo is public. Unset expands to "" and
-      # gates every client out, so a missing secret hides the tools rather than
-      # exposing them everywhere.
-      kontainerRepo = "\${KONTAINER_REMOTE}";
-      # A whitelist entry with no path component gates a whole git host: every repo
-      # cloned from it matches, across ssh/https and regardless of port (proxy-mcp
-      # >= 0.0.21). Set KONFORM_HOST to the bare hostname — a value WITH a path
-      # would silently narrow this to one repo instead.
-      konformHost = "\${KONFORM_HOST}";
-      gateThroughProxy =
-        name: repoWhitelist:
-        let
-          up = httpServices.${name};
-        in
-        {
-          inherit repoWhitelist;
-          host = "127.0.0.1";
-          port = proxiedPort;
-          path = "/${name}/mcp";
-          idleSec = 300;
-          url = "http://${up.host}:${toString up.port}${up.path}";
-          transportType = "streamable-http";
-          mode = "perSession";
-        };
-      proxied = {
-        atlassian-mcp = gateThroughProxy "atlassian-mcp" [ konformHost ];
-        jenkins-mcp = gateThroughProxy "jenkins-mcp" [ kontainerRepo ];
-        sentry-mcp = gateThroughProxy "sentry-mcp" [ kontainerRepo ];
-      }
-      // {
+      stdioServers = {
+        atlassian-mcp = mkStdio "atlassian-mcp" [ ];
+        jenkins-mcp = mkStdio "jenkins-mcp" [ ];
+        sentry-mcp = mkStdio "sentry-mcp" [ ];
+        ds = mkStdio "ds-mcp" [
+          "serve"
+          "--read-only"
+        ];
         nix-mcp = {
-          host = "127.0.0.1";
-          port = proxiedPort;
-          path = "/nix-mcp/mcp";
-          idleSec = 300;
-          command = nixMcp;
+          command = "${pkg "nix-mcp"}/bin/nix-mcp";
           args = [ ];
           repoScoped = true;
         };
-        ds = {
-          host = "127.0.0.1";
-          port = proxiedPort;
-          path = "/ds/mcp";
-          idleSec = 300;
-          repoWhitelist = [ kontainerRepo ];
-          command = dsMcp;
-          args = [
-            "serve"
-            "--read-only"
-            "--config"
-            "${homeDirectory}/.config/ds-mcp/config.json"
-          ];
-        };
       }
       // lib.optionalAttrs enableMail {
+        # The one global server: mail is useful from every session.
         notmuch-mcp = {
-          host = "127.0.0.1";
-          port = proxiedPort;
-          path = "/notmuch-mcp/mcp";
-          idleSec = 300;
-          command = notmuchMcp;
+          command = "${pkg "notmuch-mcp"}/bin/notmuch-mcp";
           args = [ ];
         };
       };
@@ -133,11 +58,23 @@
       options.stubbe.mcp.servers = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "MCP server inventory, split by how each is hosted: httpServices and proxied.";
+        description = "MCP server inventory: stdio commands, split only by repoScoped.";
       };
 
-      config.stubbe.mcp.servers = {
-        inherit httpServices proxied;
+      config = {
+        stubbe.mcp.servers = {
+          inherit stdioServers;
+        };
+
+        home.packages =
+          map pkg [
+            "atlassian-mcp"
+            "jenkins-mcp"
+            "sentry-mcp"
+            "ds-mcp"
+            "nix-mcp"
+          ]
+          ++ lib.optional enableMail (pkg "notmuch-mcp");
       };
     };
 }

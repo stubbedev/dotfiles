@@ -1,14 +1,8 @@
 {
   "mcpServers": {
     "nix-mcp": {
-      "type": "http",
-      "url": "http://127.0.0.1:39105/nix-mcp/mcp",
-      "headers": { "X-Repo-Root": "${PWD}" }
-    },
-    "pty-mcp": {
-      "type": "http",
-      "url": "http://127.0.0.1:39105/pty-mcp/mcp",
-      "headers": { "X-Repo-Root": "${PWD}" }
+      "command": "nix-mcp",
+      "args": []
     }
   }
 }

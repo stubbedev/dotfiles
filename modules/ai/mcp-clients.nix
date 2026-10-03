@@ -7,39 +7,27 @@ _: {
     }:
     let
       inherit (config.stubbe.mcp) servers;
-      # A proxied entry intentionally wins over its native HTTP service of the same
-      # name: the proxy is what adds repo gating for jenkins/sentry.
+
+      # The global client set is only the stdio servers that are not
+      # repoScoped — notmuch on desktop hosts. Everything else (the HTTP
+      # services, nix-mcp, ds) is deliberately unregistered: repos that want
+      # a server list it in a .mcp.json, hitting
+      # http://127.0.0.1:<port>/mcp for the services.
       clientServers = lib.mapAttrs (_: s: {
-        url = "http://${s.host}:${toString s.port}${s.path}";
-      }) (lib.filterAttrs (_: s: !(s.repoScoped or false)) (servers.httpServices // servers.proxied));
-
-      toClaude = _: server: {
-        type = "http";
-        inherit (server) url;
-        headers."X-Repo-Root" = "\${PWD}";
-      };
-
-      # `type` is mandatory here -- harness's schema defaults it to "stdio", so a
-      # url-only entry is parsed as a command. Header values go through harness's
-      # embedded shell, hence the bare $PWD. The 15s default connect timeout is
-      # too tight for a cold socket-activated mcp-proxy (TimeoutStartSec=120).
-      toHarness = _: server: {
-        type = "http";
-        inherit (server) url;
-        headers."X-Repo-Root" = "$PWD";
-        timeout = 120;
-      };
+        type = "stdio";
+        inherit (s) command args;
+      }) (lib.filterAttrs (_: s: !(s.repoScoped or false)) servers.stdioServers);
     in
     {
       options.stubbe.mcp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Per-agent renderings of the MCP inventory: `claude` and `harness` (JSON).";
+        description = "Per-agent renderings of the global MCP set: `claude` and `harness` (JSON).";
       };
 
       config.stubbe.mcp.clients = {
-        claude = lib.mapAttrs toClaude clientServers;
-        harness = lib.mapAttrs toHarness clientServers;
+        claude = clientServers;
+        harness = clientServers;
       };
     };
 }

@@ -208,6 +208,9 @@ _: {
             "--enable-features=WaylandWindowDecorations,WaylandSessionManagement,AcceleratedVideoEncoder"
             "--enable-zero-copy"
             "--ignore-gpu-blocklist"
+            # CDP clients (playwright MCP) attach without the per-connection
+            # chrome://inspect remote-debugging Allow dialog.
+            "--disable-features=DevToolsAcceptDebuggingConnections"
           ];
         };
         env.CHROME_DEVEL_SANDBOX = "/dev/null";

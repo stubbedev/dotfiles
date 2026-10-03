@@ -26,6 +26,11 @@ in
     HighEfficiencyModeEnabled = true;
     MemorySaverModeSavings = 2;
 
+    # Playwright MCP launches Chrome with
+    # --disable-blink-features=AutomationControlled, which Chrome lists as an
+    # unsupported flag. Keep the stealth flag, drop the infobar.
+    CommandLineFlagSecurityWarningsEnabled = false;
+
     ExtensionInstallForcelist = map (id: "${id};${updateUrl}") (builtins.attrNames extensions);
   };
 
