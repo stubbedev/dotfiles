@@ -31,15 +31,7 @@
           templ
           golangci-lint
 
-          mongodb-tools
-          mongosh
-          redis # provides redis-cli
-
           python3
-
-          caddy
-          freerdp
-          openconnect
 
           mold
           (lib.setPrio 15 clang)

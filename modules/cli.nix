@@ -61,10 +61,7 @@ _: {
         automake
 
         hyperfine
-        tabiew
         nushell
-        gum
-        goaccess
       ];
     };
 }
