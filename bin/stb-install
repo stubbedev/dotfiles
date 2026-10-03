@@ -73,22 +73,13 @@ link_dotfiles() {
 }
 
 install_nix() {
-  # Only bootstrap a *missing* nix. Unlike the lix installer this replaced,
-  # the Determinate installer is not an in-place upgrader: it refuses when it
-  # finds an existing install, which under `set -e` would abort every re-run
-  # of this script on an already-provisioned host.
-  #
-  # Determinate rather than lix or upstream, for the evaluator: nix's is
-  # single-threaded, and a full system eval of this flake is ~36s of one
-  # saturated core. Determinate's `eval-cores` splits it (3-4x measured). It
-  # has to come from the installer — nix-src cannot be built from nixpkgs
-  # (its boost coroutine patch rejects against boost 1.89) and its prebuilt
-  # binaries live behind an authenticated FlakeHub Cache, so there is no
-  # flake input that would let modules/nix.nix just set `nix.package`.
+  # Only bootstrap a *missing* nix: the upstream installer also refuses an
+  # existing install, which under `set -e` would abort every re-run of this
+  # script on an already-provisioned host.
   if [ -e /nix/var/nix/profiles/default/bin/nix ] || command -v nix >/dev/null 2>&1; then
     return 0
   fi
-  curl -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
+  curl -sSf -L https://nixos.org/nix/install | sh -s -- --no-confirm
 }
 
 configure_nix() {

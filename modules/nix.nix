@@ -22,18 +22,15 @@ in
       };
 
       nix = {
-        package = inputs.determinate-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
-
         settings = {
           experimental-features = [
             "nix-command"
             "flakes"
-            "parallel-eval"
           ];
 
-          # 0 = one evaluator thread per core. Only Determinate's evaluator has
-          # this; the win is ~26s -> ~18s on a no-op rebuild here.
-          eval-cores = 0;
+          # Upstream nix evaluates single-threaded (~26s per no-op rebuild
+          # here); Determinate nix was dropped for its version drift and
+          # opaque errors, and its parallel evaluator went with it.
 
           # The HM-side copy only applies to standalone HM, so without this the
           # daemon misses nix-community and rebuilds from source.
