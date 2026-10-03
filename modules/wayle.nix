@@ -213,17 +213,9 @@
                 printf '%s\n' "$(printf '%s' "$out" | jq -c "$filt" 2>/dev/null)"
               }
 
-              treeman_line() { emit_line '.' treeman-status; }
-
               rt="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
               case "''${1:-}" in
-                treeman-watch)
-                  treeman_line
-                  treeman logs tail --follow --all --json --since 1s 2>/dev/null |
-                    while IFS= read -r _; do treeman_line; done
-                  ;;
-
                 submap-watch)
                   marker="$rt/wayle-submap"
                   emit_submap() {
@@ -334,7 +326,6 @@
                     center = [ "clock" ];
                     right = [
                       "mail"
-                      "custom-treeman"
                       "keyboard-input"
                       "recorder"
                       "volume"
@@ -496,15 +487,6 @@
                     command = "wayle-widget submap-watch";
                     icon-name = "ld-layers-symbolic";
                     label-show = false;
-                    hide-if-empty = true;
-                  }
-                  {
-                    id = "treeman";
-                    mode = "watch";
-                    restart-policy = "on-exit";
-                    command = "wayle-widget treeman-watch";
-                    icon-show = false;
-                    left-click = "treeman worktree list";
                     hide-if-empty = true;
                   }
                 ];

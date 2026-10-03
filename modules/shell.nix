@@ -737,7 +737,6 @@
         mkdir -p $dir
         ${lib.getExe pkgs.lazygit} completion zsh > $dir/_lazygit
         cp ${pkgs.hcloud}/share/zsh/site-functions/_hcloud $dir/_hcloud
-        ${lib.getExe pkgs.vultr-cli} completion zsh > $dir/_vultr-cli
         ${lib.optionalString config.features.srv ''
           ${inputs.srv.packages.${system}.srv}/bin/srv completion zsh > $dir/_srv
         ''}
@@ -752,7 +751,6 @@
         ''}
         ${lib.optionalString config.features.development ''
           ${lib.getExe' pkgs.xilo "xilo"} completion zsh > $dir/_xilo
-          ${lib.getExe pkgs.cachix} --zsh-completion-script ${lib.getExe pkgs.cachix} > $dir/_cachix
         ''}
         ${lib.optionalString config.features.php ''
           ${pkgs.frankenphp}/bin/frankenphp completion zsh \

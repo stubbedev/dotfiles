@@ -3,6 +3,8 @@
 _: {
   stubbe.lib = {
     cache = {
+      # xilo (nix.stubbe.dev) first: self-hosted cache is preferred, then
+      # upstream and nix-community.
       substituters = [
         "https://nix.stubbe.dev/c/default/default"
         "https://cache.nixos.org"

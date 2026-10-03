@@ -30,12 +30,6 @@
       home.packages = [
         treemanPkg
         treemandPkg
-        (pkgs.stubbe.bashApp {
-          name = "treeman-status";
-          text = ''
-            command -v treeman >/dev/null 2>&1 && treeman status --format waybar 2>/dev/null
-          '';
-        })
       ];
 
       xdg.configFile."treeman/config.yaml" = {
@@ -54,8 +48,6 @@
             enabled = true;
             interval_minutes = 30;
           };
-
-          status.formats.icon = "{icon_stable} {stable}  {icon_up} {up}  {icon_down} {down}  {icon_failed} {failed}";
         };
         force = true;
       };

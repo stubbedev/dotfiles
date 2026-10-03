@@ -2,27 +2,13 @@ _: {
   flake.modules.nixos.cloud =
     { pkgs, ... }:
     {
-      environment.systemPackages = with pkgs; [
-        vultr-cli
-        hcloud
-        s5cmd
-      ];
+      environment.systemPackages = with pkgs; [ hcloud ];
     };
 
   flake.modules.homeManager.cloud =
     { config, pkgs, ... }:
     {
-      home.packages = with pkgs; [
-        vultr-cli
-        hcloud
-        s5cmd
-      ];
-
-      sops.secrets.vultr = pkgs.stubbe.secret { name = "vultr"; };
-      sops.templates."vultr-cli.yaml" = {
-        content = "api-key: ${config.sops.placeholder.vultr}";
-        path = "${config.home.homeDirectory}/.vultr-cli.yaml";
-      };
+      home.packages = with pkgs; [ hcloud ];
 
       # The secret holds the raw token with no trailing newline: it lands inside
       # a quoted TOML string, so a newline would break the parse.

@@ -11,8 +11,6 @@ in
       ...
     }:
     {
-      environment.systemPackages = [ pkgs.attic-client ];
-
       # Without this, system packages fall back to a vanilla nixpkgs eval and
       # miss every override. Read from the flake level, not `pkgs.stubbe`:
       # `pkgs` is built FROM these values, so that is infinite recursion.
@@ -33,7 +31,7 @@ in
           # opaque errors, and its parallel evaluator went with it.
 
           # The HM-side copy only applies to standalone HM, so without this the
-          # daemon misses nix-community and rebuilds from source.
+          # daemon falls back to default substituters and misses nix.stubbe.dev.
           inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
 
           # nix asks the substituter before building, so our self-hosted cache
