@@ -23,8 +23,16 @@ _: {
       # `--suffix` lets user-set values win; missing paths are skipped by the
       # loader, but if NONE of a list exists EGL/GBM init fails — hence the
       # Debian multiarch, RHEL/Arch (lib64) and generic (lib) layouts below.
+      # Distro-verified 2026-10-03 against package file lists:
+      #   Arch   nvidia-utils: /usr/lib{,/gbm}
+      #   Ubuntu libnvidia-gl-flavour.install: multiarch root + multiarch/gbm
+      #   Debian trixie Contents: libs + nvidia-drm_gbm.so under
+      #          multiarch/nvidia/current (alternatives flavour layout)
+      #   Fedora xorg-x11-drv-nvidia-libs: /usr/lib64{,/gbm}
+      #   openSUSE: /usr/lib64/nvidia
       gbmBackendsPath = lib.concatStringsSep ":" [
         "/usr/lib/x86_64-linux-gnu/gbm"
+        "/usr/lib/x86_64-linux-gnu/nvidia/current"
         "/usr/lib64/gbm"
         "/usr/lib/gbm"
         "/run/opengl-driver/lib/gbm"
@@ -38,14 +46,23 @@ _: {
         "/run/opengl-driver-32/lib/dri"
       ];
 
-      # NVIDIA vendor userspace (libGLX_nvidia, libEGL_nvidia, libnvidia-ml, …)
-      # lives in the distro's /usr, matched to the kernel module because it IS
-      # the driver package's own files.
-      hostDriverLibs = "/usr/lib/x86_64-linux-gnu:/usr/lib64:/usr/lib";
+      # NVIDIA vendor userspace (libEGL_nvidia, libGLX_nvidia, libnvidia-ml,
+      # …) lives wherever the distro driver package put it: multiarch root
+      # (Ubuntu), multiarch/nvidia/current (Debian), /usr/lib64/nvidia
+      # (openSUSE), /usr/lib64 (Fedora/RHEL) or /usr/lib (Arch) — matched to
+      # the kernel module because it IS the driver package's own files.
+      hostDriverLibs = lib.concatStringsSep ":" [
+        "/usr/lib/x86_64-linux-gnu"
+        "/usr/lib/x86_64-linux-gnu/nvidia/current"
+        "/usr/lib64/nvidia"
+        "/usr/lib64"
+        "/usr/lib"
+      ];
 
       # NVIDIA's external EGL platform descriptors: the host's first
-      # (driver-matched), nixpkgs' copies as fallback for distros that split
-      # them out of the driver package.
+      # (driver-matched; Ubuntu and Fedora ship 15_nvidia_gbm/20_nvidia_xlib
+      # here, egl-wayland ships 10_nvidia_wayland on every distro), nixpkgs'
+      # copies as fallback.
       eglExternalPlatforms = lib.concatStringsSep ":" [
         "/usr/share/egl/egl_external_platform.d"
         "${final.egl-wayland}/share/egl/egl_external_platform.d/10_nvidia_wayland.json"
