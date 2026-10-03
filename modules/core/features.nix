@@ -2,7 +2,7 @@ _:
 let
   flags = {
     desktop = "Interactive workstation UI (GUI apps, compositor support, theming). Does NOT control baseline CLI tools.";
-    development = "Language toolchains beyond the CLI baseline (node, go, rust via fenix).";
+    development = "Language toolchains beyond the CLI baseline (node, python). Project toolchains (go, rust, C/C++) come from each repo's devenv.";
     docker = "Docker. On NixOS this drives virtualisation.docker; elsewhere a privileged activation installs it via the host package manager and adds the user to the docker group.";
     avahi = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
     openssh = "Accept inbound ssh. On NixOS via services.openssh; elsewhere openssh-server from the host package manager.";
@@ -11,7 +11,6 @@ let
     theming = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, Plymouth).";
     media = "Image, video and audio tooling, plus the office suite.";
     vpn = "The GlobalProtect VPN: a NetworkManager openconnect profile provisioned from sops, signed into and toggled from wayle's network widget, plus a suspend/resume restore hook.";
-    rust = "The rust toolchain (fenix stable).";
     srv = "The srv local-site server and the mkcert CA trust that goes with it.";
     treeman = "treeman per-worktree DB orchestrator plus the treemand user daemon.";
     php = "PHP: static CLI interpreter plus FrankenPHP and composer.";

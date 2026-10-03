@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+_: {
   flake.modules.homeManager.development =
     {
       config,
@@ -11,49 +10,29 @@
       inherit (config.stubbe) gfx;
     in
     lib.mkIf config.features.development {
+      # Language toolchains (go, rust, the C/C++ linker stack) are deliberately
+      # absent: each repo's devenv owns them. Only what is repo-agnostic stays.
       home.packages =
         with pkgs;
         [
           devenv
 
           nodejs_24
-          pnpm
 
           prettier
           oxlint
           oxfmt
           stylua
 
-          gotools
-          templ
-          golangci-lint
-
           python3
-
-          mold
-          (lib.setPrio 15 clang)
-          sccache
-          cargo-sweep
-          cargo-nextest # preferred test runner: `cargo nextest run`
         ]
         ++ [
           # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
           # the .desktop entry rofi needs.
           (gfx.bundle { pkg = pkgs.neovide; })
-        ]
-        ++
-          lib.optional config.features.rust
-            inputs.fenix.packages.${pkgs.stdenv.hostPlatform.system}.stable.toolchain;
+        ];
 
       programs = {
-        go = {
-          enable = true;
-          package = pkgs.go_latest;
-          # GOBIN stays unset so it defaults to $GOPATH/bin, which modules/shell.nix
-          # keeps OFF PATH: `go install` must not shadow nix-pinned tooling.
-          env.GOPATH = "${config.home.homeDirectory}/.go";
-        };
-
         uv.enable = true;
 
         direnv = {
@@ -66,17 +45,6 @@
           # status line. Errors bypass it entirely and still surface.
           config.global.log_filter = "$.";
         };
-      };
-
-      home.sessionVariables.GOROOT = "${config.programs.go.package}/share/go";
-
-      # Deliberately not npm_config_store_dir: npm scans every npm_config_*
-      # variable, has no `store-dir` key, and warns on every invocation.
-      xdg.configFile."pnpm/rc" = {
-        force = true;
-        text = ''
-          store-dir=${config.home.homeDirectory}/.local/share/pnpm/store
-        '';
       };
 
       stubbe.setup.nodeCaBundle.script = ''

@@ -22,7 +22,9 @@ _: {
       virtualisation.oci-containers = {
         backend = "docker";
         containers.registry = {
-          image = "registry:2";
+          # registry:3 = distribution v3: same on-disk layout as v2, non-root
+          # by default. Major tag, not :latest, so a v4 can't surprise us.
+          image = "registry:3";
           ports = [ "5000:5000" ];
           volumes = [ "registry-data:/var/lib/registry" ];
           autoStart = true;
@@ -50,7 +52,7 @@ _: {
           merge required keys into /etc/docker/daemon.json
           (features.containerd-snapshotter, log rotation, insecure-registries for
           localhost:5000; drops legacy storage-driver), and start a local
-          registry:2 container on :5000 backed by the registry-data volume.
+          registry:3 container on :5000 backed by the registry-data volume.
         '';
         script = ''
           PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
@@ -118,13 +120,17 @@ _: {
           fi
           rm -f "$_stb_current" "$_stb_new"
 
-          if ! sudo docker inspect registry >/dev/null 2>&1; then
+          _stb_running=$(sudo docker inspect registry --format '{{.Config.Image}}' 2>/dev/null || true)
+          if [ "$_stb_running" != "registry:3" ]; then
+            # Missing, or still the legacy v2 container: (re)create. The
+            # registry-data volume carries over - v3 reads the v2 layout.
+            [ -n "$_stb_running" ] && sudo docker rm -f registry >/dev/null 2>&1
             sudo docker run -d \
               --name registry \
               --restart=always \
               -p 5000:5000 \
               -v registry-data:/var/lib/registry \
-              registry:2 >/dev/null
+              registry:3 >/dev/null
           fi
         '';
       };

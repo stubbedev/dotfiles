@@ -23,7 +23,6 @@
     # Inputs that ship a binary cache do NOT follow our nixpkgs: their caches are
     # built against their own locked nixpkgs, and rebasing every derivation onto
     # ours means no store-path hash matches and everything builds from source.
-    fenix.url = "github:nix-community/fenix";
     srv.url = "github:stubbedev/srv";
     treeman = {
       url = "github:stubbedev/treeman";
