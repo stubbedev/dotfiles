@@ -83,14 +83,9 @@ in
         channel.enable = false;
       };
 
-      # Persistent timers fire at the next boot after a missed run, and nix-gc
-      # saturates disk IO long enough to leave the desktop blank after login.
-      # Idle scheduling makes it yield to anything interactive.
+      # Idle scheduling makes the weekly timers yield to anything interactive.
       systemd.services = {
         nix-gc.serviceConfig = {
-          ExecStartPre = [
-            "${lib.getExe' config.nix.package "nix-env"} --profile /nix/var/nix/profiles/system --delete-generations +2"
-          ];
           IOSchedulingClass = "idle";
           CPUSchedulingPolicy = "idle";
         };

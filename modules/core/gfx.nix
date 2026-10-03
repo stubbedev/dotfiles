@@ -8,7 +8,14 @@ _: {
     }:
     let
       onNixOS = config.host.platform == "nixos";
-      inherit (pkgs.stubbe) mkGLWrapper;
+
+      # Host-driven, not probed: the /proc check silently answered false under
+      # pure eval and downgraded every wrapper on NVIDIA machines.
+      gl = pkgs.stubbe.gl {
+        hasNvidia = config.host.graphicsNvidia;
+        nvidiaVersion = config.host.graphicsNvidiaVersion;
+      };
+      mkGLWrapper = gl.wrap;
 
       linkAs =
         name: exe:

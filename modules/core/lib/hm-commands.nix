@@ -242,9 +242,9 @@
             platform = "all";
             group = "rebuild";
             complete = "custom";
-            desc = "No args: nh clean (all profiles + gcroots + store gc).";
+            desc = "No args: nix-collect-garbage -d (old generations + store gc).";
             extra = [ "With args: nix-collect-garbage <args>." ];
-            summary = "No args: nh clean; with args: nix-collect-garbage <args>";
+            summary = "No args: nix-collect-garbage -d; with args: pass them to nix-collect-garbage";
           }
           {
             name = "news";

@@ -27,6 +27,7 @@ in
         };
 
         host.installed = true;
+        host.graphicsNvidia = true;
 
         home-manager.users.${config.host.primaryUser} = {
           imports = builtins.attrValues homeModules;

@@ -136,6 +136,14 @@
       url = "github:devnullvoid/tridactyl";
       flake = false;
     };
+    # Prebuilt release binary. The version lives in this URL and is pinned by
+    # flake.lock like every other input; the overlay consumes the tree
+    # directly. Bump by hand: update the tag here, run `nix flake lock`.
+    yayamlls = {
+      url = "https://github.com/home-operations/yayamlls/releases/download/0.3.2/yayamlls_0.3.2_linux_amd64.tar.gz";
+      type = "tarball";
+      flake = false;
+    };
 
     wrappers = {
       url = "github:BirdeeHub/nix-wrapper-modules";

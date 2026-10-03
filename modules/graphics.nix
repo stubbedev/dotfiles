@@ -1,29 +1,4 @@
-_:
-let
-  evaluatedWithImpure = builtins.pathExists (/. + "/proc");
-
-  # Not sysfs: Nix's readFile fails there (kernel reports size = PAGE_SIZE,
-  # content is a few bytes, evaluator calls it "unexpected end-of-file").
-  nvidiaProcEntry = /. + "/proc/driver/nvidia/version";
-
-  hasNvidia =
-    if evaluatedWithImpure then
-      builtins.pathExists nvidiaProcEntry
-    else
-      throw ''
-        graphics.nix requires --impure to detect GPU hardware.
-        Rebuild with:
-          sudo nixos-rebuild switch --flake /etc/nixos/dotfiles#stubbe-nixos --impure
-        Without --impure, nvidia detection silently fails and your
-        working nvidia setup would be rebuilt away.
-      '';
-
-  # Plymouth attaches to simpledrm's framebuffer, which is freed when the real
-  # GPU driver loads, and then paints into nothing. simpledrm is CONFIG=y here,
-  # so blacklistedKernelModules and module_blacklist= are both no-ops.
-  disableSimpledrmTakeover = "initcall_blacklist=simpledrm_platform_driver_init";
-in
-{
+_: {
   flake.modules.nixos.graphics =
     {
       config,
@@ -31,6 +6,11 @@ in
       pkgs,
       ...
     }:
+    let
+      # Set per host (host.graphicsNvidia) instead of probing /proc, which
+      # forced --impure on every rebuild.
+      hasNvidia = config.host.graphicsNvidia;
+    in
     {
       hardware.graphics = {
         enable = true;
@@ -42,8 +22,8 @@ in
           config.boot.kernelPackages.nvidiaPackages.production.open
         ];
 
-        # Populates nvidiaProcEntry for the *next* rebuild. Fails -ENODEV
-        # without the hardware, which systemd-modules-load tolerates.
+        # Loads on non-NVIDIA hosts too, where it fails -ENODEV without the
+        # hardware; systemd-modules-load tolerates that.
         kernelModules = [ "nvidia" ];
 
         # nouveau is omitted deliberately; the kernel only binds whichever of
@@ -62,8 +42,11 @@ in
               "amdgpu"
             ];
 
+        # Plymouth attaches to simpledrm's framebuffer, which is freed when the real
+        # GPU driver loads, and then paints into nothing. simpledrm is CONFIG=y here,
+        # so blacklistedKernelModules and module_blacklist= are both no-ops.
         kernelParams = [
-          disableSimpledrmTakeover
+          "initcall_blacklist=simpledrm_platform_driver_init"
         ]
         ++ lib.optional hasNvidia "nvidia-drm.fbdev=1";
       };

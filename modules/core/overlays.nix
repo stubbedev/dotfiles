@@ -1,18 +1,22 @@
 { inputs, ... }:
 let
+  # Lazy and guarded: forced only when something consumes pkgs.nixgl (the
+  # standalone-HM NVIDIA path; NixOS hosts use system GL and never touch it).
+  # tryEval keeps pure evals - hm switch no longer passes --impure - from dying
+  # on the absolute-path access: they fall back to generic nixgl.
   nvidiaVersion =
     let
-      versionPath = /. + "/proc/driver/nvidia/version";
+      probed = builtins.tryEval (
+        let
+          versionPath = /. + "/proc/driver/nvidia/version";
+        in
+        if builtins.pathExists versionPath then
+          builtins.match ".*x86_64[[:space:]]+([0-9.]+)[[:space:]]+.*" (builtins.readFile versionPath)
+        else
+          null
+      );
     in
-    if builtins.pathExists versionPath then
-      let
-        match = builtins.match ".*x86_64[[:space:]]+([0-9.]+)[[:space:]]+.*" (
-          builtins.readFile versionPath
-        );
-      in
-      if match != null then builtins.head match else null
-    else
-      null;
+    if probed.success && probed.value != null then builtins.head probed.value else null;
 in
 {
   flake.overlays = {
@@ -60,50 +64,15 @@ in
       };
     };
 
-    # Go YAML language server, replacing node's yaml-language-server: consumed
-    # as the upstream release binary -- the same prebuilt pattern as wayle and
-    # claude-code. The latest tag is scraped at eval time from the releases
-    # atom feed, and the asset download rides the github.com web tier, so
-    # neither touches the api.github.com quota the github-token in secrets
-    # exists for (that one serves `nix flake update` daemon-side, where nix.conf
-    # access-tokens apply; the evaluator cannot authenticate: builtins.fetchurl
-    # has no headers support and query-param tokens are long rejected). This
-    # only works because every switch and check runs --impure (see README); the
-    # fetcher cache pins a tag for an hour. Building from source instead is
-    # what forces a vendorHash: go.sum carries no hashes nix can use. Delete
-    # once nixpkgs packages it.
-    yayamlls =
-      final: _prev:
-      let
-        feed = builtins.readFile (
-          builtins.fetchurl {
-            url = "https://github.com/home-operations/yayamlls/releases.atom";
-            name = "releases.xml";
-          }
-        );
-        # splitString "<title>" yields [ prelude, feedTitle, tag0, tag1, ... ];
-        # entries are newest-first, so tag0 is the latest release.
-        tag = final.lib.head (
-          final.lib.splitString "</title>" (
-            final.lib.head (final.lib.tail (final.lib.tail (final.lib.splitString "<title>" feed)))
-          )
-        );
-        assetArch =
-          {
-            x86_64-linux = "amd64";
-            aarch64-linux = "arm64";
-          }
-          .${final.stdenv.hostPlatform.system}
-            or (throw "yayamlls: no release asset for ${final.stdenv.hostPlatform.system}");
-        bin = fetchTarball {
-          url = "https://github.com/home-operations/yayamlls/releases/download/${tag}/yayamlls_${tag}_linux_${assetArch}.tar.gz";
-        };
-      in
-      {
-        yayamlls = final.runCommand "yayamlls-${tag}" { meta.mainProgram = "yayamlls"; } ''
-          install -Dm555 ${bin}/yayamlls $out/bin/yayamlls
-        '';
-      };
+    # Prebuilt release binary. The version lives in the `yayamlls` input URL
+    # and is pinned by flake.lock like every other input; no hashes or
+    # versions are written down here. (It used to scrape the releases atom at
+    # eval time, which forced --impure on every rebuild.)
+    yayamlls = final: _prev: {
+      yayamlls = final.runCommand "yayamlls" { meta.mainProgram = "yayamlls"; } ''
+        install -Dm555 ${inputs.yayamlls}/yayamlls $out/bin/yayamlls
+      '';
+    };
 
     phpantom_lsp = final: _prev: {
       phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;

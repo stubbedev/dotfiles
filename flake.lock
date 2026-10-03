@@ -1112,6 +1112,7 @@
         "wayle": "wayle",
         "wrappers": "wrappers",
         "xilo": "xilo",
+        "yayamlls": "yayamlls",
         "zsh-fzf-artisan": "zsh-fzf-artisan",
         "zsh-fzf-npm-run": "zsh-fzf-npm-run",
         "zsh-vim-mode": "zsh-vim-mode"
@@ -1494,6 +1495,19 @@
         "owner": "stubbedev",
         "repo": "xilo",
         "type": "github"
+      }
+    },
+    "yayamlls": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790547496,
+        "narHash": "sha256-8LPRWw6VKOXbWOxacFMfnYviaRJ/SUyOSv3l0S/ef7w=",
+        "type": "tarball",
+        "url": "https://github.com/home-operations/yayamlls/releases/download/0.3.2/yayamlls_0.3.2_linux_amd64.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://github.com/home-operations/yayamlls/releases/download/0.3.2/yayamlls_0.3.2_linux_amd64.tar.gz"
       }
     },
     "zsh-fzf-artisan": {

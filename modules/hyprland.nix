@@ -213,7 +213,7 @@ in
           -- non-NixOS session manager, so set them via hl.env here too.
           hl.env("XCURSOR_THEME", "${pkgs.stubbe.theme.cursor}")
           hl.env("XCURSOR_SIZE", "${toString pkgs.stubbe.theme.cursorSize}")
-          ${lib.optionalString pkgs.stubbe.hasNvidia ''
+          ${lib.optionalString config.host.graphicsNvidia ''
             hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
             hl.env("LIBVA_DRIVER_NAME", "nvidia")
             hl.env("MOZ_DISABLE_RDD_SANDBOX", "1")

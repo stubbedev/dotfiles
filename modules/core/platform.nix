@@ -2,20 +2,47 @@ _: {
   flake.modules.homeManager.platform =
     { lib, ... }:
     {
-      options.host.platform = lib.mkOption {
-        type = lib.types.enum [
-          "linux"
-          "nixos"
-        ];
-        default = "linux";
-        description = ''
-          Host platform. "linux" means home-manager on a non-NixOS distro
-          (Fedora, Ubuntu, …), where the privileged half of each aspect —
-          /etc/pam.d, udev rules, polkit, apparmor, host packages — is
-          managed by `stubbe.setup.<name>.privileged` activations. "nixos"
-          means the matching NixOS module owns those files instead, and every
-          privileged activation is gated off.
-        '';
+      options.host = {
+        platform = lib.mkOption {
+          type = lib.types.enum [
+            "linux"
+            "nixos"
+          ];
+          default = "linux";
+          description = ''
+            Host platform. "linux" means home-manager on a non-NixOS distro
+            (Fedora, Ubuntu, …), where the privileged half of each aspect —
+            /etc/pam.d, udev rules, polkit, apparmor, host packages — is
+            managed by `stubbe.setup.<name>.privileged` activations. "nixos"
+            means the matching NixOS module owns those files instead, and every
+            privileged activation is gated off.
+          '';
+        };
+
+        graphicsNvidia = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            The machine's display GPU is NVIDIA. Drives the standalone
+            home-manager GL wiring: modules/core/pkgs/gl.nix picks the NVIDIA
+            nixGL variant and its EGL platform libs when true, the Intel/AMD
+            one when false. NixOS hosts carry the same option on the NixOS
+            side, where modules/graphics.nix selects the kernel driver stack
+            from it. Replaces the /proc probe, which pure eval silently
+            answered false.
+          '';
+        };
+
+        graphicsNvidiaVersion = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Version of the NVIDIA driver the host OS runs - on NixOS whatever
+            hardware.nvidia.package resolves to (e.g. "595.104.02"), elsewhere
+            the distro package's version. nixGL's NVIDIA GLX/EGL libraries
+            must match it. Read only when host.graphicsNvidia is true.
+          '';
+        };
       };
     };
 
@@ -77,6 +104,18 @@ _: {
               2. Audit the persistence list in modules/impermanence.nix; add
                  anything host-specific.
               3. Flip this flag to true; rebuild; reboot.
+          '';
+        };
+
+        graphicsNvidia = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            The host's display GPU is NVIDIA. Replaces the /proc probe that
+            forced --impure on every rebuild: modules/graphics.nix selects
+            the nvidia driver stack when true and the intel/amdgpu defaults
+            when false. Set it in the host's declaration
+            (modules/hosts/<name>.nix).
           '';
         };
       };

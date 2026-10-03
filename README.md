@@ -111,11 +111,8 @@ hm switch --flake "path:$HOME/.stubbe"
 Or directly with home-manager:
 
 ```sh
-home-manager switch --flake .#stubbe --impure
+home-manager switch --flake .#stubbe
 ```
-
-`--impure` is required because activation scripts read `$HOME` and detect the
-host distribution at evaluation time.
 
 ## NIXOS INSTALLER ISO
 

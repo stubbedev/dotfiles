@@ -1,5 +1,4 @@
 # hm: the wrapper around home-manager/nixos-rebuild that every host drives.
-# nh stays on PATH: the wrapper shells out to it, and it is useful directly.
 _: {
   flake.modules.homeManager.script-hm =
     {
@@ -38,30 +37,39 @@ _: {
             echo "''${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
           }
 
-          run_nh() {
-            local subcmd="$1"; shift
-            local sub=home ref="$hm_flake_ref"
-            if is_nixos; then
-              sub=os
-              [ -n "''${HM_NIXOS_CONFIG:-}" ] && ref="$ref#$HM_NIXOS_CONFIG"
-            fi
-            nh "$sub" "$subcmd" "$ref" -- --impure "$@"
-          }
-
           run_hm_subcmd() {
             local subcmd="$1"; shift
 
             case "$subcmd" in
               switch|boot|test|build|repl)
-                if ! is_nixos; then
+                if is_nixos; then
+                  local ref
+                  ref="$hm_flake_ref#$(nixos_attr)"
+                  case "$subcmd" in
+                    repl)
+                      nix repl "$ref" "$@"
+                      ;;
+                    switch|boot|test)
+                      sudo nixos-rebuild "$subcmd" --flake "$ref" "$@"
+                      ;;
+                    *)
+                      nixos-rebuild "$subcmd" --flake "$ref" "$@"
+                      ;;
+                  esac
+                else
                   case "$subcmd" in
                     boot|test)
                       echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
                       return 1
                       ;;
+                    repl)
+                      nix repl "$hm_flake_ref#homeConfigurations.$USER" "$@"
+                      ;;
+                    *)
+                      home-manager "$subcmd" --flake "$hm_flake_ref" "$@"
+                      ;;
                   esac
                 fi
-                run_nh "$subcmd" "$@"
                 return
                 ;;
             esac
@@ -79,7 +87,7 @@ _: {
                   return 1
                   ;;
               esac
-              "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" --impure "$@"
+              "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" "$@"
             else
               case "$subcmd" in
                 boot|test|dry-activate|dry-build|build-vm|build-vm-with-bootloader|repl)
@@ -87,7 +95,7 @@ _: {
                   return 1
                   ;;
                 *)
-                  home-manager "$subcmd" --flake "$hm_flake_ref" --impure "$@"
+                  home-manager "$subcmd" --flake "$hm_flake_ref" "$@"
                   ;;
               esac
             fi
@@ -95,7 +103,7 @@ _: {
 
           run_rollback() {
             if is_nixos; then
-              nh os rollback "$@"
+              sudo nixos-rebuild switch --rollback "$@"
             else
               echo "hm rollback: not implemented for standalone home-manager. Use 'home-manager generations' to list, then run '<gen>/activate' from the desired generation." >&2
               return 2
@@ -105,9 +113,9 @@ _: {
           run_gc() {
             if [ "$#" -eq 0 ]; then
               if is_nixos; then
-                nh clean all
+                sudo nix-collect-garbage -d
               else
-                nh clean user
+                nix-collect-garbage -d
               fi
               return
             fi
@@ -121,7 +129,7 @@ _: {
 
           run_generations() {
             if is_nixos; then
-              nh os info "$@"
+              nixos-rebuild list-generations "$@"
             else
               home-manager generations "$@"
             fi
@@ -314,12 +322,11 @@ _: {
           ${hmSpec.renderExpandedHelp "rebuild"}
           ${hmSpec.renderHelp "meta"}
 
-          switch/boot/test/build/repl, gc, generations, and rollback route through
-          `nh` (version diff + progress output). The remaining verbs (dry-build,
-          dry-activate, build-vm*, news, instantiate) use raw nixos-rebuild/home-manager.
+          All rebuild verbs use raw nixos-rebuild/home-manager: no nh, no nom,
+          and no --impure outside `hm iso` (the flake evaluates purely).
 
           On NixOS the build/activate verbs delegate to `[sudo ]nixos-rebuild
-          <cmd> --flake <flake>#<host> --impure`. The host attr defaults to
+          <cmd> --flake <flake>#<host>`. The host attr defaults to
           `hostname -s`; override with HM_NIXOS_CONFIG=<attr>. Verbs without
           a NixOS counterpart (news/instantiate) error on NixOS; verbs without
           a home-manager counterpart (boot/test/dry-activate/dry-build/build-vm
@@ -695,16 +702,13 @@ _: {
                 echo "hm: '$1' is not supported on NixOS — the home-manager CLI is not available in submodule mode. Try 'hm help'." >&2
                 exit 2
               fi
-              home-manager --impure "$@"
+              home-manager "$@"
               ;;
           esac
         '';
       };
     in
     {
-      home.packages = [
-        hm
-        pkgs.nh
-      ];
+      home.packages = [ hm ];
     };
 }
