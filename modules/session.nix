@@ -43,9 +43,6 @@
         SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
         SSL_CERT_DIR = "/etc/ssl/certs";
 
-        # pnpm lands binaries directly here, with no /bin subdir.
-        PNPM_HOME = "${config.home.homeDirectory}/.local/share/pnpm";
-
         # Silences harmless but noisy VA-API probe failures (Electron bundles an
         # old libva; the 32-bit driver is the wrong ELF class). Mutes ALL libva
         # errors, so raise it when debugging video acceleration.

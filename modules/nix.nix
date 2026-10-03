@@ -132,8 +132,6 @@ in
         with pkgs;
         [
           nix-zsh-completions
-          cachix
-          attic-client
           xilo
           nixd
           nixdoc

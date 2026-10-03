@@ -39,7 +39,6 @@
               "/etc/profiles/per-user/$USER/bin"
               "$HOME/.local/bin"
               "$HOME/.config/composer/vendor/bin"  # PHP composer global
-              "$HOME/.local/share/pnpm"             # pnpm global (PNPM_HOME)
               "/sbin"
             )
             local p

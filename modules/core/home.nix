@@ -31,7 +31,6 @@
           config.stubbe.paths.nixBin
           "$HOME/.local/bin"
           "$HOME/.config/composer/vendor/bin"
-          "$HOME/.local/share/pnpm"
           "/usr/local/bin"
           "/usr/bin"
           "/bin"
