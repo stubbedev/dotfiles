@@ -709,9 +709,50 @@
         ${lib.getExe pkgs.zoxide} init zsh > $out/init.zsh
       '';
 
+      # --no-tui: auto-activated shells skip the TUI chrome (status line, task
+      # log preview); devenv falls back to plain logs.
       devenvInit = mkInit "devenv" ''
-        HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh > $out/init.zsh
+        HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh -- --no-tui > $out/init.zsh
         HOME=$TMPDIR COMPLETE=zsh ${lib.getExe pkgs.devenv} -- >> $out/init.zsh
+        cat >> $out/init.zsh <<'EOF'
+
+        # devenv trusts exact paths, so every worktree of an allowed repo
+        # would need its own `devenv allow`. A worktree's .git file names the
+        # main checkout, so its trust is inherited: when the main checkout is
+        # in the DB, an entry for the worktree is appended here. Registered
+        # ahead of devenv's own precmd hook, which re-reads the DB every
+        # prompt and picks the entry up same-prompt.
+        _stubbe_devenv_trust() {
+          local dir="''${PWD:a}"
+          while [[ ! -f "$dir/devenv.nix" ]]; do
+            [[ "$dir" == / ]] && return 0
+            dir="''${dir:h}"
+          done
+          local db="''${XDG_DATA_HOME:-$HOME/.local/share}/devenv/allowed"
+          [[ -s "$db" ]] && grep -qF "\"path\":\"$dir\"" "$db" && return 0
+          [[ -f "$dir/.git" ]] || return 0
+          local gitdir
+          gitdir="$(<"$dir/.git")"
+          [[ "$gitdir" == gitdir:\ * ]] || return 0
+          gitdir="''${gitdir#gitdir: }"
+          [[ "$gitdir" == /* ]] || gitdir="$dir/$gitdir"
+          gitdir="''${gitdir:a}"
+          local main
+          if [[ "$gitdir" == */.git/worktrees/* ]]; then
+            main="''${gitdir%%/.git/worktrees/*}"
+          elif [[ "$gitdir" == */worktrees/* ]]; then
+            main="''${gitdir%%/worktrees/*}"
+          else
+            return 0
+          fi
+          [[ -s "$db" ]] && grep -qF "\"path\":\"$main\"" "$db" || return 0
+          mkdir -p -- "''${db:h}"
+          printf '{"path":"%s"}\n' "$dir" >>! "$db"
+        }
+        if (( ! ''${precmd_functions[(I)_stubbe_devenv_trust]} )); then
+          precmd_functions=(_stubbe_devenv_trust $precmd_functions)
+        fi
+        EOF
       '';
 
       # -u because the sandbox build user fails compaudit's ownership check,
