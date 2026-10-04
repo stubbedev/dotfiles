@@ -1202,11 +1202,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790916275,
-        "narHash": "sha256-kxXAOfjpok60fR4X5heFr893td+r0y1I3b50FadjdmE=",
+        "lastModified": 1791105775,
+        "narHash": "sha256-l+NYZo9MsdVRE3VTJD4UuT/WwDBedyOapaTSO3N8lBc=",
         "owner": "stubbedev",
         "repo": "xilo",
-        "rev": "02b4ec2bc50b26aa4d12cdab35d4f3024fb7ec49",
+        "rev": "54572601470a744c81c78fb73c70968f7b37b2c4",
         "type": "github"
       },
       "original": {
