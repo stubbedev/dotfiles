@@ -75,19 +75,6 @@ _: {
           -F $'#{pane_id}\t#{pane_current_path}\t#{pane_current_command}' 2>/dev/null)
       }
 
-      if command -v direnv >/dev/null 2>&1; then
-        if [[ -f "$SELECTED/.envrc" ]] \
-            && grep -qxFe 'dotenv_if_exists' -e 'dotenv' "$SELECTED/.envrc"; then
-          (
-            if grep -qxF 'dotenv_if_exists' "$SELECTED/.envrc" \
-                && ! grep -qxF 'dotenv' "$SELECTED/.envrc"; then
-              direnv allow "$SELECTED" >/dev/null 2>&1
-            else
-              zsh -ic "cd ''${(q)SELECTED} && denv on" >/dev/null 2>&1
-            fi
-          ) &!
-        fi
-      fi
       if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
         tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
         tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1

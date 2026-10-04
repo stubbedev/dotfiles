@@ -1,13 +1,15 @@
-# The rasi writer in modules/core/pkgs/gen.nix is ours, so nothing but this
-# check stands between a bad edit and rofi silently falling back to its
-# built-in theme at runtime. Feeds the deployed files to rofi's own parser.
+# Nothing bespoke is deployed any more: modules/rofi.nix hands attrsets to
+# programs.rofi, which renders config.rasi and the theme. This check still
+# feeds the rendered pair to rofi the way rofi loads them at runtime, so a
+# bad attrset cannot ship a theme rofi silently falls back from.
 { self, ... }:
 {
   perSystem =
     { pkgs, ... }:
     let
-      deployed = self.homeConfigurations.stubbe.config.xdg.configFile;
-      themeOf = name: deployed."rofi/${name}".source;
+      hm = self.homeConfigurations.stubbe.config;
+      themeRasi = hm.xdg.dataFile."rofi/themes/custom.rasi".source;
+      configRasi = hm.home.file."${hm.programs.rofi.configPath}".source;
     in
     {
       checks.rofi-theme = pkgs.stubbe.check {
@@ -16,36 +18,40 @@
         text = ''
           set -euo pipefail
 
-          # @import resolves relative to the theme's own directory, so the
-          # palette has to sit next to the theme rofi is handed.
           dir="$(mktemp -d)"
           # Without a writable HOME rofi warns about its cache dir on every
           # run, and the stderr check below cannot tell that from a real
           # parse error.
           export HOME="$dir/home" XDG_CACHE_HOME="$dir/cache" XDG_RUNTIME_DIR="$dir/run"
+          export XDG_CONFIG_HOME="$dir" XDG_DATA_HOME="$dir/data"
           mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_RUNTIME_DIR"
-          cp ${themeOf "catppuccin-mocha.rasi"} "$dir/catppuccin-mocha.rasi"
-          cp ${themeOf "catppuccin-default.rasi"} "$dir/catppuccin-default.rasi"
-          cp ${themeOf "config.rasi"} "$dir/config.rasi"
+          # The layout rofi sees at runtime: config.rasi under
+          # XDG_CONFIG_HOME, its @theme "custom" resolving from rofi's theme
+          # search path.
+          install -D ${configRasi} "$dir/rofi/config.rasi"
+          install -D ${themeRasi} "$dir/data/rofi/themes/custom.rasi"
 
-          for theme in catppuccin-default config; do
-            if ! rofi -no-config -theme "$dir/$theme.rasi" -dump-theme >"$dir/$theme.dump" 2>"$dir/$theme.err"; then
-              echo "rofi rejected the generated $theme.rasi:" >&2
-              cat "$dir/$theme.err" >&2
-              exit 1
-            fi
-            # rofi exits 0 on a theme it could not parse, reporting the
-            # failure on stderr, so an empty error stream is the real signal.
-            if [ -s "$dir/$theme.err" ]; then
-              echo "rofi parsed $theme.rasi with errors:" >&2
-              cat "$dir/$theme.err" >&2
-              exit 1
-            fi
+          if ! rofi -dump-theme >"$dir/dump" 2>"$dir/err"; then
+            echo "rofi rejected the rendered config or theme:" >&2
+            cat "$dir/err" >&2
+            exit 1
+          fi
+          # rofi exits 0 on a file it could not parse, reporting the
+          # failure on stderr, so an empty error stream is the real signal.
+          if [ -s "$dir/err" ]; then
+            echo "rofi parsed the rendered config or theme with errors:" >&2
+            cat "$dir/err" >&2
+            exit 1
+          fi
+
+          for section in window mainbox inputbar listview element-text; do
+            grep -q "^$section {" "$dir/data/rofi/themes/custom.rasi" ||
+              { echo "missing section: $section" >&2; exit 1; }
           done
 
-          # The palette must actually reach the theme: a broken @import
+          # The palette must actually reach the theme: a misrouted file
           # parses clean but drops every colour.
-          grep -q "mauve" "$dir/catppuccin-default.dump" ||
+          grep -q "mauve" "$dir/dump" ||
             { echo "palette did not resolve into the theme" >&2; exit 1; }
 
           touch "$out"

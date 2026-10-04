@@ -63,8 +63,12 @@ _: {
           ".treeman.local.yaml"
           ".treeman/"
           ".treeman-hooks/"
-          ".envrc"
-          ".direnv/"
+          # devenv's machine-local state and overrides, exactly its own
+          # init scaffold: .devenv state dir, .devenv.flake.nix, local inputs.
+          ".devenv*"
+          "devenv.local.nix"
+          "devenv.local.yaml"
+          ".pre-commit-config.yaml"
         ];
         settings = {
           user = {

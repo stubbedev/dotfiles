@@ -167,16 +167,26 @@ in
 
       xdg.mimeApps = {
         enable = true;
+        # Glob keys expand against shared-mime-info at eval time; exact keys
+        # would keep precedence over a glob match. The NixOS half above keeps
+        # the explicit list: xdg.mime has no glob support.
         defaultApplications =
           let
             browser =
               if config.host.platform == "nixos" then "firefox.desktop" else "com.google.Chrome.desktop";
           in
           {
+            "x-scheme-handler/http" = browser;
+            "x-scheme-handler/https" = browser;
+            "x-scheme-handler/about" = browser;
+            "x-scheme-handler/unknown" = browser;
+            "text/html" = browser;
+            "application/xhtml+xml" = browser;
             "inode/directory" = "pcmanfm.desktop";
             "x-scheme-handler/file" = "pcmanfm.desktop";
-          }
-          // mimeDefaults browser lib;
+            "video/*" = "mpv.desktop";
+            "image/*" = "imv.desktop";
+          };
       };
 
       # appimageTools wrappers build their FHS sandbox with bubblewrap, which

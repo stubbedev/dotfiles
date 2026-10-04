@@ -122,7 +122,6 @@ in
     }:
     let
       onNixOS = config.host.platform == "nixos";
-      profilesDir = "${config.home.homeDirectory}/.local/state/nix/profiles";
       accessTokensFile = "${config.home.homeDirectory}/.config/nix/access-tokens.conf";
     in
     {
@@ -137,41 +136,15 @@ in
         ]
       );
 
-      # home-manager never prunes: its generation symlinks accumulate forever
-      # and pin every store path they reference.
-      stubbe.setup.pruneNixGenerations.script =
-        lib.concatMapStrings
-          (profile: ''
-            if [ -e ${lib.escapeShellArg "${profilesDir}/${profile}"} ]; then
-              $DRY_RUN_CMD ${lib.getExe' config.nix.package "nix-env"} \
-                --profile ${lib.escapeShellArg "${profilesDir}/${profile}"} --delete-generations +2 || true
-            fi
-          '')
-          [
-            "home-manager"
-            "profile"
-            "channels"
-          ];
-
-      systemd.user = lib.mkIf (!onNixOS) {
-        services.nix-collect-garbage = {
-          Unit.Description = "Collect unreachable nix store paths";
-          Service = {
-            Type = "oneshot";
-            ExecStart = lib.getExe' config.nix.package "nix-collect-garbage";
-          };
-        };
-
-        timers.nix-collect-garbage = {
-          Unit.Description = "Weekly nix store garbage collection";
-          Timer = {
-            OnCalendar = "weekly";
-            Persistent = true;
-            RandomizedDelaySec = "1h";
-            Unit = "nix-collect-garbage.service";
-          };
-          Install.WantedBy = [ "timers.target" ];
-        };
+      # Weekly expiry replaces both the old activation-time +2 prune of the
+      # home-manager/profile/channels profiles and the hand-rolled store GC
+      # timer. Store cleanup stays standalone-only: on NixOS the system
+      # nix.gc above already sweeps the whole store weekly.
+      services.home-manager.autoExpire = {
+        enable = true;
+        timestamp = "-30 days";
+        frequency = "weekly";
+        store.cleanup = lib.mkIf (!onNixOS) true;
       };
 
       # Anonymous api.github.com allows 60 requests/hr, and `nix flake update`

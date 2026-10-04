@@ -48,7 +48,7 @@ _: {
     }:
     let
       theme = pkgs.stubbe.theme;
-      qtCtConf = pkgs.stubbe.gen.ini "qtct.conf" {
+      qtCtSettings = {
         Appearance = {
           color_scheme_path = "";
           custom_palette = false;
@@ -74,6 +74,13 @@ _: {
       };
     in
     lib.mkIf config.features.theming {
+      home.pointerCursor = {
+        enable = true;
+        name = theme.cursor;
+        package = pkgs.vimix-cursors;
+        size = theme.cursorSize;
+      };
+
       gtk = {
         enable = true;
 
@@ -91,16 +98,26 @@ _: {
           package = pkgs.tela-circle-icon-theme.override { colorVariants = [ "purple" ]; };
         };
 
-        cursorTheme = {
-          name = theme.cursor;
-          package = pkgs.vimix-cursors;
-          size = theme.cursorSize;
-        };
-
         gtk3.extraConfig.gtk-application-prefer-dark-theme = 1;
         gtk4 = {
           theme = null;
           extraConfig.gtk-application-prefer-dark-theme = 1;
+        };
+      };
+
+      # Style stays qtct-managed (Appearance.style above): qt.style.name would
+      # also export QT_STYLE_OVERRIDE, which the current setup never does.
+      qt = {
+        enable = true;
+        platformTheme.name = "qtct";
+
+        qt5ctSettings = qtCtSettings;
+        qt6ctSettings = qtCtSettings;
+
+        kvantum = {
+          enable = true;
+          themes = [ pkgs.catppuccin-kvantum ];
+          settings.General.theme = theme.kvantum;
         };
       };
 
@@ -125,15 +142,17 @@ _: {
           hicolor-icon-theme
           gnome-themes-extra # includes the Adwaita-dark GTK theme
 
-          libsForQt5.qt5ct
-          kdePackages.qt6ct
+          # qtct installs its own launchers; these style plugins stay manual
+          # because qt.style.name would export QT_STYLE_OVERRIDE.
           libsForQt5.qtstyleplugin-kvantum
           kdePackages.qtstyleplugin-kvantum
         ];
 
         file = {
-          ".icons/${theme.cursor}".source = "${pkgs.vimix-cursors}/share/icons/${theme.cursor}";
-          ".local/share/icons/${theme.cursor}".source = "${pkgs.vimix-cursors}/share/icons/${theme.cursor}";
+          # dotIcons writes this; the live copy is an LXAppearance leftover
+          # inheriting DMZ-Black, a theme no longer installed.
+          ".icons/default/index.theme".force = true;
+
           ".local/share/icons/Vimix-dark".source = "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark";
 
           ".local/share/flatpak/overrides/global".source = pkgs.stubbe.gen.ini "flatpak-global" {
@@ -153,15 +172,6 @@ _: {
             force = true;
           };
         };
-      };
-
-      xdg.configFile = {
-        "Kvantum/kvantum.kvconfig".source = pkgs.stubbe.gen.ini "kvantum.kvconfig" {
-          General.theme = theme.kvantum;
-        };
-
-        "qt5ct/qt5ct.conf".source = qtCtConf;
-        "qt6ct/qt6ct.conf".source = qtCtConf;
       };
 
       # kdeglobals must be a real file, not a store symlink: Flatpak sandboxes

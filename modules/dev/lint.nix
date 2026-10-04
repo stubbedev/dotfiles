@@ -13,7 +13,7 @@
         ];
         # Scoped to tracked files, which is exactly what ends up in the flake
         # source the checks run against. Walking `.` instead would follow the
-        # result/ and .direnv symlinks into the read-only store.
+        # result/ symlinks into the read-only store.
         text = ''
           cd "$(git rev-parse --show-toplevel)"
           statix fix .

@@ -31,29 +31,6 @@
       hmSpec = pkgs.stubbe.hm;
 
       zshFiles = {
-        "paths" = ''
-
-          function _paths_init {
-            local -a STUBBE_PATHS=(
-              "$HOME/.nix-profile/bin"
-              "/etc/profiles/per-user/$USER/bin"
-              "$HOME/.local/bin"
-              "$HOME/.config/composer/vendor/bin"  # PHP composer global
-              "/sbin"
-            )
-            local p
-            local -a new_paths=()
-            for p in "''${STUBBE_PATHS[@]}"; do
-              [[ -d "$p" ]] || continue
-              [[ ":$PATH:" == *":$p:"* ]] && continue
-              new_paths+=("$p")
-            done
-            (( ''${#new_paths} )) && PATH="''${(j/:/)new_paths}:$PATH"
-            export PATH
-          }
-          _paths_init
-          unfunction _paths_init
-        '';
         "apaths" = ''
 
           function _apaths_init {
@@ -221,51 +198,6 @@
               clear
             }
           fi
-
-          if is_binary direnv; then
-            function denv {
-              local marker='dotenv_if_exists'
-              local action="''${1:-status}"
-              case "$action" in
-                on)
-                  local _content=""
-                  if [[ -f .envrc ]]; then
-                    _content="$(grep -vxF 'dotenv' .envrc || true)"
-                  fi
-                  if ! print -r -- "$_content" | grep -qxF "$marker"; then
-                    if [[ -n "$_content" ]]; then
-                      _content="''${_content}"$'\n'"$marker"
-                    else
-                      _content="$marker"
-                    fi
-                  fi
-                  print -r -- "$_content" > .envrc
-                  direnv allow
-                  ;;
-                off)
-                  direnv revoke 2>/dev/null
-                  if [[ -f .envrc ]]; then
-                    local _remaining
-                    _remaining=$(grep -vxF -e "$marker" -e 'dotenv' .envrc || true)
-                    if [[ -z "$_remaining" ]]; then
-                      rm -f .envrc
-                      echo "denv: removed .envrc"
-                    else
-                      print -r -- "$_remaining" > .envrc
-                      echo "denv: stripped marker from .envrc (kept custom content)"
-                    fi
-                  fi
-                  ;;
-                status)
-                  direnv status
-                  ;;
-                *)
-                  echo "denv: unknown action '$action' (use: on|off|status)" >&2
-                  return 1
-                  ;;
-              esac
-            }
-          fi
         '';
         "aliases" = ''
           alias la='ls -laF'
@@ -403,21 +335,6 @@
           }
           _settings_init
           unfunction _settings_init
-        '';
-        "completions/_denv" = ''
-          #compdef denv
-
-          _denv() {
-            local -a actions
-            actions=(
-              'on:write .envrc (dotenv) and allow it'
-              'off:revoke and delete .envrc if we created it'
-              'status:show direnv status for current directory'
-            )
-            _describe -t actions 'denv action' actions
-          }
-
-          _denv "$@"
         '';
         "completions/_git_shortcuts" = ''
           _git_shortcuts() {
@@ -736,7 +653,6 @@
         dir=$out/share/zsh/site-functions
         mkdir -p $dir
         ${lib.getExe pkgs.lazygit} completion zsh > $dir/_lazygit
-        cp ${pkgs.hcloud}/share/zsh/site-functions/_hcloud $dir/_hcloud
         ${lib.optionalString config.features.srv ''
           ${inputs.srv.packages.${system}.srv}/bin/srv completion zsh > $dir/_srv
         ''}
@@ -745,9 +661,6 @@
         ''}
         ${lib.optionalString config.features.wayle ''
           ${pkgs.wayle}/bin/wayle completions zsh > $dir/_wayle
-        ''}
-        ${lib.optionalString config.features.docker ''
-          cp ${pkgs.docker}/share/zsh/site-functions/_docker $dir/_docker
         ''}
         ${lib.optionalString config.features.development ''
           ${lib.getExe' pkgs.xilo "xilo"} completion zsh > $dir/_xilo
@@ -796,8 +709,9 @@
         ${lib.getExe pkgs.zoxide} init zsh > $out/init.zsh
       '';
 
-      direnvInit = mkInit "direnv" ''
-        ${lib.getExe pkgs.direnv} hook zsh > $out/init.zsh
+      devenvInit = mkInit "devenv" ''
+        HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh > $out/init.zsh
+        HOME=$TMPDIR COMPLETE=zsh ${lib.getExe pkgs.devenv} -- >> $out/init.zsh
       '';
 
       # -u because the sandbox build user fails compaudit's ownership check,
@@ -868,7 +782,6 @@
         };
         initContent = lib.mkMerge [
           (lib.mkOrder 500 ''
-            source ${zshConfig}/paths
             source ${zshConfig}/apaths
             source ${zshConfig}/sysfuncs
             source ${zshConfig}/funcs
@@ -883,7 +796,7 @@
             (( $+commands[fzf] ))      && source ${fzfInit}
             (( $+commands[starship] )) && source ${starshipInit}
             (( $+commands[zoxide] ))   && source ${zoxideInit}
-            (( $+commands[direnv] ))   && source ${direnvInit}
+            (( $+commands[devenv] ))   && source ${devenvInit}
             _patina_init="${config.xdg.cacheHome}/zsh/patina-init.zsh"
             [[ -f "$_patina_init" ]] && source "$_patina_init"
             unset _patina_init
@@ -1436,19 +1349,6 @@
         };
       };
 
-      # The hook script is generated at switch time, not built: `zsh-patina
-      # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
-      # script never starts the daemon itself, so without this unit highlighting
-      # silently does nothing after a reboot.
-      systemd.user.services.zsh-patina = {
-        Unit.Description = "zsh-patina syntax highlighting daemon";
-        Service = {
-          ExecStart = "${lib.getExe pkgs.zsh-patina} start --no-daemon";
-          Restart = "on-failure";
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-
       stubbe.setup.zshPatina.script = ''
         export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
         _patina_cache='${config.xdg.cacheHome}/zsh'
@@ -1462,7 +1362,20 @@
         unset _patina_cache
       '';
 
+      # The hook script is generated at switch time, not built: `zsh-patina
+      # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
+      # script never starts the daemon itself, so without this unit highlighting
+      # silently does nothing after a reboot.
       systemd.user = {
+        services.zsh-patina = {
+          Unit.Description = "zsh-patina syntax highlighting daemon";
+          Service = {
+            ExecStart = "${lib.getExe pkgs.zsh-patina} start --no-daemon";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "default.target" ];
+        };
+
         services.zsh-avahi-hosts = {
           Unit.Description = "Refresh avahi .local host cache for zsh completion";
           Service = {

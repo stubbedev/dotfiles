@@ -1,4 +1,5 @@
-_: {
+{ inputs, ... }:
+{
   flake.modules.homeManager.development =
     {
       config,
@@ -15,8 +16,6 @@ _: {
       home.packages =
         with pkgs;
         [
-          devenv
-
           nodejs_24
 
           prettier
@@ -30,22 +29,43 @@ _: {
           # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
           # the .desktop entry rofi needs.
           (gfx.bundle { pkg = pkgs.neovide; })
+        ]
+        ++ [
+          # devenv mcp exits immediately unless the cwd is a devenv project,
+          # which would leave the server dead in every other repo. The wrapper
+          # falls back to the pinned project below, so the search tools are
+          # reachable from anywhere; inside a devenv repo the real project
+          # wins, and with it its own nixpkgs for search_packages.
+          (pkgs.stubbe.shellScriptBin "devenv-mcp" ''
+            if [ -f devenv.nix ] || [ -f devenv.yaml ]; then
+              exec "${lib.getExe pkgs.devenv}" mcp "$@"
+            fi
+            exec "${lib.getExe pkgs.devenv}" mcp \
+              --from "path:${config.xdg.configHome}/devenv-global" "$@"
+          '')
         ];
 
       programs = {
         uv.enable = true;
 
-        direnv = {
+        devenv = {
           enable = true;
-          nix-direnv.enable = true;
-          # modules/shell.nix already sources a zcompiled hook; HM's would inject
-          # a duplicate after it.
+          # modules/shell.nix already sources a zcompiled hook; HM's runtime
+          # eval would inject a duplicate after it.
           enableZshIntegration = false;
-          # log_filter is an ALLOWLIST, so a never-matching regex suppresses every
-          # status line. Errors bypass it entirely and still surface.
-          config.global.log_filter = "$.";
         };
       };
+
+      # Pinned project for devenv-mcp's fallback. No devenv input, so the
+      # server brings its own; nixpkgs is the flake's, so package searches
+      # answer from the same tree the system runs. devenv adds its lock file
+      # next to these on first use.
+      xdg.configFile."devenv-global/devenv.yaml".text = ''
+        inputs:
+          nixpkgs:
+            url: path:${inputs.nixpkgs.outPath}
+      '';
+      xdg.configFile."devenv-global/devenv.nix".text = "{}";
 
       stubbe.setup.nodeCaBundle.script = ''
         export PATH="${

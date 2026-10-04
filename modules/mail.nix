@@ -16,79 +16,6 @@
         gmail = "${home}/.config/aerc/passwords/gmail";
       };
 
-      mbsyncrc = ''
-        IMAPAccount kontainer
-        Host ex.konformit.com
-        Port 993
-        User abs@kontainer.com
-        PassCmd "cat ${passwords.kontainer}"
-        TLSType IMAPS
-        AuthMechs LOGIN
-        PipelineDepth 1
-
-        IMAPStore kontainer-remote
-        Account kontainer
-
-        MaildirStore kontainer-local
-        Path ${maildir}/kontainer/
-        Inbox ${maildir}/kontainer/INBOX
-        SubFolders Verbatim
-
-        Channel kontainer
-        Far :kontainer-remote:
-        Near :kontainer-local:
-        Patterns "INBOX" "Sent" "Drafts" "Archive"
-        Create Both
-        Expunge Both
-        SyncState *
-        MaxMessages 2000
-        ExpireUnread no
-
-        IMAPAccount gmail
-        Host imap.gmail.com
-        Port 993
-        User alexander.bugge.stage@gmail.com
-        PassCmd "cat ${passwords.gmail}"
-        TLSType IMAPS
-        AuthMechs LOGIN
-
-        IMAPStore gmail-remote
-        Account gmail
-
-        MaildirStore gmail-local
-        Path ${maildir}/gmail/
-        Inbox ${maildir}/gmail/INBOX
-        SubFolders Verbatim
-
-        Channel gmail
-        Far :gmail-remote:
-        Near :gmail-local:
-        Patterns "INBOX" "[Gmail]/Sent Mail" "[Gmail]/Drafts" "[Gmail]/All Mail"
-        Create Both
-        Expunge Both
-        SyncState *
-        MaxMessages 5000
-        ExpireUnread no
-      '';
-
-      # The contract with aerc: aerc strips this tag on open,
-      # maildir.synchronize_flags renames the file to add `S`, and mbsync
-      # propagates that to IMAP. Nothing else marks mail as read.
-      notmuchConfig = pkgs.stubbe.gen.ini "notmuch-config" {
-        database.path = maildir;
-        user = {
-          name = "Alexander Bugge Stage";
-          primary_email = "abs@kontainer.com";
-          other_email = "alexander.bugge.stage@gmail.com";
-        };
-        new = {
-          tags = "unread;inbox;";
-          ignore = "";
-        };
-        search.exclude_tags = "deleted;spam;";
-        maildir.synchronize_flags = true;
-      };
-
       # Not a notmuch post-new hook: that hook dir lives inside .notmuch/, which
       # notmuch creates itself and home-manager will not symlink into, so
       # Not regex: its delimiters cannot contain spaces, which breaks on
@@ -135,43 +62,6 @@
             exit 1
           fi
         '';
-      };
-
-      # Without maildir-account-path aerc enumerates the shared maildir root and
-      # every tab shows both accounts' folders.
-      accountsConf = pkgs.stubbe.gen.ini "aerc-accounts.conf" {
-        kontainer = {
-          source = "notmuch://";
-          maildir-account-path = "kontainer";
-          query-map = "${home}/.config/aerc/queries-kontainer";
-          exclude-tags = "deleted,spam";
-          default = "INBOX";
-          folders = "INBOX,Sent";
-          from = "Alexander Bugge Stage <abs@kontainer.com>";
-          outgoing = "smtp+login://abs@kontainer.com@ex.konformit.com:587";
-          outgoing-cred-cmd = "cat ${passwords.kontainer}";
-          copy-to = "Sent";
-          postpone = "Drafts";
-          archive = "Archive";
-          check-mail-cmd = "${lib.getExe mailSync} kontainer";
-          check-mail = "30s";
-        };
-        gmail = {
-          source = "notmuch://";
-          maildir-account-path = "gmail";
-          query-map = "${home}/.config/aerc/queries-gmail";
-          exclude-tags = "deleted,spam,trash";
-          default = "INBOX";
-          folders = "INBOX,Sent";
-          from = "Alexander Bugge Stage <alexander.bugge.stage@gmail.com>";
-          outgoing = "smtp+plain://alexander.bugge.stage@gmail.com@smtp.gmail.com:587";
-          outgoing-cred-cmd = "cat ${passwords.gmail}";
-          copy-to = "[Gmail]/Sent Mail";
-          postpone = "[Gmail]/Drafts";
-          archive = "[Gmail]/All Mail";
-          check-mail-cmd = "${lib.getExe mailSync} gmail";
-          check-mail = "30s";
-        };
       };
 
       queries = {
@@ -457,65 +347,191 @@
         };
       };
 
-      home = {
-        packages = [
-          mailSync
-          inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
-          mailOpen
-          mailUnsubscribe
-          mailPager
-        ]
-        ++ (with pkgs; [
-          aerc
-          chafa
-          isync
-          notmuch
-        ]);
+      # One accounts.email tree feeding home-manager's mbsync, notmuch and aerc
+      # modules. Account names are the mbsync channel names the wrapper script
+      # and aerc's check-mail-cmd rely on. Side effects outside mail: home-
+      # manager's git module renders a sendemail section per smtp account.
+      accounts.email = {
+        maildirBasePath = ".local/share/mail";
 
-        # aerc takes the database path from notmuch config discovery, so point
-        # that at the legacy ~/.notmuch-config we write rather than leaving
-        sessionVariables.NOTMUCH_CONFIG = "${home}/.notmuch-config";
-
-        file = {
-          # nixpkgs' isync still reads ~/.mbsyncrc by default.
-          ".mbsyncrc".text = mbsyncrc;
-          # notmuch prefers this legacy path over XDG whenever it exists.
-          ".notmuch-config".source = notmuchConfig;
+        accounts = {
+          kontainer = {
+            primary = true;
+            address = "abs@kontainer.com";
+            realName = "Alexander Bugge Stage";
+            userName = "abs@kontainer.com";
+            passwordCommand = "cat ${passwords.kontainer}";
+            folders.inbox = "INBOX";
+            imap = {
+              host = "ex.konformit.com";
+              port = 993;
+            };
+            smtp = {
+              host = "ex.konformit.com";
+              port = 587;
+              tls.useStartTls = true;
+            };
+            mbsync = {
+              enable = true;
+              create = "both";
+              expunge = "both";
+              patterns = [
+                "INBOX"
+                "Sent"
+                "Drafts"
+                "Archive"
+              ];
+              extraConfig.account = {
+                AuthMechs = "LOGIN";
+                PipelineDepth = 1;
+              };
+              extraConfig.channel = {
+                MaxMessages = 2000;
+                ExpireUnread = "no";
+              };
+            };
+            notmuch.enable = true;
+            aerc = {
+              enable = true;
+              smtpAuth = "login";
+              # Without the generated maildir-account-path aerc enumerates the
+              # shared maildir root and every tab shows both accounts' folders.
+              extraAccounts = {
+                query-map = "${home}/.config/aerc/queries-kontainer";
+                exclude-tags = "deleted,spam";
+                folders = "INBOX,Sent";
+                archive = "Archive";
+                check-mail-cmd = "${lib.getExe mailSync} kontainer";
+                check-mail = "30s";
+              };
+            };
+          };
+          gmail = {
+            address = "alexander.bugge.stage@gmail.com";
+            realName = "Alexander Bugge Stage";
+            userName = "alexander.bugge.stage@gmail.com";
+            passwordCommand = "cat ${passwords.gmail}";
+            folders = {
+              inbox = "INBOX";
+              sent = "[Gmail]/Sent Mail";
+              drafts = "[Gmail]/Drafts";
+            };
+            imap = {
+              host = "imap.gmail.com";
+              port = 993;
+            };
+            smtp = {
+              host = "smtp.gmail.com";
+              port = 587;
+              tls.useStartTls = true;
+            };
+            mbsync = {
+              enable = true;
+              create = "both";
+              expunge = "both";
+              patterns = [
+                "INBOX"
+                "[Gmail]/Sent Mail"
+                "[Gmail]/Drafts"
+                "[Gmail]/All Mail"
+              ];
+              extraConfig = {
+                account.AuthMechs = "LOGIN";
+                channel = {
+                  MaxMessages = 5000;
+                  ExpireUnread = "no";
+                };
+              };
+            };
+            notmuch.enable = true;
+            aerc = {
+              enable = true;
+              smtpAuth = "plain";
+              extraAccounts = {
+                query-map = "${home}/.config/aerc/queries-gmail";
+                exclude-tags = "deleted,spam,trash";
+                folders = "INBOX,Sent";
+                archive = "[Gmail]/All Mail";
+                check-mail-cmd = "${lib.getExe mailSync} gmail";
+                check-mail = "30s";
+              };
+            };
+          };
         };
       };
 
+      programs.mbsync.enable = true;
+
+      # Identity and database.path come from accounts.email; search exclude
+      # deleted;spam (stateVersion default) and new.ignore .uidvalidity/
+      # .mbsyncstate (added by the mbsync module) match the old config.
+      programs.notmuch = {
+        enable = true;
+
+        # Pinned (they are also notmuch's own defaults) because the aerc
+        # read-marking contract leans on them: aerc strips the unread tag on
+        # open, synchronize_flags renames the file to add `S`, and mbsync
+        # propagates that to IMAP. Nothing else marks mail as read.
+        settings = {
+          maildir.synchronize_flags = true;
+          new.tags = [
+            "unread"
+            "inbox"
+          ];
+        };
+      };
+
+      programs.aerc = {
+        enable = true;
+
+        # unsafe-accounts-conf: the generated accounts.conf is a read-only
+        # store symlink and aerc demands 0600.
+        extraConfig = {
+          general = {
+            default-save-path = "~/Downloads";
+            unsafe-accounts-conf = true;
+            check-mail-timeout = "2m";
+          };
+          compose = {
+            editor = lib.removeSuffix "\n" ''
+              nvim -u NONE -U NONE --noplugin \
+                -c 'set notermguicolors' \
+                -c 'set t_Co=0' \
+                -c 'syntax off' \
+                -c 'hi Normal ctermbg=NONE guibg=NONE'
+            '';
+            header-layout = "To,Subject";
+            edit-headers = false;
+          };
+          viewer = {
+            pager = "mail-pager";
+            alternatives = "text/html,text/plain";
+          };
+          filters = {
+            "text/html" = "html-to-md";
+            "text/plain" = "html-to-md --plain";
+            "text/calendar" = "html-to-md --calendar";
+            "image/*" = "chafa --format symbols";
+          };
+          ui = {
+            border-char-vertical = "│";
+            border-char-horizontal = "─";
+            styleset-name = "catppuccin-macchiato";
+            auto-mark-read = true;
+          };
+        };
+      };
+
+      home.packages = [
+        mailSync
+        inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
+        mailOpen
+        mailUnsubscribe
+        mailPager
+        pkgs.chafa
+      ];
+
       xdg.configFile = {
-        "aerc/aerc.conf".text = ''
-          [general]
-          default-save-path=~/Downloads
-          unsafe-accounts-conf=true
-          check-mail-timeout=2m
-
-          [compose]
-          editor=nvim -u NONE -U NONE --noplugin \
-            -c 'set notermguicolors' \
-            -c 'set t_Co=0' \
-            -c 'syntax off' \
-            -c 'hi Normal ctermbg=NONE guibg=NONE'
-          header-layout=To,Subject
-          edit-headers=false
-
-          [viewer]
-          pager=mail-pager
-          alternatives=text/html,text/plain
-
-          [filters]
-          text/html=html-to-md
-          text/plain=html-to-md --plain
-          text/calendar=html-to-md --calendar
-          image/*=chafa --format symbols
-
-          [ui]
-          border-char-vertical="│"
-          border-char-horizontal="─"
-          styleset-name=catppuccin-macchiato
-          auto-mark-read=true
-        '';
         "aerc/binds.conf".text = ''
 
           [messages]
@@ -620,7 +636,6 @@
           p = :postpone<Enter> # Save as draft
           q = :abort<Enter> # Quit compose
         '';
-        "aerc/accounts.conf".source = accountsConf;
         "aerc/queries-kontainer".text = queries.kontainer;
         "aerc/queries-gmail".text = queries.gmail;
       };
@@ -629,13 +644,13 @@
         ".config/aerc/stylesets".src = "mail/stylesets";
       };
 
-      # aerc fails with "No database found" and mbsync refuses a MaildirStore
-      # whose Path is missing -- it does not mkdir its own Path -- so the tree
-      # and an empty index have to exist before either runs.
+      # aerc fails with "No database found" before the first sync, so an empty
+      # index has to exist up front; the maildir tree itself is covered by
+      # home-manager's createMaildir activation (programs.mbsync), which runs
+      # before writeBoundary and therefore before this step.
       stubbe.setup.mail.script = ''
-        mkdir -p ${lib.escapeShellArg "${maildir}/kontainer"} ${lib.escapeShellArg "${maildir}/gmail"}
         if [ ! -d ${lib.escapeShellArg "${maildir}/.notmuch"} ]; then
-          ${lib.getExe pkgs.notmuch} --config="${home}/.notmuch-config" new --quiet || true
+          ${lib.getExe pkgs.notmuch} --config="${config.xdg.configHome}/notmuch/default/config" new --quiet || true
         fi
       '';
 

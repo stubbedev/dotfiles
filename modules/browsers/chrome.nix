@@ -221,19 +221,21 @@ _: {
         ];
         includeUpstream = false;
       };
-      chromeDesktop = pkgs.makeDesktopItem {
-        name = "com.google.Chrome";
-        desktopName = "Google Chrome";
+    in
+    lib.mkIf config.features.browsers {
+      home.packages = [ chrome ];
+
+      xdg.desktopEntries."com.google.Chrome" = {
+        name = "Google Chrome";
         genericName = "Web Browser";
         comment = "Access the Internet";
         exec = "google-chrome-stable %U";
         icon = "google-chrome";
-        type = "Application";
         categories = [
           "Network"
           "WebBrowser"
         ];
-        mimeTypes = [
+        mimeType = [
           "application/pdf"
           "application/rdf+xml"
           "application/rss+xml"
@@ -263,12 +265,6 @@ _: {
           };
         };
       };
-    in
-    lib.mkIf config.features.browsers {
-      home.packages = [
-        chrome
-        chromeDesktop
-      ];
 
       home.sessionVariables.PLAYWRIGHT_MCP_EXECUTABLE_PATH = "${chrome}/bin/google-chrome-stable";
 

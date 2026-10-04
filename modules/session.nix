@@ -12,11 +12,8 @@
     in
     {
       home.sessionVariables = {
-        # Set again by the compositor via hl.env: a non-NixOS session manager
-        # never sources hm-session-vars.sh.
-        XCURSOR_THEME = pkgs.stubbe.theme.cursor;
-        XCURSOR_SIZE = toString pkgs.stubbe.theme.cursorSize;
-
+        # XCURSOR_THEME/XCURSOR_SIZE come from home.pointerCursor (theming.nix);
+        # the compositor re-sets both via hl.env for non-NixOS sessions.
         WALLPAPER = config.stubbe.paths.wallpaper;
 
         NIXPKGS_ALLOW_UNFREE = "1";

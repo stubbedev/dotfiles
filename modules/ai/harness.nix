@@ -75,15 +75,23 @@
           # sticks; this only decides what a fresh checkout opens with.
           models = config.stubbe.harness.models;
 
-          # One global MCP: notmuch. Everything else is registered per repo
-          # via .mcp.json, which Harness reads from the project root.
-          mcp = lib.optionalAttrs config.features.desktop {
-            notmuch-mcp = {
-              type = "stdio";
-              command = "notmuch-mcp";
-              args = [ ];
+          # Global MCP: notmuch and devenv. Everything else is registered per
+          # repo via .mcp.json, which Harness reads from the project root.
+          mcp =
+            lib.optionalAttrs config.features.desktop {
+              notmuch-mcp = {
+                type = "stdio";
+                command = "notmuch-mcp";
+                args = [ ];
+              };
+            }
+            // lib.optionalAttrs config.features.development {
+              devenv-mcp = {
+                type = "stdio";
+                command = "devenv-mcp";
+                args = [ ];
+              };
             };
-          };
 
           # The same language server inventory as nvim, in Harness's dialect:
           # `filetypes` entries match as ".<ext>" suffixes
