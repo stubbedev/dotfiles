@@ -131,7 +131,7 @@ _: {
 
               # Installed by value, not symlinked: the boot service must
               # survive a nix-collect-garbage.
-              install -m 0755 "${pkgs.adaptive-power-manager}/bin/adaptive-power-manager" "${binPath}"
+              sudo install -m 0755 "${pkgs.adaptive-power-manager}/bin/adaptive-power-manager" "${binPath}"
 
               ${pkgs.stubbe.setup.text {
                 name = "adaptive-power-manager-tmpfiles.conf";
