@@ -1,118 +1,6 @@
 _: {
-  # No shebang and no strict mode: under `set -e` the "already at the wanted
-  # thresholds" guard aborts the script whenever it is false, the common path.
-  stubbe.lib.powerSourceScript = ''
-    set -u
-
-    supplies=''${POWER_SOURCE_SUPPLY_DIR:-/sys/class/power_supply}
-    bat=''${POWER_SOURCE_BAT:-$supplies/BAT0}
-    state=''${POWER_SOURCE_STATE_DIR:-/var/lib/power-source}
-    runtime=''${POWER_SOURCE_RUNTIME_DIR:-/run/battery-charge}
-    hist=$state/unplugs
-    last_ac_file=$state/last-ac
-    full_now=$runtime/full-now
-
-    base_start=75
-    base_end=80
-    full_start=95
-    full_end=100
-    topup_window_min=120
-    min_samples=3
-    hist_max=60
-
-    mkdir -p "$state"
-
-    on_ac=0
-    for ps in "$supplies"/*; do
-      [ -r "$ps/type" ] && [ -r "$ps/online" ] || continue
-      case "$(cat "$ps/type")" in
-      Mains | USB) ;;
-      *) continue ;;
-      esac
-      if [ "$(cat "$ps/online")" = "1" ]; then
-        on_ac=1
-        break
-      fi
-    done
-
-    read -r dow hour minute <<<"''${POWER_SOURCE_NOW:-$(date '+%u %H %M')}"
-    now_min=$((10#$hour * 60 + 10#$minute))
-
-    prev_ac=$(cat "$last_ac_file" 2>/dev/null || printf 'unknown')
-    printf '%s' "$on_ac" >"$last_ac_file"
-
-    if [ "$prev_ac" != "$on_ac" ] && command -v powerprofilesctl >/dev/null 2>&1; then
-      profiles=$(powerprofilesctl list 2>/dev/null)
-      if [ "$on_ac" = 1 ]; then
-        case "$profiles" in
-        *performance:*) powerprofilesctl set performance ;;
-        *) powerprofilesctl set balanced ;;
-        esac
-      else
-        case "$profiles" in
-        *power-saver:*) powerprofilesctl set power-saver ;;
-        *) powerprofilesctl set balanced ;;
-        esac
-      fi
-    fi
-
-    if [ "$prev_ac" = 1 ] && [ "$on_ac" = 0 ]; then
-      printf '%s %s\n' "$dow" "$now_min" >>"$hist"
-      if [ "$(wc -l <"$hist")" -gt "$hist_max" ]; then
-        tail -n "$hist_max" "$hist" >"$hist.tmp" && mv "$hist.tmp" "$hist"
-      fi
-      rm -f "$full_now"
-    fi
-
-    [ "$on_ac" = 1 ] || exit 0
-    [ -w "$bat/charge_control_end_threshold" ] || exit 0
-
-    predict_unplug() {
-      awk -v dow="$dow" -v now="$now_min" -v need="$min_samples" '
-        $2 > now {
-          all[na++] = $2
-          if ($1 == dow) same[ns++] = $2
-        }
-        END {
-          if (ns >= need)      { n = ns; for (i = 0; i < n; i++) v[i] = same[i] }
-          else if (na >= need) { n = na; for (i = 0; i < n; i++) v[i] = all[i] }
-          else                 { exit 1 }
-          for (i = 1; i < n; i++) {
-            x = v[i]
-            for (j = i - 1; j >= 0 && v[j] > x; j--) v[j + 1] = v[j]
-            v[j + 1] = x
-          }
-          print v[int((n - 1) / 4)]
-        }
-      ' "$hist" 2>/dev/null
-    }
-
-    want_start=$base_start
-    want_end=$base_end
-    if [ -e "$full_now" ]; then
-      want_start=$full_start
-      want_end=$full_end
-    elif predicted=$(predict_unplug) && [ $((predicted - now_min)) -le "$topup_window_min" ]; then
-      want_start=$full_start
-      want_end=$full_end
-    fi
-
-    cur_end=$(cat "$bat/charge_control_end_threshold")
-    cur_start=$(cat "$bat/charge_control_start_threshold")
-    [ "$cur_end" = "$want_end" ] && [ "$cur_start" = "$want_start" ] && exit 0
-
-    if [ "$want_end" -gt "$cur_end" ]; then
-      printf '%s' "$want_end" >"$bat/charge_control_end_threshold"
-      printf '%s' "$want_start" >"$bat/charge_control_start_threshold"
-    else
-      printf '%s' "$want_start" >"$bat/charge_control_start_threshold"
-      printf '%s' "$want_end" >"$bat/charge_control_end_threshold"
-    fi
-  '';
-
   flake.modules.nixos.power =
     {
-      config,
       lib,
       pkgs,
       ...
@@ -121,7 +9,7 @@ _: {
       services.power-profiles-daemon.enable = true;
 
       # Undocking or unplugging with the lid already closed is handled in
-      # src/hyprland/scripts/monitor.toggle.sh instead: logind only acts on the
+      # the hyprland monitor toggle script instead: logind only acts on the
       # lid switch edge (systemd#7690).
       services.logind.settings.Login = {
         HandleLidSwitch = "suspend";
@@ -129,51 +17,38 @@ _: {
         HandleLidSwitchDocked = "ignore";
       };
 
+      # For the CLI (status, full) in user shells; the daemon runs from its
+      # own store path below.
+      environment.systemPackages = [ pkgs.adaptive-power-manager ];
+
+      # battery-full's flag directory: group-writable so the user CLI can
+      # drop a charge-to-full request without sudo.
       systemd.tmpfiles.rules = [ "d /run/battery-charge 0775 root users -" ];
 
-      systemd.services.power-source = {
-        description = "Apply power-source policy (profile + charge threshold)";
-        after = [ "power-profiles-daemon.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          StateDirectory = "power-source";
-        };
-        path = with pkgs; [
-          coreutils
-          gawk
-          power-profiles-daemon
+      # Event-driven: UPower signals cover every AC edge, the daemon's tick
+      # covers the prediction boundaries. No timer, no udev trigger.
+      systemd.services.adaptive-power-manager = {
+        description = "Adaptive battery charging and power profile policy";
+        after = [
+          "power-profiles-daemon.service"
+          "upower.service"
         ];
-        script = pkgs.stubbe.powerSourceScript;
-      };
-
-      # Both Mains and USB: a USB-C-only charger may never fire an AC event.
-      # --no-block keeps the udev worker free; the boot coldplug fires it too,
-      # so no separate init unit is needed.
-      services.udev.extraRules =
-        let
-          run = "${lib.getExe' config.systemd.package "systemctl"} --no-block start power-source.service";
-        in
-        ''
-          SUBSYSTEM=="power_supply", ATTR{type}=="Mains", RUN+="${run}"
-          SUBSYSTEM=="power_supply", ATTR{type}=="USB", RUN+="${run}"
-        '';
-
-      systemd.timers.power-source = {
-        description = "Re-evaluate power-source policy";
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnBootSec = "2min";
-          OnUnitActiveSec = "5min";
-          AccuracySec = "1min";
-        };
-      };
-
-      systemd.paths.power-source-full = {
-        description = "Watch for a manual charge-to-full request";
-        wantedBy = [ "paths.target" ];
-        pathConfig = {
-          PathExists = "/run/battery-charge/full-now";
-          Unit = "power-source.service";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          ExecStart = "${lib.getExe pkgs.adaptive-power-manager} run";
+          StateDirectory = "adaptive-power-manager";
+          Restart = "on-failure";
+          RestartSec = "10s";
+          # The sysfs threshold writes need root; everything else is contained.
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ReadWritePaths = [ "/sys/class/power_supply" ];
+          ProtectHome = true;
+          PrivateTmp = true;
+          ProtectKernelTunables = true;
+          ProtectControlGroups = true;
+          RestrictSUIDSGID = true;
+          LockPersonality = true;
         };
       };
     };
@@ -217,161 +92,99 @@ _: {
       home.packages = [
         (pkgs.stubbe.bashApp {
           name = "battery-full";
-          text = ''
-            dir=/run/battery-charge
-
-            if [ ! -d "$dir" ]; then
-              echo "battery-full: $dir is missing — is power-source.timer enabled?" >&2
-              exit 1
-            fi
-
-            touch "$dir/full-now"
-            echo "Charging to 100%. The 80% cap comes back when you unplug."
-          '';
+          text = "exec ${lib.getExe pkgs.adaptive-power-manager} full";
         })
       ];
 
       stubbe.setup = {
         powerSource = {
           privileged = true;
-          title = "Installing power-source policy (profile + adaptive charging)";
-          preCheck = pkgs.stubbe.setup.requirePath "/sys/class/power_supply/BAT0/charge_control_end_threshold";
+          title = "Installing adaptive-power-manager (profile + adaptive charging)";
           body = ''
-            Two things that should follow the charger, and don't on their own:
+            Two things that should follow the charger, and don't on their own,
+            from one event-driven Go daemon (github.com/stubbedev/adaptive-power-manager):
 
             - power-profiles-daemon never switches by itself, so a "performance"
               profile picked while docked keeps draining after the undock. This
               drops to power-saver on unplug and back to performance on AC — only
               on an actual change, so a profile you pick by hand still sticks.
             - macOS-style Optimized Battery Charging. The 80% cap stays where it
-              is; this learns what time of day the charger actually comes out and
-              raises the ceiling to 100% for the two hours before that, so the
-              machine is full when you leave without sitting at 100% all week.
-              Until a few unplugs are on record it just holds at 80%.
+              is; the daemon learns what time of day the charger actually comes
+              out and raises the ceiling to 100% for the two hours before that,
+              so the machine is full when you leave without sitting at 100% all
+              week. Until a few unplugs are on record it just holds at 80%.
 
             Also installs `battery-full`, the "charge to full now" override — it
-            lasts until you unplug.
+            lasts until you unplug, which is also when the cap comes back.
+
+            Replaces the bash power-source policy: its units, udev rule and
+            script are retired here, and the recorded unplug history carries
+            over automatically.
           '';
           script =
             let
               toUnit = pkgs.stubbe.gen.unitText;
-              scriptPath = "/usr/local/sbin/power-source.sh";
+              binPath = "/usr/local/bin/adaptive-power-manager";
             in
             ''
               PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
 
-              ${pkgs.stubbe.setup.text {
-                name = "power-source.sh";
-                target = scriptPath;
-                mode = "0755";
-                # Host bash: this copy lives in /usr/local and must survive a
-                # nix-collect-garbage.
-                text = "#!/usr/bin/env bash\n" + pkgs.stubbe.powerSourceScript;
-              }}
+              # Installed by value, not symlinked: the boot service must
+              # survive a nix-collect-garbage.
+              install -m 0755 "${pkgs.adaptive-power-manager}/bin/adaptive-power-manager" "${binPath}"
 
               ${pkgs.stubbe.setup.text {
-                name = "power-source-tmpfiles.conf";
-                target = "/etc/tmpfiles.d/power-source.conf";
+                name = "adaptive-power-manager-tmpfiles.conf";
+                target = "/etc/tmpfiles.d/adaptive-power-manager.conf";
                 text = "d /run/battery-charge 0775 root users -\n";
               }}
 
               ${pkgs.stubbe.setup.text {
-                name = "85-power-source.rules";
-                target = "/etc/udev/rules.d/85-power-source.rules";
-                text = ''
-                  SUBSYSTEM=="power_supply", ATTR{type}=="Mains", RUN+="/usr/bin/systemctl --no-block start power-source.service"
-                  SUBSYSTEM=="power_supply", ATTR{type}=="USB", RUN+="/usr/bin/systemctl --no-block start power-source.service"
-                '';
-              }}
-
-              ${pkgs.stubbe.setup.text {
-                name = "power-source.service";
-                target = "/etc/systemd/system/power-source.service";
+                name = "adaptive-power-manager.service";
+                target = "/etc/systemd/system/adaptive-power-manager.service";
                 text = toUnit {
                   Unit = {
-                    Description = "Apply power-source policy (profile + charge threshold)";
-                    After = "power-profiles-daemon.service";
+                    Description = "Adaptive battery charging and power profile policy";
+                    After = "power-profiles-daemon.service upower.service";
                   };
                   Service = {
-                    Type = "oneshot";
-                    ExecStart = scriptPath;
-                    StateDirectory = "power-source";
+                    Type = "simple";
+                    ExecStart = "${binPath} run";
+                    StateDirectory = "adaptive-power-manager";
+                    Restart = "on-failure";
+                    RestartSec = "10s";
+                    NoNewPrivileges = true;
+                    ProtectSystem = "strict";
+                    ReadWritePaths = "/sys/class/power_supply";
+                    ProtectHome = true;
+                    PrivateTmp = true;
+                    ProtectKernelTunables = true;
+                    ProtectControlGroups = true;
+                    RestrictSUIDSGID = true;
+                    LockPersonality = true;
                   };
+                  Install.WantedBy = "multi-user.target";
                 };
               }}
 
-              ${pkgs.stubbe.setup.text {
-                name = "power-source.timer";
-                target = "/etc/systemd/system/power-source.timer";
-                text = toUnit {
-                  Unit.Description = "Re-evaluate power-source policy";
-                  Timer = {
-                    OnBootSec = "2min";
-                    OnUnitActiveSec = "5min";
-                    AccuracySec = "1min";
-                  };
-                  Install.WantedBy = "timers.target";
-                };
-              }}
+              # Retire the bash policy this replaces.
+              sudo systemctl disable --now power-source.timer power-source-full.path power-source.service >/dev/null 2>&1 || true
+              sudo rm -f \
+                /etc/systemd/system/power-source.service \
+                /etc/systemd/system/power-source.timer \
+                /etc/systemd/system/power-source-full.path \
+                /etc/udev/rules.d/85-power-source.rules \
+                /usr/local/sbin/power-source.sh
 
-              ${pkgs.stubbe.setup.text {
-                name = "power-source-full.path";
-                target = "/etc/systemd/system/power-source-full.path";
-                text = toUnit {
-                  Unit.Description = "Watch for a manual charge-to-full request";
-                  Path = {
-                    PathExists = "/run/battery-charge/full-now";
-                    Unit = "power-source.service";
-                  };
-                  Install.WantedBy = "paths.target";
-                };
-              }}
-
-              sudo systemd-tmpfiles --create /etc/tmpfiles.d/power-source.conf >/dev/null 2>&1 || true
+              sudo systemd-tmpfiles --create /etc/tmpfiles.d/adaptive-power-manager.conf >/dev/null 2>&1 || true
               ${pkgs.stubbe.setup.reloadUnits}
-              sudo systemctl enable --now power-source.timer power-source-full.path >/dev/null 2>&1 || true
-
-              ${pkgs.stubbe.setup.reloadUdev}
+              sudo systemctl enable --now adaptive-power-manager.service >/dev/null 2>&1 || true
             '';
         };
 
-        batteryChargeThreshold = {
-          privileged = true;
-          title = "Installing battery charge threshold (80%)";
-          body = ''
-            This machine spends most of its life on a dock; holding lithium at
-            100% is what ages it fastest. This installs a udev rule that caps
-            charging at 80% (resume below 75%) via the ThinkPad EC, and applies
-            the thresholds immediately. Costs ~1h of unplugged runtime; buys
-            battery capacity measured in years. Charge to full for a trip with
-            `battery-full` — the rule drops back to 80% the moment you unplug,
-            so there is nothing to remember to undo. Worth doing every few
-            months anyway: the EC only recalibrates its full-charge estimate on
-            a complete charge, so a battery that never finishes reports a health
-            figure that drifts low.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.text {
-              name = "85-battery-charge-threshold.rules";
-              target = "/etc/udev/rules.d/85-battery-charge-threshold.rules";
-              text = ''
-                ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_control_start_threshold}="75", ATTR{charge_control_end_threshold}="80"
-
-                ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{status}=="Discharging", ATTR{charge_control_end_threshold}!="80", ATTR{charge_control_start_threshold}="75", ATTR{charge_control_end_threshold}="80"
-              '';
-            }}
-
-            ${pkgs.stubbe.setup.reloadUdev}
-
-            bat=/sys/class/power_supply/BAT0
-            if [ -f "$bat/charge_control_end_threshold" ]; then
-              echo 75 | sudo tee "$bat/charge_control_start_threshold" >/dev/null
-              echo 80 | sudo tee "$bat/charge_control_end_threshold" >/dev/null
-            fi
-          '';
-        };
-
         # Deliberately absent, each having been tried:
+        #   - a static batteryChargeThreshold udev rule: the daemon restores
+        #     the cap on the unplug edge itself, so the rule only fought it.
         #   - thermald refuses to start where thinkpad_acpi/dytc_lapmode exists.
         #   - wifi powersave toggling: NetworkManager already sets powersave=3,
         #     and the AC half turns it back off for a net loss.
@@ -433,8 +246,8 @@ _: {
             Opening the lid wakes.
 
             Undocking or unplugging with the lid already closed is handled
-            separately by src/hyprland/scripts/monitor.toggle.sh — logind
-            only acts on the lid switch edge, not on later display or power
+            separately by the hyprland monitor toggle script — logind only
+            acts on the lid switch edge, not on later display or power
             changes (systemd#7690).
           '';
           script = ''

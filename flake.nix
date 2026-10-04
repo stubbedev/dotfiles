@@ -42,6 +42,10 @@
       url = "github:stubbedev/atlassian-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    adaptive-power-manager = {
+      url = "github:stubbedev/adaptive-power-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # The Crush fork: config-driven theming, git header, thinking toggle and
     # prompt height, so nothing has to be patched into the Go source here.
     harness = {

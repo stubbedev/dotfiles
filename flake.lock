@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "adaptive-power-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791115047,
+        "narHash": "sha256-UtcEitmUlshGJuQWPurSwSwSD/YuqeeWgeDGDmj9/VI=",
+        "owner": "stubbedev",
+        "repo": "adaptive-power-manager",
+        "rev": "6137ed6107c5477ea56dd22893027e8598dc2313",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "adaptive-power-manager",
+        "type": "github"
+      }
+    },
     "atlassian-mcp": {
       "inputs": {
         "nixpkgs": [
@@ -832,6 +852,7 @@
     },
     "root": {
       "inputs": {
+        "adaptive-power-manager": "adaptive-power-manager",
         "atlassian-mcp": "atlassian-mcp",
         "claude-code": "claude-code",
         "cship": "cship",

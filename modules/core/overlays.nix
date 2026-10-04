@@ -88,6 +88,11 @@ in
       xilo = inputs.xilo.packages.${final.stdenv.hostPlatform.system}.default;
     };
 
+    adaptive-power-manager = final: _prev: {
+      adaptive-power-manager =
+        inputs.adaptive-power-manager.packages.${final.stdenv.hostPlatform.system}.default;
+    };
+
     # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so without
     # gvfs listed here every dav:// / smb:// / mtp:// URI fails with
     # "Operation not supported".
