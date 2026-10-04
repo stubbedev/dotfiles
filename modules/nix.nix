@@ -26,6 +26,9 @@ in
             "flakes"
           ];
 
+          # `<nixpkgs>` resolves to the flake's pinned tree.
+          nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
+
           # Upstream nix evaluates single-threaded (~26s per no-op rebuild
           # here); Determinate nix was dropped for its version drift and
           # opaque errors, and its parallel evaluator went with it.
@@ -57,8 +60,6 @@ in
         extraOptions = ''
           !include ${config.sops.templates."nix-access-tokens.conf".path}
         '';
-
-        nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
 
         daemonCPUSchedPolicy = "idle";
         daemonIOSchedClass = "idle";
