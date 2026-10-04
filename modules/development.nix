@@ -67,6 +67,16 @@
       '';
       xdg.configFile."devenv-global/devenv.nix".text = "{}";
 
+      # devenv reads this for shell/TUI preferences. The schema rejects
+      # unknown keys, so a stale key would break every devenv invocation:
+      # keep it to settings that exist. Kills the "(devenv)" prompt prefix;
+      # TUI/watcher silencing lives in the hook flags (modules/shell.nix).
+      xdg.configFile."devenv/config.yaml".text = ''
+        version: 1
+        shell:
+          prompt_prefix: false
+      '';
+
       stubbe.setup.nodeCaBundle.script = ''
         export PATH="${
           lib.makeBinPath [

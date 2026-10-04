@@ -709,10 +709,12 @@
         ${lib.getExe pkgs.zoxide} init zsh > $out/init.zsh
       '';
 
-      # --no-tui: auto-activated shells skip the TUI chrome (status line, task
-      # log preview); devenv falls back to plain logs.
+      # Hook-activated shells run muted: --no-tui skips the TUI (status line,
+      # task-log preview), --quiet silences what logs remain, --no-reload
+      # drops the PTY watcher whose "devenv watching" line would otherwise
+      # ride along. Manual `devenv shell` is untouched.
       devenvInit = mkInit "devenv" ''
-        HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh -- --no-tui > $out/init.zsh
+        HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh -- --no-tui --no-reload --quiet > $out/init.zsh
         HOME=$TMPDIR COMPLETE=zsh ${lib.getExe pkgs.devenv} -- >> $out/init.zsh
         cat >> $out/init.zsh <<'EOF'
 
