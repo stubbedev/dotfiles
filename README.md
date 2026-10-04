@@ -28,6 +28,8 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 ├── src/                   # the few real files: nvim + hyprland live-edit
 │                          # trees, aerc stylesets, wallpapers, the claude
 │                          # plugin marketplace dir
+├── certs/                 # the srv root CA (public cert); seeded into the
+│                          # system trust store at build time
 └── secrets/               # sops-encrypted, keyed per machine in .sops.yaml
 ```
 

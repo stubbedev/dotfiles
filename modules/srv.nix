@@ -1,8 +1,9 @@
 # srv fronts local sites (Traefik + vendored mkcert + embedded DNS on
-# 127.0.0.1:15353). Everything environmental — CA generation and trust,
-# the systemd-resolved drop-in, the stub listener — is `srv install`'s job
-# now (one sudo prompt, `srv doctor` verifies); this module only ships the
-# bits srv cannot do for itself.
+# 127.0.0.1:15353). Everything environmental — CA generation, the
+# systemd-resolved drop-in, the stub listener — is `srv install`'s job
+# now (one sudo prompt, `srv doctor` verifies); this module ships what srv
+# cannot do for itself: the committed rootCA as the build-time trust seed,
+# and the NSS databases its vendored mkcert does not scan.
 { inputs, ... }:
 {
   flake.modules.nixos.srv =
@@ -12,24 +13,16 @@
       pkgs,
       ...
     }:
-    let
-      userHome = config.users.users.${config.host.primaryUser}.home;
-      rootCA = "${userHome}/.local/share/mkcert/rootCA.pem";
-    in
     lib.mkIf config.stubbe.userFeatures.srv {
       # certutil, so srv's vendored mkcert can trust the local CA in the
       # browsers' NSS store (security.pki below only covers the system store).
       environment.systemPackages = [ pkgs.nss.tools ];
 
-      # builtins.path so the build sandbox can read it: a raw "/home/..." string
-      # resolves at eval time but is unreadable at build time. Seeded on the
-      # rebuild after `srv install` first generates the CA.
-      security.pki.certificateFiles = lib.optional (builtins.pathExists rootCA) (
-        builtins.path {
-          path = rootCA;
-          name = "mkcert-rootCA.pem";
-        }
-      );
+      # Flake evals are restricted to the flake tree, so a runtime-generated
+      # CA under $HOME is invisible here (builtins.pathExists silently returns
+      # false). The cert is committed instead and the user's CAROOT below is
+      # pinned to the same file, leaving `srv install` to mint only leaves.
+      security.pki.certificateFiles = [ ../certs/mkcert-rootCA.pem ];
 
       # srv's DNS registers via a systemd-resolved drop-in; lookups must reach
       # resolved's stub (127.0.0.53), so NM may not bypass it.
@@ -46,6 +39,7 @@
     }:
     let
       srvPkg = inputs.srv.packages.${pkgs.stdenv.hostPlatform.system}.srv;
+      rootCA = ../certs/mkcert-rootCA.pem;
     in
     lib.mkIf config.features.srv {
       home.packages = [
@@ -74,6 +68,32 @@
           ];
         };
         Install.WantedBy = [ "default.target" ];
+      };
+
+      # Pin the CA cert to the committed copy, so the system store and every
+      # NSS database always see the same CA that srv signs with. force, because
+      # machines provisioned before this still hold mkcert's real file there.
+      xdg.dataFile."mkcert/rootCA.pem" = {
+        source = rootCA;
+        force = true;
+      };
+
+      # srv's vendored mkcert only scans the legacy NSS locations (~/.mozilla,
+      # ~/.pki): HM's Firefox profiles live under ~/.config/mozilla and current
+      # Chrome keeps its user DB at ~/.local/share/pki. Seed those directly —
+      # user-owned databases, idempotent, no sudo.
+      stubbe.setup.nssTrust = {
+        script = ''
+          for db in \
+            "$HOME"/.config/mozilla/firefox/*/cert9.db \
+            "$HOME"/.local/share/pki/nssdb/cert9.db \
+            "$HOME"/.pki/nssdb/cert9.db; do
+            [ -f "$db" ] || continue
+            ${lib.getExe' pkgs.nss.tools "certutil"} -A \
+              -d "sql:''${db%cert9.db}" -i ${rootCA} \
+              -n "mkcert development CA" -t "C,,"
+          done
+        '';
       };
 
       # Auto-migrate off any imperatively-installed daemon unit. `srv daemon

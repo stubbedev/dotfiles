@@ -19,11 +19,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "path": "/nix/store/fd5qgysvbfx27wj651swlr899w6jnbwd-source",
+        "path": "/nix/store/5wwvz80gd6v1z981bsrvr7c1vhkyc3as-source",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/fd5qgysvbfx27wj651swlr899w6jnbwd-source",
+        "path": "/nix/store/5wwvz80gd6v1z981bsrvr7c1vhkyc3as-source",
         "type": "path"
       }
     },
