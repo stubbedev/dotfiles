@@ -115,6 +115,20 @@ in
       });
     };
 
+    # tela-circle-icon-theme 2026-07-07 ships three symlinks to icons
+    # that do not exist in the release (xsi-addon-symbolic.svg,
+    # org.xfce.appfinder.svg); the stdenv noBrokenSymlinks check rejects
+    # the whole package for it. Upstream declined to skip the check for
+    # the square sibling (nixpkgs#382288), so prune the dangling links
+    # here. Deletable once the theme or nixpkgs adapts.
+    tela-icon-fix = _final: prev: {
+      tela-circle-icon-theme = prev.tela-circle-icon-theme.overrideAttrs (old: {
+        preFixup = (old.preFixup or "") + ''
+          find $out/share/icons -xtype l -delete
+        '';
+      });
+    };
+
     # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so without
     # gvfs listed here every dav:// / smb:// / mtp:// URI fails with
     # "Operation not supported".
