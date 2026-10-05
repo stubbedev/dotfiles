@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ ... }:
 {
   flake.modules.homeManager.development =
     {
@@ -29,20 +29,6 @@
           # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
           # the .desktop entry rofi needs.
           (gfx.bundle { pkg = pkgs.neovide; })
-        ]
-        ++ [
-          # devenv mcp exits immediately unless the cwd is a devenv project,
-          # which would leave the server dead in every other repo. The wrapper
-          # falls back to the pinned project below, so the search tools are
-          # reachable from anywhere; inside a devenv repo the real project
-          # wins, and with it its own nixpkgs for search_packages.
-          (pkgs.stubbe.shellScriptBin "devenv-mcp" ''
-            if [ -f devenv.nix ] || [ -f devenv.yaml ]; then
-              exec "${lib.getExe pkgs.devenv}" mcp "$@"
-            fi
-            exec "${lib.getExe pkgs.devenv}" mcp \
-              --from "path:${config.xdg.configHome}/devenv-global" "$@"
-          '')
         ];
 
       programs = {
@@ -55,17 +41,6 @@
           enableZshIntegration = false;
         };
       };
-
-      # Pinned project for devenv-mcp's fallback. No devenv input, so the
-      # server brings its own; nixpkgs is the flake's, so package searches
-      # answer from the same tree the system runs. devenv adds its lock file
-      # next to these on first use.
-      xdg.configFile."devenv-global/devenv.yaml".text = ''
-        inputs:
-          nixpkgs:
-            url: path:${inputs.nixpkgs.outPath}
-      '';
-      xdg.configFile."devenv-global/devenv.nix".text = "{}";
 
       # devenv reads this for shell/TUI preferences. The schema rejects
       # unknown keys, so a stale key would break every devenv invocation:

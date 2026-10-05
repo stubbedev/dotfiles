@@ -59,24 +59,16 @@ _: {
           name = "claude-config-mcp";
           target = "${config.home.homeDirectory}/.claude.json";
           key = "mcpServers";
-          # Authoritative: the managed set fully owns .mcpServers. notmuch and
-          # devenv are the global servers; everything else comes from a repo's
-          # .mcp.json, so dropped entries disappear instead of lingering.
-          value =
-            lib.optionalAttrs config.features.desktop {
-              notmuch-mcp = {
-                type = "stdio";
-                command = "notmuch-mcp";
-                args = [ ];
-              };
-            }
-            // lib.optionalAttrs config.features.development {
-              devenv-mcp = {
-                type = "stdio";
-                command = "devenv-mcp";
-                args = [ ];
-              };
+          # Authoritative: the managed set fully owns .mcpServers. notmuch is
+          # the global server; everything else comes from a repo's .mcp.json,
+          # so dropped entries disappear instead of lingering.
+          value = lib.optionalAttrs config.features.desktop {
+            notmuch-mcp = {
+              type = "stdio";
+              command = "notmuch-mcp";
+              args = [ ];
             };
+          };
         }}
       '';
     };

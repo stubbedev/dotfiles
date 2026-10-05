@@ -1,6 +1,5 @@
-# MCP: notmuch and devenv are the global servers, rendered into each client;
-# every
-# other server is registered per repo via .mcp.json, whose bare command
+# MCP: notmuch is the global server, rendered into each client; every other
+# server is registered per repo via .mcp.json, whose bare command
 # resolves off PATH — which is all this module exists for: putting the
 # binaries there. Credentials for the per-repo servers are sops-rendered
 # config.json files (modules/ai/mcp-services.nix).
