@@ -712,7 +712,9 @@
       # Hook-activated shells run muted: --no-tui skips the TUI (status line,
       # task-log preview), --quiet silences what logs remain, --no-reload
       # drops the PTY watcher whose "devenv watching" line would otherwise
-      # ride along. Manual `devenv shell` is untouched.
+      # ride along. The task lifecycle lines go too: the devenv-quiet overlay
+      # (modules/core/overlays.nix) patches --quiet to cover them. Manual
+      # `devenv shell` keeps full TUI and output.
       devenvInit = mkInit "devenv" ''
         HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh -- --no-tui --no-reload --quiet > $out/init.zsh
         HOME=$TMPDIR COMPLETE=zsh ${lib.getExe pkgs.devenv} -- >> $out/init.zsh

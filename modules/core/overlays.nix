@@ -93,6 +93,28 @@ in
         inputs.adaptive-power-manager.packages.${final.stdenv.hostPlatform.system}.default;
     };
 
+    # --quiet means quiet. Upstream prints task lifecycle lines ("• Running
+    # devenv:enterShell" / "✓ … in Nms") even under --quiet on purpose (#3115:
+    # liveness for agents and redirected runs), and that is the one noise the
+    # hook-activated shell cannot turn off. Gate the lifecycle override on
+    # Quiet instead, so the hook's `--quiet` spawn is silent without wrapping
+    # the session's stderr in a filter (that demotes stderr to a pipe and
+    # costs every tool its isatty colors). Manual `devenv shell` runs without
+    # --quiet and keeps its output. doCheck off: the crate's own tests assert
+    # the noisy behavior; delete this overlay once upstream grows a flag.
+    devenv-quiet = _final: prev: {
+      devenv = prev.devenv.overrideAttrs (old: {
+        doCheck = false;
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace devenv/src/console.rs \
+            --replace-fail 'entry.show_lifecycle || self.show_at(level),' \
+              'entry.show_lifecycle && !matches!(self.verbosity, VerbosityLevel::Quiet) || self.show_at(level),' \
+            --replace-fail 'show_lifecycle || self.show_at(level),' \
+              'show_lifecycle && !matches!(self.verbosity, VerbosityLevel::Quiet) || self.show_at(level),'
+        '';
+      });
+    };
+
     # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so without
     # gvfs listed here every dav:// / smb:// / mtp:// URI fails with
     # "Operation not supported".
