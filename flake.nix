@@ -30,18 +30,6 @@
       url = "github:stubbedev/xilo";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    jenkins-mcp = {
-      url = "github:stubbedev/jenkins-mcp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    sentry-mcp = {
-      url = "github:stubbedev/sentry-mcp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    atlassian-mcp = {
-      url = "github:stubbedev/atlassian-mcp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     adaptive-power-manager = {
       url = "github:stubbedev/adaptive-power-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -52,13 +40,8 @@
       url = "github:stubbedev/harness";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    ds-mcp.url = "github:stubbedev/ds-mcp";
     html-to-md = {
       url = "github:stubbedev/html-to-md";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    nix-mcp = {
-      url = "github:stubbedev/nix-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     cship = {

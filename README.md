@@ -26,8 +26,7 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   └── <aspect>.nix       # mail, shell, hyprland, wayle, power, storage, …
 ├── bin/                   # ONLY the pre-Nix bootstraps (stb-install*)
 ├── src/                   # the few real files: nvim + hyprland live-edit
-│                          # trees, aerc stylesets, wallpapers, the claude
-│                          # plugin marketplace dir
+│                          # trees, aerc stylesets, wallpapers
 ├── certs/                 # the srv root CA (public cert); seeded into the
 │                          # system trust store at build time
 └── secrets/               # sops-encrypted, keyed per machine in .sops.yaml
@@ -58,7 +57,7 @@ checkout — it bootstraps Nix and home-manager on a fresh host.
      needs `pkgs` (`file`, `secret`, `bashApp`, `zshApp`, `install*`, `json*`).
      Reachable from any module of any class, because it rides on `pkgs`.
    - `config.stubbe.*` — options for anything derived from the configuration:
-     `paths`, `gfx`, `setup`, `mutable`, `mcp`.
+     `paths`, `gfx`, `setup`, `mutable`.
 
    There is no `specialArgs` and no `extraSpecialArgs` anywhere. A module that
    needs a flake input resolves it at flake-parts level, where `inputs` is
