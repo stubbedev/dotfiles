@@ -81,17 +81,27 @@
       # srv's vendored mkcert only scans the legacy NSS locations (~/.mozilla,
       # ~/.pki): HM's Firefox profiles live under ~/.config/mozilla and current
       # Chrome keeps its user DB at ~/.local/share/pki. Seed those directly —
-      # user-owned databases, idempotent, no sudo.
+      # user-owned databases, idempotent, no sudo. A stray `sudo` browser run
+      # can leave a profile's NSS files root-owned: unreadable to us and to the
+      # browser alike, so nothing is lost by moving them aside (the dir is
+      # ours) and starting a fresh DB. Best-effort: never blocks activation.
       stubbe.setup.nssTrust = {
         script = ''
+          certutil=${lib.getExe' pkgs.nss.tools "certutil"}
           for db in \
             "$HOME"/.config/mozilla/firefox/*/cert9.db \
             "$HOME"/.local/share/pki/nssdb/cert9.db \
             "$HOME"/.pki/nssdb/cert9.db; do
             [ -f "$db" ] || continue
-            ${lib.getExe' pkgs.nss.tools "certutil"} -A \
-              -d "sql:''${db%cert9.db}" -i ${rootCA} \
-              -n "mkcert development CA" -t "C,,"
+            dir=''${db%cert9.db}
+            if [ ! -O "$db" ] || [ ! -w "$db" ]; then
+              for f in cert9.db key4.db pkcs11.txt; do
+                if [ -e "$dir$f" ]; then mv -f "$dir$f" "$dir$f.unowned-bak"; fi
+              done
+              "$certutil" -N --empty-password -d "sql:$dir" >/dev/null 2>&1 || continue
+            fi
+            "$certutil" -A -d "sql:$dir" -i ${rootCA} \
+              -n "mkcert development CA" -t "C,," >/dev/null 2>&1 || true
           done
         '';
       };
