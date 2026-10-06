@@ -1,8 +1,6 @@
 _: {
   flake.modules.homeManager.git =
     {
-      config,
-      lib,
       pkgs,
       ...
     }:
@@ -49,12 +47,14 @@ _: {
             unstagedChangesColor = [ c.red ];
             defaultFgColor = [ c.text ];
             searchingActiveBorderColor = [ c.yellow ];
+            # New home upstream (was gui.authorColors); emitting the migrated
+            # shape keeps lazygit from rewriting the read-only config.yml.
+            authorColors."*" = c.lavender;
           };
-          authorColors."*" = c.lavender;
         };
       };
     in
-    lib.mkIf config.features.desktop {
+    {
       programs.git = {
         enable = true;
         ignores = [

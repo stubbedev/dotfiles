@@ -1,4 +1,5 @@
-_: {
+{ inputs, ... }:
+{
   flake.modules.nixos.boot =
     {
       config,
@@ -60,8 +61,6 @@ _: {
             varies). Instructions are printed instead.
         '';
         script = ''
-          PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
           ${pkgs.stubbe.setup.hostPackage {
             detect = "plymouthd";
             apt = [ "plymouth" ];
@@ -152,6 +151,28 @@ _: {
             sudo systemctl unmask plymouth-quit.service
           fi
         '';
+      };
+    };
+
+  flake.modules.nixos.secureBoot =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      imports = [ inputs.lanzaboote.nixosModules.lanzaboote ];
+
+      config = lib.mkIf config.host.secureBoot {
+        boot.loader.systemd-boot.enable = lib.mkForce false;
+
+        boot.lanzaboote = {
+          enable = true;
+          pkiBundle = "/var/lib/sbctl";
+        };
+
+        environment.systemPackages = [ pkgs.sbctl ];
       };
     };
 }

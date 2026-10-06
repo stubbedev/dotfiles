@@ -5,8 +5,5 @@ _: {
     withHash =
       { lib, stubbe, ... }:
       lib.mapAttrs (_: hex: "#${hex}") stubbe.colors;
-    withArgb =
-      { lib, stubbe, ... }:
-      lib.mapAttrs (_: hex: "0xff${hex}") stubbe.colors;
   };
 }

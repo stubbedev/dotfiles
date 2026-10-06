@@ -106,8 +106,6 @@ _: {
         stateInputs = [ "/usr/lib/systemd/system-generators/zram-generator" ];
         preCheck = pkgs.stubbe.setup.requireCommand "systemctl";
         script = ''
-          PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
           ${pkgs.stubbe.setup.hostPackage {
             have = "[ -e /usr/lib/systemd/system-generators/zram-generator ] || [ -e /lib/systemd/system-generators/zram-generator ]";
             apt = [ "systemd-zram-generator" ];

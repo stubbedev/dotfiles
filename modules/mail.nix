@@ -28,8 +28,9 @@
           util-linux # flock
         ];
         text = ''
+          accounts=(${lib.concatStringsSep " " (lib.attrNames passwords)})
           if [ "$#" -eq 0 ]; then
-            channels=(kontainer gmail)
+            channels=("''${accounts[@]}")
           else
             channels=("$@")
           fi
@@ -53,9 +54,14 @@
 
           notmuch new --quiet || true
 
-          notmuch tag +kontainer -- 'path:kontainer/** and not tag:kontainer' || true
-          notmuch tag +gmail     -- 'path:gmail/**     and not tag:gmail'     || true
-          notmuch tag -inbox -- 'tag:inbox and not folder:kontainer/INBOX and not folder:gmail/INBOX' || true
+          ${lib.concatMapStrings (account: ''
+            notmuch tag +${account} -- 'path:${account}/** and not tag:${account}' || true
+          '') (lib.attrNames passwords)}
+          notmuch tag -inbox -- 'tag:inbox and ${
+            lib.concatStringsSep " and " (
+              map (account: "not folder:${account}/INBOX") (lib.attrNames passwords)
+            )
+          }' || true
 
           if [ ''${#failed[@]} -gt 0 ]; then
             echo "mail-sync: failed channels: ''${failed[*]}" >&2
@@ -115,6 +121,7 @@
 
       mailUnsubscribe = pkgs.stubbe.bashApp {
         name = "mail-unsubscribe";
+        runtimeInputs = [ pkgs.curl ];
         text = ''
           set +e +o pipefail
 
@@ -143,33 +150,24 @@
 
           unsub_post=$(echo "$email" | grep -i "^List-Unsubscribe-Post:" | head -1)
 
+          check_response() {
+            if [ "$1" = "200" ] || [ "$1" = "201" ] || [ "$1" = "204" ]; then
+              echo "✓ Successfully unsubscribed"
+              exit 0
+            fi
+            echo "Warning: Unsubscribe request returned HTTP $1"
+            echo "URL: $url"
+            exit 1
+          }
+
           if [ -n "$unsub_post" ]; then
             echo "Processing one-click unsubscribe..."
             response=$(curl -sS -X POST -d "List-Unsubscribe=One-Click" "$url" -w "\n%{http_code}" -o /dev/null)
-            http_code=$(echo "$response" | tail -n1)
-
-            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
-              echo "✓ Successfully unsubscribed"
-              exit 0
-            else
-              echo "Warning: Unsubscribe request returned HTTP $http_code"
-              echo "URL: $url"
-              exit 1
-            fi
           else
             echo "Processing unsubscribe request..."
             response=$(curl -sS -L "$url" -w "\n%{http_code}" -o /dev/null)
-            http_code=$(echo "$response" | tail -n1)
-
-            if [ "$http_code" = "200" ] || [ "$http_code" = "201" ] || [ "$http_code" = "204" ]; then
-              echo "✓ Successfully unsubscribed"
-              exit 0
-            else
-              echo "Warning: Unsubscribe request returned HTTP $http_code"
-              echo "URL: $url"
-              exit 1
-            fi
           fi
+          check_response "$(printf '%s\n' "$response" | tail -n1)"
         '';
       };
 
@@ -336,16 +334,13 @@
       };
     in
     lib.mkIf config.features.desktop {
-      sops.secrets = {
-        aerc-kontainer = pkgs.stubbe.secret {
-          name = "aerc-kontainer";
-          path = passwords.kontainer;
-        };
-        aerc-gmail = pkgs.stubbe.secret {
-          name = "aerc-gmail";
-          path = passwords.gmail;
-        };
-      };
+      sops.secrets = lib.mapAttrs (
+        account: path:
+        pkgs.stubbe.secret {
+          name = "aerc-${account}";
+          inherit path;
+        }
+      ) passwords;
 
       # One accounts.email tree feeding home-manager's mbsync, notmuch and aerc
       # modules. Account names are the mbsync channel names the wrapper script

@@ -76,30 +76,13 @@
           uid=$(id -u)
           runtime="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
 
+          ${pkgs.stubbe.hypr.instanceFn}
           CURRENT_INSTANCE=""
-          attempt=0
-
-          if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
-            if [ -S "/run/user/$uid/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" ]; then
-              CURRENT_INSTANCE="$HYPRLAND_INSTANCE_SIGNATURE"
-            fi
+          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+            CURRENT_INSTANCE=$(hypr_instance first 1 "")
           fi
-
           if [ -z "$CURRENT_INSTANCE" ] && [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
-            while [ $attempt -lt 50 ] && [ -z "$CURRENT_INSTANCE" ]; do
-              for lockfile in "/run/user/$uid/hypr/"*/hyprland.lock; do
-                instance_dir="''${lockfile%/*}"
-                if [ -S "$instance_dir/.socket.sock" ]; then
-                  CURRENT_INSTANCE="''${instance_dir##*/}"
-                  break
-                fi
-              done
-
-              if [ -z "$CURRENT_INSTANCE" ]; then
-                sleep 0.1
-              fi
-              attempt=$((attempt + 1))
-            done
+            CURRENT_INSTANCE=$(hypr_instance first 50 0.1)
           fi
 
           if [ -n "$CURRENT_INSTANCE" ]; then
@@ -381,18 +364,12 @@
                 hyprland-workspaces = {
                   display-mode = "label";
                   label-size = "14px";
-                  workspace-map = {
-                    "1".color = c.blue;
-                    "2".color = "#f0c6c6";
-                    "3".color = "#ddb6f2";
-                    "4".color = "#f5bde6";
-                    "5".color = "#f28d8c";
-                    "6".color = "#e8a2a1";
-                    "7".color = "#f8bd96";
-                    "8".color = "#fae3b0";
-                    "9".color = "#a6d189";
-                    "10".color = "#81c8be";
-                  };
+                  workspace-map = builtins.listToAttrs (
+                    lib.imap1 (i: hex: {
+                      name = toString i;
+                      value.color = "#${hex}";
+                    }) pkgs.stubbe.workspaceColors
+                  );
                 };
 
                 systray.icon-scale = "20px";

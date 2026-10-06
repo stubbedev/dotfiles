@@ -118,9 +118,8 @@ switch_home_manager() {
   local flake_path activation
   flake_path=$(readlink -f "$HOME/.stubbe")
 
-  # --impure: modules/graphics.nix probes /proc for the GPU.
   if [ -x "$HOME/.nix-profile/bin/home-manager" ]; then
-    "$HOME/.nix-profile/bin/home-manager" switch --impure --flake "$flake_path#stubbe"
+    "$HOME/.nix-profile/bin/home-manager" switch --flake "$flake_path#stubbe"
     return 0
   fi
 
@@ -132,7 +131,7 @@ switch_home_manager() {
   # that modules/nix.nix then has to prune. programs.home-manager.enable puts
   # the real binary on PATH from here on.
   activation=$(/nix/var/nix/profiles/default/bin/nix build --no-link --print-out-paths \
-    --extra-experimental-features 'nix-command flakes' --impure \
+    --extra-experimental-features 'nix-command flakes' \
     "$flake_path#homeConfigurations.stubbe.activationPackage")
   "$activation/activate"
 }

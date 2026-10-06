@@ -465,10 +465,7 @@ else
 fi
 
 echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
-# --impure so graphics.nix can read /proc/driver/nvidia/version (populated
-# by the live ISO when an NVIDIA card is present — see iso.nix kernelModules)
-# and enable the nvidia driver in the installed system iff the target has one.
-nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password --impure
+nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password
 
 # Apply the password captured up front. chpasswd reads "user:plaintext"
 # from stdin and uses the installed system's default crypt method
@@ -555,7 +552,7 @@ echo "  Flake checkout: ${FLAKE_PATH} (clone of ${REPO_URL}, owned by ${PRIMARY_
 echo "  Transcript:     ${LOG}"
 echo ""
 echo "Log in as '${PRIMARY_USER}', then iterate via:"
-echo "  sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR} --impure"
+echo "  sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
 if [ "$sbctl_present" = true ]; then
   echo ""
   echo "Secure Boot: keys are in /var/lib/sbctl. On first boot, put firmware"

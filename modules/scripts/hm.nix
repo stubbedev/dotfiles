@@ -33,6 +33,13 @@ _: {
             [ -r /etc/os-release ] && grep -q '^ID=nixos' /etc/os-release
           }
 
+          # The GTK2 theme must not exist when HM asserts the config: an
+          # app-written ~/.gtkrc-2.0 makes the next activation refuse to
+          # clobber it and the theme silently reverts.
+          clear_gtkrc() {
+            rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+          }
+
           nixos_attr() {
             echo "''${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
           }
@@ -637,7 +644,7 @@ _: {
               shift
               prime_sudo_nixos
               update_system
-              rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              clear_gtkrc
               run_hm_subcmd switch "$@" && push_to_cache
               ;;
             whoami)
@@ -668,20 +675,20 @@ _: {
               usage
               ;;
             switch)
-              rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              clear_gtkrc
               shift
               prime_sudo_nixos
               run_hm_subcmd switch "$@" && push_to_cache
               ;;
             boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
-              rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              clear_gtkrc
               subcmd="$1"
               shift
               run_hm_subcmd "$subcmd" "$@"
               ;;
             rollback)
               shift
-              rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              clear_gtkrc
               run_rollback "$@"
               ;;
             gc)
@@ -697,7 +704,7 @@ _: {
               exit 2
               ;;
             *)
-              rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+              clear_gtkrc
               if is_nixos; then
                 echo "hm: '$1' is not supported on NixOS — the home-manager CLI is not available in submodule mode. Try 'hm help'." >&2
                 exit 2

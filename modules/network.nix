@@ -1,6 +1,11 @@
 _: {
   flake.modules.nixos.network =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       networking = {
         networkmanager = {
@@ -33,7 +38,7 @@ _: {
       # [NOTFOUND=return]` into nsswitch ahead of `resolve`, which hijacks every
       # `*.local` lookup to multicast mDNS and returns before systemd-resolved
       # is consulted. srv routes its local domains (including `*.local`) through
-      services.avahi = {
+      services.avahi = lib.mkIf config.stubbe.userFeatures.avahi {
         enable = true;
         nssmdns4 = false;
         openFirewall = true;
@@ -80,8 +85,6 @@ _: {
             <hostname>.local on the LAN.
           '';
           script = ''
-            PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
             ${pkgs.stubbe.setup.hostPackage {
               detect = "avahi-daemon";
               apt = [
@@ -184,8 +187,6 @@ _: {
             (ufw/firewalld if present), and enable the sshd unit.
           '';
           script = ''
-            PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
             ${pkgs.stubbe.setup.hostPackage {
               detect = "sshd";
               apt = [ "openssh-server" ];

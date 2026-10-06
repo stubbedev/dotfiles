@@ -4,10 +4,8 @@ _: {
     {
       home.packages = with pkgs; [
         bc
-        zsh
         zsh-completions
         zsh-patina
-        tmux
         starship
 
         fd
@@ -35,8 +33,6 @@ _: {
 
         statix
 
-        git
-        lazygit
         lazydocker
         gh
 

@@ -46,13 +46,13 @@
       config = lib.mkIf config.features.harness {
         home.packages = [ harness ];
 
-        sops.secrets.z-ai-token = pkgs.stubbe.secret { name = "z-ai-token"; };
-        sops.secrets.opencode-api-token = pkgs.stubbe.secret { name = "opencode-api-token"; };
-        sops.secrets.meta-muse-spark-api-token = pkgs.stubbe.secret {
-          name = "meta-muse-spark-api-token";
-        };
-        sops.secrets.openai-token = pkgs.stubbe.secret { name = "openai-token"; };
-        sops.secrets.cortiai-token = pkgs.stubbe.secret { name = "cortiai-token"; };
+        sops.secrets = lib.genAttrs [
+          "z-ai-token"
+          "opencode-api-token"
+          "meta-muse-spark-api-token"
+          "openai-token"
+          "cortiai-token"
+        ] (name: pkgs.stubbe.secret { inherit name; });
 
         # YAML, not JSON: the fork reads $XDG_CONFIG_HOME/harness/config.yaml
         # (hand-written, never written back to) and keeps its own writes in

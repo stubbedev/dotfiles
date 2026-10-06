@@ -22,6 +22,7 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   ├── core/              # the foundation (see CONVENTIONS below)
 │   ├── hosts/             # host definitions, one file each
 │   ├── dev/               # flake checks, lint, `nix fmt`
+│   ├── scripts/           # the `hm` front-end, launchers, clip, ISO burner
 │   ├── ai/, browsers/     # aspects big enough to want a directory
 │   └── <aspect>.nix       # mail, shell, hyprland, wayle, power, storage, …
 ├── bin/                   # ONLY the pre-Nix bootstraps (stb-install*)
@@ -33,9 +34,11 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 ```
 
 Every config file and script is inline Nix inside its aspect module. Scripts
-become PATH bins through `pkgs.stubbe.bashApp` (build-time shellcheck) or
-`pkgs.stubbe.zshApp` (build-time `zsh -n`). `bin/stb-install` runs from the
-checkout — it bootstraps Nix and home-manager on a fresh host.
+become PATH bins through `pkgs.stubbe.bashApp` (build-time shellcheck),
+`pkgs.stubbe.zshApp` (build-time `zsh -n`), or `pkgs.stubbe.shellScript` /
+`shellScriptBin` for scripts that must keep plain (non-`set -euo pipefail`)
+semantics. `bin/stb-install` runs from the checkout — it bootstraps Nix and
+home-manager on a fresh host.
 
 ## CONVENTIONS
 
@@ -48,16 +51,19 @@ checkout — it bootstraps Nix and home-manager on a fresh host.
 
 2. **No opt-outs.** Every `.nix` file under `modules/` is auto-loaded by
    import-tree and must be a flake-parts module. There are no
-   underscore-prefixed exceptions and no `lib/` directory: shared code lives in
-   `pkgs.stubbe` or in an option.
+   underscore-prefixed exceptions.
 
-3. **Two ways to reach shared code, and no third.**
-   - `pkgs.stubbe.*` — an overlay (`modules/core/pkgs-stubbe.nix`) carrying the
-     pure data (`colors`, `theme`, `newtabUrl`, `cache`) and every builder that
-     needs `pkgs` (`file`, `secret`, `bashApp`, `zshApp`, `install*`, `json*`).
-     Reachable from any module of any class, because it rides on `pkgs`.
-   - `config.stubbe.*` — options for anything derived from the configuration:
-     `paths`, `gfx`, `setup`, `mutable`.
+3. **Three layers of shared code, and no fourth.**
+   - `stubbe.lib.*` (`modules/core/lib/`) — pure data and pure functions:
+     `colors`, `theme`, `newtabUrl`, `cache`, the `hm` command catalogue,
+     `managedBy`. Needs nothing; mirrored as `flake.lib`.
+   - `pkgs.stubbe.*` (`modules/core/pkgs/`) — every builder that needs `pkgs`:
+     `file`, `secret`, `bashApp`, `zshApp`, `shellScript`, `gen`, `gl`,
+     `check`, and the `setup.*` script fragments. Re-exports all of
+     `stubbe.lib`, and is reachable from any module of any class because it
+     rides on `pkgs`.
+   - `config.stubbe.*` — options for anything derived from the evaluated
+     configuration: `paths`, `gfx`, `setup`, `mutable`, `userFeatures`.
 
    There is no `specialArgs` and no `extraSpecialArgs` anywhere. A module that
    needs a flake input resolves it at flake-parts level, where `inputs` is
@@ -86,7 +92,7 @@ checkout — it bootstraps Nix and home-manager on a fresh host.
 7. **Everything is Nix.** Config is structured Nix data rendered through
    `lib.generators` / `pkgs.formats` where a format exists (INI, TOML, YAML,
    JSON), and inline strings where none does — so the Catppuccin palette
-   exists once, in `modules/core/lib.nix`, and flows into every themed
+   exists once, in `modules/core/lib/palette.nix`, and flows into every themed
    surface by interpolation. The only real files left under `src/` are the
    ones that must be files: the nvim and hyprland live-edit trees
    (`stubbe.mutable` link), binary wallpapers, and the sops secrets.

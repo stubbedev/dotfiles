@@ -99,32 +99,11 @@ in
       '';
 
       hyprctl = pkgs.stubbe.shellScriptBin "hyprctl" ''
-        uid="''${UID:-$(id -u)}"
-        hypr_root="/run/user/$uid/hypr"
+        ${pkgs.stubbe.hypr.instanceFn}
 
-        _socket_ok() {
-          [ -S "$hypr_root/$1/.socket.sock" ]
-        }
-
-        if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ] && _socket_ok "$HYPRLAND_INSTANCE_SIGNATURE"; then
-          : # already correct
-        else
-          current_instance=""
-          newest_lock=""
-          for lockfile in "$hypr_root"/*/hyprland.lock; do
-            [ -e "$lockfile" ] || continue
-            instance_name="''${lockfile%/hyprland.lock}"
-            instance_name="''${instance_name##*/}"
-            if _socket_ok "$instance_name"; then
-              if [ -z "$newest_lock" ] || [ "$lockfile" -nt "$newest_lock" ]; then
-                newest_lock="$lockfile"
-                current_instance="$instance_name"
-              fi
-            fi
-          done
-          if [ -n "$current_instance" ]; then
-            export HYPRLAND_INSTANCE_SIGNATURE="$current_instance"
-          fi
+        instance=$(hypr_instance newest 1 "")
+        if [ -n "$instance" ]; then
+          export HYPRLAND_INSTANCE_SIGNATURE="$instance"
         fi
 
         exec ${pkgs.hyprland}/bin/hyprctl "$@"
@@ -149,9 +128,6 @@ in
         startHyprland
         compositorSession
         (gfx.wrapExe "Xwayland" pkgs.xwayland)
-        (pkgs.runCommandLocal "monitor-brightness" { } ''
-          install -Dm755 ${pkgs.stubbe.file "src/hyprland/scripts/monitor.brightness.sh"} $out/bin/monitor-brightness
-        '')
       ]
       ++ (with pkgs; [
         wl-clipboard
@@ -291,29 +267,9 @@ in
               name = "hyprland-reload";
               text = ''
                 (
-                  uid="''${UID:-$(id -u)}"
-                  hypr_root="/run/user/$uid/hypr"
+                  ${pkgs.stubbe.hypr.instanceFn}
 
-                  [ -d "$hypr_root" ] || exit 0
-
-                  target_instance=""
-                  if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && \
-                     [ -S "$hypr_root/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" ]; then
-                    target_instance="$HYPRLAND_INSTANCE_SIGNATURE"
-                  else
-                    newest_mtime=0
-                    for sock in "$hypr_root"/*/.socket.sock; do
-                      [ -S "$sock" ] || continue
-                      instance_dir="''${sock%/.socket.sock}"
-                      instance="''${instance_dir##*/}"
-                      mtime=$(stat -c %Y "$sock" 2>/dev/null || echo 0)
-                      if [ "$mtime" -gt "$newest_mtime" ]; then
-                        newest_mtime="$mtime"
-                        target_instance="$instance"
-                      fi
-                    done
-                  fi
-
+                  target_instance=$(hypr_instance newest 1 "")
                   [ -n "$target_instance" ] || exit 0
 
                   export HYPRLAND_INSTANCE_SIGNATURE="$target_instance"
@@ -368,8 +324,6 @@ in
               launcher = "/etc/greetd/hyprland-session.sh";
             in
             ''
-              PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
               ${pkgs.stubbe.setup.hostPackage {
                 detect = "greetd";
                 apt = [ "greetd" ];

@@ -16,17 +16,17 @@ _: {
         pkgs.stubbe.shellScript "setup-${name}" ''
           set -e
 
+          # Activations run with a stripped PATH; restore the standard
+          # locations first, so sudo and every probe below (preCheck,
+          # hostPackage, systemctl, ...) find their binaries. Many live
+          # under /sbin.
+          PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
+
           if (exec >/dev/tty) 2>/dev/null; then
             exec >/dev/tty 2>&1
           fi
 
-          SUDO=""
-          for path in /bin/sudo /usr/bin/sudo /usr/local/bin/sudo; do
-            if [ -x "$path" ]; then
-              SUDO="$path"
-              break
-            fi
-          done
+          SUDO="$(command -v sudo || true)"
 
           if [ -z "$SUDO" ]; then
             exit 0

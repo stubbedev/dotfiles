@@ -1,39 +1,20 @@
 { inputs, ... }:
-let
-  # Lazy and guarded: forced only when something consumes pkgs.nixgl (the
-  # standalone-HM NVIDIA path; NixOS hosts use system GL and never touch it).
-  # tryEval keeps pure evals - hm switch no longer passes --impure - from dying
-  # on the absolute-path access: they fall back to generic nixgl.
-  nvidiaVersion =
-    let
-      probed = builtins.tryEval (
-        let
-          versionPath = /. + "/proc/driver/nvidia/version";
-        in
-        if builtins.pathExists versionPath then
-          builtins.match ".*x86_64[[:space:]]+([0-9.]+)[[:space:]]+.*" (builtins.readFile versionPath)
-        else
-          null
-      );
-    in
-    if probed.success && probed.value != null then builtins.head probed.value else null;
-in
 {
   flake.overlays = {
+    # Lazy: forced only when something consumes pkgs.nixgl, the standalone-HM
+    # Intel fallback in pkgs/gl.nix; NixOS hosts and NVIDIA machines use system
+    # GL and never touch it.
     nixgl =
       final: _prev:
       let
         isIntelX86 = final.stdenv.hostPlatform.system == "x86_64-linux";
       in
       {
-        nixgl = import "${inputs.nixgl}/default.nix" (
-          {
-            pkgs = final;
-            enable32bits = isIntelX86;
-            enableIntelX86Extensions = isIntelX86;
-          }
-          // final.lib.optionalAttrs (nvidiaVersion != null) { inherit nvidiaVersion; }
-        );
+        nixgl = import "${inputs.nixgl}/default.nix" {
+          pkgs = final;
+          enable32bits = isIntelX86;
+          enableIntelX86Extensions = isIntelX86;
+        };
       };
 
     cship =

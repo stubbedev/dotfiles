@@ -127,8 +127,6 @@ _: {
               binPath = "/usr/local/bin/adaptive-power-manager";
             in
             ''
-              PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
               # Installed by value, not symlinked: the boot service must
               # survive a nix-collect-garbage.
               sudo install -m 0755 "${pkgs.adaptive-power-manager}/bin/adaptive-power-manager" "${binPath}"
@@ -204,8 +202,6 @@ _: {
               the disk and burn a chunk of the battery mid-flight.
           '';
           script = ''
-            PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
             cpu_model=$(awk -F: '/^model[[:space:]]*:/ { gsub(/ /, "", $2); print $2; exit }' /proc/cpuinfo)
             case "$cpu_model" in
             ${

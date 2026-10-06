@@ -1,19 +1,10 @@
 { inputs, ... }:
+let
+  system = "x86_64-linux";
+  treemanPkg = inputs.treeman.packages.${system}.treeman;
+  treemandPkg = inputs.treeman.packages.${system}.treemand;
+in
 {
-  flake.modules.nixos.treeman =
-    { pkgs, ... }:
-    let
-      inherit (pkgs.stdenv.hostPlatform) system;
-      treemanPkg = inputs.treeman.packages.${system}.treeman;
-      treemandPkg = inputs.treeman.packages.${system}.treemand;
-    in
-    {
-      environment.systemPackages = [
-        treemanPkg
-        treemandPkg
-      ];
-    };
-
   flake.modules.homeManager.treeman =
     {
       config,
@@ -21,11 +12,6 @@
       pkgs,
       ...
     }:
-    let
-      inherit (pkgs.stdenv.hostPlatform) system;
-      treemanPkg = inputs.treeman.packages.${system}.treeman;
-      treemandPkg = inputs.treeman.packages.${system}.treemand;
-    in
     lib.mkIf config.features.treeman {
       home.packages = [
         treemanPkg

@@ -13,13 +13,21 @@
         ];
         # Scoped to tracked files, which is exactly what ends up in the flake
         # source the checks run against. Walking `.` instead would follow the
-        # result/ symlinks into the read-only store.
+        # result/ symlinks into the read-only store. Deleted-but-unstaged
+        # files are filtered out: until the deletion is committed they still
+        # show up in git ls-files, and deadnix/nixfmt die on the missing
+        # paths.
         text = ''
           cd "$(git rev-parse --show-toplevel)"
           statix fix .
-          git ls-files -z '*.nix' \
-            | xargs -0 deadnix --edit --
-          git ls-files -z '*.nix' | xargs -0 nixfmt
+          tracked_nix() {
+            git ls-files -z '*.nix' \
+              | while IFS= read -r -d "" f; do
+                if [ -e "$f" ]; then printf '%s\0' "$f"; fi
+              done
+          }
+          tracked_nix | xargs -0 -r deadnix --edit --
+          tracked_nix | xargs -0 -r nixfmt
         '';
       };
 

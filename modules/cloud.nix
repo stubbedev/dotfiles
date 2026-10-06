@@ -1,10 +1,4 @@
 _: {
-  flake.modules.nixos.cloud =
-    { pkgs, ... }:
-    {
-      environment.systemPackages = with pkgs; [ hcloud ];
-    };
-
   flake.modules.homeManager.cloud =
     { config, pkgs, ... }:
     {

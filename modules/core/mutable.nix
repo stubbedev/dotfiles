@@ -3,7 +3,6 @@ _: {
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     let
@@ -41,7 +40,7 @@ _: {
         default = { };
         type = lib.types.attrsOf (
           lib.types.submodule (
-            { name, config, ... }:
+            { name, ... }:
             {
               options = {
                 target = lib.mkOption {
@@ -72,12 +71,6 @@ _: {
                   description = "A store path to install instead of a checkout path. Mutually exclusive with `src`.";
                 };
 
-                text = lib.mkOption {
-                  type = lib.types.nullOr lib.types.lines;
-                  default = null;
-                  description = "Content generated in Nix; shorthand for `source = pkgs.writeText …`.";
-                };
-
                 mode = lib.mkOption {
                   type = lib.types.str;
                   default = "0644";
@@ -85,9 +78,6 @@ _: {
                 };
               };
 
-              config.source = lib.mkIf (config.text != null) (
-                lib.mkDefault (pkgs.writeText (lib.replaceStrings [ "/" ] [ "-" ] name) config.text)
-              );
             }
           )
         );

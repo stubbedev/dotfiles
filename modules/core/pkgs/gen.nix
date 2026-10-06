@@ -12,16 +12,12 @@ _: {
       let
         inherit (final) lib;
 
-        fileNameOf = relPath: lib.replaceStrings [ "/" ] [ "-" ] relPath;
-
         viaFormat = fmt: name: fmt.generate name;
         viaText =
           render: name: value:
           final.writeText name (render value);
       in
       {
-        inherit fileNameOf;
-
         json = viaFormat (final.formats.json { });
         toml = viaFormat (final.formats.toml { });
         yaml = viaFormat (final.formats.yaml { });
@@ -37,19 +33,5 @@ _: {
         # an override.
         unitText = lib.generators.toINI { listsAsDuplicateKeys = true; };
       };
-
-    # xdg.configFile shape: { "<path>" = <value>; } -> { "<path>".source = …; },
-    # so a module names each config file once.
-    conf =
-      { lib, stubbe, ... }:
-      lib.mapAttrs
-        (_: writer: lib.mapAttrs (path: value: { source = writer (stubbe.gen.fileNameOf path) value; }))
-        (
-          removeAttrs stubbe.gen [
-            "fileNameOf"
-            "iniText"
-            "unitText"
-          ]
-        );
   };
 }

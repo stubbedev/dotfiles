@@ -106,8 +106,6 @@ _: {
           registry:3 container on :5000 backed by the registry-data volume.
         '';
         script = ''
-          PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
           # Group first: the socket unit's SocketGroup needs it to exist.
           sudo groupadd -f docker
           if ! id -nG ${config.home.username} | tr ' ' '\n' | grep -qx docker; then

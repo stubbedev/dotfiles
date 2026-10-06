@@ -232,8 +232,6 @@ in
                 extension: lib.concatMapStrings (provider: " ! -name '${uuidOf provider}.${extension}'") providers;
             in
             ''
-              PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
               ${perProvider}
 
               # The detach hook and its drop-in, from before persistence made

@@ -1,6 +1,6 @@
 # Branch of the stubbe.lib trunk (see ../lib.nix).
 # The single source of truth for colour and theme names; pkgs.stubbe.withHash
-# and withArgb re-encode these for formats that want a different literal.
+# re-encodes these for formats that want a # prefix.
 _: {
   stubbe.lib = {
     colors = {
@@ -43,5 +43,20 @@ _: {
 
     # The page every new tab and the browser home button lands on.
     newtabUrl = "https://start.local/";
+
+    # Per-workspace accent ramp, workspace 1 first; wayle renders it into the
+    # hyprland-workspaces label map.
+    workspaceColors = [
+      "89b4fa"
+      "f0c6c6"
+      "ddb6f2"
+      "f5bde6"
+      "f28d8c"
+      "e8a2a1"
+      "f8bd96"
+      "fae3b0"
+      "a6d189"
+      "81c8be"
+    ];
   };
 }

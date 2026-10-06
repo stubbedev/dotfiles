@@ -185,8 +185,6 @@ in
             which is what lets the USB controllers reach their low-power states.
           '';
           script = ''
-            PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
-
             ${pkgs.stubbe.setup.text {
               name = "90-usb-autosuspend-disable.rules";
               target = "/etc/udev/rules.d/90-usb-autosuspend-disable.rules";

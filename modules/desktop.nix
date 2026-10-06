@@ -92,6 +92,12 @@ in
         ++ lib.optionals (config.host.platform != "nixos") [
           pkgs.gvfs
           pkgs.udisks2
+        ]
+        ++ lib.optionals config.features.slack [
+          (config.stubbe.gfx.bundle {
+            pkg = pkgs.slack;
+            flags = [ "--disable-setuid-sandbox" ];
+          })
         ];
 
       xdg = {
@@ -196,6 +202,14 @@ in
         profileName = "nix-bubblewrap";
         programGlob = "/nix/store/*/bin/bwrap";
       };
+
+      stubbe.setup.slackApparmor = lib.mkIf config.features.slack (
+        pkgs.stubbe.setup.apparmor {
+          appName = "Slack";
+          profileName = "nix-slack";
+          programGlob = "/nix/store/*/lib/slack/{slack,chrome-sandbox}";
+        }
+      );
 
       # udisks2 is a Nix package here, but its daemon has to be reachable from
       # the SYSTEM bus, which never looks in ~/.nix-profile.
