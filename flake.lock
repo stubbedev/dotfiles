@@ -28,11 +28,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1791071338,
-        "narHash": "sha256-YBAFoulgm9qEavWtmb2gHwk7lgpVZL7vtr4+yi6H3UU=",
+        "lastModified": 1791259350,
+        "narHash": "sha256-zFzAgJWwGylQEnlX3wC/j2sVjMRCVnYNn8ogLDF7JGc=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "b17e42820330bd34ab890632c2f6f80daf4e517f",
+        "rev": "05717477d9464707396b6387ae401175450173d6",
         "type": "github"
       },
       "original": {
@@ -661,16 +661,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1787187597,
-        "narHash": "sha256-P5adooUaNCidGTIh/PDKzwvtIXCQ0y8tUMbLUC4sk98=",
+        "lastModified": 1791247617,
+        "narHash": "sha256-lhMVWOm/mlB1NiSnkZiZXux1OB+RFRHkci2NAR1zFHo=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "533ef884630924b774a2d74ac3d6050f7b3fbce0",
+        "rev": "c23560bcc1b712eb5d10a873fc4f507da71a3574",
         "type": "github"
       },
       "original": {
         "owner": "PHPantom-dev",
-        "ref": "0.10.0",
+        "ref": "0.11.0",
         "repo": "phpantom_lsp",
         "type": "github"
       }
@@ -798,11 +798,11 @@
     },
     "systems": {
       "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "lastModified": 1791244623,
+        "narHash": "sha256-uuanbkFk8a313Zfrxdcz8Us/yQtaxNnKJtX8v0ZPpd8=",
         "owner": "nix-systems",
         "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "rev": "d36eeed142f88b5a636f2e3856a53c61654cf29b",
         "type": "github"
       },
       "original": {
