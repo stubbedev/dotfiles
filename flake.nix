@@ -40,6 +40,12 @@
       url = "github:stubbedev/harness";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Composer, natively: a Go port of Composer installed as `composer`
+    # (modules/php.nix). flake.lock pins it; `nix flake update maestro` moves it.
+    maestro = {
+      url = "github:stubbedev/maestro";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     html-to-md = {
       url = "github:stubbedev/html-to-md";
       inputs.nixpkgs.follows = "nixpkgs";

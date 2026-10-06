@@ -141,7 +141,10 @@ in
           '';
         };
 
-      composer = phpPackage.packages.composer.override { inherit php; };
+      # maestro replaces Composer: its package provides both `maestro` and
+      # `composer`. It runs scripts and plugins with the `php` on PATH (the
+      # static build below, same extensions and ini). Pinned by flake.lock only.
+      composer = inputs.maestro.packages.${pkgs.stdenv.hostPlatform.system}.default;
     in
     lib.mkIf config.features.php {
       home.packages = with pkgs; [
