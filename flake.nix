@@ -3,10 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    # nix-community/nixGL#221: fixes the version regex for NVIDIA Open Kernel
-    # Module 595.71.05+. Switch back to upstream once merged.
+    # nix-community/nixGL#221 (NVIDIA kernel-param regex for 595.71.05+) is
+    # still open upstream, but it only matters for nixgl's NVIDIA wrapper —
+    # which this config never uses: NVIDIA hosts dispatch via the host's glvnd
+    # (modules/core/pkgs/gl.nix), and only nixGLIntel is consumed, identical in
+    # both trees.
     nixgl = {
-      url = "github:KeeTraxx/nixGL/fix-nvidia-kernel-param";
+      url = "github:nix-community/nixgl";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -59,7 +62,10 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    notmuch-mcp.url = "github:stubbedev/notmuch-mcp";
+    notmuch-mcp = {
+      url = "github:stubbedev/notmuch-mcp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     wayle = {
       # ?submodules=1: the github fetcher skips submodules, leaving the vendored
       # cava C sources missing.
@@ -97,15 +103,6 @@
     impermanence = {
       url = "github:nix-community/impermanence";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    ghostscript-src = {
-      url = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz";
-      type = "tarball";
-      flake = false;
-    };
-    imagemagick-src = {
-      url = "github:ImageMagick/ImageMagick/7.1.2-25";
-      flake = false;
     };
     libembroidery-src = {
       url = "github:Embroidermodder/libembroidery";

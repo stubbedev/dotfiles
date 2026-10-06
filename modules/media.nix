@@ -22,22 +22,6 @@
         ];
       };
 
-      # At the use site, not via an overlay, so reverse deps like libreoffice and
-      # imagemagick keep using the cached pkgs.ghostscript.
-      ghostscript-latest = pkgs.ghostscript.overrideAttrs (_old: {
-        version = "10.07.0";
-        src = inputs.ghostscript-src;
-      });
-
-      # Pinned to the exact release production runs: clip-path and alpha handling
-      # are version sensitive, so reproducing a bug locally needs the same patch
-      # release.
-      # EL9, currently 7.1.2-25). Clip-path and alpha handling is version
-      imagemagick-prod = pkgs.imagemagick.overrideAttrs (_old: {
-        version = "7.1.2-25";
-        src = inputs.imagemagick-src;
-      });
-
       libembroidery = pkgs.stdenv.mkDerivation {
         pname = "libembroidery";
         version = "unstable";
@@ -64,13 +48,13 @@
     in
     lib.mkIf config.features.media {
       home.packages = with pkgs; [
-        imagemagick-prod
+        imagemagick
         libembroidery
         pngquant
         exiftool
         libraw
         librsvg
-        ghostscript-latest
+        ghostscript
         mupdf
 
         (gfx.wrap ffmpeg-full)

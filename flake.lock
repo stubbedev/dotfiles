@@ -324,19 +324,6 @@
         "type": "github"
       }
     },
-    "ghostscript-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1773656479,
-        "narHash": "sha256-KxFUHhpfp7mMdV13iz0nGqGUPQfFBtn+BX10+p93Z6I=",
-        "type": "tarball",
-        "url": "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10070/ghostscript-10.07.0.tar.xz"
-      }
-    },
     "gitignore": {
       "inputs": {
         "nixpkgs": [
@@ -440,23 +427,6 @@
       "original": {
         "owner": "stubbedev",
         "repo": "html-to-md",
-        "type": "github"
-      }
-    },
-    "imagemagick-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1780612020,
-        "narHash": "sha256-7z1oIKXZcumsESLrFRvU6z0M8JVsogG7yDWwF62jPwo=",
-        "owner": "ImageMagick",
-        "repo": "ImageMagick",
-        "rev": "04a04eaaa22f721f204c4bf4c6b24b08b1afe5c5",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ImageMagick",
-        "ref": "7.1.2-25",
-        "repo": "ImageMagick",
         "type": "github"
       }
     },
@@ -580,17 +550,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1780323343,
-        "narHash": "sha256-TqVmAh3N0apQNMGxZgMnqVMF0jnAH0B9YfEujqK+Of8=",
-        "owner": "KeeTraxx",
-        "repo": "nixGL",
-        "rev": "51471fb4760efda2defba73bc1c264b7ba5364c2",
+        "lastModified": 1762090880,
+        "narHash": "sha256-fbRQzIGPkjZa83MowjbD2ALaJf9y6KMDdJBQMKFeY/8=",
+        "owner": "nix-community",
+        "repo": "nixgl",
+        "rev": "b6105297e6f0cd041670c3e8628394d4ee247ed5",
         "type": "github"
       },
       "original": {
-        "owner": "KeeTraxx",
-        "ref": "fix-nvidia-kernel-param",
-        "repo": "nixGL",
+        "owner": "nix-community",
+        "repo": "nixgl",
         "type": "github"
       }
     },
@@ -643,22 +612,6 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1791130267,
-        "narHash": "sha256-1sjwcQMcgAbmiip/VivBSiK8p2bTkQGOvCuO7vnwfx4=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "9013764fcc0ea99fa16cf7aa7decf8a5c3889dd2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_3": {
-      "locked": {
         "lastModified": 1791161550,
         "narHash": "sha256-hUcT0jKmSHN5XgRW3sSEIIlqsVClkVfToluYtOd56ok=",
         "owner": "NixOS",
@@ -676,7 +629,9 @@
     "notmuch-mcp": {
       "inputs": {
         "flake-utils": "flake-utils_5",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1791204683,
@@ -748,11 +703,9 @@
         "cship": "cship",
         "disko": "disko",
         "flake-parts": "flake-parts",
-        "ghostscript-src": "ghostscript-src",
         "harness": "harness",
         "home-manager": "home-manager",
         "html-to-md": "html-to-md",
-        "imagemagick-src": "imagemagick-src",
         "impermanence": "impermanence",
         "import-tree": "import-tree",
         "lanzaboote": "lanzaboote",
@@ -820,7 +773,7 @@
     "srv": {
       "inputs": {
         "flake-utils": "flake-utils_7",
-        "nixpkgs": "nixpkgs_3"
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
         "lastModified": 1791312942,
