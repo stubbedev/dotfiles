@@ -46,19 +46,15 @@ jobs:
 
       # Scoped to lint + eval checks only. hyprland-config is deliberately
       # excluded: it builds Hyprland from source, which is far too slow for
-      # an uncached runner — run `nix flake check --impure` locally for the
-      # full set.
-      #
-      # --impure is required because modules/graphics.nix reads /proc
-      # for GPU detection and throws under pure eval. The runner has no
-      # NVIDIA driver, so detection resolves to the non-NVIDIA path.
+      # an uncached runner — run `just check` locally for the full set.
+      # Pure eval: GPU detection is host-driven (host.graphicsNvidia), nothing
+      # reads /proc any more.
       - name: Build lint and eval checks
         run: |
-          nix build --impure --no-link \
+          nix build --no-link \
             .#checks.x86_64-linux.lint-statix \
             .#checks.x86_64-linux.lint-deadnix \
             .#checks.x86_64-linux.lint-fmt \
             .#checks.x86_64-linux.lint-shellcheck \
-            .#checks.x86_64-linux.eval-nixos-stubbe \
             .#checks.x86_64-linux.eval-hm-stubbe \
             .#checks.x86_64-linux.rofi-theme
