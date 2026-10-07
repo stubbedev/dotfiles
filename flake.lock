@@ -354,11 +354,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791225849,
-        "narHash": "sha256-5bEdUSCQyW6GqMnOaidMJt1TrfUq+Jy6lXT7Avi7RDo=",
+        "lastModified": 1791317531,
+        "narHash": "sha256-3vECcuc43iPeDIYfzoIw4H4Lw7Ks1jTVyjIPDZRm+g4=",
         "owner": "stubbedev",
         "repo": "harness",
-        "rev": "6d5cc8a7d9e83f5933d324ed42b082c42cbf70ca",
+        "rev": "97256853cabb44ed9d43ad0e0c201fdb12d8875f",
         "type": "github"
       },
       "original": {
@@ -516,11 +516,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791312924,
-        "narHash": "sha256-uUNuJp2ScFqiWIP8fRMxggqxcCEyvQzGVAKHccS2Eig=",
+        "lastModified": 1791349369,
+        "narHash": "sha256-HO/rYXftpugm5Psp9+n7jolZiMyc/k1Yu8ToM+7oQi0=",
         "owner": "stubbedev",
         "repo": "maestro",
-        "rev": "b01f0e2117757729c4cc097acace8dfa087cf0c4",
+        "rev": "6898e7aa700a8c4a382c66919048d0ae7fe406ac",
         "type": "github"
       },
       "original": {
@@ -612,11 +612,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1791161550,
-        "narHash": "sha256-hUcT0jKmSHN5XgRW3sSEIIlqsVClkVfToluYtOd56ok=",
+        "lastModified": 1791191277,
+        "narHash": "sha256-i8KuaINOYLvB2oQikGvtRmdZRxATRxsI9Yad2pp7dEA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8c6b39505383e6d5dcb431f00cb3597b71f8045c",
+        "rev": "aa48d347080940b8a2b8d2f48228674e280a3514",
         "type": "github"
       },
       "original": {
@@ -655,16 +655,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1791247617,
-        "narHash": "sha256-lhMVWOm/mlB1NiSnkZiZXux1OB+RFRHkci2NAR1zFHo=",
+        "lastModified": 1791346348,
+        "narHash": "sha256-OTMe7T/TK9lpQGXPQA8VIfZ+SA6/7T/2WBdwym3A+0E=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "c23560bcc1b712eb5d10a873fc4f507da71a3574",
+        "rev": "1756b1f920c1290d4c4fdd4d2c902fad53a75cd3",
         "type": "github"
       },
       "original": {
         "owner": "PHPantom-dev",
-        "ref": "0.11.0",
+        "ref": "0.11.1",
         "repo": "phpantom_lsp",
         "type": "github"
       }
@@ -776,11 +776,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1791312942,
-        "narHash": "sha256-4WvVlJq0FcxtHamwIAdn0WK7oQ3b4IIomcRDJJrXVpc=",
+        "lastModified": 1791319217,
+        "narHash": "sha256-PFs0JNUa6LCKMAoFbYsDThBmZJopvb9MB2BD4rG/l00=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "5b9c41bcdb7742886a5b47e279f1397e79eccb35",
+        "rev": "51e090cc18f5def69571457cc7cf45967dc8f603",
         "type": "github"
       },
       "original": {
