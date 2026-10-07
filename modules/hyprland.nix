@@ -319,6 +319,10 @@ in
             Recovery if autologin ever fails to render: switch to a text console
             (Ctrl+Alt+F3) and log in there to fix or roll back.
           '';
+          # Purging another DM's package (deb-systemd-helper purge) deletes the
+          # shared display-manager.service alias it once owned, silently
+          # disabling greetd; re-run when the alias disappears.
+          stateInputs = [ "/etc/systemd/system/display-manager.service" ];
           script =
             let
               launcher = "/etc/greetd/hyprland-session.sh";
