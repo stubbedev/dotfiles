@@ -85,7 +85,7 @@
       flake = false;
     };
     phpantom_lsp = {
-      url = "github:PHPantom-dev/phpantom_lsp/0.11.0";
+      url = "github:PHPantom-dev/phpantom_lsp/0.11.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     disko = {
