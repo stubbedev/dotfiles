@@ -516,11 +516,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791349369,
-        "narHash": "sha256-HO/rYXftpugm5Psp9+n7jolZiMyc/k1Yu8ToM+7oQi0=",
+        "lastModified": 1791395733,
+        "narHash": "sha256-rFVC0+8/P1kFhMNAjMc/tOBrCK/ITqfEK/WOMm7VSfg=",
         "owner": "stubbedev",
         "repo": "maestro",
-        "rev": "6898e7aa700a8c4a382c66919048d0ae7fe406ac",
+        "rev": "4f5afcff44bb1cb5141f28130fc24d949b50c36c",
         "type": "github"
       },
       "original": {
