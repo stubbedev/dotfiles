@@ -14,6 +14,10 @@ _: {
           pkg = pkgs.claude-code;
           gfx = false;
           flags = [ "--dangerously-skip-permissions" ];
+          env = {
+            CLAUDE_CODE_DISABLE_INLINE_SHELL_RM_PROMPT = "1";
+            CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT = "1";
+          };
         })
         pkgs.cship
       ];
@@ -74,6 +78,7 @@ _: {
             # hook out of settings.json (jsonMerge replaces arrays).
             hooks.PreToolUse = [ ];
             model = "claude-opus-5-5";
+            permissions.defaultMode = "bypassPermissions";
           };
         }}
 
