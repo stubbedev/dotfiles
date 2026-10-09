@@ -22,10 +22,21 @@ _: {
       # ~/.config/gh/hosts.yml carries the GitHub CLI oauth_token. By default gh
       # stashes the token in libsecret under "Default_Keyring", which PAM does
       # NOT auto-unlock — so the token effectively vanishes on every reboot.
-      # Pinning hosts.yml through sops sidesteps the keyring entirely.
-      sops.secrets.gh_hosts = pkgs.stubbe.secret {
-        name = "gh-hosts.yaml";
-        path = "${config.home.homeDirectory}/.config/gh/hosts.yml";
+      # Pinning hosts.yml through sops sidesteps the keyring entirely. It reuses
+      # the github-token secret nix's access-tokens already read (see nix.nix),
+      # so one token rotation covers both.
+      sops.secrets.github-token = pkgs.stubbe.secret { name = "github-token"; };
+      sops.templates."gh-hosts.yml" = {
+        content = ''
+          github.com:
+              git_protocol: ssh
+              users:
+                  stubbedev:
+                      oauth_token: ${config.sops.placeholder.github-token}
+              user: stubbedev
+              oauth_token: ${config.sops.placeholder.github-token}
+        '';
+        path = "${config.xdg.configHome}/gh/hosts.yml";
       };
     };
 }
