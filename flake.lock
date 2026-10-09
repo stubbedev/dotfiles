@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791146173,
-        "narHash": "sha256-s80AEqrIxUEO4Eg9N/GsfkfBcT2fkdXJSiLKJtWrdAw=",
+        "lastModified": 1791532895,
+        "narHash": "sha256-XOJsOzWdifnCbMi/Ts7jzB7tPDna4tTfchkOOhRaRn4=",
         "owner": "stubbedev",
         "repo": "adaptive-power-manager",
-        "rev": "0294400e762bbd3c0dfe116ea9a27582cfc95a3e",
+        "rev": "ef36270f1e98cf970b9d85053948cc07b8827c37",
         "type": "github"
       },
       "original": {
@@ -417,11 +417,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791209336,
-        "narHash": "sha256-7idOqNzh/lx3VPng0Rl06EzmbHDmE7Kvg7DeOiFH8qc=",
+        "lastModified": 1791532865,
+        "narHash": "sha256-uAQqFGfEy3QTGYOuAx2Qs93Ua2LGimP33VcQXyfhUmU=",
         "owner": "stubbedev",
         "repo": "html-to-md",
-        "rev": "68f07a10d5afd67ed1acba785cbe66b067892b84",
+        "rev": "7f7ba0d2e66b5b12b898d5db0ed7425e15187115",
         "type": "github"
       },
       "original": {
@@ -516,11 +516,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791520987,
-        "narHash": "sha256-Xv5mjFIW5C/1n3O80MGz3GECiIv7FwYDA3crjKBtKds=",
+        "lastModified": 1791531941,
+        "narHash": "sha256-9FIam879gHZcHMxw1NDjCb49WkeEHmA0cBZT/KRnUBM=",
         "owner": "stubbedev",
         "repo": "maestro",
-        "rev": "77102c026823d107f1b267164bbab0f697b2f52e",
+        "rev": "2e5e634ed8fdc43b5fab662681a23e03c3460082",
         "type": "github"
       },
       "original": {
@@ -634,11 +634,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791204683,
-        "narHash": "sha256-cPh3vED4FM0GwOv9EDT60J9/r6n/A8Gsf9QvwuRM/LQ=",
+        "lastModified": 1791532885,
+        "narHash": "sha256-c8OrmMHaL9sYirT0cOTf5Xk5AheZuPy8N4yRnFXheso=",
         "owner": "stubbedev",
         "repo": "notmuch-mcp",
-        "rev": "7dca130420c659a0153ae0bc3281e5620ce93f4e",
+        "rev": "8999ed60b64ad7868504c529c8f09c27161bcbae",
         "type": "github"
       },
       "original": {
@@ -947,11 +947,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791460199,
-        "narHash": "sha256-utP1jJmkh+34Y3QTLAF2D/5GPDLf/KoGHX/ncr+rO4o=",
+        "lastModified": 1791532840,
+        "narHash": "sha256-pAwI0lVXBi7w3wrmI+qjmtDA+HoyNJoTj6rJTWZcblI=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "ff28241f9f37ef1f13cb1bee04901738e889893e",
+        "rev": "94d4ff3394d9d36d610a83137547416135d89e2e",
         "type": "github"
       },
       "original": {
@@ -984,11 +984,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791209198,
-        "narHash": "sha256-7xDjMWfI8yhRHdEVHnEE7qqxkcPI6Ajh51y855ExvF4=",
+        "lastModified": 1791532795,
+        "narHash": "sha256-2YzFmqorpuhvfSQNsLqvrGSGNkOe7h3g/OblJwXT2v0=",
         "ref": "master",
-        "rev": "3242eeb1bb384cfcb377d4ed61bd76049c95f0b6",
-        "revCount": 966,
+        "rev": "be9d76c060f76ec85a7dcf6e96230896fc333a8e",
+        "revCount": 967,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/stubbedev/wayle.git"
@@ -1028,11 +1028,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791211768,
-        "narHash": "sha256-fe67CIWbbk5R+qQ6TKlqo/jihUdusUrvhIjUC9wSekE=",
+        "lastModified": 1791533829,
+        "narHash": "sha256-20MEWvbjEk5mL/Ij4oo/gCgg7R4vSoGBcxQDp66vjuo=",
         "owner": "stubbedev",
         "repo": "xilo",
-        "rev": "c3554e7513151f48a5209be0563a3000b4a4fc9d",
+        "rev": "16a4bcd88bbe48a1201e98fcb573753502e7aa3f",
         "type": "github"
       },
       "original": {
@@ -1057,11 +1057,11 @@
     "zsh-fzf-artisan": {
       "flake": false,
       "locked": {
-        "lastModified": 1791208216,
-        "narHash": "sha256-tXP+CiqtCX40YJLZe0v4i+4BxVe0Z2Y0K9eDKLWCZfA=",
+        "lastModified": 1791532871,
+        "narHash": "sha256-KacwBKsFEmQyirEvfduuuYqq8AOmgOvuGpWPXj1g7qE=",
         "owner": "stubbedev",
         "repo": "zsh-fzf-artisan",
-        "rev": "7a1e9c83b375b346301195a57257f38286172e17",
+        "rev": "cefe9b65a9bd6fcf021b26d5c8af2d8ee2093a5c",
         "type": "github"
       },
       "original": {
@@ -1073,11 +1073,11 @@
     "zsh-fzf-npm-run": {
       "flake": false,
       "locked": {
-        "lastModified": 1791206661,
-        "narHash": "sha256-9DotZifTvme7B4bf5uAehUOVupEfQeYi91eEnXok3PI=",
+        "lastModified": 1791532875,
+        "narHash": "sha256-YiqR1LkDrHNaHmpV/AqAz67WZsN1G2E7qhYbhkDPivw=",
         "owner": "stubbedev",
         "repo": "zsh-fzf-npm-run",
-        "rev": "d76bda214ec0230c9ef5b23bd39ba5b6dd4b8a38",
+        "rev": "4fb37ae01944cc387ea053f6fdce940cc8cc6ac1",
         "type": "github"
       },
       "original": {
