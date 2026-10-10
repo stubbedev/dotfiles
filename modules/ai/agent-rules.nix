@@ -7,6 +7,10 @@ _: {
 
         These apply to every repo. A repo's own CLAUDE.md/AGENTS.md wins where it is more specific.
 
+        ## Communication
+
+        - Always write in English, even when the ticket, PR, or user input is in another language. This applies to PR descriptions, commit messages, documentation, and code comments.
+
         ## Before writing
 
         - **Read before writing.** Find every caller and the existing tests first. When a signature or behaviour changes, update every call site in the same change.
@@ -68,7 +72,9 @@ _: {
       '';
     in
     lib.mkMerge [
-      (lib.mkIf config.features.claudeCode { home.file.".claude/CLAUDE.md".text = rules; })
+      (lib.mkIf config.features.claudeCode {
+        home.file.".claude/CLAUDE.md".text = rules + "\n@~/.claude/local.md\n";
+      })
       (lib.mkIf config.features.harness { xdg.configFile."AGENTS.md".text = rules; })
     ];
 }
