@@ -155,35 +155,25 @@ _: {
           '';
         };
 
-      # jq against the LIVE file, so anything the owning app wrote between
-      # evaluation and activation survives.
-      # jsonMerge is additive; jsonSet REPLACES one key, so entries dropped
-      # from `value` actually disappear.
-      jsonMerge =
+      jsonWrite =
         {
           name,
           target,
-          patch,
+          value,
           mode ? "0600",
         }:
         let
-          patchFile = (final.formats.json { }).generate "${name}.json" patch;
+          valueFile = (final.formats.json { }).generate "${name}.json" value;
         in
         ''
-          mkdir -p "$(dirname ${lib.escapeShellArg target})"
-          if [ -f ${lib.escapeShellArg target} ]; then
-            ${lib.getExe final.jq} -s '(.[0] // {}) * .[1]' ${lib.escapeShellArg target} ${patchFile} \
-              > ${lib.escapeShellArg "${target}.hm-tmp"}
-            if cmp -s ${lib.escapeShellArg "${target}.hm-tmp"} ${lib.escapeShellArg target}; then
-              rm -f ${lib.escapeShellArg "${target}.hm-tmp"}
-            else
-              mv ${lib.escapeShellArg "${target}.hm-tmp"} ${lib.escapeShellArg target}
-            fi
-          else
-            install -D -m ${mode} ${patchFile} ${lib.escapeShellArg target}
+          if ! cmp -s ${valueFile} ${lib.escapeShellArg target}; then
+            install -D -m ${mode} ${valueFile} ${lib.escapeShellArg "${target}.hm-tmp"}
+            mv ${lib.escapeShellArg "${target}.hm-tmp"} ${lib.escapeShellArg target}
           fi
         '';
 
+      # jq against the LIVE file, so anything the owning app wrote between
+      # evaluation and activation survives; only `key` is replaced.
       jsonSet =
         {
           name,

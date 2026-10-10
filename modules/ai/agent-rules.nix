@@ -46,9 +46,27 @@ _: {
 
         - **Fewest syscalls.** Batch reads/writes, buffer I/O, read a file once, avoid stat-then-open races and redundant existence checks (just open and handle the error). Prefer one process over a pipeline of subprocesses; prefer shell builtins over forking external tools.
         - **Fewest allocations.** Preallocate with known capacity, reuse buffers, borrow/slice instead of copying, avoid intermediate collections and string building in loops, stream instead of loading everything into memory.
-        - **Right complexity.** Pick the data structure that makes the operation cheap (hash lookup over linear scan). No N+1 queries or calls; batch them.
+        - **Right complexity.** Pick the data structure that makes the operation cheap (hash lookup over linear scan). Batch remote calls instead of one per item.
         - **Do work once.** Hoist invariant work out of loops, cache what is expensive and stable, do not recompute derived values.
         - Do not trade correctness or clarity for micro-optimisations in cold code.
+
+        ## Data access
+
+        Always, not only on known hot paths: every query to a database, search index, cache or other data store is written for production volume, never for the size of the test fixture. A query that works today and scans tomorrow is a bug.
+
+        - **Every query is served by an index.** Before writing or changing a query, name the index that serves its filter, join, sort and grouping columns, respecting leftmost-prefix order. If none exists, add it in the same change as a migration. A full scan is acceptable only on a table that is provably small and bounded, and you say so.
+        - **Prove it with the plan.** Run the store's plan tool (`EXPLAIN (ANALYZE, BUFFERS)`, `EXPLAIN QUERY PLAN`, `EXPLAIN FORMAT=JSON`, `.explain("executionStats")`) on every new or changed query against realistically sized data, and report the plan. Sequential/collection scans, filesorts, temp tables, hash joins over unbounded inputs or rows-examined far above rows-returned on a growing table mean the query is not done.
+        - **Sargable predicates only.** No functions, casts, arithmetic or implicit type/collation conversions on indexed columns in `WHERE`, `JOIN` or `ORDER BY` (`date(created_at) = ?` becomes a half-open range). No leading-wildcard `LIKE`; use a trigram or full-text index. No `OR` across different columns that defeats the index; use `UNION ALL` or a matching index. Bind parameters with the column's exact type.
+        - **Design indexes for the queries.** Composite order is equality columns, then range, then sort. Make hot reads index-only with covering columns (`INCLUDE`). Use partial or expression indexes for skewed or computed predicates. Index the referencing side of every foreign key. Every index is justified by a query it serves; drop redundant and unused ones, since each one taxes writes.
+        - **No N+1.** Never query inside a loop. Fetch related rows with a join or one batched `IN`/`= ANY($1)` query, and eager-load ORM relations explicitly instead of relying on lazy loading.
+        - **Read only what is used.** No `SELECT *`; project the needed columns so covering indexes apply. Every list query has a `LIMIT` and a deterministic `ORDER BY` served by an index, with a unique tiebreaker.
+        - **Keyset pagination.** Paginate growing data by seeking on the indexed sort key (`WHERE (created_at, id) < ($1, $2)`), never with `OFFSET`.
+        - **Cheap existence and counts.** Use `EXISTS` instead of `COUNT(*)` to test presence; no exact counts over large tables on request paths.
+        - **Bulk writes, short transactions.** Multi-row `INSERT`, `COPY` or upsert, one transaction per batch, never row-at-a-time loops. Keep transactions and row locks as short and narrow as possible; no network calls while holding them.
+        - **ORMs and query builders are not exempt.** Inspect the SQL they actually emit and hold it to every rule here.
+        - **Non-relational stores too.** Design keys and secondary indexes from the access patterns. No `KEYS`, DynamoDB `Scan`, unindexed Mongo queries or unbounded range reads on request paths.
+        - **Schema changes are online.** Build indexes without blocking writes (`CREATE INDEX CONCURRENTLY`, online DDL), avoid table-rewriting `ALTER`s on large tables, and backfill in bounded batches.
+        - **Lock the plan in.** For hot-path queries, add a test that asserts the plan uses the intended index, so a regression to a scan fails CI.
 
         ## Style
 

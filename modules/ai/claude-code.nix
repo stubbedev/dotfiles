@@ -1,5 +1,3 @@
-# Settings are patched into the LIVE file with jq at activation time: merging
-# at eval time would drop anything Claude Code wrote in between.
 _: {
   flake.modules.homeManager.claudeCode =
     {
@@ -8,6 +6,9 @@ _: {
       pkgs,
       ...
     }:
+    let
+      model = "claude-opus-5-5";
+    in
     lib.mkIf config.features.claudeCode {
       home.packages = [
         (config.stubbe.gfx.bundle {
@@ -56,10 +57,10 @@ _: {
       );
 
       stubbe.setup.claudeCode.script = ''
-        ${pkgs.stubbe.setup.jsonMerge {
-          name = "claude-settings-patch";
+        ${pkgs.stubbe.setup.jsonWrite {
+          name = "claude-settings";
           target = "${config.home.homeDirectory}/.claude/settings.json";
-          patch = {
+          value = {
             statusLine = {
               type = "command";
               command = "cship";
@@ -73,12 +74,13 @@ _: {
             cleanupPeriodDays = 14;
             tui = "fullscreen";
             editorMode = "vi";
-            # Alias guard lives in zsh: modules/shell.nix sets no_aliases for
-            # non-interactive shells. Empty list prunes the old PreToolUse
-            # hook out of settings.json (jsonMerge replaces arrays).
-            hooks.PreToolUse = [ ];
-            model = "claude-opus-5-5";
+            theme = "auto";
+            inherit model;
+            modelSettings.${model}.effortLevel = "high";
+            switchModelsOnFlag = false;
+            agentPushNotifEnabled = true;
             permissions.defaultMode = "bypassPermissions";
+            skipDangerousModePermissionPrompt = true;
           };
         }}
 
