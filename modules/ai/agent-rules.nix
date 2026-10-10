@@ -9,7 +9,7 @@ _: {
 
         ## Communication
 
-        - Always write in English, even when the ticket, PR, or user input is in another language. This applies to PR descriptions, commit messages, documentation, and code comments.
+        - Always write in English, even when the ticket, PR, or user input is in another language. This applies to PR descriptions, commit messages, and documentation.
 
         ## Before writing
 
