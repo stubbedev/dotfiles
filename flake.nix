@@ -49,6 +49,10 @@
       url = "github:stubbedev/maestro";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    shell-lsp = {
+      url = "github:stubbedev/shell-lsp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     html-to-md = {
       url = "github:stubbedev/html-to-md";
       inputs.nixpkgs.follows = "nixpkgs";

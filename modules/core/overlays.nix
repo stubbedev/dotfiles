@@ -59,6 +59,10 @@
       phpantom_lsp = inputs.phpantom_lsp.packages.${final.stdenv.hostPlatform.system}.default;
     };
 
+    shell-lsp = final: _prev: {
+      shell-lsp = inputs.shell-lsp.packages.${final.stdenv.hostPlatform.system}.default;
+    };
+
     # packages.default, not overlays.default: the overlay callPackages against
     # OUR nixpkgs, so the derivation differs from the cachix cache.
     claude-code = final: _prev: {

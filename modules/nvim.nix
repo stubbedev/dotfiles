@@ -109,7 +109,7 @@
                 lua-language-server
                 superhtml # html
                 biome # css, json
-                bash-language-server
+                shell-lsp
                 taplo
                 yayamlls
                 marksman
@@ -148,7 +148,6 @@
                 golangci-lint
                 hadolint
                 markdownlint-cli2
-                shellcheck
                 shfmt
                 statix
                 deadnix

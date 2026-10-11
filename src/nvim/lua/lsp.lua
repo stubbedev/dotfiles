@@ -256,9 +256,9 @@ local servers = {
     root_markers = { "pyproject.toml", "ruff.toml", ".ruff.toml", ".git" },
   },
 
-  bashls = {
-    cmd = { "bash-language-server", "start" },
-    filetypes = { "sh", "bash", "zsh" },
+  shell_lsp = {
+    cmd = { "shell-lsp" },
+    filetypes = { "sh", "bash", "zsh", "ksh" },
     root_markers = { ".git" },
   },
   docker_language_server = {
