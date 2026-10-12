@@ -415,55 +415,53 @@ local function reference_jump(count, cycle)
   return function()
     local win = vim.api.nvim_get_current_win()
     local buf = vim.api.nvim_win_get_buf(win)
-    local client = vim.lsp.get_clients({ bufnr = buf, method = "textDocument/documentHighlight" })[1]
-    if not client then
-      return
-    end
-
-    local function byte(line, character)
-      local text = vim.api.nvim_buf_get_lines(buf, line, line + 1, false)[1] or ""
-      local ok, col = pcall(vim.str_byteindex, text, client.offset_encoding, character, false)
-      return ok and col or character
-    end
-
-    client:request(
-      "textDocument/documentHighlight",
-      vim.lsp.util.make_position_params(win, client.offset_encoding),
-      function(_, result)
-        if not result or #result == 0 then
-          return
+    vim.lsp.buf_request_all(buf, "textDocument/documentHighlight", function(client)
+      return vim.lsp.util.make_position_params(win, client.offset_encoding)
+    end, function(responses)
+      local client, result
+      for id, response in pairs(responses) do
+        if response.result and #response.result > 0 and (not client or id < client.id) then
+          client, result = vim.lsp.get_client_by_id(id), response.result
         end
+      end
+      if not client then
+        return
+      end
 
-        local positions = vim.tbl_map(function(hl)
-          return hl.range.start
-        end, result)
-        table.sort(positions, function(a, b)
-          if a.line == b.line then
-            return a.character < b.character
-          end
-          return a.line < b.line
-        end)
+      local function byte(line, character)
+        local text = vim.api.nvim_buf_get_lines(buf, line, line + 1, false)[1] or ""
+        local ok, col = pcall(vim.str_byteindex, text, client.offset_encoding, character, false)
+        return ok and col or character
+      end
 
-        local cursor = vim.api.nvim_win_get_cursor(win)
-        local current = 1
-        for i, pos in ipairs(positions) do
-          if pos.line < cursor[1] - 1 or (pos.line == cursor[1] - 1 and byte(pos.line, pos.character) <= cursor[2]) then
-            current = i
-          end
+      local positions = vim.tbl_map(function(hl)
+        return hl.range.start
+      end, result)
+      table.sort(positions, function(a, b)
+        if a.line == b.line then
+          return a.character < b.character
         end
+        return a.line < b.line
+      end)
 
-        local target = current + count * vim.v.count1
-        if cycle then
-          target = (target - 1) % #positions + 1
-        else
-          target = math.min(math.max(target, 1), #positions)
+      local cursor = vim.api.nvim_win_get_cursor(win)
+      local current = 1
+      for i, pos in ipairs(positions) do
+        if pos.line < cursor[1] - 1 or (pos.line == cursor[1] - 1 and byte(pos.line, pos.character) <= cursor[2]) then
+          current = i
         end
+      end
 
-        local pos = positions[target]
-        vim.api.nvim_win_set_cursor(win, { pos.line + 1, byte(pos.line, pos.character) })
-      end,
-      buf
-    )
+      local target = current + count * vim.v.count1
+      if cycle then
+        target = (target - 1) % #positions + 1
+      else
+        target = math.min(math.max(target, 1), #positions)
+      end
+
+      local pos = positions[target]
+      vim.api.nvim_win_set_cursor(win, { pos.line + 1, byte(pos.line, pos.character) })
+    end)
   end
 end
 
