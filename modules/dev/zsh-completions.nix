@@ -10,7 +10,7 @@
       checks.zsh-completions = pkgs.stubbe.check {
         name = "zsh-completions";
         env.zshrc = self.homeConfigurations.stubbe.config.home.file."./.zshrc".source;
-        text = ''
+        text = /* zsh */ ''
           set -euo pipefail
 
           dump=$(grep -o '/nix/store/[^ ]*-stubbe-zcompdump/zcompdump' "$zshrc" | head -1)
