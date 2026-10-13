@@ -652,11 +652,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791812552,
-        "narHash": "sha256-pEbRvc+I0hG253ti54RuXb4LQQz6Q4qRGJnEHFMVgPQ=",
+        "lastModified": 1791831229,
+        "narHash": "sha256-sMUlJCcUDbD90rupDz+AxrmJG36HoH+xSQ9HDontZxU=",
         "owner": "stubbedev",
         "repo": "notmuch-mcp",
-        "rev": "7ae04d766ac37c7c66cee245a32ac33ec28ab191",
+        "rev": "e0e658d8a1d3ce02a7981d4d9a11cc21dbfbe5c0",
         "type": "github"
       },
       "original": {
@@ -777,11 +777,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791833895,
-        "narHash": "sha256-2nLu40w80txDx/KnuLi6xPLrDGdD4d0DBs41nbbruZY=",
+        "lastModified": 1791844888,
+        "narHash": "sha256-AQDo1+A3hl+JUgdOjJ6/7XVctyMGEe2ZYlVmqsom/Zc=",
         "owner": "stubbedev",
         "repo": "shell-lsp",
-        "rev": "5df2682c6f9f92ee68f8742a7d8809dda4330b93",
+        "rev": "33387d4bcd29609d9317838e19f0c082ac400f7e",
         "type": "github"
       },
       "original": {
@@ -1062,11 +1062,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791769612,
-        "narHash": "sha256-qI4/PP0PlW5H75Umy7g6ZcSeHn/1Gf6at23GFceVSgA=",
+        "lastModified": 1791851245,
+        "narHash": "sha256-NEwaLJcWX5IMsMf4JRY7t4b2TrcRU2mVLipGQwkDe5A=",
         "owner": "BirdeeHub",
         "repo": "nix-wrapper-modules",
-        "rev": "dbfb92e9e4abc3f4b1931a1e26128fd22cbf45ad",
+        "rev": "76feb903258b26f3e314ea3dd1923da4f70f9bdf",
         "type": "github"
       },
       "original": {
