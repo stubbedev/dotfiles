@@ -8,13 +8,37 @@ _: {
     }:
     let
       model = "claude-opus-5-5";
+
+      shellLspPlugin = pkgs.linkFarm "claude-shell-lsp-plugin" {
+        ".claude-plugin/plugin.json" = pkgs.stubbe.gen.json "plugin.json" {
+          name = "shell-lsp";
+          description = "shell-lsp diagnostics for sh, bash, zsh and ksh scripts";
+        };
+        ".lsp.json" = pkgs.stubbe.gen.json "lsp.json" {
+          shell-lsp = {
+            command = lib.getExe pkgs.shell-lsp;
+            extensionToLanguage = {
+              ".sh" = "sh";
+              ".bash" = "bash";
+              ".bats" = "bash";
+              ".zsh" = "zsh";
+              ".dash" = "sh";
+              ".ksh" = "ksh";
+            };
+          };
+        };
+      };
     in
     lib.mkIf config.features.claudeCode {
       home.packages = [
         (config.stubbe.gfx.bundle {
           pkg = pkgs.claude-code;
           gfx = false;
-          flags = [ "--dangerously-skip-permissions" ];
+          flags = [
+            "--dangerously-skip-permissions"
+            "--plugin-dir"
+            "${shellLspPlugin}"
+          ];
           env = {
             CLAUDE_CODE_DISABLE_INLINE_SHELL_RM_PROMPT = "1";
             CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT = "1";
