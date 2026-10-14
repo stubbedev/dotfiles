@@ -16,6 +16,7 @@ _: {
         with pkgs;
         [
           nodejs_24
+          pnpm
 
           prettier
           oxlint
