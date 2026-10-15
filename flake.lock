@@ -185,11 +185,11 @@
         "systems": "systems_11"
       },
       "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "lastModified": 1791914995,
+        "narHash": "sha256-Zf/xfQEAasnwnmEfHqW/4hjDE/s44yn2hD4RuVIZRjA=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "rev": "b7a79d3fea1e214f6d668d521cecec0c01e26544",
         "type": "github"
       },
       "original": {
@@ -1002,11 +1002,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792068718,
-        "narHash": "sha256-bED90hL6TxYpRYRmbDVsbtpdmmCOwdYgFxfc1qUWqE8=",
+        "lastModified": 1792070678,
+        "narHash": "sha256-bI8wKmOaemUP7nxKV/1comfEMSQ4Q+bTBr9IjNd3fSo=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "daccc32677af7d6329e9535315b114472737e2a0",
+        "rev": "bddc1d61ef25bda5fb280525a6d9f25f828101d5",
         "type": "github"
       },
       "original": {
@@ -1083,11 +1083,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792067982,
-        "narHash": "sha256-Z5rDWNNlLGg/wKxBMRFKUXNOFte9mJROonVxPh1CX3Y=",
+        "lastModified": 1792070504,
+        "narHash": "sha256-NAfZsPgOdvKaIaCVpF79ceMfFVfjlnP8IWmsSCiBBHo=",
         "owner": "stubbedev",
         "repo": "xilo",
-        "rev": "ff15ebd827e2f28913641af137ed977e66803699",
+        "rev": "3ca9c46a5ddd8f09cf1755e5ff83b0cabb6c2201",
         "type": "github"
       },
       "original": {
