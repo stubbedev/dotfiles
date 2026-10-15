@@ -296,9 +296,8 @@ _: {
           After = [ "hyprland-session.target" ];
           PartOf = [ "hyprland-session.target" ];
           # Never restart on `hm switch`. KillMode=control-group plus
-          # single-instance means a restart takes every terminal window with it
-          # — and every tmux server, which double-forks but stays in this unit's
-          # cgroup. Any alacritty store-path bump changes the unit file, so
+          # single-instance means a restart takes every terminal window with it.
+          # Any alacritty store-path bump changes the unit file, so
           # sd-switch would otherwise restart it on a routine flake update. A new
           # binary lands on next login, or on an explicit restart.
           X-SwitchMethod = "keep-old";
@@ -309,6 +308,7 @@ _: {
           ExecStart = "${alacrittyGfx}/bin/alacritty --socket %t/alacritty.sock --daemon";
           Restart = "on-failure";
           RestartSec = "2s";
+          ManagedOOMPreference = "avoid";
         };
       };
     };

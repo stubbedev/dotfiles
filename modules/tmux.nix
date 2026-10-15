@@ -9,6 +9,14 @@ _: {
     let
       p = pkgs.stubbe.withHash;
 
+      runtimeSubdir = "tmux";
+      tmuxTmpdir = "\${XDG_RUNTIME_DIR}/${runtimeSubdir}";
+
+      tmuxServer = pkgs.stubbe.shellScript "tmux-server" ''
+        . ${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh
+        exec ${lib.getExe config.programs.tmux.package} -D
+      '';
+
       directions = [
         {
           key = "Left";
@@ -552,8 +560,39 @@ _: {
         '';
       };
 
+      home.sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
+
+      systemd.user = {
+        sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
+
+        sockets.tmux = {
+          Unit = {
+            Description = "tmux server socket";
+            X-SwitchMethod = "keep-old";
+          };
+          Socket = {
+            ListenStream = "%t/${runtimeSubdir}/tmux-%U/default";
+            SocketMode = "0600";
+            DirectoryMode = "0700";
+          };
+          Install.WantedBy = [ "sockets.target" ];
+        };
+
+        services.tmux = {
+          Unit = {
+            Description = "tmux server";
+            X-SwitchMethod = "keep-old";
+          };
+          Service = {
+            ExecStart = "${tmuxServer}";
+            ManagedOOMPreference = "avoid";
+          };
+        };
+      };
+
       programs.tmux = {
         enable = true;
+        secureSocket = false;
         sensibleOnTop = true;
         plugins = [ pkgs.tmuxPlugins.yank ];
         extraConfig = ''
