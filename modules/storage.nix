@@ -27,12 +27,15 @@ _: {
         memoryPercent = 50;
       };
 
-      # No earlyoom: its freeSwapThreshold is meaningless against zram (15G of
-      # "free swap" is compressed RAM, not headroom) and it kills by RSS, so it
-      # picks the biggest process — mysqld or a Chrome renderer — rather than
-      # whatever is actually thrashing. systemd-oomd is PSI- and cgroup-aware
-      # and is on by default; keep exactly one OOM killer.
-      systemd.oomd.enable = true;
+      systemd = {
+        oomd = {
+          enable = true;
+          enableRootSlice = true;
+          enableSystemSlice = true;
+          enableUserSlices = true;
+        };
+        slices."-".sliceConfig.ManagedOOMSwap = "kill";
+      };
 
       services = {
         smartd = {
