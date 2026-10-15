@@ -210,9 +210,13 @@ local function resize_active(dx, dy)
     return hl.dsp.window.resize({ x = dx, y = dy, relative = true })
 end
 
+local function launch(cmd)
+    return hl.dsp.exec_cmd("app2unit -- " .. cmd)
+end
+
 local function setup_keybinds()
-    hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd("alacritty"))
-    hl.bind(mod .. " + SHIFT + E", hl.dsp.exec_cmd("pcmanfm"))
+    hl.bind(mod .. " + RETURN", launch("alacritty"))
+    hl.bind(mod .. " + SHIFT + E", launch("pcmanfm"))
     hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd("rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun -location 0 -width 60"))
     hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "run" -modes combi -run-command "]] .. scripts .. [[/rofi.run.sh {cmd}" -location 0 -width 60]]))
     hl.bind(mod .. " + CTRL + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "window" -modes combi]]))
@@ -224,7 +228,7 @@ local function setup_keybinds()
     -- does not stay pressed until the next physical Ctrl press.
     hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl && notify-send "Pasted selection"]]))
     hl.bind(mod .. " + C", hl.dsp.exec_cmd([[wl-copy "$(wl-paste -p)" && notify-send "Copied selection"]]))
-    hl.bind(mod .. " + M", hl.dsp.exec_cmd("mail-open"))
+    hl.bind(mod .. " + M", launch("mail-open"))
 
     hl.bind(mod .. " + SHIFT + Q", hy3_kill)
     hl.bind(mod .. " + F", hl.dsp.window.fullscreen())

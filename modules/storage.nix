@@ -1,8 +1,34 @@
-_: {
+_:
+let
+  memorySysctl = {
+    "vm.swappiness" = 150;
+    "vm.page-cluster" = 0;
+    "kernel.sysrq" = 240;
+  };
+
+  oomdMemoryPressure = {
+    ManagedOOMMemoryPressure = "kill";
+    ManagedOOMMemoryPressureLimit = "80%";
+  };
+
+  oomdSlices = {
+    "-" = oomdMemoryPressure // {
+      ManagedOOMSwap = "kill";
+    };
+    system = oomdMemoryPressure;
+    user = oomdMemoryPressure;
+  };
+
+  oomdUserSlice = {
+    Slice = oomdMemoryPressure;
+  };
+in
+{
   flake.modules.nixos.storage =
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     let
@@ -28,13 +54,12 @@ _: {
       };
 
       systemd = {
-        oomd = {
-          enable = true;
-          enableRootSlice = true;
-          enableSystemSlice = true;
-          enableUserSlices = true;
+        oomd.enable = true;
+        slices = lib.mapAttrs (_: sliceConfig: { inherit sliceConfig; }) oomdSlices;
+        user.units.slice = {
+          text = pkgs.stubbe.gen.unitText oomdUserSlice;
+          overrideStrategy = "asDropin";
         };
-        slices."-".sliceConfig.ManagedOOMSwap = "kill";
       };
 
       services = {
@@ -55,7 +80,10 @@ _: {
         };
       };
 
-      boot.supportedFilesystems = lib.mkIf config.host.installed [ "btrfs" ];
+      boot = {
+        kernel.sysctl = memorySysctl;
+        supportedFilesystems = lib.mkIf config.host.installed [ "btrfs" ];
+      };
 
       fileSystems = lib.mkIf config.host.installed (
         lib.mapAttrs (_: subvol: {
@@ -77,11 +105,23 @@ _: {
     };
 
   flake.modules.homeManager.storage =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
+    let
+      oomdDropin =
+        {
+          name,
+          target,
+          unit,
+        }:
+        pkgs.stubbe.setup.text {
+          inherit name target;
+          text = pkgs.stubbe.managedBy "oomd" + pkgs.stubbe.gen.unitText unit;
+        };
+    in
     {
-      stubbe.setup.zram = {
+      stubbe.setup.memory = {
         privileged = true;
-        title = "Installing zram compressed swap";
+        title = "Installing zram swap and the OOM policy";
         body = ''
           Install systemd-zram-generator, write a managed
           /etc/systemd/zram-generator.conf (zstd, size = RAM/2), and bring up the
@@ -95,16 +135,18 @@ _: {
               paging them out costs a zstd compress (~3.5:1 here) and no I/O.
             - vm.page-cluster=0. Swap readahead batches 8 pages per fault, which
               only pays off on a rotating seek. zram faults are single-page.
-            - earlyoom masked, systemd-oomd left on. earlyoom's freeSwapThreshold
+            - kernel.sysrq=240. Sync, remount, signal and reboot keys, so
+              Alt+SysRq+F runs the kernel OOM killer on a frozen desktop instead
+              of a forced power-off.
+            - earlyoom masked, systemd-oomd on. earlyoom's freeSwapThreshold
               cannot read zram (compressed "free swap" is not headroom) and it
               kills by RSS, so it reaches for mysqld or a Chrome renderer instead
               of whatever is thrashing. oomd is PSI- and cgroup-aware. Two OOM
               daemons with different policies is a race, so pick one.
-
-          Without zram, the OOM path fires under load and SIGTERMs Chrome/Electron
-          renderers (oom_score_adj +300) across every chromium-family app
-          ("Aw, Snap!", blank Slack). zram gives ~3x effective headroom so the
-          threshold is rarely hit.
+            - oomd slice drop-ins. oomd only acts on cgroups that opt in, so
+              without them it runs and never kills: the root, system and user
+              slices kill on sustained memory pressure, and the root slice also
+              kills the biggest swap user once zram is nearly full.
         '';
         stateInputs = [ "/usr/lib/systemd/system-generators/zram-generator" ];
         preCheck = pkgs.stubbe.setup.requireCommand "systemctl";
@@ -130,19 +172,34 @@ _: {
           }}
 
           ${pkgs.stubbe.setup.text {
-            name = "99-swap.conf";
-            target = "/etc/sysctl.d/99-swap.conf";
-            text = ''
-              # managed-by: stubbe zram
-              vm.swappiness = 150
-              vm.page-cluster = 0
-            '';
+            name = "99-memory.conf";
+            target = "/etc/sysctl.d/99-memory.conf";
+            text =
+              pkgs.stubbe.managedBy "memory"
+              + lib.generators.toKeyValue {
+                mkKeyValue = lib.generators.mkKeyValueDefault { } " = ";
+              } memorySysctl;
           }}
+          sudo rm -f /etc/sysctl.d/99-swap.conf
 
           sudo sysctl --system >/dev/null 2>&1 || true
 
-          # One OOM killer. Mask rather than disable so an apt upgrade of the
-          # earlyoom package cannot re-enable it behind our back.
+          ${lib.concatStrings (
+            lib.mapAttrsToList (
+              slice: sliceConfig:
+              oomdDropin {
+                name = "oomd-${slice}.slice.conf";
+                target = "/etc/systemd/system/${slice}.slice.d/10-stubbe-oomd.conf";
+                unit.Slice = sliceConfig;
+              }
+            ) oomdSlices
+          )}
+          ${oomdDropin {
+            name = "oomd-user-slices.conf";
+            target = "/etc/systemd/user/slice.d/10-stubbe-oomd.conf";
+            unit = oomdUserSlice;
+          }}
+
           if systemctl list-unit-files earlyoom.service >/dev/null 2>&1; then
             sudo systemctl disable --now earlyoom.service >/dev/null 2>&1 || true
             sudo systemctl mask earlyoom.service >/dev/null 2>&1 || true

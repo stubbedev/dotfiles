@@ -130,6 +130,7 @@ in
         (gfx.wrapExe "Xwayland" pkgs.xwayland)
       ]
       ++ (with pkgs; [
+        app2unit
         wl-clipboard
         wl-clip-persist
         wtype

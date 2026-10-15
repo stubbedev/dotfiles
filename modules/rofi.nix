@@ -8,6 +8,7 @@ _: {
     }:
     let
       inherit (config.lib.formats.rasi) mkLiteral;
+      app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
     lib.mkIf config.features.hyprland {
       programs.rofi = {
@@ -23,6 +24,8 @@ _: {
           show-icons = true;
           icon-theme = pkgs.stubbe.theme.icon;
           lines = 10;
+          run-command = "${app2unit} -- {cmd}";
+          run-shell-command = "${app2unit} -- {terminal} -e {cmd}";
         };
 
         theme = {
