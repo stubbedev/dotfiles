@@ -98,7 +98,6 @@
                   "vim"
                   "nano"
                   "ed"
-                  "code"
                 ];
               };
 
