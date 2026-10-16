@@ -261,6 +261,11 @@ local servers = {
     filetypes = { "sh", "bash", "zsh", "ksh", "make", "just", "nix" },
     root_markers = { ".git" },
   },
+  just_lsp = {
+    cmd = { "just-lsp" },
+    filetypes = { "just" },
+    root_markers = { "justfile", "Justfile", ".justfile", ".git" },
+  },
   docker_language_server = {
     cmd = { "docker-language-server", "start", "--stdio" },
     filetypes = { "dockerfile", "yaml.docker-compose" },
