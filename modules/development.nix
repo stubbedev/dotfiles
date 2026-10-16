@@ -23,6 +23,8 @@ _: {
           oxfmt
           stylua
 
+          vscode
+
           python3
         ]
         ++ [
