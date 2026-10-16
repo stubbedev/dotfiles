@@ -23,15 +23,27 @@ _: {
           oxfmt
           stylua
 
-          vscode
-
           python3
         ]
         ++ [
           # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
           # the .desktop entry rofi needs.
           (gfx.bundle { pkg = pkgs.neovide; })
+          # NIXOS_OZONE_WL makes nixpkgs' wrapper pass Chromium switches that
+          # the code CLI warns about; --ozone-platform is one it knows. Without
+          # it Electron's auto-detection falls back to XWayland, as the session
+          # sets no XDG_SESSION_TYPE.
+          (gfx.bundle {
+            pkg = pkgs.vscode;
+            flags = [ "--ozone-platform=wayland" ];
+          })
         ];
+
+      stubbe.setup.vscodeApparmor = pkgs.stubbe.setup.apparmor {
+        appName = "VS Code";
+        profileName = "nix-vscode";
+        programGlob = "/nix/store/*/lib/vscode/{code,chrome-sandbox}";
+      };
 
       programs = {
         uv.enable = true;
