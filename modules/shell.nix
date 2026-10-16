@@ -31,7 +31,7 @@
       hmSpec = pkgs.stubbe.hm;
 
       zshFiles = {
-        "apaths" = ''
+        "apaths" = /* zsh */ ''
 
           function _apaths_init {
             local -a STUBBE_APP_PATHS=(
@@ -51,7 +51,7 @@
           _apaths_init
           unfunction _apaths_init
         '';
-        "sysfuncs" = ''
+        "sysfuncs" = /* zsh */ ''
           # shellcheck disable=SC1091
 
           function is_binary {
@@ -73,7 +73,7 @@
             exec zsh
           }
         '';
-        "funcs" = ''
+        "funcs" = /* zsh */ ''
           # shellcheck disable=SC1091
 
 
@@ -199,7 +199,7 @@
             }
           fi
         '';
-        "aliases" = ''
+        "aliases" = /* zsh */ ''
           alias la='ls -laF'
           alias ff='find . -type f -name'
           alias h='history'
@@ -235,7 +235,7 @@
             alias ls='ls --color'
           fi
         '';
-        "settings" = ''
+        "settings" = /* zsh */ ''
           function _settings_init {
             bindkey "^Xa" _expand_alias
 
@@ -336,7 +336,7 @@
           _settings_init
           unfunction _settings_init
         '';
-        "completions/_git_shortcuts" = ''
+        "completions/_git_shortcuts" = /* zsh */ ''
           _git_shortcuts() {
             case $service in
               gcb|gd|gcd|ggo|gwt)
@@ -382,7 +382,7 @@
 
           _git_shortcuts "$@"
         '';
-        "completions/_hm" = ''
+        "completions/_hm" = /* zsh */ ''
           #compdef hm
 
           _hm() {
