@@ -67,7 +67,6 @@ function M.setup()
   lint.linters_by_ft = {
     nix = { "statix", "deadnix" },
     markdown = { "markdownlint-cli2" },
-    dockerfile = { "hadolint" },
   }
 
   local timer = assert(vim.uv.new_timer())

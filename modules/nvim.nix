@@ -145,7 +145,6 @@
                 gofumpt
                 gotools # provides goimports
                 golangci-lint
-                hadolint
                 markdownlint-cli2
                 statix
                 deadnix
