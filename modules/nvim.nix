@@ -109,7 +109,6 @@
                 superhtml # html
                 biome # css, json
                 shell-lsp
-                just-lsp
                 taplo
                 yayamlls
                 marksman
