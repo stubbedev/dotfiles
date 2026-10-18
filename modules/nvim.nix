@@ -147,7 +147,6 @@
                 golangci-lint
                 hadolint
                 markdownlint-cli2
-                shfmt
                 statix
                 deadnix
 

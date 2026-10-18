@@ -258,7 +258,7 @@ local servers = {
 
   shell_lsp = {
     cmd = { "shell-lsp" },
-    filetypes = { "sh", "bash", "zsh", "ksh", "make", "just", "nix" },
+    filetypes = { "sh", "bash", "zsh", "ksh", "make", "just", "dockerfile", "nix" },
     root_markers = { ".git" },
   },
   docker_language_server = {
