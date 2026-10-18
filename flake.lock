@@ -777,11 +777,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792316512,
-        "narHash": "sha256-jT+Wkg5HlQHLn0bzOt3GDDmqaWMpoQ529DA5xNMibPA=",
+        "lastModified": 1792339391,
+        "narHash": "sha256-EoGPK3TGsSendUE8rebtkWm3nokFxqUaOEvkuYHc5b8=",
         "owner": "stubbedev",
         "repo": "shell-lsp",
-        "rev": "9eb03cd286016e79bdf77c9f732db54f82ec7d29",
+        "rev": "a2a29357bb3533aaa2e94d86d9d412ca1f9b8415",
         "type": "github"
       },
       "original": {
