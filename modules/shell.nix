@@ -859,9 +859,10 @@
       ) pluginSpecs;
     in
     lib.mkIf config.features.desktop {
-      # Terminals and tmux spawn $SHELL. Pointing it at the nix zsh skips the
-      # distro-zsh hop through the .zshenv exec below; logins via passwd
-      # (TTY, ssh) still take that hop.
+      # Terminals, tmux and devenv hook shells (devenv-hook-shell overlay)
+      # spawn $SHELL. Pointing it at the nix zsh skips the distro-zsh hop
+      # through the .zshenv exec below; logins via passwd (TTY, ssh) still
+      # take that hop.
       home.sessionVariables.SHELL = zshBin;
 
       programs.zsh = {

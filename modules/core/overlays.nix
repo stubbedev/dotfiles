@@ -100,6 +100,24 @@
       });
     };
 
+    # A hook-activated shell takes its binary from passwd whenever the login
+    # shell's name matches the hook's dialect, ignoring $SHELL. Here that is
+    # the distro /bin/zsh, whose .zshenv exec into the nix zsh fires midway
+    # through devenv's generated .zshrc and drops its cd-out exit handler and
+    # PATH restore. Prefer an absolute $SHELL of the hinted dialect, falling
+    # back to passwd, which still covers upstream's stripped-PATH case.
+    # Delete once upstream consults $SHELL in the hook branch.
+    devenv-hook-shell = _final: prev: {
+      devenv = prev.devenv.overrideAttrs (old: {
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace devenv-core/src/settings.rs \
+            --replace-fail \
+              'login_shell().and_then(|(name, path)| (name == shell).then_some(path))' \
+              'std::env::var("SHELL").ok().filter(|path| std::path::Path::new(path).is_absolute() && shell_name_from_path(path).as_deref() == Some(shell.as_str())).map(std::path::PathBuf::from).or_else(|| login_shell().and_then(|(name, path)| (name == shell).then_some(path)))'
+        '';
+      });
+    };
+
     # tela-circle-icon-theme 2026-07-07 ships three symlinks to icons
     # that do not exist in the release (xsi-addon-symbolic.svg,
     # org.xfce.appfinder.svg); the stdenv noBrokenSymlinks check rejects
