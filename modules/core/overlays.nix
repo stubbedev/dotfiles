@@ -118,6 +118,27 @@
       });
     };
 
+    # The devenv source patches here rule out the binary cache, and nixpkgs'
+    # postInstall then compiles the whole workspace a second time (dev
+    # profile) for `cargo xtask` to emit manpages and shell completions. The
+    # zsh completion comes from the binary itself (COMPLETE=zsh in
+    # modules/shell.nix), so keep only the wrapProgram half. Fails the build
+    # if upstream renames the marker.
+    devenv-no-xtask = _final: prev: {
+      devenv = prev.devenv.overrideAttrs (
+        old:
+        let
+          marker = "# Generate manpages";
+        in
+        {
+          postInstall =
+            assert prev.lib.assertMsg (prev.lib.hasInfix marker old.postInstall)
+              "devenv postInstall no longer contains '${marker}'";
+            builtins.head (prev.lib.splitString marker old.postInstall);
+        }
+      );
+    };
+
     # tela-circle-icon-theme 2026-07-07 ships three symlinks to icons
     # that do not exist in the release (xsi-addon-symbolic.svg,
     # org.xfce.appfinder.svg); the stdenv noBrokenSymlinks check rejects
