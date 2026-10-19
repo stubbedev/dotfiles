@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791752987,
-        "narHash": "sha256-72oMSwb/G2QYkAO7onY+PZjVwKYHh4/bpJkM5ZA60is=",
+        "lastModified": 1792375794,
+        "narHash": "sha256-tZVthYNAnUfCPj3Aw1M8rYGMJJGdbX0HPomcvoyklmg=",
         "owner": "stubbedev",
         "repo": "adaptive-power-manager",
-        "rev": "c95fed405ed2ab1f1ced7d1dd408cb7a2580369d",
+        "rev": "b7d119ac6c6d61858304360700d7e61a26b1e0af",
         "type": "github"
       },
       "original": {
@@ -28,11 +28,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1792184490,
-        "narHash": "sha256-h0ocvti7xZNzf6bhS1bvwr7L0fLTicWfvO11Xn1zR3s=",
+        "lastModified": 1792364479,
+        "narHash": "sha256-HZ/ssK2bqVxSRVm6MoIcdLSAYZ4s67vcl7rbeoPiv90=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "69ea6acabd545898cd2764a12c293ead05fd7e84",
+        "rev": "c932f70402686f018d829534d71f9e8ba7859cfb",
         "type": "github"
       },
       "original": {
