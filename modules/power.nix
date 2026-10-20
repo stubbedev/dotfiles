@@ -25,15 +25,19 @@ _: {
       # drop a charge-to-full request without sudo.
       systemd.tmpfiles.rules = [ "d /run/battery-charge 0775 root users -" ];
 
-      # Event-driven: UPower signals cover every AC edge, the daemon's tick
-      # covers the prediction boundaries. No timer, no udev trigger.
+      # Event-driven: UPower signals cover every AC edge, inotify the
+      # battery-full flag, and the daemon's own wall-clock timer the
+      # prediction boundaries. No systemd timer, no udev trigger.
+      # graphical.target, not multi-user: ppd is After=multi-user.target,
+      # so ordering after it from multi-user is a cycle systemd breaks by
+      # dropping this unit.
       systemd.services.adaptive-power-manager = {
         description = "Adaptive battery charging and power profile policy";
         after = [
           "power-profiles-daemon.service"
           "upower.service"
         ];
-        wantedBy = [ "multi-user.target" ];
+        wantedBy = [ "graphical.target" ];
         serviceConfig = {
           ExecStart = "${lib.getExe pkgs.adaptive-power-manager} run";
           StateDirectory = "adaptive-power-manager";
@@ -161,7 +165,7 @@ _: {
                     RestrictSUIDSGID = true;
                     LockPersonality = true;
                   };
-                  Install.WantedBy = "multi-user.target";
+                  Install.WantedBy = "graphical.target";
                 };
               }}
 
@@ -176,7 +180,8 @@ _: {
 
               sudo systemd-tmpfiles --create /etc/tmpfiles.d/adaptive-power-manager.conf >/dev/null 2>&1 || true
               ${pkgs.stubbe.setup.reloadUnits}
-              sudo systemctl enable --now adaptive-power-manager.service >/dev/null 2>&1 || true
+              sudo systemctl --quiet reenable adaptive-power-manager.service
+              sudo systemctl restart adaptive-power-manager.service
             '';
         };
 
