@@ -86,6 +86,7 @@ in
           libsecret
 
           util-linux
+          xdg-utils
 
           pcmanfm
         ]

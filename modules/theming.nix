@@ -1,4 +1,19 @@
-_: {
+_:
+let
+  fontPackages =
+    pkgs: with pkgs; [
+      nerd-fonts.jetbrains-mono
+      font-awesome
+      adwaita-fonts
+      dejavu_fonts
+      liberation_ttf
+      corefonts
+      noto-fonts
+      noto-fonts-cjk-sans
+      noto-fonts-color-emoji
+    ];
+in
+{
   flake.modules.nixos.theming =
     { pkgs, ... }:
     {
@@ -21,11 +36,7 @@ _: {
       };
 
       fonts = {
-        packages = with pkgs; [
-          nerd-fonts.jetbrains-mono
-          font-awesome
-          adwaita-fonts
-        ];
+        packages = fontPackages pkgs;
         fontconfig.enable = true;
       };
 
@@ -132,21 +143,19 @@ _: {
       fonts.fontconfig.enable = true;
 
       home = {
-        packages = with pkgs; [
-          nerd-fonts.jetbrains-mono
-          font-awesome
-          adwaita-fonts
+        packages =
+          fontPackages pkgs
+          ++ (with pkgs; [
+            adwaita-icon-theme
+            vimix-icon-theme
+            hicolor-icon-theme
+            gnome-themes-extra # includes the Adwaita-dark GTK theme
 
-          adwaita-icon-theme
-          vimix-icon-theme
-          hicolor-icon-theme
-          gnome-themes-extra # includes the Adwaita-dark GTK theme
-
-          # qtct installs its own launchers; these style plugins stay manual
-          # because qt.style.name would export QT_STYLE_OVERRIDE.
-          libsForQt5.qtstyleplugin-kvantum
-          kdePackages.qtstyleplugin-kvantum
-        ];
+            # qtct installs its own launchers; these style plugins stay manual
+            # because qt.style.name would export QT_STYLE_OVERRIDE.
+            libsForQt5.qtstyleplugin-kvantum
+            kdePackages.qtstyleplugin-kvantum
+          ]);
 
         file = {
           # dotIcons writes this; the live copy is an LXAppearance leftover
