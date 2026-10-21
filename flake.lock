@@ -595,11 +595,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792568634,
-        "narHash": "sha256-EVwiDnWG2Vau03dNwWKzQPYM5PmALgOd21/hvC27lP0=",
+        "lastModified": 1792577069,
+        "narHash": "sha256-dvIRE4r7fMBSwh/ay1cCbAF4nO6G/WfzJIDJ71ZrDj0=",
         "owner": "stubbedev",
         "repo": "maestro",
-        "rev": "2162366080a8f080be01d1158a320b9f4c51fb48",
+        "rev": "92d77293f2fce579f49dc6fc286a35799e48cd90",
         "type": "github"
       },
       "original": {
@@ -1136,11 +1136,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792413105,
-        "narHash": "sha256-27uw+CzcKuIoIQpdQOrzgYPG5N/FAkTSMig/M8oZ5SY=",
+        "lastModified": 1792576520,
+        "narHash": "sha256-J3wgHdv6PmEIoKmYk4z2ms6w34nUpkE/Nl8t9jNTw4w=",
         "owner": "stubbedev",
         "repo": "treeman",
-        "rev": "3b0f677df56d33ee880b0868dbcc5dc740d943b2",
+        "rev": "0a2a7990903e569d9950c378ba9a078f46345b77",
         "type": "github"
       },
       "original": {
