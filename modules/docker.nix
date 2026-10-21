@@ -49,22 +49,52 @@ _: {
       # restarts don't kill containers. dockerd/containerd/runc come from the
       # same locked rev as the client; iptables and kmod ride the unit's PATH
       # (modprobe for bridge/overlay, iptables for the bridge firewall).
-      # /etc/systemd/system shadows any distro unit; /var/lib/docker state
-      # carries over across upgrades.
+      # /etc/systemd/system shadows any distro unit; /var/lib/docker and
+      # /var/lib/containerd state carry over across upgrades.
+      containerdSocket = "/run/containerd/containerd.sock";
+      engineContainerdConfig = pkgs.stubbe.gen.toml "containerd.toml" {
+        version = 3;
+        disabled_plugins = [ "io.containerd.grpc.v1.cri" ];
+      };
+      engineContainerdService = pkgs.stubbe.gen.systemd "containerd.service" {
+        Unit = {
+          Description = "containerd container runtime (nix-provisioned)";
+          After = [ "network.target" ];
+        };
+        Service = {
+          Type = "notify";
+          Environment = "PATH=${pkgs.containerd}/bin:${pkgs.runc}/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+          ExecStartPre = "-${pkgs.kmod}/bin/modprobe overlay";
+          ExecStart = "${pkgs.containerd}/bin/containerd --config ${engineContainerdConfig}";
+          Delegate = "yes";
+          KillMode = "process";
+          Restart = "always";
+          RestartSec = 5;
+          LimitNPROC = "infinity";
+          LimitCORE = "infinity";
+          TasksMax = "infinity";
+          OOMScoreAdjust = -999;
+        };
+        Install.WantedBy = [ "multi-user.target" ];
+      };
       engineDockerService = pkgs.stubbe.gen.systemd "docker.service" {
         Unit = {
           Description = "Docker Engine (nix-provisioned)";
           After = [
             "network-online.target"
             "docker.socket"
+            "containerd.service"
           ];
           Wants = [ "network-online.target" ];
-          Requires = [ "docker.socket" ];
+          Requires = [
+            "docker.socket"
+            "containerd.service"
+          ];
         };
         Service = {
           Type = "notify";
           Environment = "PATH=${pkgs.iptables}/bin:${pkgs.iptables}/sbin:${pkgs.kmod}/bin:/usr/sbin:/usr/bin:/sbin:/bin";
-          ExecStart = "${pkgs.docker}/bin/dockerd";
+          ExecStart = "${pkgs.docker}/bin/dockerd --containerd=${containerdSocket}";
           ExecReload = "kill -s HUP \$MAINPID";
           LimitNOFILE = 1048576;
           Delegate = "yes";
@@ -97,8 +127,8 @@ _: {
         title = "Installing Docker";
         body = ''
           Provisions the docker engine from nix (no distro package manager):
-          renders /etc/systemd/system/docker.service pointing at the locked
-          dockerd/containerd/runc, enables and starts it, adds
+          renders /etc/systemd/system/{containerd,docker}.service pointing at
+          the locked containerd/runc/dockerd, enables and (re)starts them, adds
           ${config.home.username} to the docker group so non-root containers
           work without sudo, merges required keys into /etc/docker/daemon.json
           (features.containerd-snapshotter, log rotation, insecure-registries
@@ -117,6 +147,7 @@ _: {
           # things that touch the unit files.
           _stb_changed=0
           for pair in \
+            "${engineContainerdService}:/etc/systemd/system/containerd.service" \
             "${engineDockerService}:/etc/systemd/system/docker.service" \
             "${engineDockerSocket}:/etc/systemd/system/docker.socket"; do
             _stb_src="''${pair%%:*}"
@@ -128,7 +159,8 @@ _: {
           done
           if [ "$_stb_changed" = 1 ]; then
             sudo systemctl daemon-reload
-            sudo systemctl enable --now docker.socket docker.service >/dev/null 2>&1 || true
+            sudo systemctl enable containerd.service docker.socket docker.service >/dev/null 2>&1 || true
+            sudo systemctl restart containerd.service docker.service >/dev/null 2>&1 || true
           fi
 
           _stb_patch=${
