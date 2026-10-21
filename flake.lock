@@ -1217,11 +1217,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792572067,
-        "narHash": "sha256-ufDxP3Clk30BU6xTVA/vDRLHaa0VlGj+RaIrs9rmX/w=",
+        "lastModified": 1792572418,
+        "narHash": "sha256-GTIB+6neT5nY2WRjdvaB/WjLFd1hQkE250l96SoG/EY=",
         "owner": "stubbedev",
         "repo": "xilo",
-        "rev": "449bcbc5638e5d3f923a442d8d8d337f65e01357",
+        "rev": "d22dcd59cc2e8292a9c7aee5897ebd4df38bf95b",
         "type": "github"
       },
       "original": {
