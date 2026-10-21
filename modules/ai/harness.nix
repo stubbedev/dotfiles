@@ -291,6 +291,7 @@
           small = {
             provider = "anthropic";
             model = "claude-haiku-5-5";
+            reasoning_effort = "low";
             max_tokens = 128000;
           };
         };
