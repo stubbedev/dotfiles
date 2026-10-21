@@ -23,11 +23,6 @@
             nodejs_24
             pnpm
 
-            prettier
-            oxlint
-            oxfmt
-            stylua
-
             python3
           ]
           ++ [

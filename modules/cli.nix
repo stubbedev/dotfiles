@@ -28,10 +28,7 @@ _: {
         jless
 
         gnugrep
-        hunspell
         gawk
-
-        statix
 
         lazydocker
         gh
@@ -45,16 +42,9 @@ _: {
         less
         more
 
-        gcc
-        gnumake
         gnutar
         coreutils
-        cmake
-        pkg-config
         gettext
-        libtool
-        autoconf
-        automake
 
         hyperfine
       ];
