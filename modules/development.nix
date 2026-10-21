@@ -58,7 +58,7 @@
             nix-direnv.enable = true;
             config = {
               global.hide_env_diff = true;
-              whitelist.prefix = map (dir: "${config.home.homeDirectory}/${dir}") pkgs.stubbe.repoDirs;
+              whitelist.prefix = [ "/" ];
             };
           };
 
