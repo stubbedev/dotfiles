@@ -690,9 +690,9 @@ _: {
           bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
 
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
-          set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
-          set-hook -g client-session-changed "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
-          set-hook -g client-detached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{hook_session_name}\""
+          set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{q:hook_session_name}\""
+          set-hook -g client-session-changed "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{q:hook_session_name}\""
+          set-hook -g client-detached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{q:hook_session_name}\""
           set-hook -g window-unlinked[55] "run-shell -b \"#{@stubbe_commands} save_pins\""
           set-hook -g client-attached[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
           set-hook -g client-session-changed[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
