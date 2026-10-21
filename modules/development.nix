@@ -57,7 +57,10 @@
             enableGitIntegration = true;
             nix-direnv.enable = true;
             config = {
-              global.hide_env_diff = true;
+              global = {
+                hide_env_diff = true;
+                warn_timeout = "0s";
+              };
               whitelist.prefix = [ "/" ];
             };
           };
