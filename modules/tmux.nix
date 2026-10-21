@@ -714,6 +714,7 @@ _: {
           set -g status-right "#{?#{==:#{@stubbe_ssh},1},#{s|\\(([^)]+)\\)|(#[fg=${p.yellow}]\\1#[fg=default])|r:session_name},#S}"
           set -g window-status-format          " #I:#W#(#{@stubbe_commands} branch_ticket '#{pane_current_path}')#{?#{@pinned}, 󰤱,} "
           set -g window-status-current-format  "#[bg=${p.mauve},fg=${p.base},bold]  #I:#W#(#{@stubbe_commands} branch_ticket '#{pane_current_path}') #{?#{@pinned},󰤱 ,}#{?window_zoomed_flag, 󰊓 , }"
+          set -g window-status-current-style   none
           set -g window-status-activity-style  none
           set -g mode-style                    bg=${p.mauve},fg=${p.base}
           set -g pane-active-border-style      bg=${p.base},fg=${p.mauve}
