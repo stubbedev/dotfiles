@@ -100,7 +100,7 @@ _: {
             editorMode = "vi";
             theme = "auto";
             inherit model;
-            modelSettings.${model}.effortLevel = "high";
+            modelSettings.${model}.effortLevel = "medium";
             switchModelsOnFlag = false;
             agentPushNotifEnabled = true;
             permissions.defaultMode = "bypassPermissions";
