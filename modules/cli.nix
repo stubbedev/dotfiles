@@ -21,6 +21,8 @@ _: {
 
         curl
         wget
+        rsync
+        tree
         tokei
 
         jq
@@ -39,6 +41,7 @@ _: {
         rar
 
         xsel
+        xclip
         less
         more
 
