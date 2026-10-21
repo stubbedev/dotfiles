@@ -472,6 +472,16 @@
           force = true;
         };
 
+        xdg.dataFile."dbus-1/services/org.freedesktop.Notifications.service".source =
+          (pkgs.formats.ini { }).generate "org.freedesktop.Notifications.service"
+            {
+              "D-BUS Service" = {
+                Name = "org.freedesktop.Notifications";
+                Exec = "${lib.getExe' pkgs.coreutils "false"}";
+                SystemdService = "wayle.service";
+              };
+            };
+
         xdg.configFile."wleave/layout.json".source =
           let
             icon = name: "${pkgs.wleave}/share/wleave/icons/${name}.svg";
