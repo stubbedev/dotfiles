@@ -52,6 +52,7 @@
           "meta-muse-spark-api-token"
           "openai-token"
           "cortiai-token"
+          "anthropic-api-token"
         ] (name: pkgs.stubbe.secret { inherit name; });
 
         # YAML, not JSON: the fork reads $XDG_CONFIG_HOME/harness/config.yaml
@@ -161,6 +162,8 @@
           # endpoint and the model list under the "openai" id, so the
           # credential is the only thing missing.
           openai.api_key = "$(cat ${config.sops.secrets.openai-token.path})";
+
+          anthropic.api_key = "$(cat ${config.sops.secrets.anthropic-api-token.path})";
 
           # Corti's OpenAI-compatible gateway (ai.eu.corti.app), no models.dev
           # entry, so the S1 family is spelled out in full: s1 and s1-mini
@@ -277,19 +280,18 @@
 
         stubbe.harness.models = {
           large = {
-            provider = "zai-coding-plan";
-            model = "glm-5.3";
-            reasoning_effort = "max";
-            max_tokens = 131072;
+            provider = "anthropic";
+            model = "claude-opus-5-5";
+            reasoning_effort = "medium";
+            max_tokens = 128000;
           };
           # The small model runs titles, summaries and the cheap internal
-          # calls, so it gets the flash sibling: same 1M context and 131072
-          # output cap, a fraction of the cost.
+          # calls, so it gets Haiku: same 1M context and 128000 output cap,
+          # a fraction of the cost.
           small = {
-            provider = "zai-coding-plan";
-            model = "glm-5.3-flash";
-            reasoning_effort = "max";
-            max_tokens = 131072;
+            provider = "anthropic";
+            model = "claude-haiku-5-5";
+            max_tokens = 128000;
           };
         };
       };
