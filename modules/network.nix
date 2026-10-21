@@ -45,17 +45,19 @@ _: {
         # Real LAN NICs only. Without this, avahi advertises on docker0 / br-* /
         # veth* too, which collides the hostname with itself across bridges
         # (stubbe-nixos-2, -3, …) and leaks it into container networks.
-        allowInterfaces = [
-          "enp4s0"
-          "wlp3s0"
-        ];
-        publish = {
-          enable = true;
-          addresses = true;
-          domain = true;
-          hinfo = true;
-          userServices = true;
-          workstation = true;
+        settings = {
+          server.allow-interfaces = [
+            "enp4s0"
+            "wlp3s0"
+          ];
+          publish = {
+            disable-publishing = false;
+            disable-user-service-publishing = false;
+            publish-addresses = true;
+            publish-domain = true;
+            publish-hinfo = true;
+            publish-workstation = true;
+          };
         };
       };
 
