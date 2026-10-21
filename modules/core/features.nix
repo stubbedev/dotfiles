@@ -2,7 +2,7 @@ _:
 let
   flags = {
     desktop = "Interactive workstation UI (GUI apps, compositor support, theming). Does NOT control baseline CLI tools.";
-    development = "Language toolchains beyond the CLI baseline (node, python). Project toolchains (go, rust, C/C++) come from each repo's devenv.";
+    development = "Language toolchains beyond the CLI baseline (node, python). Project toolchains (go, rust, C/C++) come from each repo's flake dev shell, loaded by direnv.";
     docker = "Docker. On NixOS this drives virtualisation.docker; elsewhere a privileged activation renders the engine's systemd units from the same locked nixpkgs docker (socket-activated, live-restore), wires the group, daemon.json and the registry:3 container.";
     avahi = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
     openssh = "Accept inbound ssh. Elsewhere openssh-server from the host package manager; on NixOS services.openssh stays unconditional so the installer ISO keeps its remote-debug path.";

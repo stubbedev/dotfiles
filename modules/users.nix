@@ -16,18 +16,15 @@ _: {
     };
 
   flake.modules.nixos.userDirs =
-    { config, ... }:
+    { config, pkgs, ... }:
     let
       user = config.host.primaryUser;
       inherit (config.users.users.${user}) home group;
     in
     {
-      systemd.tmpfiles.rules = [
-        "d ${home}/git         0755 ${user} ${group} - -"
-        "d ${home}/git/work    0755 ${user} ${group} - -"
-        "d ${home}/git/private 0755 ${user} ${group} - -"
-        "d ${home}/docs        0755 ${user} ${group} - -"
-      ];
+      systemd.tmpfiles.rules = map (dir: "d ${home}/${dir} 0755 ${user} ${group} - -") (
+        [ "git" ] ++ pkgs.stubbe.repoDirs ++ [ "docs" ]
+      );
     };
 
   flake.modules.nixos.locale = _: {

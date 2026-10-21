@@ -78,67 +78,6 @@
         inputs.adaptive-power-manager.packages.${final.stdenv.hostPlatform.system}.default;
     };
 
-    # --quiet means quiet. Upstream prints task lifecycle lines ("• Running
-    # devenv:enterShell" / "✓ … in Nms") even under --quiet on purpose (#3115:
-    # liveness for agents and redirected runs), and that is the one noise the
-    # hook-activated shell cannot turn off. Gate the lifecycle override on
-    # Quiet instead, so the hook's `--quiet` spawn is silent without wrapping
-    # the session's stderr in a filter (that demotes stderr to a pipe and
-    # costs every tool its isatty colors). Manual `devenv shell` runs without
-    # --quiet and keeps its output. doCheck off: the crate's own tests assert
-    # the noisy behavior; delete this overlay once upstream grows a flag.
-    devenv-quiet = _final: prev: {
-      devenv = prev.devenv.overrideAttrs (old: {
-        doCheck = false;
-        postPatch = (old.postPatch or "") + ''
-          substituteInPlace devenv/src/console.rs \
-            --replace-fail 'entry.show_lifecycle || self.show_at(level),' \
-              'entry.show_lifecycle && !matches!(self.verbosity, VerbosityLevel::Quiet) || self.show_at(level),' \
-            --replace-fail 'show_lifecycle || self.show_at(level),' \
-              'show_lifecycle && !matches!(self.verbosity, VerbosityLevel::Quiet) || self.show_at(level),'
-        '';
-      });
-    };
-
-    # A hook-activated shell takes its binary from passwd whenever the login
-    # shell's name matches the hook's dialect, ignoring $SHELL. Here that is
-    # the distro /bin/zsh, whose .zshenv exec into the nix zsh fires midway
-    # through devenv's generated .zshrc and drops its cd-out exit handler and
-    # PATH restore. Prefer an absolute $SHELL of the hinted dialect, falling
-    # back to passwd, which still covers upstream's stripped-PATH case.
-    # Delete once upstream consults $SHELL in the hook branch.
-    devenv-hook-shell = _final: prev: {
-      devenv = prev.devenv.overrideAttrs (old: {
-        postPatch = (old.postPatch or "") + ''
-          substituteInPlace devenv-core/src/settings.rs \
-            --replace-fail \
-              'login_shell().and_then(|(name, path)| (name == shell).then_some(path))' \
-              'std::env::var("SHELL").ok().filter(|path| std::path::Path::new(path).is_absolute() && shell_name_from_path(path).as_deref() == Some(shell.as_str())).map(std::path::PathBuf::from).or_else(|| login_shell().and_then(|(name, path)| (name == shell).then_some(path)))'
-        '';
-      });
-    };
-
-    # The devenv source patches here rule out the binary cache, and nixpkgs'
-    # postInstall then compiles the whole workspace a second time (dev
-    # profile) for `cargo xtask` to emit manpages and shell completions. The
-    # zsh completion comes from the binary itself (COMPLETE=zsh in
-    # modules/shell.nix), so keep only the wrapProgram half. Fails the build
-    # if upstream renames the marker.
-    devenv-no-xtask = _final: prev: {
-      devenv = prev.devenv.overrideAttrs (
-        old:
-        let
-          marker = "# Generate manpages";
-        in
-        {
-          postInstall =
-            assert prev.lib.assertMsg (prev.lib.hasInfix marker old.postInstall)
-              "devenv postInstall no longer contains '${marker}'";
-            builtins.head (prev.lib.splitString marker old.postInstall);
-        }
-      );
-    };
-
     # tela-circle-icon-theme 2026-07-07 ships three symlinks to icons
     # that do not exist in the release (xsi-addon-symbolic.svg,
     # org.xfce.appfinder.svg); the stdenv noBrokenSymlinks check rejects

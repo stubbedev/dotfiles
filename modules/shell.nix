@@ -709,130 +709,11 @@
         ${lib.getExe pkgs.zoxide} init zsh > $out/init.zsh
       '';
 
-      # Hook-activated shells run muted: --no-tui skips the TUI (status line,
-      # task-log preview), --quiet silences what logs remain, --no-reload
-      # drops the PTY watcher whose "devenv watching" line would otherwise
-      # ride along. The task lifecycle lines go too: the devenv-quiet overlay
-      # (modules/core/overlays.nix) patches --quiet to cover them. Manual
-      # `devenv shell` keeps full TUI and output.
-      devenvInit = mkInit "devenv" ''
-        HOME=$TMPDIR ${lib.getExe pkgs.devenv} hook zsh -- --no-tui --no-reload --quiet > $out/init.zsh
-        HOME=$TMPDIR COMPLETE=zsh ${lib.getExe pkgs.devenv} -- >> $out/init.zsh
-        cat >> $out/init.zsh <<'EOF'
-
-        # devenv trusts exact paths, so every checkout (main or worktree)
-        # would need its own `devenv allow`. Trust is per repository instead,
-        # keyed by git common dir in allowed-repos: inside a git checkout,
-        # `devenv allow` and `devenv revoke` act on the whole repository
-        # (allow works before the repo has a devenv.nix), and the precmd hook
-        # appends each checkout of a trusted repository to devenv's own DB.
-        # `command devenv allow` still trusts a single checkout. Revoke also
-        # drops DB entries for deleted directories, since a removed
-        # worktree's entry can no longer be traced to its repository. Paths are
-        # symlink-resolved (:A) to match the DB, and files are read with $(<)
-        # so the per-prompt path never forks. Registered ahead of devenv's
-        # own precmd hook, which re-reads the DB every prompt and picks the
-        # entry up same-prompt.
-        _stubbe_devenv_db="''${XDG_DATA_HOME:-$HOME/.local/share}/devenv/allowed"
-        _stubbe_devenv_repos="''${_stubbe_devenv_db:h}/allowed-repos"
-
-        _stubbe_git_common_dir() {
-          local dir="$1"
-          while [[ ! -e "$dir/.git" ]]; do
-            [[ "$dir" == / ]] && return 1
-            dir="''${dir:h}"
-          done
-          if [[ -d "$dir/.git" ]]; then
-            REPLY="$dir/.git"
-          else
-            local gitdir="$(<"$dir/.git")"
-            [[ "$gitdir" == "gitdir: "* ]] || return 1
-            gitdir="''${gitdir#gitdir: }"
-            [[ "$gitdir" == /* ]] || gitdir="$dir/$gitdir"
-            REPLY="$gitdir"
-            if [[ -f "$gitdir/commondir" ]]; then
-              REPLY="$(<"$gitdir/commondir")"
-              [[ "$REPLY" == /* ]] || REPLY="$gitdir/$REPLY"
-            fi
-          fi
-          REPLY="''${REPLY:A}"
-        }
-
-        _stubbe_devenv_repo_allowed() {
-          [[ -r "$_stubbe_devenv_repos" ]] || return 1
-          local -a repos=("''${(@f)$(<"$_stubbe_devenv_repos")}")
-          (( ''${repos[(Ie)$1]} ))
-        }
-
-        _stubbe_rewrite_lines() {
-          local file="$1" tmp="$1.$$.tmp"
-          shift
-          if (( $# )); then print -rl -- "$@"; fi >| "$tmp"
-          command mv -f -- "$tmp" "$file"
-        }
-
-        _stubbe_devenv_allow() {
-          _stubbe_git_common_dir "''${PWD:A}" || { command devenv allow "$@"; return; }
-          local common="$REPLY"
-          if [[ -f devenv.nix ]]; then
-            command devenv allow "$@" || return
-          fi
-          if ! _stubbe_devenv_repo_allowed "$common"; then
-            mkdir -p -- "''${_stubbe_devenv_repos:h}"
-            print -r -- "$common" >>! "$_stubbe_devenv_repos"
-          fi
-          print -r -- "devenv: allowed every checkout of $common"
-        }
-
-        _stubbe_devenv_revoke() {
-          _stubbe_git_common_dir "''${PWD:A}" || { command devenv revoke "$@"; return; }
-          local common="$REPLY" line p
-          local -a keep=()
-          if [[ -r "$_stubbe_devenv_repos" ]]; then
-            for line in "''${(@f)$(<"$_stubbe_devenv_repos")}"; do
-              [[ -n "$line" && "$line" != "$common" ]] && keep+=("$line")
-            done
-            _stubbe_rewrite_lines "$_stubbe_devenv_repos" "''${keep[@]}"
-          fi
-          keep=()
-          if [[ -r "$_stubbe_devenv_db" ]]; then
-            for line in "''${(@f)$(<"$_stubbe_devenv_db")}"; do
-              [[ -n "$line" ]] || continue
-              p="''${''${line#*\"path\":\"}%%\"*}"
-              [[ -e "$p" ]] || continue
-              _stubbe_git_common_dir "$p" && [[ "$REPLY" == "$common" ]] && continue
-              keep+=("$line")
-            done
-            _stubbe_rewrite_lines "$_stubbe_devenv_db" "''${keep[@]}"
-          fi
-          print -r -- "devenv: revoked every checkout of $common"
-        }
-
-        devenv() {
-          case "$1" in
-            allow) shift; _stubbe_devenv_allow "$@" ;;
-            revoke) shift; _stubbe_devenv_revoke "$@" ;;
-            *) command devenv "$@" ;;
-          esac
-        }
-
-        _stubbe_devenv_trust() {
-          local dir="''${PWD:A}"
-          while [[ ! -f "$dir/devenv.nix" ]]; do
-            [[ "$dir" == / ]] && return 0
-            dir="''${dir:h}"
-          done
-          local allowed=""
-          [[ -r "$_stubbe_devenv_db" ]] && allowed="$(<"$_stubbe_devenv_db")"
-          [[ "$allowed" == *"\"path\":\"$dir\""* ]] && return 0
-          _stubbe_git_common_dir "$dir" && _stubbe_devenv_repo_allowed "$REPLY" || return 0
-          mkdir -p -- "''${_stubbe_devenv_db:h}"
-          printf '{"path":"%s"}\n' "$dir" >>! "$_stubbe_devenv_db"
-        }
-        if (( ! ''${precmd_functions[(I)_stubbe_devenv_trust]} )); then
-          precmd_functions=(_stubbe_devenv_trust $precmd_functions)
-        fi
-        EOF
+      # The hook calls direnv-instant by name, so it resolves to the wrapper
+      # programs.direnv-instant installs (modules/development.nix), which
+      # carries the settings.
+      direnvInstantInit = mkInit "direnv-instant" ''
+        ${lib.getExe config.programs.direnv-instant.package} hook zsh > $out/init.zsh
       '';
 
       # -u because the sandbox build user fails compaudit's ownership check,
@@ -859,10 +740,9 @@
       ) pluginSpecs;
     in
     lib.mkIf config.features.desktop {
-      # Terminals, tmux and devenv hook shells (devenv-hook-shell overlay)
-      # spawn $SHELL. Pointing it at the nix zsh skips the distro-zsh hop
-      # through the .zshenv exec below; logins via passwd (TTY, ssh) still
-      # take that hop.
+      # Terminals and tmux spawn $SHELL. Pointing it at the nix zsh skips the
+      # distro-zsh hop through the .zshenv exec below; logins via passwd (TTY,
+      # ssh) still take that hop.
       home.sessionVariables.SHELL = zshBin;
 
       programs.zsh = {
@@ -918,7 +798,7 @@
             (( $+commands[fzf] ))      && source ${fzfInit}
             (( $+commands[starship] )) && source ${starshipInit}
             (( $+commands[zoxide] ))   && source ${zoxideInit}
-            (( $+commands[devenv] ))   && source ${devenvInit}
+            ${lib.optionalString config.programs.direnv-instant.enable "source ${direnvInstantInit}"}
             _patina_init="${config.xdg.cacheHome}/zsh/patina-init.zsh"
             [[ -f "$_patina_init" ]] && source "$_patina_init"
             unset _patina_init

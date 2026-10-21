@@ -523,7 +523,7 @@
         # The one global MCP server: both AI clients register it
         # (modules/ai/{claude-code,harness}.nix) and it reads this module's
         # notmuch setup. Every other server is per-repo: .mcp.json registers
-        # it, that repo's devenv provides the binary.
+        # it, that repo's flake dev shell provides the binary.
         inputs.notmuch-mcp.packages.${pkgs.stdenv.hostPlatform.system}.default
         mailOpen
         mailUnsubscribe
