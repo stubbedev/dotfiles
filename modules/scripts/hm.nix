@@ -313,10 +313,6 @@ _: {
               nix flake update --flake "$hm_flake_ref" --quiet
               commit_flake_lock
             fi
-
-            if has_cmd nix-channel; then
-              nix-channel --update >/dev/null 2>&1 || true
-            fi
           }
 
           usage() {
