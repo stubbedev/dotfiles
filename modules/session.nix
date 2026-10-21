@@ -91,6 +91,7 @@
 
       xdg.configFile."starship.toml".source = pkgs.stubbe.gen.toml "starship.toml" {
         command_timeout = 100;
+        nix_shell.symbol = " ";
       };
     };
 }
