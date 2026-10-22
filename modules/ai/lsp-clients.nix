@@ -95,14 +95,26 @@ _: {
           };
         };
 
-        bashls = {
-          command = lib.getExe' pkgs.bash-language-server "bash-language-server";
-          args = [ "start" ];
+        shell_lsp = {
+          command = lib.getExe pkgs.shell-lsp;
           languages = {
-            sh = "shellscript";
-            bash = "shellscript";
-            zsh = "shellscript";
+            sh = "sh";
+            bash = "bash";
+            bats = "bats";
+            zsh = "zsh";
+            ksh = "ksh";
+            dash = "dash";
+            mk = "makefile";
+            mak = "makefile";
+            just = "just";
+            dockerfile = "dockerfile";
+            containerfile = "dockerfile";
           };
+          fileNames = [
+            "makefile"
+            "gnumakefile"
+            "justfile"
+          ];
         };
 
         superhtml = {
@@ -145,10 +157,10 @@ _: {
         };
       };
 
-      # harness's `lsp` map: filetypes match as ".<ext>" suffixes on the file
-      # name, and the settings move to `options`. Commands must be store paths:
-      # user-configured servers skip harness's PATH probe, and harness runs without
-      # nvim's wrapper PATH to find binaries by name.
+      # harness's `lsp` map: a filetype matches a file named "<filetype>" or
+      # ending in ".<filetype>", and the settings move to `options`. Commands
+      # must be store paths: user-configured servers skip harness's PATH probe,
+      # and harness runs without nvim's wrapper PATH to find binaries by name.
       toHarness =
         _: s:
         {
@@ -156,20 +168,34 @@ _: {
         }
         // lib.optionalAttrs (s ? args) { inherit (s) args; }
         // {
-          filetypes = builtins.attrNames s.languages;
+          filetypes = builtins.attrNames s.languages ++ s.fileNames or [ ];
         }
         // lib.optionalAttrs (s ? settings) { options = s.settings; }
         // lib.optionalAttrs (s ? initOptions) { init_options = s.initOptions; };
+
+      # Claude's plugin `.lsp.json` dialect: extensions only, keyed with the
+      # dot, so `fileNames` has no equivalent there.
+      toClaude =
+        _: s:
+        {
+          inherit (s) command;
+          extensionToLanguage = lib.mapAttrs' (ext: lib.nameValuePair ".${ext}") s.languages;
+        }
+        // lib.optionalAttrs (s ? args) { inherit (s) args; };
+
+      claudeServers = [ "shell_lsp" ];
     in
     {
       options.stubbe.lsp.clients = lib.mkOption {
         type = lib.types.raw;
         internal = true;
-        description = "Harness's `lsp` map, rendered from the shared inventory.";
+        description = "Harness's `lsp` map and Claude's `.lsp.json`, rendered from the shared inventory.";
       };
 
       config.stubbe.lsp.clients =
-        # Keeps `config` in an expression, which deadnix requires to see used.
-        lib.optionalAttrs config.features.harness { harness = lib.mapAttrs toHarness servers; };
+        lib.optionalAttrs config.features.harness { harness = lib.mapAttrs toHarness servers; }
+        // lib.optionalAttrs config.features.claudeCode {
+          claude = lib.mapAttrs toClaude (lib.getAttrs claudeServers servers);
+        };
     };
 }

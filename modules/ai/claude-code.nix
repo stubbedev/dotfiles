@@ -12,21 +12,9 @@ _: {
       shellLspPlugin = pkgs.linkFarm "claude-shell-lsp-plugin" {
         ".claude-plugin/plugin.json" = pkgs.stubbe.gen.json "plugin.json" {
           name = "shell-lsp";
-          description = "shell-lsp diagnostics for sh, bash, zsh and ksh scripts";
+          description = "shell-lsp diagnostics for shell scripts, Makefiles, justfiles and Dockerfiles";
         };
-        ".lsp.json" = pkgs.stubbe.gen.json "lsp.json" {
-          shell-lsp = {
-            command = lib.getExe pkgs.shell-lsp;
-            extensionToLanguage = {
-              ".sh" = "sh";
-              ".bash" = "bash";
-              ".bats" = "bash";
-              ".zsh" = "zsh";
-              ".dash" = "sh";
-              ".ksh" = "ksh";
-            };
-          };
-        };
+        ".lsp.json" = pkgs.stubbe.gen.json "lsp.json" config.stubbe.lsp.clients.claude;
       };
     in
     lib.mkIf config.features.claudeCode {
