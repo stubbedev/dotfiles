@@ -1,6 +1,6 @@
 { inputs, ... }:
 {
-  flake.modules.nixos.wayle =
+  flake.modules.nixos.lysShell =
     {
       config,
       lib,
@@ -9,16 +9,16 @@
     }:
     {
       # Nesting this in lib.mkIf makes the upstream module and its options vanish.
-      imports = [ inputs.wayle.nixosModules.default ];
+      imports = [ inputs.lys-shell.nixosModules.default ];
 
       config =
         let
-          enabled = config.stubbe.userFeatures.wayle && config.stubbe.userFeatures.hyprland;
+          enabled = config.stubbe.userFeatures.lysShell && config.stubbe.userFeatures.hyprland;
         in
         lib.mkIf enabled {
-          programs.wayle = {
+          programs.lys-shell = {
             enable = true;
-            package = pkgs.wayle;
+            package = pkgs.lys-shell;
             systemd.enable = false;
             portal.enable = true;
             lock.enable = true;
@@ -28,7 +28,7 @@
           # common.default, so mkForce is needed to drop it.
           xdg.portal.config = lib.mkForce {
             common.default = [
-              "wayle"
+              "lys-shell"
               "gnome"
               "gtk"
             ];
@@ -36,7 +36,7 @@
         };
     };
 
-  flake.modules.homeManager.wayle =
+  flake.modules.homeManager.lysShell =
     {
       config,
       lib,
@@ -45,15 +45,15 @@
     }:
     let
       inherit (config.stubbe) gfx;
-      enabled = config.features.wayle && config.features.hyprland;
+      enabled = config.features.lysShell && config.features.hyprland;
 
       # Rejoined with the upstream package so $out/share reaches the profile:
-      # without it GTK cannot resolve wayle's bundled icon names.
-      waylePackage = gfx.bundle {
-        pkg = pkgs.wayle;
+      # without it GTK cannot resolve lys-shell's bundled icon names.
+      lysShellPackage = gfx.bundle {
+        pkg = pkgs.lys-shell;
         exes = [
-          "wayle"
-          "wayle-settings"
+          "lys-shell"
+          "lys-settings"
         ];
       };
 
@@ -64,10 +64,10 @@
         builtins.pathExists psu
         && lib.any (lib.hasPrefix "BAT") (builtins.attrNames (builtins.readDir psu));
 
-      wayleBin = lib.getExe' waylePackage "wayle";
+      lysShellBin = lib.getExe' lysShellPackage "lys-shell";
 
       launcher = pkgs.stubbe.bashApp {
-        name = "wayle-launch";
+        name = "lys-shell-launch";
         text = ''
           set +e +u +o pipefail
 
@@ -128,7 +128,7 @@
           (
             n=0
             while [ $n -lt 40 ]; do
-              if ${wayleBin} wallpaper set "${config.stubbe.paths.wallpaper}" --fit fill >/dev/null 2>&1; then
+              if ${lysShellBin} wallpaper set "${config.stubbe.paths.wallpaper}" --fit fill >/dev/null 2>&1; then
                 break
               fi
               n=$((n + 1))
@@ -136,7 +136,7 @@
             done
           ) &
 
-          exec ${wayleBin} shell
+          exec ${lysShellBin} shell
         '';
       };
 
@@ -144,7 +144,7 @@
 
       restartBarIfSessionActive = pkgs.stubbe.shellScript "restart-bar-if-session-active" ''
         if ${lib.getExe' pkgs.systemd "systemctl"} --user is-active --quiet ${lib.head sessionTarget}; then
-          exec ${lib.getExe' pkgs.systemd "systemctl"} --user restart wayle.service
+          exec ${lib.getExe' pkgs.systemd "systemctl"} --user restart lys-shell.service
         fi
       '';
 
@@ -165,25 +165,44 @@
       };
     in
     {
-      imports = [ inputs.wayle.homeManagerModules.default ];
+      imports = [ inputs.lys-shell.homeManagerModules.default ];
 
       config = lib.mkIf enabled {
-        programs.wayle = lib.mkIf (config.host.platform != "nixos") {
+        # The shell's own files from before the wayle -> lys-shell rename move
+        # over once: runtime settings and user styles under the config dir,
+        # logs, wallpaper state and the VPN credential caches under the state
+        # dir. Before checkLinkTargets, so the new config dir does not exist
+        # yet; the old generation's config.toml link goes, and linkGeneration
+        # recreates it under the new name. A no-op once the new dir exists.
+        home.activation.lysShellRenamedDirs = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+          moveRenamedDir() {
+            if [ -d "$1" ] && [ ! -e "$2" ]; then
+              if [ -L "$1/config.toml" ]; then
+                run rm "$1/config.toml"
+              fi
+              run mv "$1" "$2"
+            fi
+          }
+          moveRenamedDir "${config.xdg.configHome}/wayle" "${config.xdg.configHome}/lys-shell"
+          moveRenamedDir "${config.xdg.stateHome}/wayle" "${config.xdg.stateHome}/lys-shell"
+        '';
+
+        programs.lys-shell = lib.mkIf (config.host.platform != "nixos") {
           enable = true;
-          package = waylePackage;
+          package = lysShellPackage;
           systemd.enable = false;
           settings = { };
           portal.enable = true;
         };
 
         home.packages = [
-          waylePackage
+          lysShellPackage
           launcher
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
           (gfx.wrap pkgs.wleave)
           (pkgs.stubbe.bashApp {
-            name = "wayle-widget";
+            name = "lys-shell-widget";
             text = ''
               set +e
               set -uo pipefail
@@ -200,14 +219,14 @@
 
               case "''${1:-}" in
                 submap-watch)
-                  marker="$rt/wayle-submap"
+                  marker="$rt/lys-shell-submap"
                   emit_submap() {
                     if [ -f "$marker" ]; then printf '{"text":"%s"}\n' "$(cat "$marker" 2>/dev/null)"; else echo; fi
                   }
                   emit_submap
                   inotifywait -q -m -e create,delete,close_write,moved_to,moved_from --format '%f' "$rt" 2>/dev/null |
                     while IFS= read -r f; do
-                      case "$f" in wayle-submap) emit_submap ;; esac
+                      case "$f" in lys-shell-submap) emit_submap ;; esac
                     done
                   ;;
 
@@ -224,7 +243,7 @@
                           activelayout\>\>hl-virtual-keyboard-*) continue ;;
                           activelayout\>\>*)
                             [ "$(($(date +%s) - start))" -lt 3 ] && continue
-                            wayle toast "''${line##*,}" --icon ld-keyboard-symbolic --duration 1000 ;;
+                            lys-shell toast "''${line##*,}" --icon ld-keyboard-symbolic --duration 1000 ;;
                         esac
                       done
                       ;;
@@ -242,21 +261,21 @@
           brightnessctl
         ]);
 
-        # The single file, never the directory: wayle writes into that directory
+        # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
-        xdg.configFile."wayle/config.toml" = {
+        xdg.configFile."lys-shell/config.toml" = {
           source =
             let
               c = pkgs.stubbe.withHash;
             in
-            pkgs.stubbe.gen.toml "wayle-config.toml" {
+            pkgs.stubbe.gen.toml "lys-shell-config.toml" {
               general = {
                 font-sans = "JetBrainsMono Nerd Font";
                 font-mono = "JetBrainsMono Nerd Font";
               };
 
               styling = {
-                theme-provider = "wayle";
+                theme-provider = "lys-shell";
                 rounding = "sm";
                 palette = {
                   bg = c.base;
@@ -273,9 +292,9 @@
               };
 
               # The upstream default pam-service `system-auth` does not exist on
-              # NixOS, so a dedicated /etc/pam.d/wayle is provisioned instead.
+              # NixOS, so a dedicated /etc/pam.d/lys-shell is provisioned instead.
               lock = {
-                pam-service = "wayle";
+                pam-service = "lys-shell";
                 lock-on-start = true;
                 background-mode = "color";
                 background-color = c.base;
@@ -381,18 +400,18 @@
                 bluetooth.label-show = false;
 
                 volume = {
-                  scroll-up = "wayle audio output-volume +5";
-                  scroll-down = "wayle audio output-volume -5";
-                  middle-click = "wayle audio output-mute";
+                  scroll-up = "lys-shell audio output-volume +5";
+                  scroll-down = "lys-shell audio output-volume -5";
+                  middle-click = "lys-shell audio output-mute";
                 };
 
                 microphone = {
-                  scroll-up = "wayle audio input-volume +5";
-                  scroll-down = "wayle audio input-volume -5";
-                  middle-click = "wayle audio input-mute";
+                  scroll-up = "lys-shell audio input-volume +5";
+                  scroll-down = "lys-shell audio input-volume -5";
+                  middle-click = "lys-shell audio input-mute";
                 };
 
-                # wayle has no brightness CLI. -n keeps a 1-unit floor so
+                # lys-shell has no brightness CLI. -n keeps a 1-unit floor so
                 # scrolling down never blacks the screen.
                 brightness = {
                   scroll-up = "brightnessctl set 5%+";
@@ -461,7 +480,7 @@
                     id = "submap";
                     mode = "watch";
                     restart-policy = "on-exit";
-                    command = "wayle-widget submap-watch";
+                    command = "lys-shell-widget submap-watch";
                     icon-name = "ld-layers-symbolic";
                     label-show = false;
                     hide-if-empty = true;
@@ -478,7 +497,7 @@
               "D-BUS Service" = {
                 Name = "org.freedesktop.Notifications";
                 Exec = "${lib.getExe' pkgs.coreutils "false"}";
-                SystemdService = "wayle.service";
+                SystemdService = "lys-shell.service";
               };
             };
 
@@ -555,7 +574,7 @@
             buttons = [
               {
                 label = "lock";
-                action = "wayle-lock";
+                action = "lys-lock";
                 text = "Lock";
                 keybind = "l";
                 icon = icon "lock";
@@ -598,23 +617,23 @@
           };
 
         systemd.user.services = {
-          wayle = {
+          lys-shell = {
             Unit = {
-              Description = "Wayle desktop shell (bar, notifications, OSD, wallpaper)";
-              Documentation = "https://github.com/stubbedev/wayle";
+              Description = "lys-shell desktop shell (bar, notifications, OSD, wallpaper)";
+              Documentation = "https://github.com/stubbedev/lys-shell";
               After = sessionTarget ++ [ "power-profiles-daemon.service" ];
               Wants = [ "power-profiles-daemon.service" ];
               PartOf = sessionTarget;
-              # Moves the unit hash on a config edit so sd-switch restarts wayle.
-              X-Restart-Triggers = [ (toString config.xdg.configFile."wayle/config.toml".source) ];
+              # Moves the unit hash on a config edit so sd-switch restarts lys-shell.
+              X-Restart-Triggers = [ (toString config.xdg.configFile."lys-shell/config.toml".source) ];
             };
             Install.WantedBy = sessionTarget;
             Service = {
               # Not Type=dbus: systemd would block on org.freedesktop.Notifications
-              # and time the unit out if wayle claims it late or not at all.
+              # and time the unit out if lys-shell claims it late or not at all.
               Type = "simple";
               ExecStart = lib.getExe launcher;
-              ExecStopPost = "-${lib.getExe pkgs.bash} -c '${lib.getExe' pkgs.procps "pkill"} -9 wayle || true; sleep 0.5'";
+              ExecStopPost = "-${lib.getExe pkgs.bash} -c '${lib.getExe' pkgs.procps "pkill"} -9 lys-shell || true; sleep 0.5'";
               Restart = "on-failure";
               RestartSec = "3s";
             };
@@ -624,11 +643,11 @@
           await-bluetooth = awaitUnit "Restart the bar when bluetooth starts" "bluetooth.service";
         };
 
-        stubbe.setup.wayleLockPam = {
+        stubbe.setup.lysShellLockPam = {
           privileged = true;
-          title = "⚠️  Wayle lock PAM configuration missing";
+          title = "⚠️  lys-shell lock PAM configuration missing";
           body = ''
-            Wayle's session lock needs a PAM configuration to authenticate the
+            lys-shell's session lock needs a PAM configuration to authenticate the
             unlock. This will create a minimal Nix-compatible PAM config that also
             unlocks the login keyring on unlock.
           '';
@@ -640,8 +659,8 @@
               pamGnomeKeyring = "${config.home.profileDirectory}/lib/security/pam_gnome_keyring.so";
             in
             pkgs.stubbe.setup.text {
-              name = "wayle-pam";
-              target = "/etc/pam.d/wayle";
+              name = "lys-shell-pam";
+              target = "/etc/pam.d/lys-shell";
               text = ''
                 #%PAM-1.0
                 auth       required     pam_unix.so nullok

@@ -1,8 +1,8 @@
-# The VPN is wayle's now. NetworkManager's openconnect plugin brings the
-# tunnel up, and wayle — registered as NM's secret agent — performs the
+# The VPN is lys-shell's now. NetworkManager's openconnect plugin brings the
+# tunnel up, and lys-shell — registered as NM's secret agent — performs the
 # GlobalProtect sign-in itself: password and 2FA are asked in the network
 # dropdown, and the session cookie plus password are cached under
-# ~/.local/state/wayle/vpn keyed by the profile's NM UUID, so a reconnect
+# ~/.local/state/lys-shell/vpn keyed by the profile's NM UUID, so a reconnect
 # after a dropped tunnel or a resume from suspend costs no second factor.
 # That replaces this aspect's previous root openconnect unit, the polkit rule
 # that let the user start/stop it, the connect/disconnect/status scripts, and
@@ -25,7 +25,7 @@ let
   providers = [ "konform" ];
 
   # The NM profile UUID, derived from the provider name so it is stable
-  # across rebuilds without being tracked by hand. wayle keys its credential
+  # across rebuilds without being tracked by hand. lys-shell keys its credential
   # cache by it; a gateway password that has since changed just means the
   # cached one is rejected once and re-typed.
   uuidOf =
@@ -43,9 +43,9 @@ let
   configOf = provider: home: "${home}/.config/vpn/${provider}/config";
 
   # The keyfile NetworkManager reads, written from the sourced VPN config.
-  # `wayle-username` is wayle's own data key (the plugin has none for it);
+  # `lys-shell-username` is lys-shell's own data key (the plugin has none for it);
   # the `*-flags=2` triple marks the plugin's minted secrets not-saved, so NM
-  # always asks the agent — wayle — rather than a stored value.
+  # always asks the agent — lys-shell — rather than a stored value.
   keyfileBody = provider: uuid: ''
     usergroup="''${VPN_USERGROUP-gateway}"
     {
@@ -61,7 +61,7 @@ let
         'persistent=true' \
         "gateway=$VPN_GATEWAY" \
         'protocol=gp' \
-        "wayle-username=$VPN_USERNAME"
+        "lys-shell-username=$VPN_USERNAME"
       if [ -n "$usergroup" ]; then
         printf 'usergroup=%s\n' "$usergroup"
       fi
@@ -82,9 +82,15 @@ let
   # Persistence, applied to a profile that already exists: written by this
   # aspect before it asked for it, or by hand. A permission list is cleared
   # too — v0.8.52 of wayle made profiles user-owned, which NM then refused to
-  # activate. Everything else in it stays user state.
+  # activate. A username stored under wayle's data key moves to lys-shell's,
+  # keeping the value the profile holds. Everything else in it stays user
+  # state.
   persist = nmcli: uuid: ''
     ${nmcli} connection modify ${uuid} connection.permissions "" vpn.persistent yes
+    old_username=$(${nmcli} -g vpn.data connection show ${uuid} | sed -n 's/\(^\|.*, \)wayle-username = \([^,]*\).*/\2/p')
+    if [ -n "$old_username" ]; then
+      ${nmcli} connection modify ${uuid} -vpn.data wayle-username +vpn.data "lys-shell-username=$old_username"
+    fi
   '';
 
   # Where the retired detach hook and its NetworkManager.service drop-in were
@@ -126,7 +132,7 @@ in
               set -euo pipefail
 
               # Written only when it is missing: once written the profile is
-              # user state, owned by NetworkManager and the wayle widget that
+              # user state, owned by NetworkManager and the lys-shell widget that
               # edits it, not something a switch gets to clobber.
               if [ ! -e "${profileTarget provider}" ]; then
                 keyfile_tmp=$(mktemp)
@@ -182,7 +188,7 @@ in
             dropped along the way.
 
             The profile is written only when NetworkManager does not know it;
-            after that it is user state, owned by NetworkManager and the wayle
+            after that it is user state, owned by NetworkManager and the lys-shell
             widget that edits it, and only its persistence is kept in line.
           '';
           script =
@@ -243,7 +249,7 @@ in
               # exist — the pre-migration pair above all, whose password the
               # gateway has since changed. Caches for live profiles are kept:
               # they are what makes a reconnect cost no second factor.
-              state_dir="${home}/.local/state/wayle/vpn"
+              state_dir="${home}/.local/state/lys-shell/vpn"
               if [ -d "$state_dir" ]; then
               find "$state_dir" -maxdepth 1 -type f -name '*.cookie'${keepCaches "cookie"} -delete
               find "$state_dir" -maxdepth 1 -type f -name '*.password'${keepCaches "password"} -delete

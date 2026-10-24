@@ -7,10 +7,10 @@ let
     avahi = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
     openssh = "Accept inbound ssh. Elsewhere openssh-server from the host package manager; on NixOS services.openssh stays unconditional so the installer ISO keeps its remote-debug path.";
     hyprland = "The Hyprland compositor, its session, and login (greetd autologin).";
-    wayle = "The wayle desktop shell — bar, notifications, OSD, wallpaper, lock, portal. The default and only shell; disabling leaves no bar.";
+    lysShell = "The lys-shell desktop shell — bar, notifications, OSD, wallpaper, lock, portal. The default and only shell; disabling leaves no bar.";
     theming = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, Plymouth).";
     media = "Image, video and audio tooling, plus the office suite.";
-    vpn = "The GlobalProtect VPN: a NetworkManager openconnect profile provisioned from sops, signed into and toggled from wayle's network widget, plus a suspend/resume restore hook.";
+    vpn = "The GlobalProtect VPN: a NetworkManager openconnect profile provisioned from sops, signed into and toggled from lys-shell's network widget, plus a suspend/resume restore hook.";
     srv = "The srv local-site server; 'srv install' owns CA trust and DNS.";
     treeman = "treeman per-worktree DB orchestrator plus the treemand user daemon.";
     php = "PHP: static CLI interpreter plus FrankenPHP and composer.";

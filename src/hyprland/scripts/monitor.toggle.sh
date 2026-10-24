@@ -8,11 +8,11 @@ apply_reload() {
 WALLPAPER="${WALLPAPER:-$HOME/.stubbe/src/wallpapers/ballet.jpg}"
 
 apply_wallpaper() {
-  command -v wayle >/dev/null 2>&1 || return 0
+  command -v lys-shell >/dev/null 2>&1 || return 0
   (
     n=0
     while [ $n -lt 12 ]; do
-      if wayle wallpaper set "$WALLPAPER" --fit fill >/dev/null 2>&1; then
+      if lys-shell wallpaper set "$WALLPAPER" --fit fill >/dev/null 2>&1; then
         break
       fi
       n=$((n + 1))

@@ -44,7 +44,7 @@ _: {
     # The page every new tab and the browser home button lands on.
     newtabUrl = "https://start.local/";
 
-    # Per-workspace accent ramp, workspace 1 first; wayle renders it into the
+    # Per-workspace accent ramp, workspace 1 first; lys-shell renders it into the
     # hyprland-workspaces label map.
     workspaceColors = [
       "89b4fa"

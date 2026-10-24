@@ -24,7 +24,7 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   ├── dev/               # flake checks, lint, `nix fmt`
 │   ├── scripts/           # the `hm` front-end, launchers, clip, ISO burner
 │   ├── ai/, browsers/     # aspects big enough to want a directory
-│   └── <aspect>.nix       # mail, shell, hyprland, wayle, power, storage, …
+│   └── <aspect>.nix       # mail, shell, hyprland, lys-shell, power, storage, …
 ├── bin/                   # ONLY the pre-Nix bootstraps (stb-install*)
 ├── src/                   # the few real files: nvim + hyprland live-edit
 │                          # trees, aerc stylesets, wallpapers

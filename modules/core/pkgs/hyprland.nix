@@ -1,6 +1,6 @@
 # Branch of the pkgs.stubbe helper tree (see ./default.nix).
 # The "find the live Hyprland compositor instance" shell function, shared by
-# the hyprctl wrapper, wayle-launch and the post-switch reload step. Emitted
+# the hyprctl wrapper, lys-shell-launch and the post-switch reload step. Emitted
 # as text because the three scripts are separate derivations.
 #
 #   hypr_instance <first|newest> <attempts> <sleep>

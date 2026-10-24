@@ -184,7 +184,7 @@ in
         enable = true;
         settings = {
           general = {
-            lock_cmd = "wayle-lock";
+            lock_cmd = "lys-lock";
             # Lock before logind suspends (hypridle holds a sleep
             # delay-inhibitor), so wake lands on the lock screen instead of
             # flashing the session.

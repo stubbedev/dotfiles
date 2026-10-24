@@ -39,7 +39,7 @@ _: {
           default = "${config.stubbe.paths.dotfiles}/src/wallpapers/ballet.jpg";
           defaultText = "\${config.stubbe.paths.dotfiles}/src/wallpapers/ballet.jpg";
           description = ''
-            Desktop wallpaper, single source of truth: wayle-launch applies it
+            Desktop wallpaper, single source of truth: lys-shell-launch applies it
             to every monitor at startup and it is exported as the WALLPAPER
             session variable, so the DRM-hotplug listener re-applies it on dock
             without hardcoding a second copy of the path.

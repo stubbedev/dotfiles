@@ -13,13 +13,13 @@ _: {
       };
 
       security.pam.services = {
-        # /etc/pam.d/wayle is provisioned by the wayle NixOS module
-        # (programs.wayle.lock.enable) as an empty service, since wayle locks
+        # /etc/pam.d/lys-shell is provisioned by the lys-shell NixOS module
+        # (programs.lys-shell.lock.enable) as an empty service, since lys-shell locks
         # natively via ext-session-lock-v1. Merge the keyring hook in here: the
-        # wayle unlock is the only place the login password is typed, so it is
+        # lys-shell unlock is the only place the login password is typed, so it is
         # the gate that must unlock the keyring — otherwise secret-service
         # clients (Chrome) prompt on first use each session.
-        wayle.enableGnomeKeyring = true;
+        lys-shell.enableGnomeKeyring = true;
 
         # Keyring autounlock on both the tty-login and greetd PAM stacks.
         # greetd authenticates the graphical login under its own PAM service
@@ -197,14 +197,14 @@ _: {
         };
 
         # Nix's PAM modules expect /run/wrappers/bin/unix_chkpwd, which only
-        # NixOS provides. Without it, wayle's session-lock unlock cannot verify
+        # NixOS provides. Without it, lys-shell's session-lock unlock cannot verify
         # the password at all.
         pamWrappers = lib.mkIf config.features.hyprland {
           privileged = true;
-          title = "⚠️  Nix PAM wrapper setup required for wayle lock authentication";
+          title = "⚠️  Nix PAM wrapper setup required for lys-shell lock authentication";
           body = ''
             This will install a systemd service to enable password authentication
-            for wayle's session lock. The service will persist across reboots.
+            for lys-shell's session lock. The service will persist across reboots.
           '';
           script = ''
             ${pkgs.stubbe.setup.text {

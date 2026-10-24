@@ -72,10 +72,10 @@
       url = "github:stubbedev/notmuch-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    wayle = {
+    lys-shell = {
       # ?submodules=1: the github fetcher skips submodules, leaving the vendored
       # cava C sources missing.
-      url = "git+https://github.com/stubbedev/wayle.git?ref=master&submodules=1";
+      url = "git+https://github.com/stubbedev/lys-shell.git?ref=master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     zsh-vim-mode = {

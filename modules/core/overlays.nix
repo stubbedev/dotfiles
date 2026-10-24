@@ -35,8 +35,8 @@
 
     # `packages.default`, never its `overlays.default`: that overlay rebuilds via
     # callPackage against OUR nixpkgs, so no store hash matches the CI cache.
-    wayle = _final: prev: {
-      wayle = inputs.wayle.packages.${prev.stdenv.hostPlatform.system}.default;
+    lys-shell = _final: prev: {
+      lys-shell = inputs.lys-shell.packages.${prev.stdenv.hostPlatform.system}.default;
     };
 
     vue-language-server-node = _final: prev: {

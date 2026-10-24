@@ -659,8 +659,8 @@
         ${lib.optionalString config.features.treeman ''
           ${inputs.treeman.packages.${system}.treeman}/bin/treeman completion zsh > $dir/_treeman
         ''}
-        ${lib.optionalString config.features.wayle ''
-          ${pkgs.wayle}/bin/wayle completions zsh > $dir/_wayle
+        ${lib.optionalString config.features.lysShell ''
+          ${pkgs.lys-shell}/bin/lys-shell completions zsh > $dir/_lys-shell
         ''}
         ${lib.optionalString config.features.development ''
           ${lib.getExe' pkgs.xilo "xilo"} completion zsh > $dir/_xilo

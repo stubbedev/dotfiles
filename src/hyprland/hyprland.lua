@@ -154,7 +154,7 @@ local function setup_autostart()
             "wl-clip-persist --clipboard regular",
             scripts .. "/hy3.tiling.sh",
             scripts .. "/touchpad.unlock-reload.sh",
-            "wayle-widget kb-toast hypr",
+            "lys-shell-widget kb-toast hypr",
         }) do
             hl.exec_cmd(cmd)
         end
@@ -220,10 +220,10 @@ local function setup_keybinds()
     hl.bind(mod .. " + SPACE", hl.dsp.exec_cmd("rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun -location 0 -width 60"))
     hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "run" -modes combi -run-command "]] .. scripts .. [[/rofi.run.sh {cmd}" -location 0 -width 60]]))
     hl.bind(mod .. " + CTRL + SPACE", hl.dsp.exec_cmd([[rofi -show combi -combi-modes "window" -modes combi]]))
-    hl.bind("SHIFT + Print", hl.dsp.exec_cmd("wayle screenshot output"))
-    hl.bind("Print", hl.dsp.exec_cmd("wayle screenshot region"))
-    hl.bind(mod .. " + Print", hl.dsp.exec_cmd("wayle screenshot window"))
-    hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("wayle recorder toggle"))
+    hl.bind("SHIFT + Print", hl.dsp.exec_cmd("lys-shell screenshot output"))
+    hl.bind("Print", hl.dsp.exec_cmd("lys-shell screenshot region"))
+    hl.bind(mod .. " + Print", hl.dsp.exec_cmd("lys-shell screenshot window"))
+    hl.bind(mod .. " + SHIFT + R", hl.dsp.exec_cmd("lys-shell recorder toggle"))
     -- wtype's -M holds the modifier past exit; -m releases it again so Ctrl
     -- does not stay pressed until the next physical Ctrl press.
     hl.bind(mod .. " + V", hl.dsp.exec_cmd([[cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl && notify-send "Pasted selection"]]))
@@ -233,7 +233,7 @@ local function setup_keybinds()
     hl.bind(mod .. " + SHIFT + Q", hy3_kill)
     hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
     hl.bind(mod .. " + T", hl.dsp.window.float({ action = "toggle" }))
-    hl.bind(mod .. " + escape", hl.dsp.exec_cmd("wayle-lock"))
+    hl.bind(mod .. " + escape", hl.dsp.exec_cmd("lys-lock"))
     hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
     hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
     hl.bind(mod .. " + delete", hl.dsp.exit())
@@ -266,7 +266,7 @@ local function setup_keybinds()
         hl.bind(mod .. " + SHIFT + " .. key, hy3_to_ws(i))
     end
 
-    local submap_marker = '"$XDG_RUNTIME_DIR/wayle-submap"'
+    local submap_marker = '"$XDG_RUNTIME_DIR/lys-shell-submap"'
     local function enter_submap(name)
         return function()
             hl.dispatch(hl.dsp.exec_cmd("printf %s " .. name .. " > " .. submap_marker))
