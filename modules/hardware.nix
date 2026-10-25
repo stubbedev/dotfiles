@@ -83,8 +83,6 @@ in
             "virtio_scsi"
           ];
           kernelModules = [ ];
-
-          systemd.enable = true;
         };
         kernelModules = [
           "kvm-intel"

@@ -23,7 +23,6 @@
           "rd.udev.log_level=3"
         ];
         consoleLogLevel = lib.mkDefault 3;
-        initrd.verbose = false;
       };
     };
 
