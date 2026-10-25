@@ -130,28 +130,6 @@
       };
 
       sessionTarget = [ "hyprland-session.target" ];
-
-      restartBarIfSessionActive = pkgs.stubbe.shellScript "restart-bar-if-session-active" ''
-        if ${lib.getExe' pkgs.systemd "systemctl"} --user is-active --quiet ${lib.head sessionTarget}; then
-          exec ${lib.getExe' pkgs.systemd "systemctl"} --user restart lys-shell.service
-        fi
-      '';
-
-      awaitUnit = description: unit: {
-        Unit = {
-          Description = description;
-          After = [
-            "default.target"
-            unit
-          ];
-        };
-        Install.WantedBy = [ "default.target" ];
-        Service = {
-          Type = "oneshot";
-          ExecStart = "${restartBarIfSessionActive}";
-          Restart = "no";
-        };
-      };
     in
     {
       imports = [ inputs.lys-shell.homeManagerModules.default ];
@@ -512,8 +490,6 @@
             };
           };
 
-          await-powerprofile = awaitUnit "Restart the bar when power-profiles-daemon starts" "power-profiles-daemon.service";
-          await-bluetooth = awaitUnit "Restart the bar when bluetooth starts" "bluetooth.service";
         };
 
         stubbe.setup.lysShellLockPam = {

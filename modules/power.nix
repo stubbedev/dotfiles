@@ -7,6 +7,9 @@ _: {
     }:
     {
       services.power-profiles-daemon.enable = true;
+      # The battery module and adaptive-power-manager read the battery
+      # (and wireless peripherals' charge) from UPower.
+      services.upower.enable = true;
 
       # Undocking or unplugging with the lid already closed is handled in
       # the hyprland monitor toggle script instead: logind only acts on the
