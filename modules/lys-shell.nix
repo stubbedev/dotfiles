@@ -125,17 +125,6 @@
 
           export GDK_BACKEND=wayland
 
-          (
-            n=0
-            while [ $n -lt 40 ]; do
-              if ${lysShellBin} wallpaper set "${config.stubbe.paths.wallpaper}" --fit fill >/dev/null 2>&1; then
-                break
-              fi
-              n=$((n + 1))
-              sleep 0.25
-            done
-          ) &
-
           exec ${lysShellBin} shell
         '';
       };
@@ -168,23 +157,17 @@
       imports = [ inputs.lys-shell.homeManagerModules.default ];
 
       config = lib.mkIf enabled {
-        # The shell's own files from before the wayle -> lys-shell rename move
-        # over once: runtime settings and user styles under the config dir,
-        # logs, wallpaper state and the VPN credential caches under the state
-        # dir. Before checkLinkTargets, so the new config dir does not exist
-        # yet; the old generation's config.toml link goes, and linkGeneration
-        # recreates it under the new name. A no-op once the new dir exists.
-        home.activation.lysShellRenamedDirs = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-          moveRenamedDir() {
-            if [ -d "$1" ] && [ ! -e "$2" ]; then
-              if [ -L "$1/config.toml" ]; then
-                run rm "$1/config.toml"
-              fi
-              run mv "$1" "$2"
-            fi
-          }
-          moveRenamedDir "${config.xdg.configHome}/wayle" "${config.xdg.configHome}/lys-shell"
-          moveRenamedDir "${config.xdg.stateHome}/wayle" "${config.xdg.stateHome}/lys-shell"
+        home.activation.lysShellStateFromWayle = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          oldState="${config.xdg.stateHome}/wayle"
+          newState="${config.xdg.stateHome}/lys-shell"
+          if [ -d "$oldState" ]; then
+            run mkdir -p "$newState"
+            for entry in "$oldState"/*; do
+              [ -e "$entry" ] || continue
+              case "$entry" in *.log) continue ;; esac
+              [ -e "$newState/''${entry##*/}" ] || run mv "$entry" "$newState/"
+            done
+          fi
         '';
 
         programs.lys-shell = lib.mkIf (config.host.platform != "nixos") {
@@ -200,7 +183,6 @@
           launcher
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
-          (gfx.wrap pkgs.wleave)
           (pkgs.stubbe.bashApp {
             name = "lys-shell-widget";
             text = ''
@@ -263,12 +245,12 @@
 
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
-        xdg.configFile."lys-shell/config.toml" = {
+        xdg.configFile."lys-shell/config.yaml" = {
           source =
             let
               c = pkgs.stubbe.withHash;
             in
-            pkgs.stubbe.gen.toml "lys-shell-config.toml" {
+            pkgs.stubbe.gen.yaml "lys-shell-config.yaml" {
               general = {
                 font-sans = "JetBrainsMono Nerd Font";
                 font-mono = "JetBrainsMono Nerd Font";
@@ -296,8 +278,8 @@
               lock = {
                 pam-service = "lys-shell";
                 lock-on-start = true;
-                background-mode = "color";
-                background-color = c.base;
+                background-mode = "image";
+                background-image = config.stubbe.paths.wallpaper;
                 date-format = "%A, %d %B %Y";
               };
 
@@ -325,7 +307,10 @@
                       "hyprland-workspaces"
                       "custom-submap"
                     ];
-                    center = [ "clock" ];
+                    center = [
+                      "clock"
+                      "idle-inhibit"
+                    ];
                     right = [
                       "mail"
                       "keyboard-input"
@@ -343,16 +328,19 @@
                       "systray"
                       "notifications"
                       "power"
+                      "treeman"
                     ];
                   }
                 ];
               };
 
+              greeter.background-mode = "wallpaper";
+
+              share-picker.default-page = "outputs";
+
               wallpaper = {
-                engine-enabled = true;
-                transition-type = "fade";
-                transition-duration = 1.0;
-                transition-fps = 60;
+                inherit (config.stubbe.paths) wallpaper;
+                fit-mode = "fill";
               };
 
               animations = {
@@ -423,17 +411,17 @@
                   units = "metric";
                 };
 
-                # The power module has no built-in menu; every click action
-                # defaults to a no-op unless bound.
-                power.left-click = "wleave";
-
                 recorder = {
                   icon-color = "fg-muted";
                   label-show = false;
+                  microphone = true;
+                  microphone-device = "alsa_input.usb-Creative_Technology_Ltd_Creative_Live__Cam_Sync_4K_SN0001-02.analog-stereo";
+                  webcam-device = "/dev/video0";
                 };
 
                 mail = {
                   icon-name = "ld-mail-symbolic";
+                  icon-color = "accent";
                   hide-when-zero = true;
                   notify = true;
                   notify-summary = "{{ sender }}";
@@ -501,121 +489,6 @@
               };
             };
 
-        xdg.configFile."wleave/layout.json".source =
-          let
-            icon = name: "${pkgs.wleave}/share/wleave/icons/${name}.svg";
-          in
-          pkgs.stubbe.gen.json "wleave-layout.json" {
-            css = toString (
-              pkgs.writeText "wleave.css" ''
-                window {
-                    background-color: rgba(12, 12, 12, 0.8);
-                }
-
-                button {
-                    color: oklab(from var(--view-fg-color) var(--standalone-color-oklab));
-                    background-color: var(--view-bg-color);
-                    border: none;
-                    padding: 10px;
-                }
-
-                /* Icon-only: collapse the text label. wleave always builds it from the
-                   button's `text`, and a vertical box packs children from the top, so a
-                   visible label pushes the icon up. Zeroing it leaves the picture as the
-                   only space-taking child → it fills the button and ScaleDown centres
-                   the glyph vertically. */
-                button label.action-name {
-                    font-size: 0;
-                    min-height: 0;
-                    min-width: 0;
-                    margin: 0;
-                    padding: 0;
-                }
-
-                button label.keybind {
-                    font-size: 11px;
-                    font-family: monospace;
-                }
-
-                button:hover label.keybind, button:focus label.keybind {
-                    opacity: 1;
-                }
-
-                button:focus,
-                button:hover {
-                    background-color: color-mix(in srgb, var(--accent-bg-color), var(--view-bg-color));
-                }
-
-                button:active {
-                    color: var(--accent-fg-color);
-                    background-color: var(--accent-bg-color);
-                }
-
-                button#shutdown { --view-fg-color: #ff8d8d; }
-                button#hibernate { --view-fg-color: #a8c0ff; }
-                button#reboot { --view-fg-color: #84ffaa; }
-                button#lock { --view-fg-color: #ffe8b6; }
-                button#logout { --view-fg-color: #ffcca8; }
-                button#suspend { --view-fg-color: #caaff9; }
-
-                /* Shrink the icons: margin reduces the picture's allocation. */
-                .icon-dropshadow {
-                    margin: 10px;
-                }
-              ''
-            );
-            "buttons-per-row" = "1/1";
-            margin = "15%";
-            "margin-top" = "46%";
-            "margin-bottom" = "46%";
-            "button-aspect-ratio" = "1";
-            "close-on-lost-focus" = true;
-            "no-version-info" = true;
-            buttons = [
-              {
-                label = "lock";
-                action = "lys-lock";
-                text = "Lock";
-                keybind = "l";
-                icon = icon "lock";
-              }
-              {
-                label = "logout";
-                action = [
-                  {
-                    "$DESKTOP_SESSION" = "hyprland";
-                    shell = "hyprctl dispatch exit";
-                  }
-                  "loginctl terminate-user $USER"
-                ];
-                text = "Logout";
-                keybind = "e";
-                icon = icon "logout";
-              }
-              {
-                label = "suspend";
-                action = "systemctl suspend";
-                text = "Suspend";
-                keybind = "u";
-                icon = icon "suspend";
-              }
-              {
-                label = "reboot";
-                action = "systemctl reboot";
-                text = "Reboot";
-                keybind = "r";
-                icon = icon "reboot";
-              }
-              {
-                label = "shutdown";
-                action = "systemctl poweroff";
-                text = "Shutdown";
-                keybind = "s";
-                icon = icon "shutdown";
-              }
-            ];
-          };
-
         systemd.user.services = {
           lys-shell = {
             Unit = {
@@ -625,7 +498,7 @@
               Wants = [ "power-profiles-daemon.service" ];
               PartOf = sessionTarget;
               # Moves the unit hash on a config edit so sd-switch restarts lys-shell.
-              X-Restart-Triggers = [ (toString config.xdg.configFile."lys-shell/config.toml".source) ];
+              X-Restart-Triggers = [ (toString config.xdg.configFile."lys-shell/config.yaml".source) ];
             };
             Install.WantedBy = sessionTarget;
             Service = {
