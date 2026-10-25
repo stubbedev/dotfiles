@@ -484,7 +484,6 @@
               # and time the unit out if lys-shell claims it late or not at all.
               Type = "simple";
               ExecStart = lib.getExe launcher;
-              ExecStopPost = "-${lib.getExe pkgs.bash} -c '${lib.getExe' pkgs.procps "pkill"} -9 lys-shell || true; sleep 0.5'";
               Restart = "on-failure";
               RestartSec = "3s";
             };
