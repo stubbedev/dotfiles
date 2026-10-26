@@ -642,19 +642,45 @@
         "type": "github"
       }
     },
+    "lys-lib": {
+      "inputs": {
+        "flake-parts": [
+          "lys-shell",
+          "flake-parts"
+        ],
+        "nixpkgs": [
+          "lys-shell",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793028578,
+        "narHash": "sha256-S0GJ3Tx5EGVSui4rYOf6jrGaiUgDoZnZeXnaWly2PyQ=",
+        "owner": "stubbedev",
+        "repo": "lys-lib",
+        "rev": "c484855461a56c7e135a974299d655915ddae87e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-lib",
+        "type": "github"
+      }
+    },
     "lys-shell": {
       "inputs": {
         "flake-parts": "flake-parts_7",
+        "lys-lib": "lys-lib",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1793027316,
-        "narHash": "sha256-mIvJnVGNVDfE7JB+dPPy8VY7neWqXmEryKbs6kGcqjM=",
+        "lastModified": 1793028966,
+        "narHash": "sha256-NW1dHpYPd4suZANxdAyH7XBiiwF3kaUFLXs6o3wtfhE=",
         "ref": "master",
-        "rev": "43cb8e7b373fa2b63bb77b52aacefa43bc716a33",
-        "revCount": 635,
+        "rev": "658756136a31b04c2914f2271678bdb7518f522b",
+        "revCount": 637,
         "type": "git",
         "url": "https://github.com/stubbedev/lys-shell.git"
       },
