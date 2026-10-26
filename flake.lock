@@ -654,11 +654,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793031289,
-        "narHash": "sha256-85d7f01PHxNCtSy8m0OCoGOt4n4HYannTQ/wAcZZW7c=",
+        "lastModified": 1793036737,
+        "narHash": "sha256-IoWXcjXzQUi3Vv1wDCicow79hnZj2mfKFsusU+Lp/u4=",
         "owner": "stubbedev",
         "repo": "lys-lib",
-        "rev": "64b52f3cbc6205a172c582e64b3d798b25316405",
+        "rev": "62f71098258eaec762dc52d8c8582baf32cc9f73",
         "type": "github"
       },
       "original": {
@@ -676,11 +676,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793040064,
-        "narHash": "sha256-JIjbknJGMALaYGOo/MKKYAOm5aJV0ZJ8jg+siKhATw4=",
+        "lastModified": 1793041275,
+        "narHash": "sha256-p8++lLHyCKtxTHWlISbEXy2HKBv5lWpqWjLIkdQRbeU=",
         "ref": "master",
-        "rev": "e489f878c18f0f6da792420bccd55819f90aa6aa",
-        "revCount": 657,
+        "rev": "d1e90ac246a30f140551463b50f579e9b7bd79a5",
+        "revCount": 659,
         "type": "git",
         "url": "https://github.com/stubbedev/lys-shell.git"
       },
