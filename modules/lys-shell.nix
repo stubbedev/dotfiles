@@ -135,19 +135,6 @@
       imports = [ inputs.lys-shell.homeManagerModules.default ];
 
       config = lib.mkIf enabled {
-        home.activation.lysShellStateFromWayle = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          oldState="${config.xdg.stateHome}/wayle"
-          newState="${config.xdg.stateHome}/lys-shell"
-          if [ -d "$oldState" ]; then
-            run mkdir -p "$newState"
-            for entry in "$oldState"/*; do
-              [ -e "$entry" ] || continue
-              case "$entry" in *.log) continue ;; esac
-              [ -e "$newState/''${entry##*/}" ] || run mv "$entry" "$newState/"
-            done
-          fi
-        '';
-
         programs.lys-shell = lib.mkIf (config.host.platform != "nixos") {
           enable = true;
           package = lysShellPackage;
@@ -236,6 +223,7 @@
 
               styling = {
                 theme-provider = "lys-shell";
+                appearance = "dark";
                 rounding = "sm";
                 palette = {
                   bg = c.base;
@@ -287,10 +275,10 @@
                     ];
                     center = [
                       "clock"
+                      "mail"
                       "idle-inhibit"
                     ];
                     right = [
-                      "mail"
                       "keyboard-input"
                       "recorder"
                       "volume"
@@ -399,7 +387,8 @@
 
                 mail = {
                   icon-name = "ld-mail-symbolic";
-                  icon-color = "accent";
+                  icon-color = "status-success";
+                  label-color = "status-success";
                   hide-when-zero = true;
                   notify = true;
                   notify-summary = "{{ sender }}";
@@ -429,6 +418,10 @@
                   icon-on = "ld-moon-symbolic";
                   icon-off = "ld-sun-symbolic";
                 };
+
+                # The default `loginctl terminate-session $XDG_SESSION_ID` is a no-op
+                # here: the systemd user unit has no XDG_SESSION_ID.
+                power.logout-command = "loginctl terminate-session \"$(loginctl show-user \"$USER\" -p Display --value)\"";
 
                 power-profiles = {
                   label-show = false;

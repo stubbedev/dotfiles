@@ -10,9 +10,7 @@
 #
 # The profile is persistent (vpn.persistent), so NM keeps the tunnel through a suspend or a
 # change of wifi and openconnect reconnects on the same session, instead of the
-# plugin stopping it with the SIGINT that logs the gateway session off. That
-# is what wayle's NetworkManager detach hook used to paper over; wayle no
-# longer ships it, and non-NixOS hosts have it removed from /etc.
+# plugin stopping it with the SIGINT that logs the gateway session off.
 #
 # What is left is provisioning: one NetworkManager profile per provider,
 # written at activation from the sops-managed config so the gateway and
@@ -81,23 +79,11 @@ let
 
   # Persistence, applied to a profile that already exists: written by this
   # aspect before it asked for it, or by hand. A permission list is cleared
-  # too — v0.8.52 of wayle made profiles user-owned, which NM then refused to
-  # activate. A username stored under wayle's data key moves to lys-shell's,
-  # keeping the value the profile holds. Everything else in it stays user
-  # state.
+  # too: NM refuses to activate a user-owned profile of this plugin.
+  # Everything else in it stays user state.
   persist = nmcli: uuid: ''
     ${nmcli} connection modify ${uuid} connection.permissions "" vpn.persistent yes
-    old_username=$(${nmcli} -g vpn.data connection show ${uuid} | sed -n 's/\(^\|.*, \)wayle-username = \([^,]*\).*/\2/p')
-    if [ -n "$old_username" ]; then
-      ${nmcli} connection modify ${uuid} -vpn.data wayle-username +vpn.data "lys-shell-username=$old_username"
-    fi
   '';
-
-  # Where the retired detach hook and its NetworkManager.service drop-in were
-  # installed on non-NixOS hosts.
-  detachHookTarget = "/etc/NetworkManager/dispatcher.d/pre-down.d/90-wayle-openconnect-detach";
-
-  detachDropInTarget = "/etc/systemd/system/NetworkManager.service.d/90-wayle-openconnect-detach.conf";
 in
 {
   flake.modules.nixos.vpn =
@@ -182,8 +168,7 @@ in
 
             Also retires what came before: the root openconnect systemd unit,
             its /usr/local/sbin runner, the polkit rule that allowed starting
-            and stopping it, and wayle's old NetworkManager detach hook with its
-            NetworkManager.service drop-in, which persistence replaces.
+            and stopping it.
             Credential caches keyed by profile UUIDs that no longer exist are
             dropped along the way.
 
@@ -239,11 +224,6 @@ in
             in
             ''
               ${perProvider}
-
-              # The detach hook and its drop-in, from before persistence made
-              # them unnecessary. The drop-in is an ExecStop= of
-              # NetworkManager.service, so the daemon-reload below matters.
-              sudo rm -f ${detachHookTarget} ${detachDropInTarget}
 
               # Credential caches keyed by NM profile UUIDs that no longer
               # exist — the pre-migration pair above all, whose password the

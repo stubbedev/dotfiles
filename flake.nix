@@ -73,8 +73,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     lys-shell = {
-      # ?submodules=1: the github fetcher skips submodules, leaving the vendored
-      # cava C sources missing.
       url = "git+https://github.com/stubbedev/lys-shell.git?ref=master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
