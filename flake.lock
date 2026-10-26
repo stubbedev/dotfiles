@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792599325,
-        "narHash": "sha256-csiQgnX9Sw7AhVaXyceiXJL+xh7rjU5Lw2Wq0XzlDB8=",
+        "lastModified": 1792980308,
+        "narHash": "sha256-8pyUg1jwhnW2pg6vdfDty+hdtrPb8Q5y6IC1BTiE6uQ=",
         "owner": "stubbedev",
         "repo": "adaptive-power-manager",
-        "rev": "7526a414e5c07e6c42820e6070e8506afc627fe4",
+        "rev": "a55957bb0182c920e026423d82c24f0a6fa58d8e",
         "type": "github"
       },
       "original": {
