@@ -11,6 +11,7 @@ _: {
           "networkmanager"
           "i2c"
           "dialout"
+          "input"
         ];
       };
     };
