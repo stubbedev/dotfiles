@@ -671,16 +671,17 @@
       "inputs": {
         "flake-parts": "flake-parts_7",
         "lys-lib": "lys-lib",
+        "lys-wm": "lys-wm",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1793041569,
-        "narHash": "sha256-bICaI5KMVdt8asm+Ki1H0WdNUBN3mFsFb/fKuV8RLXY=",
+        "lastModified": 1793043686,
+        "narHash": "sha256-nbvZIe4mMkFW3oc0UJRj54K0iZ4aRiFVOS4U55X7eHk=",
         "ref": "master",
-        "rev": "7565d827621e91ee17045acd73b6f1e4b7235a8a",
-        "revCount": 660,
+        "rev": "70a62476fe7dbd3a56a2bb8ad31a86c34bd304b1",
+        "revCount": 667,
         "type": "git",
         "url": "https://github.com/stubbedev/lys-shell.git"
       },
@@ -688,6 +689,58 @@
         "ref": "master",
         "type": "git",
         "url": "https://github.com/stubbedev/lys-shell.git"
+      }
+    },
+    "lys-ui": {
+      "inputs": {
+        "flake-parts": [
+          "lys-shell",
+          "flake-parts"
+        ],
+        "nixpkgs": [
+          "lys-shell",
+          "lys-wm",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792847676,
+        "narHash": "sha256-Lh259vWm/n59pTknaCJqWL2bAXoj4spLTYG/2eWehW8=",
+        "owner": "stubbedev",
+        "repo": "lys-ui",
+        "rev": "b4ed4d0aa4f9b01018bca62f494600f85847ed9b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-ui",
+        "type": "github"
+      }
+    },
+    "lys-wm": {
+      "inputs": {
+        "flake-parts": [
+          "lys-shell",
+          "flake-parts"
+        ],
+        "lys-ui": "lys-ui",
+        "nixpkgs": [
+          "lys-shell",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793036086,
+        "narHash": "sha256-APaUkJrh9GcHWh68PPlJQtw4Gu2+U/pcQVOoX66d0zs=",
+        "owner": "stubbedev",
+        "repo": "lys-wm",
+        "rev": "bfe4d609178870ad0d7ffefb14f7f51a127a2e3a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-wm",
+        "type": "github"
       }
     },
     "maestro": {
