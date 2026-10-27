@@ -65,6 +65,15 @@ in
 
       scriptDir = "${config.stubbe.paths.dotfiles}/src/lys-wm/scripts";
 
+      wireplumberHotplug = pkgs.stubbe.bashApp {
+        name = "wireplumber-hotplug";
+        runtimeInputs = with pkgs; [
+          coreutils
+          systemd
+        ];
+        text = builtins.readFile ../src/lys-wm/scripts/wireplumber.hotplug.sh;
+      };
+
       lysWm = gfx.bundle {
         pkg = pkgs.lys-wm;
         exes = [ "lys-wm" ];
@@ -339,8 +348,7 @@ in
           Install.WantedBy = sessionTarget;
           Service = {
             Type = "simple";
-            Environment = [ "PATH=${config.stubbe.paths.nixBin}:/usr/bin:/bin" ];
-            ExecStart = "${scriptDir}/wireplumber.hotplug.sh";
+            ExecStart = lib.getExe wireplumberHotplug;
             Restart = "on-failure";
             RestartSec = "2s";
           };
