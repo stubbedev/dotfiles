@@ -73,6 +73,10 @@
 
         (gfx.bundle { pkg = readest; })
 
+        # Bare, not gfx.bundle: GTK4 + WebKit crashes when nixGL's GL init
+        # mixes with the host driver (same reason as pavucontrol above).
+        stremio-linux-shell
+
         (gfx.bundle { pkg = libreoffice-stable; })
       ];
     };
