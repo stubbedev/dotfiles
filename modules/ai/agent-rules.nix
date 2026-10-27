@@ -87,6 +87,7 @@ _: {
 
         - Refactor whatever the task needs. Report unrelated problems you notice instead of silently fixing them.
         - One logical change per commit. The message explains why, since the source carries no comments.
+        - **No attribution.** Never add commit trailers, PR lines, footers or annotations crediting yourself, this tool, or a session: no `Co-Authored-By`, no `Claude-Session`, no session URLs, no generated-with lines. Commit messages and PR descriptions carry the change and its rationale only.
       '';
     in
     lib.mkMerge [

@@ -140,8 +140,8 @@
             # nothing actionable behind it.
             disable_update_check = true;
 
-            # Matches includeCoAuthoredBy = false for Claude Code: no trailer,
-            # no "Generated with" line in commits or PR bodies.
+            # Matches attribution = false for Claude Code: no trailer, no
+            # "Generated with" line in commits or PR bodies.
             attribution = {
               trailer_style = "none";
               generated_with = false;

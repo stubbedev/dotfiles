@@ -78,7 +78,7 @@ _: {
               command = "cship";
               refreshInterval = 5;
             };
-            includeCoAuthoredBy = false;
+            attribution = false;
             # Retention sweep for ~/.claude/{projects,tasks,shell-snapshots,
             # backups}. Default is 30 days; 14 keeps ~/.claude/projects (500 MB
             # over 400+ transcripts) in check. Deliberately unconditional — an
