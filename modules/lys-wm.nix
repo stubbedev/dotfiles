@@ -17,7 +17,7 @@ let
     done
     export PATH
 
-    exec lys-wm --systemd
+    exec systemd-cat -t lys-wm lys-wm --systemd
   '';
 in
 {
