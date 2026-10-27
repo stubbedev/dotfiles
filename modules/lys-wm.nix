@@ -330,9 +330,9 @@ in
       services.hyprpolkitagent.enable = true;
 
       systemd.user.services = {
-        monitor-toggle = {
+        wireplumber-hotplug = {
           Unit = {
-            Description = "Suspend a closed, undocked laptop and restart WirePlumber on DRM hotplug (monitor.toggle.sh)";
+            Description = "Restart WirePlumber when a display is plugged in, for its HDMI and DisplayPort audio";
             After = sessionTarget;
             PartOf = sessionTarget;
           };
@@ -340,7 +340,7 @@ in
           Service = {
             Type = "simple";
             Environment = [ "PATH=${config.stubbe.paths.nixBin}:/usr/bin:/bin" ];
-            ExecStart = "${scriptDir}/monitor.toggle.sh";
+            ExecStart = "${scriptDir}/wireplumber.hotplug.sh";
             Restart = "on-failure";
             RestartSec = "2s";
           };

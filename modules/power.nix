@@ -11,9 +11,10 @@ _: {
       # (and wireless peripherals' charge) from UPower.
       services.upower.enable = true;
 
-      # Undocking or unplugging with the lid already closed is handled in
-      # the monitor toggle script instead: logind only acts on the
-      # lid switch edge (systemd#7690).
+      # These apply only while no lys-wm session runs: lys-wm holds the
+      # handle-lid-switch inhibitor and applies the same policy itself,
+      # including undocking or unplugging with the lid already closed,
+      # which logind alone never acts on (systemd#7690).
       services.logind.settings.Login = {
         HandleLidSwitch = "suspend";
         HandleLidSwitchExternalPower = "ignore";
@@ -249,10 +250,10 @@ _: {
             connectors) or headless, so SSH sessions and long builds survive.
             Opening the lid wakes.
 
-            Undocking or unplugging with the lid already closed is handled
-            separately by the monitor toggle script — logind only
-            acts on the lid switch edge, not on later display or power
-            changes (systemd#7690).
+            While a lys-wm session runs, lys-wm holds the lid instead and
+            applies the same policy, including undocking or unplugging
+            with the lid already closed, which logind alone never acts on
+            (systemd#7690).
           '';
           script = ''
             ${pkgs.stubbe.setup.text {
