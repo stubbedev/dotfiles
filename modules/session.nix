@@ -13,9 +13,7 @@
     {
       home.sessionVariables = {
         # XCURSOR_THEME/XCURSOR_SIZE come from home.pointerCursor (theming.nix);
-        # the compositor re-sets both via hl.env for non-NixOS sessions.
-        WALLPAPER = config.stubbe.paths.wallpaper;
-
+        # lys-wm re-sets both from its env for non-NixOS sessions.
         NIXPKGS_ALLOW_UNFREE = "1";
         NIXPKGS_ALLOW_INSECURE = "1";
 

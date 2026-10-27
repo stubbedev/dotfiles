@@ -39,10 +39,8 @@ _: {
           default = "${config.stubbe.paths.dotfiles}/src/wallpapers/ballet.jpg";
           defaultText = "\${config.stubbe.paths.dotfiles}/src/wallpapers/ballet.jpg";
           description = ''
-            Desktop wallpaper, single source of truth: lys-shell-launch applies it
-            to every monitor at startup and it is exported as the WALLPAPER
-            session variable, so the DRM-hotplug listener re-applies it on dock
-            without hardcoding a second copy of the path.
+            Desktop wallpaper, single source of truth: lys-shell's wallpaper and
+            lock screen both read it from the generated lys-shell config.
           '';
         };
       };

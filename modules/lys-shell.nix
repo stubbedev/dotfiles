@@ -62,56 +62,6 @@
 
       lysShellBin = lib.getExe' lysShellPackage "lys-shell";
 
-      launcher = pkgs.stubbe.bashApp {
-        name = "lys-shell-launch";
-        text = ''
-          set +e +u +o pipefail
-
-          shopt -s nullglob
-
-          uid=$(id -u)
-          runtime="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
-
-          _wayland_live() {
-            local display="$1"
-            [ -S "$runtime/$display" ] || return 1
-            [ -e "$runtime/$display.lock" ] || return 1
-            ! flock -n -x "$runtime/$display.lock" true 2>/dev/null
-          }
-
-          if [ -n "$WAYLAND_DISPLAY" ] && _wayland_live "$WAYLAND_DISPLAY"; then
-            :
-          else
-            unset WAYLAND_DISPLAY
-            attempt=0
-            while [ $attempt -lt 50 ] && [ -z "$WAYLAND_DISPLAY" ]; do
-              for socket in "$runtime"/wayland-[0-9]*; do
-                case "$socket" in *.*) continue ;; esac
-                candidate="''${socket##*/}"
-                if _wayland_live "$candidate"; then
-                  export WAYLAND_DISPLAY="$candidate"
-                  break
-                fi
-              done
-
-              if [ -z "$WAYLAND_DISPLAY" ]; then
-                sleep 0.1
-              fi
-              attempt=$((attempt + 1))
-            done
-          fi
-
-          if [ -z "$WAYLAND_DISPLAY" ] || ! _wayland_live "$WAYLAND_DISPLAY"; then
-            echo "No live Wayland compositor found, retrying via systemd" >&2
-            exit 1
-          fi
-
-          export GDK_BACKEND=wayland
-
-          exec ${lysShellBin} shell
-        '';
-      };
-
       sessionTarget = [ config.wayland.systemd.target ];
     in
     {
@@ -128,31 +78,8 @@
 
         home.packages = [
           lysShellPackage
-          launcher
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
-          (pkgs.stubbe.bashApp {
-            name = "lys-shell-widget";
-            runtimeInputs = [
-              pkgs.jq
-              pkgs.lys-wm
-            ];
-            text = ''
-              case "''${1:-}" in
-                kb-toast)
-                  lys-wmctl watch |
-                    jq --unbuffered -r 'select(.event == "layout") | .layout.name' |
-                    while IFS= read -r layout; do
-                      lys-shell toast "$layout" --icon ld-keyboard-symbolic --duration 1000
-                    done
-                  ;;
-                *)
-                  echo "usage: lys-shell-widget kb-toast" >&2
-                  exit 2
-                  ;;
-              esac
-            '';
-          })
         ]
         ++ [ pkgs.brightnessctl ];
 
@@ -406,7 +333,8 @@
               # Not Type=dbus: systemd would block on org.freedesktop.Notifications
               # and time the unit out if lys-shell claims it late or not at all.
               Type = "simple";
-              ExecStart = lib.getExe launcher;
+              Environment = [ "GDK_BACKEND=wayland" ];
+              ExecStart = "${lysShellBin} shell";
               Restart = "on-failure";
               RestartSec = "3s";
             };

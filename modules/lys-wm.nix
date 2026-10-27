@@ -272,7 +272,6 @@ in
         autostart = [
           "wl-paste --watch cliphist store"
           "wl-clip-persist --clipboard regular"
-          "lys-shell-widget kb-toast"
         ];
       };
 
@@ -333,7 +332,7 @@ in
       systemd.user.services = {
         monitor-toggle = {
           Unit = {
-            Description = "DRM hotplug and lid reactor (monitor.toggle.sh)";
+            Description = "Suspend a closed, undocked laptop and restart WirePlumber on DRM hotplug (monitor.toggle.sh)";
             After = sessionTarget;
             PartOf = sessionTarget;
           };
@@ -341,7 +340,7 @@ in
           Service = {
             Type = "simple";
             Environment = [ "PATH=${config.stubbe.paths.nixBin}:/usr/bin:/bin" ];
-            ExecStart = "${scriptDir}/monitor.toggle.sh daemon";
+            ExecStart = "${scriptDir}/monitor.toggle.sh";
             Restart = "on-failure";
             RestartSec = "2s";
           };

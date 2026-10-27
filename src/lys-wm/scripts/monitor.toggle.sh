@@ -1,22 +1,6 @@
 #!/usr/bin/env bash
 
 
-WALLPAPER="${WALLPAPER:-$HOME/.stubbe/src/wallpapers/ballet.jpg}"
-
-apply_wallpaper() {
-  command -v lys-shell >/dev/null 2>&1 || return 0
-  (
-    n=0
-    while [ $n -lt 12 ]; do
-      if lys-shell wallpaper set "$WALLPAPER" --fit fill >/dev/null 2>&1; then
-        break
-      fi
-      n=$((n + 1))
-      sleep 0.25
-    done
-  ) &
-}
-
 read_lid() {
   local f line
   LID=open
@@ -42,10 +26,6 @@ on_ac() {
     [ "$(cat "$ps/online")" = "1" ] && return 0
   done
   return 1
-}
-
-react() {
-  apply_wallpaper
 }
 
 suspend_if_closed_undocked() {
@@ -82,7 +62,6 @@ poll_lid() {
     read_lid
     [ "$LID" = "$prev" ] && continue
     prev=$LID
-    react
 
     if [ "$LID" = "closed" ]; then
       sleep 5
@@ -103,8 +82,6 @@ watch_power() {
 listen_events() {
   local last_action=0
 
-  react
-
   poll_lid &
   local poll_pid=$!
   watch_power &
@@ -118,15 +95,10 @@ listen_events() {
     if [ $((now - last_action)) -lt 1 ]; then
       continue
     fi
-    react
     restart_wireplumber
     suspend_if_closed_undocked
     last_action=$(date +%s)
   done < <(udevadm monitor --property --udev --subsystem-match=drm 2>/dev/null)
 }
 
-if [ "${1:-}" = "daemon" ]; then
-  listen_events
-else
-  react
-fi
+listen_events
