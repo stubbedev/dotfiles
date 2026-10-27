@@ -76,6 +76,13 @@
       url = "git+https://github.com/stubbedev/lys-shell.git?ref=master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lys-wm = {
+      url = "github:stubbedev/lys-wm";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        lys-shell.follows = "lys-shell";
+      };
+    };
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
       flake = false;

@@ -10,7 +10,7 @@ _: {
       inherit (config.lib.formats.rasi) mkLiteral;
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
-    lib.mkIf config.features.hyprland {
+    lib.mkIf config.features.lysWm {
       programs.rofi = {
         enable = true;
         package = config.stubbe.gfx.wrap pkgs.rofi;

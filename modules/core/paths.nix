@@ -11,7 +11,7 @@ _: {
             The live checkout of this repo. Anything under
             `stubbe.mutable.<target>.src` resolves relative to `<dotfiles>/src`,
             and the scripts that must survive a `nix-collect-garbage` (the
-            greetd launcher, the Hyprland script dir) reference it instead of a
+            greetd launcher, the lys-wm script dir) reference it instead of a
             store path.
           '';
         };

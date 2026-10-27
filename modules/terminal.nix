@@ -290,11 +290,11 @@ _: {
         };
       };
 
-      systemd.user.services.alacritty-daemon = lib.mkIf config.features.hyprland {
+      systemd.user.services.alacritty-daemon = lib.mkIf config.features.lysWm {
         Unit = {
           Description = "Alacritty daemon (shared single-instance process)";
-          After = [ "hyprland-session.target" ];
-          PartOf = [ "hyprland-session.target" ];
+          After = [ config.wayland.systemd.target ];
+          PartOf = [ config.wayland.systemd.target ];
           # Never restart on `hm switch`. KillMode=control-group plus
           # single-instance means a restart takes every terminal window with it.
           # Any alacritty store-path bump changes the unit file, so
@@ -302,7 +302,7 @@ _: {
           # binary lands on next login, or on an explicit restart.
           X-SwitchMethod = "keep-old";
         };
-        Install.WantedBy = [ "hyprland-session.target" ];
+        Install.WantedBy = [ config.wayland.systemd.target ];
         Service = {
           Type = "simple";
           ExecStart = "${alacrittyGfx}/bin/alacritty --socket %t/alacritty.sock --daemon";

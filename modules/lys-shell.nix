@@ -13,7 +13,7 @@
 
       config =
         let
-          enabled = config.stubbe.userFeatures.lysShell && config.stubbe.userFeatures.hyprland;
+          enabled = config.stubbe.userFeatures.lysShell && config.stubbe.userFeatures.lysWm;
         in
         lib.mkIf enabled {
           programs.lys-shell = {
@@ -24,15 +24,11 @@
             lock.enable = true;
           };
 
-          # programs.hyprland registers a per-desktop portal section that beats
-          # common.default, so mkForce is needed to drop it.
-          xdg.portal.config = lib.mkForce {
-            common.default = [
-              "lys-shell"
-              "gnome"
-              "gtk"
-            ];
-          };
+          xdg.portal.config.common.default = [
+            "lys-shell"
+            "gnome"
+            "gtk"
+          ];
         };
     };
 
@@ -45,7 +41,7 @@
     }:
     let
       inherit (config.stubbe) gfx;
-      enabled = config.features.lysShell && config.features.hyprland;
+      enabled = config.features.lysShell && config.features.lysWm;
 
       # Rejoined with the upstream package so $out/share reaches the profile:
       # without it GTK cannot resolve lys-shell's bundled icon names.
@@ -75,19 +71,6 @@
 
           uid=$(id -u)
           runtime="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
-
-          ${pkgs.stubbe.hypr.instanceFn}
-          CURRENT_INSTANCE=""
-          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            CURRENT_INSTANCE=$(hypr_instance first 1 "")
-          fi
-          if [ -z "$CURRENT_INSTANCE" ] && [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
-            CURRENT_INSTANCE=$(hypr_instance first 50 0.1)
-          fi
-
-          if [ -n "$CURRENT_INSTANCE" ]; then
-            export HYPRLAND_INSTANCE_SIGNATURE="$CURRENT_INSTANCE"
-          fi
 
           _wayland_live() {
             local display="$1"
@@ -129,7 +112,7 @@
         '';
       };
 
-      sessionTarget = [ "hyprland-session.target" ];
+      sessionTarget = [ config.wayland.systemd.target ];
     in
     {
       imports = [ inputs.lys-shell.homeManagerModules.default ];
@@ -150,63 +133,28 @@
           (gfx.wrapExe "awww-daemon" pkgs.awww)
           (pkgs.stubbe.bashApp {
             name = "lys-shell-widget";
+            runtimeInputs = [
+              pkgs.jq
+              pkgs.lys-wm
+            ];
             text = ''
-              set +e
-              set -uo pipefail
-
-              emit_line() {
-                local filt="$1" out
-                shift
-                out="$("$@" 2>/dev/null)" || { echo; return; }
-                [ -n "$out" ] || { echo; return; }
-                printf '%s\n' "$(printf '%s' "$out" | jq -c "$filt" 2>/dev/null)"
-              }
-
-              rt="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-
               case "''${1:-}" in
-                submap-watch)
-                  marker="$rt/lys-shell-submap"
-                  emit_submap() {
-                    if [ -f "$marker" ]; then printf '{"text":"%s"}\n' "$(cat "$marker" 2>/dev/null)"; else echo; fi
-                  }
-                  emit_submap
-                  inotifywait -q -m -e create,delete,close_write,moved_to,moved_from --format '%f' "$rt" 2>/dev/null |
-                    while IFS= read -r f; do
-                      case "$f" in lys-shell-submap) emit_submap ;; esac
+                kb-toast)
+                  lys-wmctl watch |
+                    jq --unbuffered -r 'select(.event == "layout") | .layout.name' |
+                    while IFS= read -r layout; do
+                      lys-shell toast "$layout" --icon ld-keyboard-symbolic --duration 1000
                     done
                   ;;
-
-                kb-toast)
-                  case "''${2:-}" in
-                    hypr)
-                      sock="$rt/hypr/''${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket2.sock"
-                      [ -S "$sock" ] || exit 0
-                      start="$(date +%s)"
-                      socat -U - "UNIX-CONNECT:$sock" 2>/dev/null | while IFS= read -r line; do
-                        case "$line" in
-                          # wtype & friends spawn a throwaway hl-virtual-keyboard-*
-                          # and emit `,none` on teardown: not a layout switch.
-                          activelayout\>\>hl-virtual-keyboard-*) continue ;;
-                          activelayout\>\>*)
-                            [ "$(($(date +%s) - start))" -lt 3 ] && continue
-                            lys-shell toast "''${line##*,}" --icon ld-keyboard-symbolic --duration 1000 ;;
-                        esac
-                      done
-                      ;;
-                  esac
+                *)
+                  echo "usage: lys-shell-widget kb-toast" >&2
+                  exit 2
                   ;;
-
-                *) exit 0 ;;
               esac
             '';
           })
         ]
-        ++ (with pkgs; [
-          hyprsunset
-          inotify-tools
-          brightnessctl
-        ]);
+        ++ [ pkgs.brightnessctl ];
 
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
@@ -270,8 +218,8 @@
                   {
                     monitor = "*";
                     left = [
-                      "hyprland-workspaces"
-                      "custom-submap"
+                      "lys-wm-workspaces"
+                      "keybind-mode"
                     ];
                     center = [
                       "clock"
@@ -289,7 +237,6 @@
                     ++ [
                       "network"
                       "bluetooth"
-                      "hyprsunset"
                       "power-profiles"
                       "systray"
                       "notifications"
@@ -334,7 +281,7 @@
 
                 # No `icon` in the map: it is shown regardless and would replace
                 # the workspace number.
-                hyprland-workspaces = {
+                lys-wm-workspaces = {
                   display-mode = "label";
                   label-size = "14px";
                   workspace-map = builtins.listToAttrs (
@@ -409,16 +356,6 @@
                   ];
                 };
 
-                hyprsunset = {
-                  temperature = 4500;
-                  auto-schedule = true;
-                  latitude = 55.6;
-                  longitude = 12.5;
-                  label-show = false;
-                  icon-on = "ld-moon-symbolic";
-                  icon-off = "ld-sun-symbolic";
-                };
-
                 # The default `loginctl terminate-session $XDG_SESSION_ID` is a no-op
                 # here: the systemd user unit has no XDG_SESSION_ID.
                 power.logout-command = "loginctl terminate-session \"$(loginctl show-user \"$USER\" -p Display --value)\"";
@@ -434,17 +371,10 @@
                   color-performance = "red";
                 };
 
-                custom = [
-                  {
-                    id = "submap";
-                    mode = "watch";
-                    restart-policy = "on-exit";
-                    command = "lys-shell-widget submap-watch";
-                    icon-name = "ld-layers-symbolic";
-                    label-show = false;
-                    hide-if-empty = true;
-                  }
-                ];
+                keybind-mode = {
+                  auto-hide = true;
+                  label-show = false;
+                };
               };
             };
           force = true;

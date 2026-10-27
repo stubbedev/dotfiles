@@ -45,7 +45,7 @@ _: {
     newtabUrl = "https://start.local/";
 
     # Per-workspace accent ramp, workspace 1 first; lys-shell renders it into the
-    # hyprland-workspaces label map.
+    # lys-wm-workspaces label map.
     workspaceColors = [
       "89b4fa"
       "f0c6c6"

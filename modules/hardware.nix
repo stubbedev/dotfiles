@@ -36,15 +36,6 @@ let
       return 1
     }
 
-    reload_hypr() {
-      local sock
-      command -v socat >/dev/null 2>&1 || return 0
-      for sock in /run/user/*/hypr/*/.socket.sock; do
-        [ -S "$sock" ] || continue
-        printf 'reload' | socat - "UNIX-CONNECT:$sock" >/dev/null 2>&1 || true
-      done
-    }
-
     for settle in 2 3 4 5; do
       sleep "$settle"
       echo "$dev" > "$drv/unbind" 2>/dev/null || true
@@ -53,7 +44,6 @@ let
       mt_back && break
     done
 
-    reload_hypr
     exit 0
   '';
 in
@@ -62,7 +52,6 @@ in
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     {
@@ -133,7 +122,6 @@ in
       systemd.services.touchpad-rebind = {
         description = "Rebind wedged i2c-hid touchpad after dock undock";
         serviceConfig.Type = "oneshot";
-        path = [ pkgs.socat ];
         script = rebindTouchpadScript;
       };
     };

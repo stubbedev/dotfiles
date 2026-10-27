@@ -12,7 +12,7 @@ _: {
       services.upower.enable = true;
 
       # Undocking or unplugging with the lid already closed is handled in
-      # the hyprland monitor toggle script instead: logind only acts on the
+      # the monitor toggle script instead: logind only acts on the
       # lid switch edge (systemd#7690).
       services.logind.settings.Login = {
         HandleLidSwitch = "suspend";
@@ -250,7 +250,7 @@ _: {
             Opening the lid wakes.
 
             Undocking or unplugging with the lid already closed is handled
-            separately by the hyprland monitor toggle script — logind only
+            separately by the monitor toggle script — logind only
             acts on the lid switch edge, not on later display or power
             changes (systemd#7690).
           '';

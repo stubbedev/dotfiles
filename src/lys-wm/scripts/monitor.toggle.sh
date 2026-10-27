@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
 
-apply_reload() {
-  hyprctl reload >/dev/null 2>&1 || true
-}
-
 WALLPAPER="${WALLPAPER:-$HOME/.stubbe/src/wallpapers/ballet.jpg}"
 
 apply_wallpaper() {
@@ -48,19 +44,7 @@ on_ac() {
   return 1
 }
 
-apply_lid() {
-  sleep 0.3
-
-  read_lid
-
-  if [ "$LID" = "closed" ]; then
-    hyprctl eval "reflow_monitors(true)" >/dev/null 2>&1 || true
-  fi
-}
-
 react() {
-  apply_reload
-  apply_lid
   apply_wallpaper
 }
 
@@ -107,18 +91,6 @@ poll_lid() {
   done
 }
 
-listen_lid() {
-  command -v libinput >/dev/null 2>&1 || return 0
-  while true; do
-    stdbuf -oL libinput debug-events --verbose 2>/dev/null \
-      | grep --line-buffered -i 'lid: resume touchpad' \
-      | while IFS= read -r _; do
-        apply_reload
-      done
-    sleep 2
-  done
-}
-
 watch_power() {
   udevadm monitor --property --udev --subsystem-match=power_supply 2>/dev/null \
     | grep --line-buffered '^UDEV .*power_supply' \
@@ -135,11 +107,9 @@ listen_events() {
 
   poll_lid &
   local poll_pid=$!
-  listen_lid &
-  local lid_pid=$!
   watch_power &
   local power_pid=$!
-  trap 'kill "$poll_pid" "$lid_pid" "$power_pid" 2>/dev/null' EXIT INT TERM
+  trap 'kill "$poll_pid" "$power_pid" 2>/dev/null' EXIT INT TERM
 
   while IFS= read -r line; do
     [ "$line" = "HOTPLUG=1" ] || continue

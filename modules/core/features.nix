@@ -6,7 +6,7 @@ let
     docker = "Docker. On NixOS this drives virtualisation.docker; elsewhere a privileged activation renders the engine's systemd units from the same locked nixpkgs docker (socket-activated, live-restore), wires the group, daemon.json and the registry:3 container.";
     avahi = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
     openssh = "Accept inbound ssh. Elsewhere openssh-server from the host package manager; on NixOS services.openssh stays unconditional so the installer ISO keeps its remote-debug path.";
-    hyprland = "The Hyprland compositor, its session, and login (greetd autologin).";
+    lysWm = "The lys-wm compositor, its session, and login (greetd autologin).";
     lysShell = "The lys-shell desktop shell — bar, notifications, OSD, wallpaper, lock, portal. The default and only shell; disabling leaves no bar.";
     theming = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, Plymouth).";
     media = "Image, video and audio tooling, plus the office suite.";

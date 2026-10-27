@@ -95,12 +95,13 @@
             ${config.stubbe.paths.terminal} --class "$APP_ID" -e aerc
           }
 
-          if [[ "$XDG_CURRENT_DESKTOP" == "Hyprland" ]] && command -v hyprctl &> /dev/null; then
-            addr=$(hyprctl -j clients | jq -r --arg c "$APP_ID" '.[] | select(.class == $c) | .address' | head -n1)
-            if [[ -n "$addr" ]]; then
-              ws=$(hyprctl -j activeworkspace | jq -r '.id')
-              hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })"
-              hyprctl dispatch "hl.plugin.hy3.move_to_workspace('$ws', { follow = true })"
+          if [[ "$XDG_CURRENT_DESKTOP" == "lys-wm" ]] && command -v lys-wmctl &> /dev/null; then
+            id=$(lys-wmctl windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
+            if [[ -n "$id" ]]; then
+              ws=$(lys-wmctl workspaces | jq -r '.[] | select(.focused) | .id')
+              lys-wmctl dispatch focuswindow "$id"
+              lys-wmctl dispatch movetoworkspace "$ws"
+              lys-wmctl dispatch focuswindow "$id"
             else
               spawn_term
             fi

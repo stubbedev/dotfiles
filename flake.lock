@@ -155,7 +155,7 @@
     "flake-parts_10": {
       "inputs": {
         "nixpkgs-lib": [
-          "notmuch-mcp",
+          "maestro",
           "nixpkgs"
         ]
       },
@@ -176,7 +176,7 @@
     "flake-parts_11": {
       "inputs": {
         "nixpkgs-lib": [
-          "shell-lsp",
+          "nix-mcp",
           "nixpkgs"
         ]
       },
@@ -197,7 +197,7 @@
     "flake-parts_12": {
       "inputs": {
         "nixpkgs-lib": [
-          "srv",
+          "notmuch-mcp",
           "nixpkgs"
         ]
       },
@@ -218,7 +218,7 @@
     "flake-parts_13": {
       "inputs": {
         "nixpkgs-lib": [
-          "treeman",
+          "shell-lsp",
           "nixpkgs"
         ]
       },
@@ -237,6 +237,48 @@
       }
     },
     "flake-parts_14": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "srv",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790898470,
+        "narHash": "sha256-zTwuwezD0w3hpga6a6P8emidzAZFyWqlNeRBlpWOOl8=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "024633cd702b10285db5cb19b40ad48d2399ba60",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_15": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "treeman",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790898470,
+        "narHash": "sha256-zTwuwezD0w3hpga6a6P8emidzAZFyWqlNeRBlpWOOl8=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "024633cd702b10285db5cb19b40ad48d2399ba60",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_16": {
       "inputs": {
         "nixpkgs-lib": [
           "xilo",
@@ -383,7 +425,7 @@
     "flake-parts_8": {
       "inputs": {
         "nixpkgs-lib": [
-          "maestro",
+          "lys-wm",
           "nixpkgs"
         ]
       },
@@ -404,7 +446,8 @@
     "flake-parts_9": {
       "inputs": {
         "nixpkgs-lib": [
-          "nix-mcp",
+          "lys-wm",
+          "lys-ui",
           "nixpkgs"
         ]
       },
@@ -717,6 +760,28 @@
         "type": "github"
       }
     },
+    "lys-ui_2": {
+      "inputs": {
+        "flake-parts": "flake-parts_9",
+        "nixpkgs": [
+          "lys-wm",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1792847676,
+        "narHash": "sha256-Lh259vWm/n59pTknaCJqWL2bAXoj4spLTYG/2eWehW8=",
+        "owner": "stubbedev",
+        "repo": "lys-ui",
+        "rev": "b4ed4d0aa4f9b01018bca62f494600f85847ed9b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-ui",
+        "type": "github"
+      }
+    },
     "lys-wm": {
       "inputs": {
         "flake-parts": [
@@ -743,9 +808,34 @@
         "type": "github"
       }
     },
-    "maestro": {
+    "lys-wm_2": {
       "inputs": {
         "flake-parts": "flake-parts_8",
+        "lys-shell": [
+          "lys-shell"
+        ],
+        "lys-ui": "lys-ui_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793095130,
+        "narHash": "sha256-add40ZIwZTyJY6z4wCMTxyWhwrtzmx2ZAJwOh22jLNo=",
+        "owner": "stubbedev",
+        "repo": "lys-wm",
+        "rev": "458b19f799fcab415a9928022d6a7292d6a572b8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-wm",
+        "type": "github"
+      }
+    },
+    "maestro": {
+      "inputs": {
+        "flake-parts": "flake-parts_10",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -779,7 +869,7 @@
     },
     "nix-mcp": {
       "inputs": {
-        "flake-parts": "flake-parts_9",
+        "flake-parts": "flake-parts_11",
         "nixpkgs": "nixpkgs"
       },
       "locked": {
@@ -898,7 +988,7 @@
     },
     "notmuch-mcp": {
       "inputs": {
-        "flake-parts": "flake-parts_10",
+        "flake-parts": "flake-parts_12",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -982,6 +1072,7 @@
         "lanzaboote": "lanzaboote",
         "libembroidery-src": "libembroidery-src",
         "lys-shell": "lys-shell",
+        "lys-wm": "lys-wm_2",
         "maestro": "maestro",
         "mongodb-php-src": "mongodb-php-src",
         "nix-mcp": "nix-mcp",
@@ -1025,7 +1116,7 @@
     },
     "shell-lsp": {
       "inputs": {
-        "flake-parts": "flake-parts_11",
+        "flake-parts": "flake-parts_13",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -1066,7 +1157,7 @@
     },
     "srv": {
       "inputs": {
-        "flake-parts": "flake-parts_12",
+        "flake-parts": "flake-parts_14",
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
@@ -1151,7 +1242,7 @@
     },
     "treeman": {
       "inputs": {
-        "flake-parts": "flake-parts_13",
+        "flake-parts": "flake-parts_15",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -1208,7 +1299,7 @@
     },
     "xilo": {
       "inputs": {
-        "flake-parts": "flake-parts_14",
+        "flake-parts": "flake-parts_16",
         "nixpkgs": [
           "nixpkgs"
         ]

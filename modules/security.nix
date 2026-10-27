@@ -119,14 +119,14 @@ _: {
         ]
       );
 
-      systemd.user.services = lib.mkIf (secretsExec != null && config.features.hyprland) {
+      systemd.user.services = lib.mkIf (secretsExec != null && config.features.lysWm) {
         secrets-service = {
           Unit = {
             Description = "D-Bus secrets service (org.freedesktop.secrets)";
-            After = [ "hyprland-session.target" ];
-            PartOf = [ "hyprland-session.target" ];
+            After = [ config.wayland.systemd.target ];
+            PartOf = [ config.wayland.systemd.target ];
           };
-          Install.WantedBy = [ "hyprland-session.target" ];
+          Install.WantedBy = [ config.wayland.systemd.target ];
           Service = {
             Type = "dbus";
             BusName = "org.freedesktop.secrets";
@@ -158,7 +158,7 @@ _: {
           '';
         };
 
-        keyringPam = lib.mkIf (config.features.hyprland || config.features.theming) {
+        keyringPam = lib.mkIf (config.features.lysWm || config.features.theming) {
           privileged = true;
           title = "GNOME Keyring PAM setup";
           body = ''
@@ -199,7 +199,7 @@ _: {
         # Nix's PAM modules expect /run/wrappers/bin/unix_chkpwd, which only
         # NixOS provides. Without it, lys-shell's session-lock unlock cannot verify
         # the password at all.
-        pamWrappers = lib.mkIf config.features.hyprland {
+        pamWrappers = lib.mkIf config.features.lysWm {
           privileged = true;
           title = "⚠️  Nix PAM wrapper setup required for lys-shell lock authentication";
           body = ''
