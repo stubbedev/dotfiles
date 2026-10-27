@@ -820,11 +820,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793095130,
-        "narHash": "sha256-add40ZIwZTyJY6z4wCMTxyWhwrtzmx2ZAJwOh22jLNo=",
+        "lastModified": 1793116117,
+        "narHash": "sha256-jyHGnkIleA+B+uyjmPrvVEU0aucAZCMlBKsLqIyIlzU=",
         "owner": "stubbedev",
         "repo": "lys-wm",
-        "rev": "458b19f799fcab415a9928022d6a7292d6a572b8",
+        "rev": "9f2e4c7da4d85198c4887dae693d60463a6cf6cd",
         "type": "github"
       },
       "original": {
