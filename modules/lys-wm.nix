@@ -116,8 +116,8 @@ in
         XF86AudioLowerVolume = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
         XF86AudioMute = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
         XF86AudioMicMute = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
-        XF86MonBrightnessUp = "${scriptDir}/monitor.brightness.sh increase";
-        XF86MonBrightnessDown = "${scriptDir}/monitor.brightness.sh decrease";
+        XF86MonBrightnessUp = "lys-shell brightness +10";
+        XF86MonBrightnessDown = "lys-shell brightness -10";
       };
 
       resizeSubmap = "resize_mode";

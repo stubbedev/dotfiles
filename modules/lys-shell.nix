@@ -81,10 +81,7 @@
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
         ]
-        ++ (with pkgs; [
-          hyprsunset
-          brightnessctl
-        ]);
+        ++ [ pkgs.hyprsunset ];
 
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
@@ -243,13 +240,6 @@
                   middle-click = "lys-shell audio input-mute";
                 };
 
-                # lys-shell has no brightness CLI. -n keeps a 1-unit floor so
-                # scrolling down never blacks the screen.
-                brightness = {
-                  scroll-up = "brightnessctl set 5%+";
-                  scroll-down = "brightnessctl set 5%- -n";
-                };
-
                 weather = {
                   location = "55.6,12.5";
                   units = "metric";
@@ -296,10 +286,6 @@
                   icon-on = "ld-moon-symbolic";
                   icon-off = "ld-sun-symbolic";
                 };
-
-                # The default `loginctl terminate-session $XDG_SESSION_ID` is a no-op
-                # here: the systemd user unit has no XDG_SESSION_ID.
-                power.logout-command = "loginctl terminate-session \"$(loginctl show-user \"$USER\" -p Display --value)\"";
 
                 power-profiles = {
                   label-show = false;
