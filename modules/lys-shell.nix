@@ -81,7 +81,10 @@
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
         ]
-        ++ [ pkgs.brightnessctl ];
+        ++ (with pkgs; [
+          hyprsunset
+          brightnessctl
+        ]);
 
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
@@ -164,6 +167,7 @@
                     ++ [
                       "network"
                       "bluetooth"
+                      "hyprsunset"
                       "power-profiles"
                       "systray"
                       "notifications"
@@ -281,6 +285,16 @@
                       provider = "gmail";
                     }
                   ];
+                };
+
+                hyprsunset = {
+                  temperature = 4500;
+                  auto-schedule = true;
+                  latitude = 55.6;
+                  longitude = 12.5;
+                  label-show = false;
+                  icon-on = "ld-moon-symbolic";
+                  icon-off = "ld-sun-symbolic";
                 };
 
                 # The default `loginctl terminate-session $XDG_SESSION_ID` is a no-op
