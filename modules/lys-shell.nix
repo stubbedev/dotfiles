@@ -80,8 +80,7 @@
           lysShellPackage
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
-        ]
-        ++ [ pkgs.hyprsunset ];
+        ];
 
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
@@ -116,9 +115,11 @@
 
               # The upstream default pam-service `system-auth` does not exist on
               # NixOS, so a dedicated /etc/pam.d/lys-shell is provisioned instead.
-              lock = {
-                pam-service = "lys-shell";
-                lock-on-start = true;
+              login = {
+                lock = {
+                  pam-service = "lys-shell";
+                  lock-on-start = true;
+                };
                 background-mode = "image";
                 background-image = config.stubbe.paths.wallpaper;
                 date-format = "%A, %d %B %Y";
@@ -164,7 +165,7 @@
                     ++ [
                       "network"
                       "bluetooth"
-                      "hyprsunset"
+                      "nightlight"
                       "power-profiles"
                       "systray"
                       "notifications"
@@ -174,8 +175,6 @@
                   }
                 ];
               };
-
-              greeter.background-mode = "wallpaper";
 
               share-picker.default-page = "outputs";
 
@@ -277,7 +276,7 @@
                   ];
                 };
 
-                hyprsunset = {
+                nightlight = {
                   temperature = 4500;
                   auto-schedule = true;
                   latitude = 55.6;
