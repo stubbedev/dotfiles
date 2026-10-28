@@ -89,11 +89,203 @@ _: {
         - One logical change per commit. The message explains why, since the source carries no comments.
         - **No attribution.** Never add commit trailers, PR lines, footers or annotations crediting yourself, this tool, or a session: no `Co-Authored-By`, no `Claude-Session`, no session URLs, no generated-with lines. Commit messages and PR descriptions carry the change and its rationale only.
       '';
+
+      # Both engines read ~/.claude/skills: Claude Code at that path directly,
+      # Harness because its global skill dirs are $XDG_CONFIG_HOME/harness,
+      # $XDG_CONFIG_HOME/agents, ~/.agents and ~/.claude. One file, no copy to
+      # keep in sync.
+      issuesSkill = ''
+        ---
+        name: issues
+        description: Review and burn down the open GitHub issues of the current repository in one batch. Lists the issues, reviews each one, groups them logically, then asks the user whether to work on everything, one group or a specific subset, and fixes the chosen groups with parallel sub-agents whose work never overlaps. Each issue is closed as its fix is committed, partially solved ones get a comment saying what landed and what did not, and anything discovered along the way is filed as a new issue. Use this whenever the user mentions GitHub issues in any working sense — "what issues do we have", "triage", "burn down the backlog", "fix these issues", "work through the issues" — or invokes /issues, even when they name no specific issue.
+        ---
+
+        # Issues
+
+        Work the open issues of the current repository as one batch and leave
+        GitHub reflecting the result: closed issues with a commit behind them,
+        partial ones with a comment that says what landed and what did not, and
+        new issues for everything found on the way.
+
+        Arguments given to the skill (`$ARGUMENTS`) narrow or skip the opening
+        questions: an `owner/repo` picks the repository, issue numbers skip the
+        whole-issue listing for those issues only, and "review" means stop after
+        the grouping.
+
+        ## Ground rules
+
+        - **Review before touching.** Every issue is read in full, body and
+          comments, before it is grouped. An issue that is already fixed, a
+          duplicate, or waiting on the reporter is not work; say so and leave it
+          open rather than closing it on a guess.
+        - **Overlap is about files, not issues.** Every file the selected work
+          will touch belongs to exactly one agent at a time. Issues that share a
+          file are the same group. An agent that discovers mid-work it needs a
+          file another running agent owns stops and reports instead of editing
+          it; the coordinator then either hands that file over once the other
+          agent is done, or defers the issue with a comment.
+        - **Trust the LSP, not the build.** Correctness comes from the language
+          server: use LSP rename/references instead of text search for anything
+          that spans call sites, and read the diagnostics that arrive after each
+          edit. No compiles, no test runs, no formatter loops while work is in
+          flight; they are slow, they fight each other across parallel agents,
+          and they tell you nothing the diagnostics have not already said.
+        - **One verification pass, at the end.** When every selected issue is
+          committed, run the project's gates once, fix what they surface,
+          commit the fixes, and only then push. A second pass means the first
+          one was cut short, not that it was thorough.
+        - **The coordinator owns git and gh.** Only the top-level agent commits,
+          closes issues and pushes. Sub-agents edit files and report; a shared
+          index is the one thing parallel agents cannot share safely.
+
+        ## 1. Scope the repository
+
+        ```sh
+        gh auth status
+        gh repo view --json nameWithOwner,defaultBranchRef --jq '.nameWithOwner'
+        gh issue list --state open --limit 200 \
+          --json number,title,labels,assignees,milestone,createdAt,updatedAt,comments,body
+        ```
+
+        If the working directory is not a repository, or the repository has more
+        than one plausible upstream, ask which one before going further. Note
+        the current branch and whether the working tree is dirty: a dirty tree
+        gets a question before any agent starts, because the run commits.
+
+        ## 2. Review each issue
+
+        For every open issue, `gh issue view <n> --comments`, then open the code
+        it refers to. Record:
+
+        - **verdict** — actionable, needs-info, stale, duplicate, already-fixed.
+          Only actionable ones become work; the rest are reported with one line
+          of reasoning (and a comment on the issue when the reason is useful to
+          the reporter).
+        - **kind** — bug, feature, chore, question.
+        - **area** — the files or module the fix lives in, from what you just
+          read, not from the issue title.
+        - **coupling** — other issues it depends on, blocks, or duplicates.
+        - **size** — small enough for one agent, or big enough to split.
+
+        Read the tests around the affected code while reviewing: the fix has to
+        land with a test, and knowing the existing pattern changes the plan.
+
+        ## 3. Group
+
+        Group by the code the work touches and by dependency order, never by
+        label or theme. Two issues that edit the same file are one group even if
+        they look unrelated, because the alternative is two agents racing on one
+        file. Issues where one must land before another are separate groups in a
+        stated order, not one big group.
+
+        Aim for groups small enough that an agent can finish one without
+        touching a file it does not own. A group of five issues across five
+        unrelated subsystems is five groups.
+
+        ## 4. Offer the choice
+
+        Present the groups as a short table — group, issue numbers and titles,
+        area, order, one-line why they belong together — then ask with the
+        question tool (`AskUserQuestion` in Claude Code) which to work on:
+
+        - every group,
+        - one named group,
+        - a specific subset (then ask which numbers),
+        - none, review only.
+
+        Wait for the answer. Do not start work in the same breath as the
+        question, and do not pick a default when the answer is unclear; a second
+        question is cheaper than a batch of unwanted commits.
+
+        ## 5. Dispatch
+
+        Partition the selected groups into agents of disjoint file sets, at most
+        five running at once. Give each agent, in the prompt:
+
+        - the issue numbers, titles and full bodies it owns, plus the relevant
+          comments,
+        - the files it owns, and the explicit instruction not to edit any file
+          outside them,
+        - the repo conventions that apply (AGENTS.md, CLAUDE.md, neighbouring
+          code, test patterns next to the touched code),
+        - the rule that verification is the coordinator's job at the end: make
+          the change, let the LSP diagnostics carry it, add the test, and report,
+        - the instruction to return: files changed, what the diagnostics said,
+          what is provably fixed, what part of which issue is not fixed, and any
+          new problem found,
+        - the instruction not to run git, not to commit, not to touch gh.
+
+        Each issue's fix lands as its own logical change; an agent that cannot
+        separate two issues into two changes reports that rather than bundling
+        them.
+
+        ## 6. Commit and close, issue by issue
+
+        After an agent reports, review the diff, then commit per issue with the
+        rationale in the message and a `Closes #<n>` or `Refs #<n>` trailer in
+        the body.
+
+        - Fully solved, in one command:
+
+          ```sh
+          gh issue close <n> --reason completed \
+            --comment "Fixed in <short sha>: <one line on what changed>."
+          ```
+
+        - Partially solved, a comment and no close:
+
+          ```sh
+          gh issue comment <n> --body "<what landed in <short sha>, what is still missing, and why it did not land here>"
+          ```
+
+          Name the missing part concretely, not as "the rest".
+
+        Both happen as the commit is made, not at the end of the run: the issue
+        tracker should never show a solved issue as open because a later step
+        failed.
+
+        ## 7. Verify once, then push
+
+        With every selected issue committed, run the gates the project declares
+        — formatter, linter, typecheck, and the tests for the packages touched.
+        Never the full suite when targets exist; scope it to what changed. Fix
+        what the gates surface in follow-up commits, and keep the issue states
+        honest if a fix turns out not to hold. Then push once, at the end, and
+        report the branch.
+
+        ## 8. File what you found
+
+        Every bug, gap or contradiction noticed during the run becomes a new
+        issue, with the context that makes it actionable: what was being done,
+        what was observed, where, and why it matters. File it immediately so it
+        is not lost to a later summarisation; do not let it widen the current
+        batch.
+
+        Solve a new issue in the same batch only when it blocks the selected
+        work — say so in the issue, and reference it from the commit that fixes
+        it. Everything else waits for a later run.
+
+        ## 9. Report
+
+        Finish with four lists, no prose padding:
+
+        - closed — number, title, commit
+        - partially solved — number, what landed, what remains
+        - filed — number, one line
+        - verification — the gates run and their result, and the push
+
+        Anything left open because it was not selected, or because the run ran
+        out of clean ways to divide it, goes in the report too.
+      '';
+      agentSkillEnabled = config.features.claudeCode || config.features.harness;
     in
     lib.mkMerge [
       (lib.mkIf config.features.claudeCode {
         home.file.".claude/CLAUDE.md".text = rules + "\n@~/.claude/local.md\n";
       })
       (lib.mkIf config.features.harness { xdg.configFile."AGENTS.md".text = rules; })
+      (lib.mkIf agentSkillEnabled {
+        home.file.".claude/skills/issues/SKILL.md".text = issuesSkill;
+      })
     ];
 }
