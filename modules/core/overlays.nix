@@ -4,17 +4,25 @@
     # Lazy: forced only when something consumes pkgs.nixgl, the standalone-HM
     # Intel fallback in pkgs/gl.nix; NixOS hosts and NVIDIA machines use system
     # GL and never touch it.
+    # nixGL.nix is called directly, not via default.nix, so its `pcre` argument
+    # can be replaced: nixpkgs removed pcre, and nixGL's script checkPhase
+    # still runs `pcregrep`. pcre2grep is its drop-in successor.
     nixgl =
       final: _prev:
       let
         isIntelX86 = final.stdenv.hostPlatform.system == "x86_64-linux";
       in
       {
-        nixgl = import "${inputs.nixgl}/default.nix" {
-          pkgs = final;
-          enable32bits = isIntelX86;
-          enableIntelX86Extensions = isIntelX86;
-        };
+        nixgl = final.callPackage "${inputs.nixgl}/nixGL.nix" (
+          {
+            enable32bits = isIntelX86;
+            pcre = final.runCommand "pcregrep-pcre2" { } ''
+              mkdir -p $out/bin
+              ln -s ${final.lib.getExe' final.pcre2 "pcre2grep"} $out/bin/pcregrep
+            '';
+          }
+          // final.lib.optionalAttrs (!isIntelX86) { intel-media-driver = null; }
+        );
       };
 
     cship =
