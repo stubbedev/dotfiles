@@ -286,231 +286,237 @@ in
 
       sessionTarget = [ config.wayland.systemd.target ];
     in
-    lib.mkIf config.features.lysWm {
-      home.packages = [
-        lysWm
-      ]
-      ++ (with pkgs; [
-        app2unit
-        wl-clipboard
-        wl-clip-persist
-        wtype
-        libnotify
-      ]);
+    {
+      imports = [ inputs.lys-wm.homeManagerModules.default ];
 
-      xdg.configFile."lys-wm/config.yaml".source = pkgs.stubbe.gen.yaml "lys-wm-config.yaml" settings;
-
-      wayland.systemd.target = "lys-wm-session.target";
-
-      services.hypridle = {
-        enable = true;
-        settings = {
-          general = {
-            lock_cmd = "lys-lock";
-            # Lock before logind suspends (hypridle holds a sleep
-            # delay-inhibitor), so wake lands on the lock screen instead of
-            # flashing the session.
-            before_sleep_cmd = "loginctl lock-session";
-            # s2idle resume can leave DPMS off; force displays back on.
-            after_sleep_cmd = "lys-wmctl dispatch dpms on";
-          };
-          listener = [
-            {
-              timeout = 300;
-              on-timeout = "loginctl lock-session";
-            }
-            # Screens off shortly after the lock lands — a locked but lit panel
-            # is pure battery drain. on-resume covers wiggle-the-mouse wakeups.
-            {
-              timeout = 330;
-              on-timeout = "lys-wmctl dispatch dpms off";
-              on-resume = "lys-wmctl dispatch dpms on";
-            }
-            # macOS-style idle sleep, battery only. On AC (docked included) the
-            # machine stays up so SSH and long builds survive.
-            {
-              timeout = 900;
-              on-timeout = "sh -c 'grep -qx 1 /sys/class/power_supply/AC/online || systemctl suspend'";
-            }
-          ];
+      config = lib.mkIf config.features.lysWm {
+        programs.lys-wm = {
+          enable = true;
+          package = lysWm;
         };
-      };
 
-      services.hyprpolkitagent.enable = true;
+        home.packages = with pkgs; [
+          app2unit
+          wl-clipboard
+          wl-clip-persist
+          wtype
+          libnotify
+        ];
 
-      systemd.user.services = {
-        wireplumber-hotplug = {
-          Unit = {
-            Description = "Restart WirePlumber when a display is plugged in, for its HDMI and DisplayPort audio";
-            After = sessionTarget;
-            PartOf = sessionTarget;
+        xdg.configFile."lys-wm/config.yaml".source = pkgs.stubbe.gen.yaml "lys-wm-config.yaml" settings;
+
+        wayland.systemd.target = "lys-wm-session.target";
+
+        services.hypridle = {
+          enable = true;
+          settings = {
+            general = {
+              lock_cmd = "lys-lock";
+              # Lock before logind suspends (hypridle holds a sleep
+              # delay-inhibitor), so wake lands on the lock screen instead of
+              # flashing the session.
+              before_sleep_cmd = "loginctl lock-session";
+              # s2idle resume can leave DPMS off; force displays back on.
+              after_sleep_cmd = "lys-wmctl dispatch dpms on";
+            };
+            listener = [
+              {
+                timeout = 300;
+                on-timeout = "loginctl lock-session";
+              }
+              # Screens off shortly after the lock lands — a locked but lit panel
+              # is pure battery drain. on-resume covers wiggle-the-mouse wakeups.
+              {
+                timeout = 330;
+                on-timeout = "lys-wmctl dispatch dpms off";
+                on-resume = "lys-wmctl dispatch dpms on";
+              }
+              # macOS-style idle sleep, battery only. On AC (docked included) the
+              # machine stays up so SSH and long builds survive.
+              {
+                timeout = 900;
+                on-timeout = "sh -c 'grep -qx 1 /sys/class/power_supply/AC/online || systemctl suspend'";
+              }
+            ];
           };
-          Install.WantedBy = sessionTarget;
-          Service = {
-            Type = "simple";
-            ExecStart = lib.getExe wireplumberHotplug;
+        };
+
+        services.hyprpolkitagent.enable = true;
+
+        systemd.user.services = {
+          wireplumber-hotplug = {
+            Unit = {
+              Description = "Restart WirePlumber when a display is plugged in, for its HDMI and DisplayPort audio";
+              After = sessionTarget;
+              PartOf = sessionTarget;
+            };
+            Install.WantedBy = sessionTarget;
+            Service = {
+              Type = "simple";
+              ExecStart = lib.getExe wireplumberHotplug;
+              Restart = "on-failure";
+              RestartSec = "2s";
+            };
+          };
+
+          hypridle = {
+            Unit.Description = lib.mkForce "Hypridle idle daemon (lock, dpms, idle sleep)";
+            Service = {
+              Environment = [ "PATH=${config.stubbe.paths.nixBin}:/usr/bin:/bin" ];
+              Restart = lib.mkForce "on-failure";
+              RestartSec = lib.mkForce "2s";
+            };
+          };
+
+          hyprpolkitagent.Service = {
             Restart = "on-failure";
             RestartSec = "2s";
           };
         };
 
-        hypridle = {
-          Unit.Description = lib.mkForce "Hypridle idle daemon (lock, dpms, idle sleep)";
-          Service = {
-            Environment = [ "PATH=${config.stubbe.paths.nixBin}:/usr/bin:/bin" ];
-            Restart = lib.mkForce "on-failure";
-            RestartSec = lib.mkForce "2s";
-          };
-        };
-
-        hyprpolkitagent.Service = {
-          Restart = "on-failure";
-          RestartSec = "2s";
-        };
-      };
-
-      stubbe.setup = {
-        lysWmReload.script = lib.getExe (
-          pkgs.stubbe.bashApp {
-            name = "lys-wm-reload";
-            text = ''
-              shopt -s nullglob
-              for sock in "/run/user/$(id -u)/lys-wm/"*.sock; do
-                if ! ${lib.getExe' pkgs.lys-wm "lys-wmctl"} --socket "$sock" reload; then
-                  echo "lys-wm-reload: lys-wm at $sock kept its running config" >&2
-                fi
-              done
-            '';
-          }
-        );
-
-        greetd = {
-          privileged = true;
-          title = "Installing greetd (autologin login manager, replaces SDDM)";
-          body = ''
-            Install greetd (which ships the agreety fallback greeter) via the
-            host package manager, drop the shared lys-wm session launcher into
-            /etc/greetd, write /etc/greetd/config.toml (autologin into lys-wm,
-            agreety on logout), and make greetd the system display manager in
-            place of SDDM.
-
-            The display-manager swap disables any enabled DM (sddm/gdm/lightdm/…),
-            repoints /etc/systemd/system/display-manager.service at
-            greetd.service, and sets graphical.target as default. It does NOT
-            restart the display manager — it takes effect on next reboot, so the
-            current session survives.
-
-            Recovery if autologin ever fails to render: switch to a text console
-            (Ctrl+Alt+F3) and log in there to fix or roll back.
-          '';
-          # Purging another DM's package (deb-systemd-helper purge) deletes the
-          # shared display-manager.service alias it once owned, silently
-          # disabling greetd; re-run when the alias disappears.
-          stateInputs = [ "/etc/systemd/system/display-manager.service" ];
-          script =
-            let
-              launcher = "/etc/greetd/lys-wm-session.sh";
-            in
-            ''
-              ${pkgs.stubbe.setup.hostPackage {
-                detect = "greetd";
-                apt = [ "greetd" ];
-                dnf = [ "greetd" ];
-                pacman = [ "greetd" ];
-              }}
-
-              if ! getent passwd greeter >/dev/null 2>&1; then
-                sudo useradd --system --create-home --home-dir /var/lib/greetd \
-                  --shell /usr/sbin/nologin --user-group \
-                  --groups video,input greeter 2>/dev/null || true
-              fi
-
-              ${pkgs.stubbe.setup.text {
-                name = "lys-wm-session.sh";
-                target = launcher;
-                mode = "0755";
-                text = "#!/bin/sh\n" + greetdSessionScript;
-              }}
-
-              ${pkgs.stubbe.setup.text {
-                name = "greetd-config.toml";
-                target = "/etc/greetd/config.toml";
-                text = ''
-                  [terminal]
-                  vt = 7
-
-                  [initial_session]
-                  command = "${launcher}"
-                  user = "${config.home.username}"
-
-                  [default_session]
-                  command = "agreety --cmd ${launcher}"
-                  user = "greeter"
-                '';
-              }}
-
-              ${pkgs.stubbe.setup.text {
-                name = "greetd-plymouth-order.conf";
-                target = "/etc/systemd/system/greetd.service.d/plymouth-order.conf";
-                text = ''
-                  [Unit]
-                  After=plymouth-quit.service plymouth-quit-wait.service
-                '';
-              }}
-              ${pkgs.stubbe.setup.reloadUnits}
-
-              current_dm=""
-              if [ -L /etc/systemd/system/display-manager.service ]; then
-                current_dm=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
-              fi
-
-              if [ "$current_dm" = "greetd" ]; then
-                echo "greetd is already the default display manager; config refreshed." >&2
-              else
-                for dm in sddm gdm gdm3 lightdm lxdm xdm; do
-                  if systemctl cat "$dm.service" >/dev/null 2>&1 \
-                     && systemctl is-enabled --quiet "$dm.service" 2>/dev/null; then
-                    echo "Disabling existing display manager: $dm" >&2
-                    sudo systemctl disable "$dm.service" >/dev/null 2>&1 || true
+        stubbe.setup = {
+          lysWmReload.script = lib.getExe (
+            pkgs.stubbe.bashApp {
+              name = "lys-wm-reload";
+              text = ''
+                shopt -s nullglob
+                for sock in "/run/user/$(id -u)/lys-wm/"*.sock; do
+                  if ! ${lib.getExe' pkgs.lys-wm "lys-wmctl"} --socket "$sock" reload; then
+                    echo "lys-wm-reload: lys-wm at $sock kept its running config" >&2
                   fi
                 done
+              '';
+            }
+          );
 
-                if [ -L /etc/systemd/system/display-manager.service ]; then
-                  tgt=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
-                  if [ "$tgt" != "greetd" ]; then
-                    sudo rm -f /etc/systemd/system/display-manager.service
-                  fi
-                fi
+          greetd = {
+            privileged = true;
+            title = "Installing greetd (autologin login manager, replaces SDDM)";
+            body = ''
+              Install greetd (which ships the agreety fallback greeter) via the
+              host package manager, drop the shared lys-wm session launcher into
+              /etc/greetd, write /etc/greetd/config.toml (autologin into lys-wm,
+              agreety on logout), and make greetd the system display manager in
+              place of SDDM.
 
-                sudo systemctl enable greetd.service
+              The display-manager swap disables any enabled DM (sddm/gdm/lightdm/…),
+              repoints /etc/systemd/system/display-manager.service at
+              greetd.service, and sets graphical.target as default. It does NOT
+              restart the display manager — it takes effect on next reboot, so the
+              current session survives.
 
-                if [ ! -L /etc/systemd/system/display-manager.service ] \
-                   || [ "$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)" != "greetd" ]; then
-                  greetd_unit=$(systemctl show -p FragmentPath greetd.service --value 2>/dev/null)
-                  if [ -n "$greetd_unit" ] && [ -e "$greetd_unit" ]; then
-                    echo "Materialising display-manager.service → $greetd_unit." >&2
-                    sudo rm -f /etc/systemd/system/display-manager.service
-                    sudo ln -sf "$greetd_unit" /etc/systemd/system/display-manager.service
-                  else
-                    echo "ERROR: greetd.service has no readable FragmentPath. Display manager alias not set." >&2
-                    exit 1
-                  fi
-                fi
-
-                if command -v apt-get >/dev/null 2>&1 && [ -d /etc/X11 ]; then
-                  greetd_bin=$(command -v greetd 2>/dev/null || echo /usr/bin/greetd)
-                  echo "$greetd_bin" | sudo tee /etc/X11/default-display-manager >/dev/null
-                fi
-
-                if [ "$(sudo systemctl get-default 2>/dev/null)" != "graphical.target" ]; then
-                  sudo systemctl set-default graphical.target >/dev/null
-                fi
-
-                echo "" >&2
-                echo "greetd is now the default display manager (effective on next reboot)." >&2
-                echo "Not restarting the display manager, to avoid killing the current session." >&2
-              fi
+              Recovery if autologin ever fails to render: switch to a text console
+              (Ctrl+Alt+F3) and log in there to fix or roll back.
             '';
+            # Purging another DM's package (deb-systemd-helper purge) deletes the
+            # shared display-manager.service alias it once owned, silently
+            # disabling greetd; re-run when the alias disappears.
+            stateInputs = [ "/etc/systemd/system/display-manager.service" ];
+            script =
+              let
+                launcher = "/etc/greetd/lys-wm-session.sh";
+              in
+              ''
+                ${pkgs.stubbe.setup.hostPackage {
+                  detect = "greetd";
+                  apt = [ "greetd" ];
+                  dnf = [ "greetd" ];
+                  pacman = [ "greetd" ];
+                }}
+
+                if ! getent passwd greeter >/dev/null 2>&1; then
+                  sudo useradd --system --create-home --home-dir /var/lib/greetd \
+                    --shell /usr/sbin/nologin --user-group \
+                    --groups video,input greeter 2>/dev/null || true
+                fi
+
+                ${pkgs.stubbe.setup.text {
+                  name = "lys-wm-session.sh";
+                  target = launcher;
+                  mode = "0755";
+                  text = "#!/bin/sh\n" + greetdSessionScript;
+                }}
+
+                ${pkgs.stubbe.setup.text {
+                  name = "greetd-config.toml";
+                  target = "/etc/greetd/config.toml";
+                  text = ''
+                    [terminal]
+                    vt = 7
+
+                    [initial_session]
+                    command = "${launcher}"
+                    user = "${config.home.username}"
+
+                    [default_session]
+                    command = "agreety --cmd ${launcher}"
+                    user = "greeter"
+                  '';
+                }}
+
+                ${pkgs.stubbe.setup.text {
+                  name = "greetd-plymouth-order.conf";
+                  target = "/etc/systemd/system/greetd.service.d/plymouth-order.conf";
+                  text = ''
+                    [Unit]
+                    After=plymouth-quit.service plymouth-quit-wait.service
+                  '';
+                }}
+                ${pkgs.stubbe.setup.reloadUnits}
+
+                current_dm=""
+                if [ -L /etc/systemd/system/display-manager.service ]; then
+                  current_dm=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
+                fi
+
+                if [ "$current_dm" = "greetd" ]; then
+                  echo "greetd is already the default display manager; config refreshed." >&2
+                else
+                  for dm in sddm gdm gdm3 lightdm lxdm xdm; do
+                    if systemctl cat "$dm.service" >/dev/null 2>&1 \
+                       && systemctl is-enabled --quiet "$dm.service" 2>/dev/null; then
+                      echo "Disabling existing display manager: $dm" >&2
+                      sudo systemctl disable "$dm.service" >/dev/null 2>&1 || true
+                    fi
+                  done
+
+                  if [ -L /etc/systemd/system/display-manager.service ]; then
+                    tgt=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
+                    if [ "$tgt" != "greetd" ]; then
+                      sudo rm -f /etc/systemd/system/display-manager.service
+                    fi
+                  fi
+
+                  sudo systemctl enable greetd.service
+
+                  if [ ! -L /etc/systemd/system/display-manager.service ] \
+                     || [ "$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)" != "greetd" ]; then
+                    greetd_unit=$(systemctl show -p FragmentPath greetd.service --value 2>/dev/null)
+                    if [ -n "$greetd_unit" ] && [ -e "$greetd_unit" ]; then
+                      echo "Materialising display-manager.service → $greetd_unit." >&2
+                      sudo rm -f /etc/systemd/system/display-manager.service
+                      sudo ln -sf "$greetd_unit" /etc/systemd/system/display-manager.service
+                    else
+                      echo "ERROR: greetd.service has no readable FragmentPath. Display manager alias not set." >&2
+                      exit 1
+                    fi
+                  fi
+
+                  if command -v apt-get >/dev/null 2>&1 && [ -d /etc/X11 ]; then
+                    greetd_bin=$(command -v greetd 2>/dev/null || echo /usr/bin/greetd)
+                    echo "$greetd_bin" | sudo tee /etc/X11/default-display-manager >/dev/null
+                  fi
+
+                  if [ "$(sudo systemctl get-default 2>/dev/null)" != "graphical.target" ]; then
+                    sudo systemctl set-default graphical.target >/dev/null
+                  fi
+
+                  echo "" >&2
+                  echo "greetd is now the default display manager (effective on next reboot)." >&2
+                  echo "Not restarting the display manager, to avoid killing the current session." >&2
+                fi
+              '';
+          };
         };
       };
     };
