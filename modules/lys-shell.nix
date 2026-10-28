@@ -324,6 +324,10 @@
               After = sessionTarget ++ [ "power-profiles-daemon.service" ];
               Wants = [ "power-profiles-daemon.service" ];
               PartOf = sessionTarget;
+              # The Notifications activation file starts this unit; outside the
+              # session that start fails at once instead of crash-looping a
+              # shell that has no compositor to connect to.
+              Requisite = sessionTarget;
               # Moves the unit hash on a config edit so sd-switch restarts lys-shell.
               X-Restart-Triggers = [ (toString config.xdg.configFile."lys-shell/config.yaml".source) ];
             };

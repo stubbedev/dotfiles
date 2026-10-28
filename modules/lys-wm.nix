@@ -341,8 +341,6 @@ in
           };
         };
 
-        services.hyprpolkitagent.enable = true;
-
         systemd.user.services = {
           wireplumber-hotplug = {
             Unit = {
@@ -366,11 +364,6 @@ in
               Restart = lib.mkForce "on-failure";
               RestartSec = lib.mkForce "2s";
             };
-          };
-
-          hyprpolkitagent.Service = {
-            Restart = "on-failure";
-            RestartSec = "2s";
           };
         };
 
