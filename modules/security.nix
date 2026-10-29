@@ -13,13 +13,11 @@ _: {
       };
 
       security.pam.services = {
-        # /etc/pam.d/lys-shell is provisioned by the lys-shell NixOS module
-        # (programs.lys-shell.lock.enable) as an empty service, since lys-shell locks
-        # natively via ext-session-lock-v1. Merge the keyring hook in here: the
-        # lys-shell unlock is the only place the login password is typed, so it is
-        # the gate that must unlock the keyring — otherwise secret-service
-        # clients (Chrome) prompt on first use each session.
-        lys-shell.enableGnomeKeyring = true;
+        # The lys-shell PAM service (for the lys-login lock) is provisioned by the
+        # lys-login NixOS module, which also adds its keyring hook: the unlock is
+        # the only place the login password is typed, so it is the gate that must
+        # unlock the keyring — otherwise secret-service clients (Chrome) prompt on
+        # first use each session.
 
         # Keyring autounlock on both the tty-login and greetd PAM stacks.
         # greetd authenticates the graphical login under its own PAM service

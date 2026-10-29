@@ -83,6 +83,16 @@
         lys-shell.follows = "lys-shell";
       };
     };
+    # The session lock and greeter split out of lys-shell. Only the lock is used
+    # here; greetd's agreety session stays the display manager.
+    lys-login = {
+      url = "github:stubbedev/lys-login";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        lys-shell.follows = "lys-shell";
+        lys-wm.follows = "lys-wm";
+      };
+    };
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
       flake = false;

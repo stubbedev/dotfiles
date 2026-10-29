@@ -51,6 +51,10 @@
       lys-wm = inputs.lys-wm.packages.${prev.stdenv.hostPlatform.system}.default;
     };
 
+    lys-login = _final: prev: {
+      lys-login = inputs.lys-login.packages.${prev.stdenv.hostPlatform.system}.default;
+    };
+
     vue-language-server-node = _final: prev: {
       vue-language-server = prev.vue-language-server.override {
         nodejs-slim = prev.nodejs-slim_24;

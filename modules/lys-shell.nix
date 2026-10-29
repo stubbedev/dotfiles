@@ -8,8 +8,11 @@
       ...
     }:
     {
-      # Nesting this in lib.mkIf makes the upstream module and its options vanish.
-      imports = [ inputs.lys-shell.nixosModules.default ];
+      # Nesting this in lib.mkIf makes the upstream modules and their options vanish.
+      imports = [
+        inputs.lys-shell.nixosModules.default
+        inputs.lys-login.nixosModules.default
+      ];
 
       config =
         let
@@ -21,6 +24,11 @@
             package = pkgs.lys-shell;
             systemd.enable = false;
             portal.enable = true;
+          };
+
+          programs.lys-login = {
+            enable = true;
+            package = pkgs.lys-login;
             lock.enable = true;
           };
 
@@ -62,10 +70,17 @@
 
       lysShellBin = lib.getExe' lysShellPackage "lys-shell";
 
+      # The shell starts the lock as `lys-login lock` from the PATH, so the lock
+      # binary needs the same driver plumbing the shell itself gets.
+      lysLoginPackage = gfx.bundle { pkg = pkgs.lys-login; };
+
       sessionTarget = [ config.wayland.systemd.target ];
     in
     {
-      imports = [ inputs.lys-shell.homeManagerModules.default ];
+      imports = [
+        inputs.lys-shell.homeManagerModules.default
+        inputs.lys-login.homeManagerModules.default
+      ];
 
       config = lib.mkIf enabled {
         programs.lys-shell = lib.mkIf (config.host.platform != "nixos") {
@@ -74,6 +89,14 @@
           systemd.enable = false;
           settings = { };
           portal.enable = true;
+        };
+
+        # The system module provisions the lock's PAM service on NixOS; on a
+        # foreign distro the privileged setup step below does it, so only the
+        # binary is enabled here.
+        programs.lys-login = lib.mkIf (config.host.platform != "nixos") {
+          enable = true;
+          package = lysLoginPackage;
         };
 
         home.packages = [
