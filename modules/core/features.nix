@@ -108,6 +108,12 @@ in
       };
 
       config.stubbe.userFeatures =
-        config.home-manager.users.${config.host.primaryUser}.features or (lib.mapAttrs (_: _: false) flags);
+        let
+          inherit (config.host) primaryUser;
+        in
+        if config.home-manager.users ? ${primaryUser} then
+          config.home-manager.users.${primaryUser}.features
+        else
+          lib.mapAttrs (_: _: false) flags;
     };
 }

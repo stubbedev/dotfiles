@@ -72,7 +72,7 @@ _: {
                 };
 
                 mode = lib.mkOption {
-                  type = lib.types.str;
+                  type = lib.types.strMatching "[0-7]{3,4}";
                   default = "0644";
                   description = "File mode for `copy`.";
                 };
@@ -87,7 +87,7 @@ _: {
         assertions = lib.concatMap (m: [
           {
             assertion = (m.src != null) != (m.source != null);
-            message = "stubbe.mutable.\"${m.target}\": set exactly one of `src` (live checkout) or `source`/`text` (generated).";
+            message = "stubbe.mutable.\"${m.target}\": set exactly one of `src` (live checkout) or `source` (generated).";
           }
           {
             assertion = m.method != "link" || m.src != null;

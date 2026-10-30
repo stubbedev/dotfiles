@@ -22,25 +22,13 @@
       harness = inputs.harness.packages.${system}.harness;
     in
     {
-      # Merge points so other aspects (modules/ai/ollama.nix) can contribute
-      # providers and default model pairs without touching this file. Same
-      # idea as stubbe.lsp.clients: the option is always
-      # declared, the defaults live in config below, and the yaml gen reads the
-      # merged result.
-      options.stubbe.harness = {
-        providers = lib.mkOption {
-          type = lib.types.attrsOf lib.types.raw;
-          internal = true;
-          default = { };
-          description = "Provider entries rendered into Harness's config.yaml `providers` block. Other aspects merge in via `config.stubbe.harness.providers.<id>`.";
-        };
-
-        models = lib.mkOption {
-          type = lib.types.attrsOf lib.types.raw;
-          internal = true;
-          default = { };
-          description = "Default model-pair entries rendered into Harness's config.yaml `models` block.";
-        };
+      # Merge point so other aspects (modules/ai/ollama.nix) can contribute
+      # providers without touching this file.
+      options.stubbe.harness.providers = lib.mkOption {
+        type = lib.types.attrsOf lib.types.raw;
+        internal = true;
+        default = { };
+        description = "Provider entries rendered into Harness's config.yaml `providers` block. Other aspects merge in via `config.stubbe.harness.providers.<id>`.";
       };
 
       config = lib.mkIf config.features.harness {
@@ -74,24 +62,26 @@
           # The pair to start from on a machine with no state yet. The state
           # file is loaded after this one, so switching model in-app still
           # sticks; this only decides what a fresh checkout opens with.
-          models = config.stubbe.harness.models;
-
-          # Global MCP: notmuch. Everything else is registered per repo via
-          # .mcp.json, which Harness reads from the project root.
-          mcp = lib.optionalAttrs config.features.desktop {
-            notmuch-mcp = {
-              type = "stdio";
-              command = "notmuch-mcp";
-              args = [ ];
+          models = {
+            large = {
+              provider = "anthropic";
+              model = "claude-opus-5-5";
+              reasoning_effort = "medium";
+              max_tokens = 128000;
+            };
+            # The small model runs titles, summaries and the cheap internal
+            # calls, so it gets Haiku: same 1M context and 128000 output cap,
+            # a fraction of the cost.
+            small = {
+              provider = "anthropic";
+              model = "claude-haiku-5-5";
+              reasoning_effort = "low";
+              max_tokens = 128000;
             };
           };
 
-          # The same language server inventory as nvim, in Harness's dialect:
-          # `filetypes` entries match as ".<ext>" suffixes
-          # and server settings live under `options`/`init_options`. The
-          # commands are store paths, which Harness needs: user-configured
-          # servers skip its PATH probe, and it runs without nvim's wrapper PATH
-          # to find the binaries by name.
+          mcp = config.stubbe.mcpServers;
+
           lsp = config.stubbe.lsp.clients.harness;
 
           # Full trust: the fork removed the permission system outright (and
@@ -275,24 +265,6 @@
                   "1.3-contributor"
                   "1.2-contributor"
                 ];
-          };
-        };
-
-        stubbe.harness.models = {
-          large = {
-            provider = "anthropic";
-            model = "claude-opus-5-5";
-            reasoning_effort = "medium";
-            max_tokens = 128000;
-          };
-          # The small model runs titles, summaries and the cheap internal
-          # calls, so it gets Haiku: same 1M context and 128000 output cap,
-          # a fraction of the cost.
-          small = {
-            provider = "anthropic";
-            model = "claude-haiku-5-5";
-            reasoning_effort = "low";
-            max_tokens = 128000;
           };
         };
       };

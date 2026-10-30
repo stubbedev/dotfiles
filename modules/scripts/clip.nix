@@ -1,13 +1,26 @@
 # clip: the clipboard shim every script and binding pipes through.
 _: {
   flake.modules.homeManager.script-clip =
-    { pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
+      displaySinks = lib.optionals config.features.desktop [
+        "sink_wayland"
+        "sink_x11"
+      ];
+      terminalSinks = [
+        "sink_tmux"
+        "sink_osc52"
+      ];
+
       clip = pkgs.stubbe.bashApp {
         name = "clip";
         runtimeInputs = [ pkgs.coreutils ];
         text = ''
-
           data=$(if [ "$#" -gt 0 ]; then printf '%s' "$*"; else cat; fi)
           [ -n "$data" ] || exit 0
 
@@ -15,27 +28,17 @@ _: {
             printf '%s' "$data" | tmux load-buffer - 2>/dev/null || true
           fi
 
-          sink_wayland() {
-            [ -n "''${WAYLAND_DISPLAY:-}" ] || return 1
-            command -v wl-copy >/dev/null 2>&1 || return 1
-            printf '%s' "$data" | wl-copy
-          }
+          ${lib.optionalString config.features.desktop ''
+            sink_wayland() {
+              [ -n "''${WAYLAND_DISPLAY:-}" ] || return 1
+              printf '%s' "$data" | ${lib.getExe' pkgs.wl-clipboard "wl-copy"}
+            }
 
-          sink_x11() {
-            [ -n "''${DISPLAY:-}" ] || return 1
-            if command -v xclip >/dev/null 2>&1; then
-              printf '%s' "$data" | xclip -selection clipboard
-            elif command -v xsel >/dev/null 2>&1; then
-              printf '%s' "$data" | xsel --clipboard --input
-            else
-              return 1
-            fi
-          }
-
-          sink_macos() {
-            command -v pbcopy >/dev/null 2>&1 || return 1
-            printf '%s' "$data" | pbcopy
-          }
+            sink_x11() {
+              [ -n "''${DISPLAY:-}" ] || return 1
+              printf '%s' "$data" | ${lib.getExe pkgs.xclip} -selection clipboard
+            }
+          ''}
 
           sink_tmux() {
             [ -n "''${TMUX:-}" ] || return 1
@@ -54,9 +57,9 @@ _: {
           }
 
           if [ -n "''${SSH_CONNECTION:-}" ] || [ -n "''${SSH_TTY:-}" ]; then
-            sinks=(sink_tmux sink_osc52 sink_wayland sink_x11 sink_macos)
+            sinks=(${lib.concatStringsSep " " (terminalSinks ++ displaySinks)})
           else
-            sinks=(sink_wayland sink_x11 sink_macos sink_tmux sink_osc52)
+            sinks=(${lib.concatStringsSep " " (displaySinks ++ terminalSinks)})
           fi
 
           for sink in "''${sinks[@]}"; do
@@ -65,7 +68,7 @@ _: {
             fi
           done
 
-          echo "clip: no clipboard reachable (no Wayland/X11/pbcopy, no tmux, no writable /dev/tty)" >&2
+          echo "clip: no clipboard reachable (${lib.optionalString config.features.desktop "no Wayland/X11, "}no tmux, no writable /dev/tty)" >&2
           exit 1
         '';
       };

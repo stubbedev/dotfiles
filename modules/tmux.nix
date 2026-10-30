@@ -9,6 +9,21 @@ _: {
     let
       p = pkgs.stubbe.withHash;
 
+      launchers = config.stubbe.launchers;
+
+      toolWindows = lib.filter (w: launchers ? ${w.launcher}) [
+        {
+          window = "sysmon";
+          launcher = "tmux-system-monitor";
+          key = "M-a";
+        }
+        {
+          window = "lazydocker";
+          launcher = "tmux-lazy-docker";
+          key = "M-A";
+        }
+      ];
+
       runtimeSubdir = "tmux";
       tmuxTmpdir = "\${XDG_RUNTIME_DIR}/${runtimeSubdir}";
 
@@ -95,470 +110,436 @@ _: {
     in
     {
       # The command palette every bind and hook in tmux.conf dispatches to.
-      home.file.".config/tmux/scripts/commands.sh" = {
-        executable = true;
-        text = ''
-          #!/usr/bin/env bash
+      home.file.".config/tmux/scripts/commands.sh".source = pkgs.stubbe.shellScript "tmux-commands" ''
+        PINNED_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/tmux/pinned"
 
-          PINNED_STATE="''${XDG_STATE_HOME:-$HOME/.local/state}/tmux/pinned"
+        toggle_window() {
+          local window_name="$1"
+          shift
+          local current_window
+          local current_path
 
-          toggle_window() {
-            local window_name="$1"
-            shift
-            local current_window
-            local current_path
+          current_window=$(tmux display-message -p '#W')
+          current_path=$(tmux display-message -p -F "#{pane_current_path}")
 
-            current_window=$(tmux display-message -p '#W')
-            current_path=$(tmux display-message -p -F "#{pane_current_path}")
+          if [ "$current_window" = "$window_name" ]; then
+            tmux last-window 2>/dev/null || true
+            return 0
+          fi
 
-            if [ "$current_window" = "$window_name" ]; then
-              tmux last-window 2>/dev/null || true
-              return 0
+          if tmux select-window -t "=$window_name" 2>/dev/null; then
+            if [ "$#" -gt 0 ] &&
+              [ "$(tmux display-message -p '#{pane_current_command}')" = "$(basename "$(tmux show-option -gv default-shell)")" ]; then
+              tmux respawn-pane -k "$@"
             fi
+            return
+          fi
 
-            if tmux select-window -t "=$window_name" 2>/dev/null; then
-              if [ "$#" -gt 0 ] &&
-                [ "$(tmux display-message -p '#{pane_current_command}')" = "$(basename "$(tmux show-option -gv default-shell)")" ]; then
-                tmux respawn-pane -k "$@"
-              fi
-              return
-            fi
+          if [ "$#" -eq 0 ]; then
+            return
+          fi
 
-            if [ "$#" -eq 0 ]; then
-              return
-            fi
+          tmux new-window -c "$current_path" -n "$window_name" "$@"
+        }
 
-            tmux new-window -c "$current_path" -n "$window_name" "$@"
-          }
+        git_flag_of_pane() {
+          local current_path
+          current_path=$(tmux display-message -p -t "$1" -F "#{pane_current_path}")
+          if [ -n "$current_path" ] && git -C "$current_path" rev-parse --git-dir >/dev/null 2>&1; then
+            echo 1
+          else
+            echo 0
+          fi
+        }
 
-          session_init() {
-            local session_name
-            local pane_id
-            local target
-            local current_path
-            local has_git=0
+        session_init() {
+          local session_name pane_id
 
-            session_name=$(tmux display-message -p -F "#{hook_session_name}")
-            if [ -z "$session_name" ]; then
-              session_name=$(tmux display-message -p -F "#S")
-            fi
-
-            pane_id=$(tmux display-message -p -F "#{hook_pane}")
-            if [ -z "$pane_id" ]; then
-              pane_id=$(tmux display-message -p -F "#{pane_id}")
-            fi
-
-            current_path=$(tmux display-message -p -t "$pane_id" -F "#{pane_current_path}")
-            if [ -n "$current_path" ] && git -C "$current_path" rev-parse --git-dir >/dev/null 2>&1; then
-              has_git=1
-            fi
-
-            if [ -n "$session_name" ]; then
-              target="$session_name"
-            else
-              target=$(tmux display-message -p -F "#S")
-            fi
-
-            tmux set-option -q -t "$target" @stubbe_has_git "$has_git"
-          }
-
-          branch_ticket() {
-            local path="$1"
-            [ -z "$path" ] && return
-            local branch
-            branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null) || return
-            local ticket
-            ticket=$(printf '%s' "$branch" | grep -oE '[A-Z]+-[0-9]+' | head -1)
-            [ -n "$ticket" ] && printf ' %s' "$ticket"
-          }
-
-          set_ssh_flag() {
-            local sess="''${1:-$(tmux display-message -p '#S')}"
-            local flag=0
-            local pid
-            while IFS= read -r pid; do
-              [ -z "$pid" ] && continue
-              if tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -q '^SSH_CONNECTION='; then
-                flag=1
-                break
-              fi
-            done < <(tmux list-clients -t "$sess" -F '#{client_pid}' 2>/dev/null)
-            tmux set-option -q -t "$sess" @stubbe_ssh "$flag"
-          }
-
-          refresh_session_git_flag() {
-            local session_name
-            local pane_id
-            local current_path
-            local has_git=0
-
+          session_name=$(tmux display-message -p -F "#{hook_session_name}")
+          if [ -z "$session_name" ]; then
             session_name=$(tmux display-message -p -F "#S")
+          fi
+
+          pane_id=$(tmux display-message -p -F "#{hook_pane}")
+          if [ -z "$pane_id" ]; then
             pane_id=$(tmux display-message -p -F "#{pane_id}")
-            current_path=$(tmux display-message -p -t "$pane_id" -F "#{pane_current_path}")
+          fi
 
-            if [ -n "$current_path" ] && git -C "$current_path" rev-parse --git-dir >/dev/null 2>&1; then
-              has_git=1
+          tmux set-option -q -t "$session_name" @stubbe_has_git "$(git_flag_of_pane "$pane_id")"
+        }
+
+        branch_ticket() {
+          local path="$1"
+          [ -z "$path" ] && return
+          local branch
+          branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null) || return
+          local ticket
+          ticket=$(printf '%s' "$branch" | grep -oE '[A-Z]+-[0-9]+' | head -1)
+          [ -n "$ticket" ] && printf ' %s' "$ticket"
+        }
+
+        set_ssh_flag() {
+          local sess="''${1:-$(tmux display-message -p '#S')}"
+          local flag=0
+          local pid
+          while IFS= read -r pid; do
+            [ -z "$pid" ] && continue
+            if tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -q '^SSH_CONNECTION='; then
+              flag=1
+              break
             fi
+          done < <(tmux list-clients -t "$sess" -F '#{client_pid}' 2>/dev/null)
+          tmux set-option -q -t "$sess" @stubbe_ssh "$flag"
+        }
 
-            tmux set-option -q -t "$session_name" @stubbe_has_git "$has_git"
+        refresh_session_git_flag() {
+          tmux set-option -q -t "$(tmux display-message -p -F "#S")" @stubbe_has_git \
+            "$(git_flag_of_pane "$(tmux display-message -p -F "#{pane_id}")")"
+        }
+
+        toggle_lazygit_window() {
+          refresh_session_git_flag
+
+          if [ "$(tmux show-option -qv @stubbe_has_git)" != "1" ]; then
+            return
+          fi
+
+          toggle_window "lazygit" ${lib.getExe launchers.tmux-lazy-git}
+        }
+
+        ${lib.concatMapStrings (w: ''
+          toggle_${w.window}_window() {
+            toggle_window ${w.window} ${lib.getExe launchers.${w.launcher}}
           }
+        '') toolWindows}
+        pane_is_pinned() {
+          [ "$(tmux show-options -t "$1" -pqv @pinned)" = "1" ]
+        }
 
-          toggle_lazygit_window() {
-            refresh_session_git_flag
+        toggle_pin() {
+          local pane_id
+          pane_id=$(tmux display-message -p "#{pane_id}")
+          if pane_is_pinned "$pane_id"; then
+            tmux set -p -t "$pane_id" @pinned 0
+          else
+            tmux set -p -t "$pane_id" @pinned 1
+          fi
+          save_pins
+        }
 
-            if [ "$(tmux show-option -qv @stubbe_has_git)" != "1" ]; then
+        save_pins() {
+          mkdir -p "''${PINNED_STATE%/*}"
+          # Keyed by pane_id: window/pane indexes shift when windows are
+          # killed, and an index-only dump would re-pin the wrong pane on
+          # the next restore.
+          tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}	#{pane_id}' |
+            sed -n 's/^1	//p' > "$PINNED_STATE.tmp"
+          mv "$PINNED_STATE.tmp" "$PINNED_STATE"
+        }
+
+        restore_pins() {
+          [ -f "$PINNED_STATE" ] || return 0
+          local pane_id
+          while IFS=$'\t' read -r _ _ _ pane_id; do
+            [ -n "$pane_id" ] || continue
+            tmux set -p -t "$pane_id" @pinned 1 2>/dev/null || true
+          done < "$PINNED_STATE"
+        }
+
+        kill_pane() {
+          local pending pane_id window_id
+
+          pane_id=$(tmux display-message -p "#{pane_id}")
+          if ! pane_is_pinned "$pane_id"; then
+            tmux kill-pane
+            return
+          fi
+
+          pending=$(tmux display-message -p "#{@kill_pane_pending}")
+          if [ "$pending" = "1" ]; then
+            tmux kill-pane
+            return
+          fi
+
+          window_id=$(tmux display-message -p "#{window_id}")
+          tmux set -p -t "$pane_id" @kill_pane_pending 1
+          pending_animation "$pane_id" "$window_id" pane
+        }
+
+        kill_window() {
+          local pending pane_id window_id any_pinned pid
+
+          window_id=$(tmux display-message -p "#{window_id}")
+
+          any_pinned=0
+          while IFS= read -r pid; do
+            if pane_is_pinned "$pid"; then
+              any_pinned=1
+              break
+            fi
+          done < <(tmux list-panes -t "$window_id" -F "#{pane_id}")
+
+          if [ "$any_pinned" != "1" ]; then
+            tmux kill-window
+            return
+          fi
+
+          pending=$(tmux display-message -p "#{@kill_window_pending}")
+          if [ "$pending" = "1" ]; then
+            tmux kill-window
+            return
+          fi
+
+          pane_id=$(tmux display-message -p "#{pane_id}")
+          tmux set -w -t "$window_id" @kill_window_pending 1
+          pending_animation "$pane_id" "$window_id" window
+        }
+
+        kill_server_confirm() {
+          local pending
+          pending=$(tmux show-option -gv @kill_server_pending 2>/dev/null)
+          if [ "$pending" = "1" ]; then
+            tmux kill-server
+            return
+          fi
+
+          tmux set -g @kill_server_pending 1
+          sleep 1.5
+          tmux set -g @kill_server_pending 0 2>/dev/null
+        }
+
+        toggle_mark_join() {
+          local pane_marked pane_marked_set pane_width pane_height
+
+          pane_marked=$(tmux display-message -p "#{pane_marked}")
+          if [ "$pane_marked" = "1" ]; then
+            tmux select-pane -M
+            return
+          fi
+
+          pane_marked_set=$(tmux display-message -p "#{pane_marked_set}")
+          if [ "$pane_marked_set" != "1" ]; then
+            tmux select-pane -m
+            return
+          fi
+
+          pane_width=$(tmux display-message -p "#{pane_width}")
+          pane_height=$(tmux display-message -p "#{pane_height}")
+          if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
+            tmux join-pane -h
+          else
+            tmux join-pane
+          fi
+        }
+
+        pending_animation() {
+          local pane_id="$1"
+          local win_id="$2"
+          local scope="$3" # "pane" or "window"
+          local duration_us=300000
+          local fill_style="#[bg=${p.red},fg=${p.base},bold]"
+
+          local flag_scope flag_target flag_name
+          case "$scope" in
+          pane)   flag_scope=-p ; flag_target="$pane_id" ; flag_name=@kill_pane_pending ;;
+          window) flag_scope=-w ; flag_target="$win_id"  ; flag_name=@kill_window_pending ;;
+          esac
+          local restore
+          printf -v restore 'tmux set -wu -t %q window-status-current-format 2>/dev/null; tmux set %s -t %q %s 0 2>/dev/null' \
+            "$win_id" "$flag_scope" "$flag_target" "$flag_name"
+          # shellcheck disable=SC2064
+          trap "$restore" EXIT INT TERM
+
+          shopt -s extglob
+          local raw base_style template
+          raw=$(tmux show-options -gqv window-status-current-format)
+          [[ "$raw" =~ ^(#\[[^]]*\]) ]] && base_style="''${BASH_REMATCH[1]}"
+          template="''${raw//#\[*([^]])\]/}"
+
+          local rest="$template" expanded="" pre job out
+          while [[ "$rest" == *'#('* ]]; do
+            pre="''${rest%%#(*}"
+            rest="''${rest#*#(}"
+            job="''${rest%%)*}"
+            rest="''${rest#*)}"
+            out=$(eval "$(tmux display-message -p -t "$win_id" "$job")" 2>/dev/null)
+            expanded+="$pre''${out//%/%%}"
+          done
+          template="$expanded$rest"
+
+          local rendered
+          rendered=$(tmux display-message -p -t "$win_id" "$template")
+
+          local -a chars=()
+          while IFS= read -r c; do
+            chars+=("$c")
+          done < <(LC_ALL=C.UTF-8 grep -o . <<<"$rendered")
+
+          local -a esc=()
+          local n
+          for n in "''${chars[@]}"; do
+            n="''${n//#/##}"
+            esc+=("''${n//%/%%}")
+          done
+
+          local per_cell total=''${#chars[@]}
+          if (( total == 0 )); then
+            printf -v per_cell "0.%06d" "$duration_us"
+            sleep "$per_cell"
+            return
+          fi
+          printf -v per_cell "0.%06d" "$((duration_us / total))"
+
+          local i j frame style
+          for ((i = 1; i <= total; i++)); do
+            frame=""
+            for ((j = 0; j < total; j++)); do
+              ((j < i)) && style="$fill_style" || style="$base_style"
+              frame+="''${style}''${esc[$j]}"
+            done
+            tmux set -wt "$win_id" window-status-current-format "$frame" 2>/dev/null
+            sleep "$per_cell"
+          done
+
+          sleep 0.2
+        }
+
+        reload_animation() {
+          local chars=("⡿" "⣟" "⣯" "⣷" "⣾" "⣽" "⣻" "⢿")
+          local original restore
+          original=$(tmux show-option -gqv status-left)
+          printf -v restore 'tmux set -g status-left %q 2>/dev/null' "$original"
+          # shellcheck disable=SC2064
+          trap "$restore" EXIT INT TERM
+
+          local n=''${#chars[@]}
+          local total=$((n * 2))
+          local peak=$((n - 1))
+          local i t r g b color
+          for ((i = 0; i < total; i++)); do
+            (( i < n )) && t=$i || t=$((total - 1 - i))
+            r=$((243 + 6 * t / peak))
+            g=$((139 + 87 * t / peak))
+            b=$((168 + 7 * t / peak))
+            printf -v color "#%02x%02x%02x" "$r" "$g" "$b"
+            tmux set -g status-left "#[bg=default,bold,fg=''${color}] ''${chars[i % n]} "
+            sleep 0.08
+          done
+        }
+
+        reload() {
+          if [[ "$(tmux display-message -p '#{pane_current_command}')" == *zsh ]]; then
+            tmux send-keys M-R
+          else
+            tmux source-file "$HOME/.config/tmux/tmux.conf"
+          fi
+          reload_animation
+        }
+
+        move_pane() {
+          local direction="$1"
+          local pane_id pane_count edge_flag target_token target_pane
+          local pane_width pane_height window_width window_height
+          local join_flags=()
+          pane_id=$(tmux display-message -p "#{pane_id}")
+          pane_count=$(tmux display-message -p "#{window_panes}")
+          pane_width=$(tmux display-message -p "#{pane_width}")
+          pane_height=$(tmux display-message -p "#{pane_height}")
+          window_width=$(tmux display-message -p "#{window_width}")
+          window_height=$(tmux display-message -p "#{window_height}")
+
+          if [ "$pane_count" -le 1 ]; then
+            return
+          fi
+
+          case "$direction" in
+          ${lib.concatMapStringsSep "\n  " (
+            d:
+            lib.concatStringsSep "\n    " [
+              "${d.flag})"
+              ''edge_flag=$(tmux display-message -p "#{${d.edge}}")''
+              ''if [ "$edge_flag" = "0" ]; then''
+              ("  " + ''tmux swap-pane -t "{${d.word}-of}"'')
+              ''elif [ "$pane_${d.fullDim}" -eq "$window_${d.fullDim}" ]; then''
+              "  return"
+              "else"
+              ("  " + ''target_token="{${d.token}}"'')
+              "  join_flags=(${d.joinFlags})"
+              "fi"
+              ";;"
+            ]
+          ) directions}
+          esac
+
+          if [ -n "$target_token" ]; then
+            target_pane=$(tmux display-message -p -t "$target_token" "#{pane_id}")
+            if [ "$target_pane" = "$pane_id" ]; then
+              while IFS= read -r target_pane; do
+                if [ "$target_pane" != "$pane_id" ]; then
+                  break
+                fi
+              done <<EOF
+        $(tmux list-panes -F "#{pane_id}")
+        EOF
+            fi
+            if [ -z "$target_pane" ] || [ "$target_pane" = "$pane_id" ]; then
               return
             fi
+            tmux move-pane -d "''${join_flags[@]}" -s "$pane_id" -t "$target_pane"
+          fi
 
-            if ! command -v tmux-lazy-git >/dev/null 2>&1; then
-              return
-            fi
+          tmux select-pane -t "$pane_id"
+        }
 
-            toggle_window "lazygit" tmux-lazy-git
-          }
+        move_pane_to_window() {
+          local target_n="$1"
+          local current_window pane_width pane_height max_window
 
-          toggle_sysmon_window() {
-            if ! command -v tmux-system-monitor >/dev/null 2>&1; then
-              return
-            fi
+          current_window=$(tmux display-message -p "#{window_index}")
+          if [ "''${current_window}" = "''${target_n}" ]; then
+            return
+          fi
 
-            toggle_window "sysmon" tmux-system-monitor
-          }
-
-          toggle_lazydocker_window() {
-            if ! command -v tmux-lazy-docker >/dev/null 2>&1; then
-              return
-            fi
-
-            toggle_window "lazydocker" tmux-lazy-docker
-          }
-
-          pane_is_pinned() {
-            [ "$(tmux show-options -t "$1" -pqv @pinned)" = "1" ]
-          }
-
-          toggle_pin() {
-            local pane_id
-            pane_id=$(tmux display-message -p "#{pane_id}")
-            if pane_is_pinned "$pane_id"; then
-              tmux set -p -t "$pane_id" @pinned 0
-            else
-              tmux set -p -t "$pane_id" @pinned 1
-            fi
-            save_pins
-          }
-
-          save_pins() {
-            mkdir -p "''${PINNED_STATE%/*}"
-            # Keyed by pane_id: window/pane indexes shift when windows are
-            # killed, and an index-only dump would re-pin the wrong pane on
-            # the next restore.
-            tmux list-panes -a -F '#{@pinned}	#{session_name}	#{window_index}	#{pane_index}	#{pane_id}' |
-              sed -n 's/^1	//p' > "$PINNED_STATE.tmp"
-            mv "$PINNED_STATE.tmp" "$PINNED_STATE"
-          }
-
-          restore_pins() {
-            [ -f "$PINNED_STATE" ] || return 0
-            local sess win pane pane_id
-            while IFS=$'\t' read -r sess win pane pane_id; do
-              [ -n "$pane" ] || continue
-              tmux set -p -t "$pane_id" @pinned 1 2>/dev/null || true
-            done < "$PINNED_STATE"
-          }
-
-          kill_pane() {
-            local pending pane_id window_id
-
-            pane_id=$(tmux display-message -p "#{pane_id}")
-            if ! pane_is_pinned "$pane_id"; then
-              tmux kill-pane
-              return
-            fi
-
-            pending=$(tmux display-message -p "#{@kill_pane_pending}")
-            if [ "$pending" = "1" ]; then
-              tmux kill-pane
-              return
-            fi
-
-            window_id=$(tmux display-message -p "#{window_id}")
-            tmux set -p -t "$pane_id" @kill_pane_pending 1
-            pending_animation "$pane_id" "$window_id" pane
-          }
-
-          kill_window() {
-            local pending pane_id window_id any_pinned pid
-
-            window_id=$(tmux display-message -p "#{window_id}")
-
-            any_pinned=0
-            while IFS= read -r pid; do
-              if pane_is_pinned "$pid"; then
-                any_pinned=1
-                break
-              fi
-            done < <(tmux list-panes -t "$window_id" -F "#{pane_id}")
-
-            if [ "$any_pinned" != "1" ]; then
-              tmux kill-window
-              return
-            fi
-
-            pending=$(tmux display-message -p "#{@kill_window_pending}")
-            if [ "$pending" = "1" ]; then
-              tmux kill-window
-              return
-            fi
-
-            pane_id=$(tmux display-message -p "#{pane_id}")
-            tmux set -w -t "$window_id" @kill_window_pending 1
-            pending_animation "$pane_id" "$window_id" window
-          }
-
-          kill_server_confirm() {
-            local pending
-            pending=$(tmux show-option -gv @kill_server_pending 2>/dev/null)
-            if [ "$pending" = "1" ]; then
-              tmux kill-server
-              return
-            fi
-
-            tmux set -g @kill_server_pending 1
-            sleep 1.5
-            tmux set -g @kill_server_pending 0 2>/dev/null
-          }
-
-          toggle_mark_join() {
-            local pane_marked pane_marked_set pane_width pane_height
-
-            pane_marked=$(tmux display-message -p "#{pane_marked}")
-            if [ "$pane_marked" = "1" ]; then
-              tmux select-pane -M
-              return
-            fi
-
-            pane_marked_set=$(tmux display-message -p "#{pane_marked_set}")
-            if [ "$pane_marked_set" != "1" ]; then
-              tmux select-pane -m
-              return
-            fi
-
+          if tmux list-windows -F "#{window_index}" | grep -q "^''${target_n}$"; then
             pane_width=$(tmux display-message -p "#{pane_width}")
             pane_height=$(tmux display-message -p "#{pane_height}")
             if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
-              tmux join-pane -h
+              tmux join-pane -h -t ":''${target_n}"
             else
-              tmux join-pane
+              tmux join-pane -t ":''${target_n}"
             fi
-          }
-
-          pending_animation() {
-            local pane_id="$1"
-            local win_id="$2"
-            local scope="$3" # "pane" or "window"
-            local duration_us=300000
-            local fill_style="#[bg=${p.red},fg=${p.base},bold]"
-
-            local flag_scope flag_target flag_name
-            case "$scope" in
-            pane)   flag_scope=-p ; flag_target="$pane_id" ; flag_name=@kill_pane_pending ;;
-            window) flag_scope=-w ; flag_target="$win_id"  ; flag_name=@kill_window_pending ;;
-            esac
-            local restore
-            printf -v restore 'tmux set -wu -t %q window-status-current-format 2>/dev/null; tmux set %s -t %q %s 0 2>/dev/null' \
-              "$win_id" "$flag_scope" "$flag_target" "$flag_name"
-            trap "$restore" EXIT INT TERM
-
-            shopt -s extglob
-            local raw base_style template
-            raw=$(tmux show-options -gqv window-status-current-format)
-            [[ "$raw" =~ ^(#\[[^]]*\]) ]] && base_style="''${BASH_REMATCH[1]}"
-            template="''${raw//#\[*([^]])\]/}"
-
-            local rest="$template" expanded="" pre job out
-            while [[ "$rest" == *'#('* ]]; do
-              pre="''${rest%%#(*}"
-              rest="''${rest#*#(}"
-              job="''${rest%%)*}"
-              rest="''${rest#*)}"
-              out=$(eval "$(tmux display-message -p -t "$win_id" "$job")" 2>/dev/null)
-              expanded+="$pre''${out//%/%%}"
-            done
-            template="$expanded$rest"
-
-            local rendered
-            rendered=$(tmux display-message -p -t "$win_id" "$template")
-
-            local -a chars=()
-            while IFS= read -r c; do
-              chars+=("$c")
-            done < <(LC_ALL=C.UTF-8 grep -o . <<<"$rendered")
-
-            local -a esc=()
-            local n
-            for n in "''${chars[@]}"; do
-              n="''${n//#/##}"
-              esc+=("''${n//%/%%}")
-            done
-
-            local per_cell total=''${#chars[@]}
-            if (( total == 0 )); then
-              printf -v per_cell "0.%06d" "$duration_us"
-              sleep "$per_cell"
-              return
-            fi
-            printf -v per_cell "0.%06d" "$((duration_us / total))"
-
-            local i j frame style
-            for ((i = 1; i <= total; i++)); do
-              frame=""
-              for ((j = 0; j < total; j++)); do
-                ((j < i)) && style="$fill_style" || style="$base_style"
-                frame+="''${style}''${esc[$j]}"
-              done
-              tmux set -wt "$win_id" window-status-current-format "$frame" 2>/dev/null
-              sleep "$per_cell"
-            done
-
-            sleep 0.2
-          }
-
-          reload_animation() {
-            local chars=("⡿" "⣟" "⣯" "⣷" "⣾" "⣽" "⣻" "⢿")
-            local original restore
-            original=$(tmux show-option -gqv status-left)
-            printf -v restore 'tmux set -g status-left %q 2>/dev/null' "$original"
-            trap "$restore" EXIT INT TERM
-
-            local n=''${#chars[@]}
-            local total=$((n * 2))
-            local peak=$((n - 1))
-            local i t r g b color
-            for ((i = 0; i < total; i++)); do
-              (( i < n )) && t=$i || t=$((total - 1 - i))
-              r=$((243 + 6 * t / peak))
-              g=$((139 + 87 * t / peak))
-              b=$((168 + 7 * t / peak))
-              printf -v color "#%02x%02x%02x" "$r" "$g" "$b"
-              tmux set -g status-left "#[bg=default,bold,fg=''${color}] ''${chars[i % n]} "
-              sleep 0.08
-            done
-          }
-
-          reload() {
-            if [[ "$(tmux display-message -p '#{pane_current_command}')" == *zsh ]]; then
-              tmux send-keys M-R
+          else
+            max_window=$(tmux list-windows -F "#{window_index}" | sort -n | tail -1)
+            if [ "''${target_n}" -gt "''${max_window}" ]; then
+              tmux break-pane
             else
-              tmux source-file "$HOME/.config/tmux/tmux.conf"
+              tmux break-pane -t ":''${target_n}"
             fi
-            reload_animation
-          }
+          fi
+        }
 
-          move_pane() {
-            local direction="$1"
-            local pane_id pane_count edge_flag target_token target_pane
-            local pane_width pane_height window_width window_height
-            local join_flags=()
-            pane_id=$(tmux display-message -p "#{pane_id}")
-            pane_count=$(tmux display-message -p "#{window_panes}")
-            pane_width=$(tmux display-message -p "#{pane_width}")
-            pane_height=$(tmux display-message -p "#{pane_height}")
-            window_width=$(tmux display-message -p "#{window_width}")
-            window_height=$(tmux display-message -p "#{window_height}")
-
-            if [ "$pane_count" -le 1 ]; then
-              return
-            fi
-
-            case "$direction" in
-            ${lib.concatMapStringsSep "\n  " (
-              d:
-              lib.concatStringsSep "\n    " [
-                "${d.flag})"
-                ''edge_flag=$(tmux display-message -p "#{${d.edge}}")''
-                ''if [ "$edge_flag" = "0" ]; then''
-                ("  " + ''tmux swap-pane -t "{${d.word}-of}"'')
-                ''elif [ "$pane_${d.fullDim}" -eq "$window_${d.fullDim}" ]; then''
-                "  return"
-                "else"
-                ("  " + ''target_token="{${d.token}}"'')
-                "  join_flags=(${d.joinFlags})"
-                "fi"
-                ";;"
-              ]
-            ) directions}
-            esac
-
-            if [ -n "$target_token" ]; then
-              target_pane=$(tmux display-message -p -t "$target_token" "#{pane_id}")
-              if [ "$target_pane" = "$pane_id" ]; then
-                while IFS= read -r target_pane; do
-                  if [ "$target_pane" != "$pane_id" ]; then
-                    break
-                  fi
-                done <<EOF
-          $(tmux list-panes -F "#{pane_id}")
-          EOF
-              fi
-              if [ -z "$target_pane" ] || [ "$target_pane" = "$pane_id" ]; then
-                return
-              fi
-              tmux move-pane -d "''${join_flags[@]}" -s "$pane_id" -t "$target_pane"
-            fi
-
-            tmux select-pane -t "$pane_id"
-          }
-
-          move_pane_to_window() {
-            local target_n="$1"
-            local current_window pane_width pane_height max_window
-
-            current_window=$(tmux display-message -p "#{window_index}")
-            if [ "''${current_window}" = "''${target_n}" ]; then
-              return
-            fi
-
-            if tmux list-windows -F "#{window_index}" | grep -q "^''${target_n}$"; then
-              pane_width=$(tmux display-message -p "#{pane_width}")
-              pane_height=$(tmux display-message -p "#{pane_height}")
-              if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
-                tmux join-pane -h -t ":''${target_n}"
-              else
-                tmux join-pane -t ":''${target_n}"
-              fi
-            else
-              max_window=$(tmux list-windows -F "#{window_index}" | sort -n | tail -1)
-              if [ "''${target_n}" -gt "''${max_window}" ]; then
-                tmux break-pane
-              else
-                tmux break-pane -t ":''${target_n}"
-              fi
-            fi
-          }
-
-          case "$1" in
-          "toggle_pin")               toggle_pin ;;
-          "save_pins")                save_pins ;;
-          "restore_pins")             restore_pins ;;
-          "kill_pane")                kill_pane ;;
-          "kill_window")              kill_window ;;
-          "kill_server_confirm")      kill_server_confirm ;;
-          "toggle_mark_join")         toggle_mark_join ;;
-          "toggle_lazygit_window")    toggle_lazygit_window ;;
-          "toggle_sysmon_window")     toggle_sysmon_window ;;
-          "toggle_lazydocker_window") toggle_lazydocker_window ;;
-          "move_pane")                move_pane "$2" ;;
-          "move_pane_to_window")      move_pane_to_window "$2" ;;
-          "session_init")             session_init ;;
-          "set_ssh_flag")             set_ssh_flag "$2" ;;
-          "branch_ticket")            branch_ticket "$2" ;;
-          "reload")                   reload ;;
-          "pending_animation")        pending_animation "$2" "$3" "$4" ;;
-          esac
-
-        '';
-      };
+        case "$1" in
+        "toggle_pin")               toggle_pin ;;
+        "save_pins")                save_pins ;;
+        "restore_pins")             restore_pins ;;
+        "kill_pane")                kill_pane ;;
+        "kill_window")              kill_window ;;
+        "kill_server_confirm")      kill_server_confirm ;;
+        "toggle_mark_join")         toggle_mark_join ;;
+        "toggle_lazygit_window")    toggle_lazygit_window ;;
+        ${
+          lib.concatMapStrings (w: ''
+            "toggle_${w.window}_window") toggle_${w.window}_window ;;
+          '') toolWindows
+        }          "move_pane")                move_pane "$2" ;;
+        "move_pane_to_window")      move_pane_to_window "$2" ;;
+        "session_init")             session_init ;;
+        "set_ssh_flag")             set_ssh_flag "$2" ;;
+        "branch_ticket")            branch_ticket "$2" ;;
+        "reload")                   reload ;;
+        "pending_animation")        pending_animation "$2" "$3" "$4" ;;
+        esac
+      '';
 
       home.sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
 
@@ -705,8 +686,13 @@ _: {
           run-shell -b "#{@stubbe_commands} session_init"
           run-shell -b "#{@stubbe_commands} set_ssh_flag"
           bind -n M-g run-shell -b "#{@stubbe_commands} toggle_lazygit_window"     # Toggle lazygit
-          bind -n M-a run-shell -b "#{@stubbe_commands} toggle_sysmon_window"      # Toggle sysmon
-          bind -n M-A run-shell -b "#{@stubbe_commands} toggle_lazydocker_window"  # Toggle lazydocker
+          ${lib.concatMapStringsSep "\n" (
+            w:
+            bindRow {
+              keyField = 4;
+              commentCol = 73;
+            } w.key ''run-shell -b "#{@stubbe_commands} toggle_${w.window}_window"'' "Toggle ${w.window}"
+          ) toolWindows}
 
           bind    p   run-shell -b "#{@stubbe_commands} toggle_pin"                # Toggle pin (prefix)
           bind -n M-P run-shell -b "#{@stubbe_commands} toggle_pin"                # Toggle pin

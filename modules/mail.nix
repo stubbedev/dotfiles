@@ -8,18 +8,24 @@
       ...
     }:
     let
-      home = config.home.homeDirectory;
-      maildir = "${home}/.local/share/mail";
+      notmuchMcp = inputs.notmuch-mcp.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
-      passwords = {
-        kontainer = "${home}/.config/aerc/passwords/kontainer";
-        gmail = "${home}/.config/aerc/passwords/gmail";
-      };
+      maildirBase = ".local/share/mail";
+      maildir = "${config.home.homeDirectory}/${maildirBase}";
+      aercDir = "${config.xdg.configHome}/aerc";
+      realName = "Alexander Bugge Stage";
+
+      accountNames = [
+        "kontainer"
+        "gmail"
+      ];
+      passwords = lib.genAttrs accountNames (account: "${aercDir}/passwords/${account}");
+      queryMap = account: "${aercDir}/queries-${account}";
 
       # Not a notmuch post-new hook: that hook dir lives inside .notmuch/, which
-      # notmuch creates itself and home-manager will not symlink into, so
-      # Not regex: its delimiters cannot contain spaces, which breaks on
-      # `[Gmail]/All Mail`.
+      # notmuch creates itself and home-manager will not symlink into, so the
+      # tagging runs here after `notmuch new`. path: globs, not folder: regex:
+      # regex delimiters cannot contain spaces, which breaks on `[Gmail]/All Mail`.
       mailSync = pkgs.stubbe.bashApp {
         name = "mail-sync";
         runtimeInputs = with pkgs; [
@@ -28,7 +34,7 @@
           util-linux # flock
         ];
         text = ''
-          accounts=(${lib.concatStringsSep " " (lib.attrNames passwords)})
+          accounts=(${lib.escapeShellArgs accountNames})
           if [ "$#" -eq 0 ]; then
             channels=("''${accounts[@]}")
           else
@@ -52,16 +58,14 @@
             esac
           done
 
-          notmuch new --quiet || true
+          notmuch new --quiet
 
           ${lib.concatMapStrings (account: ''
-            notmuch tag +${account} -- 'path:${account}/** and not tag:${account}' || true
-          '') (lib.attrNames passwords)}
+            notmuch tag +${account} -- 'path:${account}/** and not tag:${account}'
+          '') accountNames}
           notmuch tag -inbox -- 'tag:inbox and ${
-            lib.concatStringsSep " and " (
-              map (account: "not folder:${account}/INBOX") (lib.attrNames passwords)
-            )
-          }' || true
+            lib.concatStringsSep " and " (map (account: "not folder:${account}/INBOX") accountNames)
+          }'
 
           if [ ''${#failed[@]} -gt 0 ]; then
             echo "mail-sync: failed channels: ''${failed[*]}" >&2
@@ -102,15 +106,6 @@
               lys-wmctl dispatch focuswindow "$id"
               lys-wmctl dispatch movetoworkspace "$ws"
               lys-wmctl dispatch focuswindow "$id"
-            else
-              spawn_term
-            fi
-          elif [[ "$XDG_CURRENT_DESKTOP" == "niri" ]] && command -v niri &> /dev/null; then
-            id=$(niri msg --json windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
-            if [[ -n "$id" ]]; then
-              ws=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .idx')
-              niri msg action move-window-to-workspace --window-id "$id" "$ws"
-              niri msg action focus-window --id "$id"
             else
               spawn_term
             fi
@@ -348,13 +343,13 @@
       # and aerc's check-mail-cmd rely on. Side effects outside mail: home-
       # manager's git module renders a sendemail section per smtp account.
       accounts.email = {
-        maildirBasePath = ".local/share/mail";
+        maildirBasePath = maildirBase;
 
         accounts = {
           kontainer = {
             primary = true;
             address = "abs@kontainer.com";
-            realName = "Alexander Bugge Stage";
+            inherit realName;
             userName = "abs@kontainer.com";
             passwordCommand = "cat ${passwords.kontainer}";
             folders.inbox = "INBOX";
@@ -393,7 +388,7 @@
               # Without the generated maildir-account-path aerc enumerates the
               # shared maildir root and every tab shows both accounts' folders.
               extraAccounts = {
-                query-map = "${home}/.config/aerc/queries-kontainer";
+                query-map = queryMap "kontainer";
                 exclude-tags = "deleted,spam";
                 folders = "INBOX,Sent";
                 archive = "Archive";
@@ -404,7 +399,7 @@
           };
           gmail = {
             address = "alexander.bugge.stage@gmail.com";
-            realName = "Alexander Bugge Stage";
+            inherit realName;
             userName = "alexander.bugge.stage@gmail.com";
             passwordCommand = "cat ${passwords.gmail}";
             folders = {
@@ -444,7 +439,7 @@
               enable = true;
               smtpAuth = "plain";
               extraAccounts = {
-                query-map = "${home}/.config/aerc/queries-gmail";
+                query-map = queryMap "gmail";
                 exclude-tags = "deleted,spam,trash";
                 folders = "INBOX,Sent";
                 archive = "[Gmail]/All Mail";
@@ -457,6 +452,12 @@
       };
 
       programs.mbsync.enable = true;
+
+      stubbe.mcpServers.notmuch-mcp = {
+        type = "stdio";
+        command = lib.getExe notmuchMcp;
+        args = [ ];
+      };
 
       # Identity and database.path come from accounts.email; search exclude
       # deleted;spam (stateVersion default) and new.ignore .uidvalidity/
@@ -521,11 +522,7 @@
       home.packages = [
         mailSync
         inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
-        # The one global MCP server: both AI clients register it
-        # (modules/ai/{claude-code,harness}.nix) and it reads this module's
-        # notmuch setup. Every other server is per-repo: .mcp.json registers
-        # it, that repo's flake dev shell provides the binary.
-        inputs.notmuch-mcp.packages.${pkgs.stdenv.hostPlatform.system}.default
+        notmuchMcp
         mailOpen
         mailUnsubscribe
         mailPager
@@ -637,9 +634,10 @@
           p = :postpone<Enter> # Save as draft
           q = :abort<Enter> # Quit compose
         '';
-        "aerc/queries-kontainer".text = queries.kontainer;
-        "aerc/queries-gmail".text = queries.gmail;
-      };
+      }
+      // lib.mapAttrs' (
+        account: text: lib.nameValuePair "aerc/queries-${account}" { inherit text; }
+      ) queries;
 
       stubbe.mutable = {
         ".config/aerc/stylesets".src = "mail/stylesets";
@@ -651,7 +649,7 @@
       # before writeBoundary and therefore before this step.
       stubbe.setup.mail.script = ''
         if [ ! -d ${lib.escapeShellArg "${maildir}/.notmuch"} ]; then
-          ${lib.getExe pkgs.notmuch} --config="${config.xdg.configHome}/notmuch/default/config" new --quiet || true
+          ${lib.getExe pkgs.notmuch} --config="${config.xdg.configHome}/notmuch/default/config" new --quiet
         fi
       '';
 

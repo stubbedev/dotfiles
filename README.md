@@ -58,7 +58,7 @@ home-manager on a fresh host.
      `colors`, `theme`, `newtabUrl`, `cache`, the `hm` command catalogue,
      `managedBy`. Needs nothing; mirrored as `flake.lib`.
    - `pkgs.stubbe.*` (`modules/core/pkgs/`) — every builder that needs `pkgs`:
-     `file`, `secret`, `bashApp`, `zshApp`, `shellScript`, `gen`, `gl`,
+     `secret`, `bashApp`, `zshApp`, `shellScript`, `gen`, `gl`,
      `check`, and the `setup.*` script fragments. Re-exports all of
      `stubbe.lib`, and is reachable from any module of any class because it
      rides on `pkgs`.

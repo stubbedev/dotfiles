@@ -147,6 +147,8 @@ in
       composer = inputs.maestro.packages.${pkgs.stdenv.hostPlatform.system}.default;
     in
     lib.mkIf config.features.php {
+      stubbe.zshCompletions._frankenphp = "${lib.getExe' frankenphp "frankenphp"} completion zsh | ${lib.getExe pkgs.gnused} 's/caddy/frankenphp/g'";
+
       home.packages = with pkgs; [
         phpStatic
         frankenphp

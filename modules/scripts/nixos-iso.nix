@@ -14,19 +14,8 @@ _: {
       nixosIso = pkgs.stubbe.bashApp {
         name = "nixos-iso";
         text = ''
-          set -euo pipefail
-
-          flake_dir="''${NIXOS_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}"
-          out_link="''${NIXOS_ISO_OUT_LINK:-''${XDG_CACHE_HOME:-$HOME/.cache}/nixos-installer-iso}"
-
-          has_cmd() {
-            command -v "$1" >/dev/null 2>&1
-          }
-
-          if has_cmd readlink; then
-            flake_dir=$(readlink -f "$flake_dir" 2>/dev/null || echo "$flake_dir")
-          fi
-
+          flake_dir=$(realpath -e "''${NIXOS_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}")
+          out_link="''${NIXOS_ISO_OUT_LINK:-${config.xdg.cacheHome}/nixos-installer-iso}"
           flake_ref="path:$flake_dir"
 
           usage() {
@@ -125,7 +114,7 @@ _: {
             fi
 
             if [[ "''${#nix_args[@]}" -gt 0 ]] || \
-               ! { [[ -L "$out_link" ]] && [[ -e "$(readlink -f "$out_link" 2>/dev/null || true)" ]]; }; then
+               ! [[ -e "$out_link" ]]; then
               build_iso "''${nix_args[@]}"
             else
               echo "Reusing existing ISO build: $(readlink -f "$out_link")"
@@ -133,12 +122,7 @@ _: {
             iso_path=$(resolve_iso_path)
 
             echo "Writing $iso_path to $device"
-            iso_size=$(stat -c%s "$iso_path" 2>/dev/null || stat -f%z "$iso_path" 2>/dev/null || echo 0)
-            if command -v pv >/dev/null 2>&1 && [[ "$iso_size" -gt 0 ]]; then
-              pv -s "$iso_size" "$iso_path" | sudo dd of="$device" bs=16M conv=fsync
-            else
-              sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
-            fi
+            sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
             sync
           }
 

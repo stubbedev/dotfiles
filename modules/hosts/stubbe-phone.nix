@@ -40,7 +40,6 @@ in
             host = {
               platform = "android";
               profile = "mobile";
-              flakeAttr = "phone";
             };
           };
         };

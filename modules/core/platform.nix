@@ -1,8 +1,42 @@
-_: {
+{ config, ... }:
+let
+  inherit (config.stubbe.lib) userName;
+
+  sharedOptions = lib: {
+    mdnsName = lib.mkOption {
+      type = lib.types.nullOr (lib.types.enum (builtins.attrNames config.stubbe.lib.lanHosts));
+      default = null;
+      description = ''
+        The name this host advertises over mDNS: it is reachable as
+        `<mdnsName>.local`, which is the key it carries in
+        `stubbe.lib.lanHosts` (modules/core/lib/lan-hosts.nix). On NixOS it
+        feeds `services.avahi.settings.server."host-name"`. Null leaves
+        avahi on the system hostname, which then also gains avahi's
+        collision counter suffix (`-2`, `-3`, …) whenever an interface
+        publishes it twice.
+      '';
+    };
+
+    graphicsNvidia = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        The machine's display GPU is NVIDIA. The one GPU decision a host
+        makes; versions, kernel modules and userspace follow from nixpkgs
+        and the distro driver package on their own. On NixOS,
+        modules/graphics.nix selects the nvidia driver stack from it. Under
+        standalone home-manager, modules/core/pkgs/gl.nix wraps programs for
+        glvnd NVIDIA vendor dispatch against the host's own driver libraries
+        when true, and uses nixGLIntel when false.
+      '';
+    };
+  };
+in
+{
   flake.modules.homeManager.platform =
     { lib, ... }:
     {
-      options.host = {
+      options.host = sharedOptions lib // {
         platform = lib.mkOption {
           type = lib.types.enum [
             "linux"
@@ -36,44 +70,17 @@ _: {
           '';
         };
 
-        mdnsName = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = ''
-            The name this host advertises over mDNS: it is reachable as
-            `<mdnsName>.local`, which is the key it carries in
-            `stubbe.lib.lanHosts` (modules/core/lib/lan-hosts.nix). Empty
-            leaves avahi on the system hostname, which then also gains
-            avahi's collision counter suffix (`-2`, `-3`, …) whenever an
-            interface publishes it twice.
-          '';
+        battery = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "The machine runs on a battery, so the desktop shell shows its charge.";
         };
 
         flakeAttr = lib.mkOption {
           type = lib.types.str;
-          default = "";
           description = ''
-            The attribute this machine's configuration is defined under, when
-            that differs from its hostname. `hm` defaults to `hostname -s` for
-            NixOS and to `$USER` for standalone home-manager, neither of which
-            matches the nix-on-droid host name on Android.
-          '';
-        };
-
-        graphicsNvidia = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = ''
-            The machine's display GPU is NVIDIA. Drives the standalone
-            home-manager GL wiring: modules/core/pkgs/gl.nix wraps programs
-            for glvnd NVIDIA vendor dispatch against the host's own driver
-            libraries when true, and uses nixGLIntel when false. NixOS hosts
-            carry the same option on the NixOS side, where
-            modules/graphics.nix selects the kernel driver stack from it.
-            Replaces the /proc probe, which pure eval silently answered
-            false. The one GPU decision a host makes; everything else -
-            versions, kernel modules, userspace - follows from nixpkgs and
-            the distro driver package on their own.
+            The attribute this machine's configuration is defined under.
+            modules/core/configurations.nix sets it from the attribute name.
           '';
         };
       };
@@ -82,10 +89,10 @@ _: {
   flake.modules.nixos.platform =
     { lib, ... }:
     {
-      options.host = {
+      options.host = sharedOptions lib // {
         primaryUser = lib.mkOption {
           type = lib.types.str;
-          default = "stubbe";
+          default = userName;
           description = ''
             Username of the host's primary user. NixOS modules read this to
             locate the matching home-manager.users.<name> entry, so they can
@@ -137,28 +144,6 @@ _: {
               2. Audit the persistence list in modules/impermanence.nix; add
                  anything host-specific.
               3. Flip this flag to true; rebuild; reboot.
-          '';
-        };
-
-        mdnsName = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = ''
-            The name this host advertises over mDNS, fed to
-            `services.avahi.settings.server."host-name"`; see the
-            home-manager half of this option for why it is standardized.
-          '';
-        };
-
-        graphicsNvidia = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = ''
-            The host's display GPU is NVIDIA. Replaces the /proc probe that
-            forced --impure on every rebuild: modules/graphics.nix selects
-            the nvidia driver stack when true and the intel/amdgpu defaults
-            when false. Set it in the host's declaration
-            (modules/hosts/<name>.nix).
           '';
         };
       };

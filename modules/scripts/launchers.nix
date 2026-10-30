@@ -1,106 +1,4 @@
-# The tmux/fzf pickers every session binding dispatches to.
 _: {
-  # Exposed via `stubbe.lib` so the bins tmux.nix installs are built from
-  # these bytes.
-  stubbe.lib.tmuxLaunchers = {
-    "tmux-pick-session" = ''
-
-
-      SELF=''${0:A}
-
-      label_of() {
-        local name="$1" user="''${USER:-$(whoami)}"
-        if [[ $name == "$user("*")" ]]; then
-        name=''${name#"$user("}
-        name=''${name%")"}
-        fi
-        print -r -- "$name"
-      }
-
-      picker_lines() {
-        local name
-        while IFS= read -r name; do
-        [[ -n $name ]] && printf '%s\t%s\n' "$name" "$(label_of "$name")"
-        done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
-      }
-
-      if [[ $1 == --lines ]]; then
-        picker_lines
-        exit 0
-      fi
-
-      LINES_OUT=$(picker_lines)
-
-      if [[ -z $LINES_OUT ]]; then
-        clear
-        exit 0
-      fi
-
-      SELECTED=$(print -r -- "$LINES_OUT" |
-        fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
-          --header='tab: copy name')
-
-      SESSION=''${SELECTED%%$'\t'*}
-      [[ -z $SESSION ]] && exit 0
-
-      if [[ -n $TMUX ]]; then
-        tmux switch-client -t "=$SESSION"
-      else
-        tmux attach-session -t "=$SESSION"
-      fi
-    '';
-    "tmux-pick-project" = ''
-
-      SELECTED=$(fzf-pick-project "$*")
-
-      if [[ -z $SELECTED ]]; then
-        exit 0
-      fi
-
-      SELECTED_NAME=$(basename "$SELECTED" | tr '.' '_')
-      TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
-
-      # An idle shell whose directory is gone (deleted worktree) poisons every
-      # later `new-window -c "#{pane_current_path}"`: tmux cannot chdir there
-      # and falls back to its own cwd, which is how a project session ends up
-      # opening windows in $HOME. Nothing is running in such a pane, so restart
-      # it at the project root instead of inheriting the drift.
-      reroot_dead_panes() {
-        local pane cwd cmd shell
-        shell=$(basename "$(tmux show-option -gv default-shell)")
-        while IFS=$'\t' read -r pane cwd cmd; do
-          [[ -n $pane && $cmd == "$shell" && ! -d $cwd ]] || continue
-          tmux respawn-pane -k -c "$SELECTED" -t "$pane"
-        done < <(tmux list-panes -s -t "=$TMUXCLIENTNAME" \
-          -F $'#{pane_id}\t#{pane_current_path}\t#{pane_current_command}' 2>/dev/null)
-      }
-
-      if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
-        tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
-        tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
-      fi
-
-      reroot_dead_panes
-
-      # attach-session refuses to run inside a client ("sessions should be
-      # nested with care"), so the two cases stay split.
-      if [[ -n $TMUX ]]; then
-        tmux switch-client -t "=$TMUXCLIENTNAME"
-      else
-        tmux attach-session -t "=$TMUXCLIENTNAME"
-      fi
-    '';
-    "tmux-new-session" = ''
-
-      if [ -z "$1" ]; then
-        TMUXCLIENTNAME="$(whoami)(''${''${PWD:t}//./_})"
-      else
-        TMUXCLIENTNAME="$1"
-      fi
-      tmux new -As "$TMUXCLIENTNAME"
-    '';
-  };
-
   flake.modules.homeManager.script-launchers =
     {
       config,
@@ -109,28 +7,97 @@ _: {
       ...
     }:
     let
-      launchers = pkgs.stubbe.tmuxLaunchers // {
-        "fzf-pick-directory" = ''
+      launchers = {
+        "tmux-pick-session" = ''
+          label_of() {
+            local name="$1" user="''${USER:-$(whoami)}"
+            if [[ $name == "$user("*")" ]]; then
+            name=''${name#"$user("}
+            name=''${name%")"}
+            fi
+            print -r -- "$name"
+          }
 
+          picker_lines() {
+            local name
+            while IFS= read -r name; do
+            [[ -n $name ]] && printf '%s\t%s\n' "$name" "$(label_of "$name")"
+            done < <(tmux list-sessions -F "#{session_name}" 2>/dev/null)
+          }
+
+          LINES_OUT=$(picker_lines)
+
+          if [[ -z $LINES_OUT ]]; then
+            clear
+            exit 0
+          fi
+
+          SELECTED=$(print -r -- "$LINES_OUT" |
+            fzf --prompt="select tmux session: " --delimiter=$'\t' --with-nth=2.. \
+              --header='tab: copy name')
+
+          SESSION=''${SELECTED%%$'\t'*}
+          [[ -z $SESSION ]] && exit 0
+
+          if [[ -n $TMUX ]]; then
+            tmux switch-client -t "=$SESSION"
+          else
+            tmux attach-session -t "=$SESSION"
+          fi
+        '';
+        "tmux-pick-project" = ''
+          SELECTED=$(fzf-pick-project "$*")
+
+          if [[ -z $SELECTED ]]; then
+            exit 0
+          fi
+
+          SELECTED_NAME=$(basename "$SELECTED" | tr '.' '_')
+          TMUXCLIENTNAME="$(whoami)($SELECTED_NAME)"
+
+          # An idle shell whose directory is gone (deleted worktree) poisons every
+          # later `new-window -c "#{pane_current_path}"`: tmux cannot chdir there
+          # and falls back to its own cwd, which is how a project session ends up
+          # opening windows in $HOME. Nothing is running in such a pane, so restart
+          # it at the project root instead of inheriting the drift.
+          reroot_dead_panes() {
+            local pane cwd cmd shell
+            shell=$(basename "$(tmux show-option -gv default-shell)")
+            while IFS=$'\t' read -r pane cwd cmd; do
+              [[ -n $pane && $cmd == "$shell" && ! -d $cwd ]] || continue
+              tmux respawn-pane -k -c "$SELECTED" -t "$pane"
+            done < <(tmux list-panes -s -t "=$TMUXCLIENTNAME" \
+              -F $'#{pane_id}\t#{pane_current_path}\t#{pane_current_command}' 2>/dev/null)
+          }
+
+          if ! tmux has-session -t="$TMUXCLIENTNAME" 2>/dev/null; then
+            tmux new-session -ds "$TMUXCLIENTNAME" -c "$SELECTED"
+            tmux set-option -t "$TMUXCLIENTNAME" @stubbe_has_git 1
+          fi
+
+          reroot_dead_panes
+
+          # attach-session refuses to run inside a client ("sessions should be
+          # nested with care"), so the two cases stay split.
+          if [[ -n $TMUX ]]; then
+            tmux switch-client -t "=$TMUXCLIENTNAME"
+          else
+            tmux attach-session -t "=$TMUXCLIENTNAME"
+          fi
+        '';
+        "tmux-new-session" = ''
+          if [ -z "$1" ]; then
+            TMUXCLIENTNAME="$(whoami)(''${''${PWD:t}//./_})"
+          else
+            TMUXCLIENTNAME="$1"
+          fi
+          tmux new -As "$TMUXCLIENTNAME"
+        '';
+        "fzf-pick-directory" = ''
           SELECTED_DIR="$(find . -maxdepth 5 -mindepth 1 -type d ! -path '*/\.*' -print 2>/dev/null | fzf --no-multi --algo=v1 --query="$*")"
-          echo "''${SELECTED_DIR:-}"
+          echo "$SELECTED_DIR"
         '';
         "fzf-pick-project" = ''
-
-          INITIAL_QUERY="$*"
-          FILTER_PATTERNS=(
-            "go/pkg"
-          )
-          AWK_FILTER=""
-          for pattern in "''${FILTER_PATTERNS[@]}"; do
-            ESCAPED_PATTERN="''${pattern//\\/\\\\}"
-            ESCAPED_PATTERN="''${ESCAPED_PATTERN//\"/\\\"}"
-            if [[ -n "$AWK_FILTER" ]]; then
-              AWK_FILTER="$AWK_FILTER && "
-            fi
-            AWK_FILTER="$AWK_FILTER index(tolower(\$0), tolower(\"$ESCAPED_PATTERN\")) == 0"
-          done
-
           home_results() {
             fd . \
               --base-directory ~ \
@@ -141,33 +108,24 @@ _: {
               | awk -v home="$HOME" '!/^\./ && /\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print home "/" $0 }'
           }
 
-          nixos_results() {
-            [[ -d /etc/nixos ]] || return 0
-            fd . \
-              --base-directory /etc/nixos \
-              -t d \
-              --max-depth 3 \
-              --min-depth 1 \
-              --hidden 2>/dev/null \
-              | awk '/\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print "/etc/nixos/" $0 }'
-            [[ -d /etc/nixos/.git ]] && echo "/etc/nixos"
-          }
-
           all_results() {
             home_results
-            nixos_results
+            ${lib.optionalString (config.host.platform == "nixos") ''
+              fd . \
+                --base-directory /etc/nixos \
+                -t d \
+                --max-depth 3 \
+                --min-depth 1 \
+                --hidden 2>/dev/null \
+                | awk '/\/\.git/ { sub(/\/\.git.*/, ""); if (!seen[$0]++) print "/etc/nixos/" $0 }'
+              [[ -d /etc/nixos/.git ]] && echo "/etc/nixos"
+            ''}
           }
 
-          if [[ -n "$AWK_FILTER" ]]; then
-            SELECTED_PATH="$(all_results | awk "$AWK_FILTER" | fzf --no-multi --query="$INITIAL_QUERY")"
-          else
-            SELECTED_PATH="$(all_results | fzf --no-multi --query="$INITIAL_QUERY")"
-          fi
-
-          echo "''${SELECTED_PATH:-}"
+          SELECTED_PATH="$(all_results | awk '!index(tolower($0), "go/pkg")' | fzf --no-multi --query="$*")"
+          echo "$SELECTED_PATH"
         '';
         "tmux-claude" = ''
-
           inline=0
           if [[ "$1" == "--inline" ]]; then
             inline=1
@@ -182,7 +140,6 @@ _: {
           fi
         '';
         "tmux-harness" = ''
-
           if [[ -z "$TMUX" ]]; then
             harness "$@"
           else
@@ -191,12 +148,10 @@ _: {
           fi
         '';
         "tmux-lazy-docker" = ''
-
           exec lazydocker
         '';
         "tmux-lazy-git" = ''
-
-          if [[ ! -d .git ]] && ! git rev-parse --git-dir >/dev/null 2>&1; then
+          if ! git rev-parse --git-dir >/dev/null 2>&1; then
             clear
             exit 0
           fi
@@ -204,21 +159,15 @@ _: {
           exec lazygit
         '';
         "tmux-pick-directory" = ''
-
-          if [[ $# -eq 1 ]]; then
-            SELECTED=$1
-          else
-            SELECTED=$(find . -maxdepth 5 -mindepth 1 -type d ! -path '*/\.*' -print 2>/dev/null | fzf --algo=v1)
-          fi
-
+          SELECTED=$(fzf-pick-directory "$@")
           if [[ -z $SELECTED ]]; then
             exit 0
           fi
 
           cd "$SELECTED" || exit 1
+          exec "$SHELL"
         '';
         "tmux-system-monitor" = ''
-
           exec btop
         '';
       };
@@ -231,10 +180,17 @@ _: {
       };
 
       wanted = lib.filterAttrs (name: _: toolFeature.${name} or true) launchers;
-
-      launcherBins = lib.mapAttrsToList (name: text: pkgs.stubbe.zshApp { inherit name text; }) wanted;
     in
     {
-      home.packages = launcherBins;
+      options.stubbe.launchers = lib.mkOption {
+        type = lib.types.attrsOf lib.types.package;
+        readOnly = true;
+        description = "The launcher bins this host installs, by name, for the bindings that dispatch to them.";
+      };
+
+      config = {
+        stubbe.launchers = lib.mapAttrs (name: text: pkgs.stubbe.zshApp { inherit name text; }) wanted;
+        home.packages = builtins.attrValues config.stubbe.launchers;
+      };
     };
 }

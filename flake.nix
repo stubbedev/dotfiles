@@ -29,8 +29,6 @@
       url = "github:stubbedev/treeman";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Pinned to the tag the SERVER runs: the cache-config API is versioned, so a
-    # client ahead of the server 404s.
     xilo = {
       url = "github:stubbedev/xilo";
       inputs.nixpkgs.follows = "nixpkgs";

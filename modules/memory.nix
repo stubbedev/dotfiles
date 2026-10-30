@@ -158,6 +158,13 @@ in
             pacman = [ "zram-generator" ];
           }}
 
+          ${pkgs.stubbe.setup.hostPackage {
+            have = "systemctl list-unit-files systemd-oomd.service >/dev/null 2>&1";
+            apt = [ "systemd-oomd" ];
+            dnf = [ "systemd-oomd-defaults" ];
+            pacman = [ "systemd" ];
+          }}
+
           ${pkgs.stubbe.setup.text {
             name = "zram-generator.conf";
             target = "/etc/systemd/zram-generator.conf";
@@ -208,10 +215,10 @@ in
           }}
 
           if systemctl list-unit-files earlyoom.service >/dev/null 2>&1; then
-            sudo systemctl disable --now earlyoom.service >/dev/null 2>&1 || true
-            sudo systemctl mask earlyoom.service >/dev/null 2>&1 || true
+            sudo systemctl disable --now earlyoom.service
+            sudo systemctl mask earlyoom.service
           fi
-          sudo systemctl enable --now systemd-oomd.service >/dev/null 2>&1 || true
+          sudo systemctl enable --now systemd-oomd.service
 
           ${pkgs.stubbe.setup.reloadUnits}
           sudo systemctl restart systemd-zram-setup@zram0.service

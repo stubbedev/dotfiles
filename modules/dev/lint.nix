@@ -65,7 +65,7 @@
           name = "lint-shellcheck";
           nativeBuildInputs = [ pkgs.shellcheck ];
           text = ''
-            shellcheck -S warning ${self}/bin/stb-install ${self}/bin/stb-install-nixos
+            shellcheck -S warning ${self}/bin/*
             touch "$out"
           '';
         };

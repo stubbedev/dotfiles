@@ -1,12 +1,21 @@
 # Branch of the pkgs.stubbe helper tree (see ./default.nix).
 # Script writers. All of them syntax-check and shellcheck what they build.
 let
+  # -S warning, not the default style severity, which fails builds on
+  # cosmetic findings.
+  lint =
+    { final, lib, ... }:
+    ''
+      ${final.stdenv.shellDryRun} "$target"
+      ${lib.getExe final.shellcheck} -S warning "$target"
+    '';
+
   shellFile =
     {
       final,
       lib,
       ...
-    }:
+    }@args:
     {
       name,
       text,
@@ -20,18 +29,13 @@ let
       text = ''
         #!${final.runtimeShell}
         ${text}'';
-      checkPhase = ''
-        ${final.stdenv.shellDryRun} "$target"
-        ${lib.getExe final.shellcheck} -S warning "$target"
-      '';
+      checkPhase = lint args;
     };
 in
 {
   stubbe.pkgsLib = {
-    # -S warning, not the default style severity, which fails builds on
-    # cosmetic findings.
     bashApp =
-      { final, lib, ... }:
+      { final, ... }@args:
       {
         name,
         text,
@@ -41,17 +45,10 @@ in
         inherit name text runtimeInputs;
         checkPhase = ''
           runHook preCheck
-          ${final.stdenv.shellDryRun} "$target"
-          ${lib.getExe final.shellcheck} -S warning "$target"
+          ${lint args}
           runHook postCheck
         '';
       };
-
-    # Drop-in replacements for writeShellScript/writeShellScriptBin that add
-    # bashApp's checks. Separate from bashApp because writeShellApplication
-    # always prepends `set -euo pipefail`, which rewrites the control flow of
-    # scripts not written for it; these keep plain semantics and only add the
-    # syntax check and shellcheck.
 
     zshApp =
       { final, lib, ... }:

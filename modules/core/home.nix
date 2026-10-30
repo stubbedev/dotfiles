@@ -26,9 +26,9 @@
 
       home = {
         # mkDefault so the NixOS bridge can set these from
-        # users.users.<name>.home without a priority conflict; on standalone HM
-        username = lib.mkDefault "stubbe";
-        homeDirectory = lib.mkDefault "/home/stubbe";
+        # users.users.<name>.home without a priority conflict.
+        username = lib.mkDefault pkgs.stubbe.userName;
+        homeDirectory = lib.mkDefault "/home/${pkgs.stubbe.userName}";
         stateVersion = "26.05";
 
         enableNixpkgsReleaseCheck = false;
@@ -36,7 +36,9 @@
         sessionPath = [
           config.stubbe.paths.nixBin
           "$HOME/.local/bin"
-          "$HOME/.config/composer/vendor/bin"
+        ]
+        ++ lib.optional config.features.php "$HOME/.config/composer/vendor/bin"
+        ++ [
           "/usr/local/bin"
           "/usr/bin"
           "/bin"
@@ -46,7 +48,7 @@
 
       targets.genericLinux = lib.mkIf onLinux {
         enable = true;
-        nixGL.packages = pkgs.nixgl;
+        gpu.enable = false;
       };
 
       # Set on every platform, not just non-NixOS: home-manager defaults
@@ -78,7 +80,6 @@
         ];
 
         max-jobs = "auto";
-        cores = 2;
 
         download-buffer-size = 128 * 1024 * 1024;
       };

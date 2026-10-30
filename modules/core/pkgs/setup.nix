@@ -81,11 +81,12 @@ _: {
 
       reloadUdev = ''
         if command -v udevadm >/dev/null 2>&1; then
-          sudo udevadm control --reload-rules >/dev/null 2>&1 || true
+          sudo udevadm control --reload-rules
         fi
       '';
 
       # Rules want root:polkitd where that group exists, root:root otherwise.
+      # polkitd watches its rules directories, so no restart is needed.
       polkitRule =
         { source, target }:
         ''
@@ -93,16 +94,11 @@ _: {
           if getent group polkitd >/dev/null 2>&1; then
             sudo chown root:polkitd ${lib.escapeShellArg target}
           fi
-          if command -v systemctl >/dev/null 2>&1; then
-            sudo systemctl restart polkit.service >/dev/null 2>&1 || true
-          fi
         '';
 
       # Each exits 0 so the rest of the setup, including its sudo prompt, is
-      # skipped. PATH is restored first: activations run stripped and many
-      # probes live under /sbin.
+      # skipped.
       requireCommand = cmd: ''
-        PATH="/sbin:/usr/sbin:/bin:/usr/bin:$PATH"
         if ! command -v ${cmd} >/dev/null 2>&1; then
           exit 0
         fi
@@ -140,8 +136,7 @@ _: {
             ${stubbe.setup.text {
               name = profileName;
               target = "/etc/apparmor.d/${profileName}";
-              text = ''
-                # managed-by: stubbe ${profileName}
+              text = stubbe.managedBy profileName + ''
                 abi <abi/4.0>,
                 include <tunables/global>
                 profile ${profileName} ${programGlob} flags=(unconfined) {
@@ -163,7 +158,7 @@ _: {
           mode ? "0600",
         }:
         let
-          valueFile = (final.formats.json { }).generate "${name}.json" value;
+          valueFile = stubbe.gen.json "${name}.json" value;
         in
         ''
           if ! cmp -s ${valueFile} ${lib.escapeShellArg target}; then
@@ -183,30 +178,23 @@ _: {
           mode ? "0600",
         }:
         let
-          valueFile = (final.formats.json { }).generate "${name}.json" value;
+          valueFile = stubbe.gen.json "${name}.json" value;
+          tmp = lib.escapeShellArg "${target}.hm-tmp";
+          dst = lib.escapeShellArg target;
+          jq = lib.getExe final.jq;
         in
         ''
-          mkdir -p "$(dirname ${lib.escapeShellArg target})"
-          if [ -f ${lib.escapeShellArg target} ]; then
-            ${lib.getExe final.jq} --slurpfile v ${valueFile} '.[${builtins.toJSON key}] = $v[0]' \
-              ${lib.escapeShellArg target} > ${lib.escapeShellArg "${target}.hm-tmp"}
-            if cmp -s ${lib.escapeShellArg "${target}.hm-tmp"} ${lib.escapeShellArg target}; then
-              rm -f ${lib.escapeShellArg "${target}.hm-tmp"}
-            else
-              mv ${lib.escapeShellArg "${target}.hm-tmp"} ${lib.escapeShellArg target}
-            fi
+          install -D -m ${mode} /dev/null ${tmp}
+          if [ -f ${dst} ]; then
+            ${jq} --slurpfile v ${valueFile} '.[${builtins.toJSON key}] = $v[0]' ${dst} > ${tmp}
           else
-            ${lib.getExe final.jq} -n --slurpfile v ${valueFile} '{ ${builtins.toJSON key}: $v[0] }' \
-              > ${lib.escapeShellArg target}
-            chmod ${mode} ${lib.escapeShellArg target}
+            ${jq} -n --slurpfile v ${valueFile} '{ ${builtins.toJSON key}: $v[0] }' > ${tmp}
+          fi
+          if cmp -s ${tmp} ${dst}; then
+            rm -f ${tmp}
+          else
+            mv ${tmp} ${dst}
           fi
         '';
-
-      # ── Config generators ──────────────────────────────────────────────
-      # gen.<fmt> name value -> store path. conf.<fmt> maps
-      # { "<path>" = <value>; } straight into xdg.configFile shape, so a
-      # module states each config file once instead of repeating its name and
-      # reaching for lib.mkMerge.
-
     };
 }

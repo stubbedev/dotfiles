@@ -9,11 +9,32 @@
     }:
     let
       inherit (config.stubbe) gfx;
+      nodeCaBundle = "${config.xdg.cacheHome}/node/extra-ca.pem";
     in
     {
       imports = [ inputs.direnv-instant.homeModules.direnv-instant ];
 
       config = lib.mkIf config.features.development {
+        home.sessionVariables.NODE_EXTRA_CA_CERTS = nodeCaBundle;
+
+        home.file.".prettierrc.json".source = pkgs.stubbe.gen.json "prettierrc.json" {
+          printWidth = 80;
+          useTabs = true;
+          singleQuote = true;
+          overrides = [
+            {
+              files = [
+                "*.md"
+                "*.mdx"
+              ];
+              options = {
+                proseWrap = "always";
+                printWidth = 80;
+              };
+            }
+          ];
+        };
+
         # Language toolchains (go, rust, the C/C++ linker stack) are deliberately
         # absent: each repo's flake dev shell owns them, loaded by direnv on cd.
         # Only what is repo-agnostic stays.
@@ -85,8 +106,8 @@
             ]
           }:$PATH"
 
-          bundle="${config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
-          bundle_dir="${dirOf config.home.sessionVariables.NODE_EXTRA_CA_CERTS}"
+          bundle="${nodeCaBundle}"
+          bundle_dir="${dirOf nodeCaBundle}"
           tmp="$bundle.tmp"
 
           mkdir -p "$bundle_dir"
@@ -104,8 +125,8 @@
           }
 
           add_srv_paths() {
-            add_file "''${XDG_DATA_HOME:-$HOME/.local/share}/mkcert/rootCA.pem"
-            local sites_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/srv/sites"
+            add_file "${config.xdg.dataHome}/mkcert/rootCA.pem"
+            local sites_dir="${config.xdg.configHome}/srv/sites"
             [ -d "$sites_dir" ] || return 0
             for site_dir in "$sites_dir"/*/; do
               add_dir "$site_dir/certs"
@@ -138,6 +159,7 @@
               Type = "oneshot";
               ExecStart = pkgs.stubbe.shellScript "dev-cleanup" ''
                 set -u
+                PATH="${lib.makeBinPath [ pkgs.coreutils ]}:$PATH"
 
                 find="${lib.getExe' pkgs.findutils "find"}"
                 grep="${lib.getExe' pkgs.gnugrep "grep"}"
@@ -151,32 +173,27 @@
                     done
 
                 ${lib.optionalString config.features.docker ''
-                  docker="$(command -v docker || true)"
-                  if [ -n "$docker" ]; then
-                    "$docker" builder prune -f >/dev/null 2>&1 || true
-                    "$docker" image prune -f >/dev/null 2>&1 || true
+                  docker="${lib.getExe pkgs.docker}"
+                  "$docker" builder prune -f >/dev/null
+                  "$docker" image prune -f >/dev/null
 
-                    "$docker" volume ls -f dangling=true -q 2>/dev/null \
-                      | "$grep" -E '^[0-9a-f]{64}$' \
-                      | while IFS= read -r v; do "$docker" volume rm "$v" >/dev/null 2>&1 || true; done
+                  "$docker" volume ls -f dangling=true -q \
+                    | "$grep" -E '^[0-9a-f]{64}$' \
+                    | while IFS= read -r v; do "$docker" volume rm "$v" >/dev/null; done
 
-                    "$docker" volume ls -q 2>/dev/null | "$grep" -E '^buildx_buildkit_.*_state$' \
-                      | while IFS= read -r v; do
-                          b="''${v#buildx_buildkit_}"
-                          b="''${b%0_state}"
-                          if ! "$docker" buildx inspect "$b" >/dev/null 2>&1; then
-                            echo "rm orphaned buildx state: $v"
-                            "$docker" volume rm "$v" >/dev/null 2>&1 || true
-                          fi
-                        done
-                  fi
+                  "$docker" volume ls -q | "$grep" -E '^buildx_buildkit_.*_state$' \
+                    | while IFS= read -r v; do
+                        b="''${v#buildx_buildkit_}"
+                        b="''${b%0_state}"
+                        if ! "$docker" buildx inspect "$b" >/dev/null 2>&1; then
+                          echo "rm orphaned buildx state: $v"
+                          "$docker" volume rm "$v" >/dev/null
+                        fi
+                      done
                 ''}
               '';
               Nice = 19;
               IOSchedulingClass = "idle";
-              Environment = [
-                "PATH=/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin"
-              ];
             };
           };
 

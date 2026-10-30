@@ -29,10 +29,6 @@ in
           # `<nixpkgs>` resolves to the flake's pinned tree.
           nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
 
-          # Upstream nix evaluates single-threaded (~26s per no-op rebuild
-          # here); Determinate nix was dropped for its version drift and
-          # opaque errors, and its parallel evaluator went with it.
-
           # The HM-side copy only applies to standalone HM, so without this the
           # daemon falls back to default substituters and misses nix.stubbe.dev.
           inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
@@ -94,12 +90,9 @@ in
         };
       };
 
-      system.activationScripts = {
-        pruneSystemGenerations.text = ''
-          ${lib.getExe' config.nix.package "nix-env"} --profile /nix/var/nix/profiles/system --delete-generations +2 || true
-        '';
-
-      };
+      system.activationScripts.pruneSystemGenerations.text = ''
+        ${lib.getExe' config.nix.package "nix-env"} --profile /nix/var/nix/profiles/system --delete-generations +2
+      '';
 
       # Rendered into /run, not the store: `nix.settings.access-tokens` would
       # put the token in the world-readable nix.conf. Owned by primaryUser
@@ -130,7 +123,6 @@ in
       home.packages = lib.mkIf config.features.development (
         with pkgs;
         [
-          nix-zsh-completions
           xilo
           nixd
           nixdoc
@@ -138,10 +130,10 @@ in
         ]
       );
 
-      # Weekly expiry replaces both the old activation-time +2 prune of the
-      # home-manager/profile/channels profiles and the hand-rolled store GC
-      # timer. Store cleanup stays standalone-only: on NixOS the system
-      # nix.gc above already sweeps the whole store weekly, and on Android
+      stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
+
+      # Store cleanup stays standalone-only: on NixOS the system nix.gc above
+      # already sweeps the whole store weekly, and on Android
       # `nix-on-droid trim` owns it.
       services.home-manager.autoExpire = {
         enable = !onAndroid;

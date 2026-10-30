@@ -1,8 +1,29 @@
+{ lib, ... }:
 let
   # avahi ships this service definition: _ssh._tcp on port 22, instance name
   # %h (the avahi host name, i.e. host.mdnsName). Both halves of this aspect
   # publish it, so the path lives once.
   sshServiceFile = pkgs: "${pkgs.avahi}/etc/avahi/services/ssh.service";
+
+  yesNo = v: if lib.isBool v then lib.boolToYesNo v else toString v;
+
+  sshdLogin = {
+    PasswordAuthentication = false;
+    KbdInteractiveAuthentication = false;
+    PermitRootLogin = "no";
+  };
+  sshdKeepalive = {
+    ClientAliveInterval = 60;
+    ClientAliveCountMax = 3;
+  };
+
+  avahiHostName = mdnsName: lib.optionalAttrs (mdnsName != null) { host-name = mdnsName; };
+  avahiPublish = {
+    publish-addresses = true;
+    publish-hinfo = true;
+    publish-workstation = true;
+    publish-domain = true;
+  };
 in
 {
   flake.modules.nixos.network =
@@ -29,21 +50,16 @@ in
 
       services.openssh = {
         enable = true;
-        settings = {
-          PasswordAuthentication = lib.mkDefault false;
-          KbdInteractiveAuthentication = lib.mkDefault false;
-          # mkDefault so the live ISO can override to "prohibit-password" —
-          # root login over SSH is the only way to remote-debug a stuck install.
-          PermitRootLogin = lib.mkDefault "no";
-          ClientAliveInterval = 60;
-          ClientAliveCountMax = 3;
-        };
+        # mkDefault so the live ISO can override to "prohibit-password" —
+        # root login over SSH is the only way to remote-debug a stuck install.
+        settings = lib.mapAttrs (_: lib.mkDefault) sshdLogin // sshdKeepalive;
       };
 
       # nssmdns4 is intentionally OFF: it hooks `mdns4_minimal
       # [NOTFOUND=return]` into nsswitch ahead of `resolve`, which hijacks every
       # `*.local` lookup to multicast mDNS and returns before systemd-resolved
       # is consulted. srv routes its local domains (including `*.local`) through
+      # systemd-resolved.
       services.avahi = lib.mkIf config.stubbe.userFeatures.avahi {
         enable = true;
         nssmdns4 = false;
@@ -63,16 +79,11 @@ in
               "enp4s0"
               "wlp3s0"
             ];
-            # <mdnsName>.local, independent of the system hostname.
-            "host-name" = lib.mkIf (config.host.mdnsName != "") config.host.mdnsName;
-          };
-          publish = {
+          }
+          // avahiHostName config.host.mdnsName;
+          publish = avahiPublish // {
             disable-publishing = false;
             disable-user-service-publishing = false;
-            publish-addresses = true;
-            publish-domain = true;
-            publish-hinfo = true;
-            publish-workstation = true;
           };
         };
       };
@@ -194,30 +205,27 @@ in
             main()
           '';
 
-      # The daemon.conf both halves of this aspect agree on. $ifaces is a
-      # shell variable, interpolated when the activation runs.
-      avahiDaemonConf = [
-        "# Managed by stubbe - modules/network.nix"
-        "[server]"
-        "allow-interfaces=$ifaces"
-        "use-ipv4=yes"
-      ]
-      ++ lib.optional (config.host.mdnsName != "") "host-name=${config.host.mdnsName}"
-      ++ [
-        "use-ipv6=yes"
-        "ratelimit-interval-usec=1000000"
-        "ratelimit-burst=1000"
-        ""
-        "[publish]"
-        "publish-addresses=yes"
-        "publish-hinfo=yes"
-        "publish-workstation=yes"
-        "publish-domain=yes"
-        ""
-        "[reflector]"
-        ""
-        "[rlimits]"
-      ];
+      avahiDaemonConf = pkgs.writeText "avahi-daemon.conf" (
+        pkgs.stubbe.managedBy "avahi"
+        +
+          lib.generators.toINI
+            {
+              mkKeyValue = lib.generators.mkKeyValueDefault {
+                mkValueString = yesNo;
+              } "=";
+            }
+            {
+              server = {
+                allow-interfaces = "@ifaces@";
+                use-ipv4 = true;
+                use-ipv6 = true;
+                ratelimit-interval-usec = 1000000;
+                ratelimit-burst = 1000;
+              }
+              // avahiHostName config.host.mdnsName;
+              publish = avahiPublish;
+            }
+      );
     in
     {
       # HM owns the file from here on: a hand-written ~/.ssh/config would
@@ -310,10 +318,7 @@ in
               echo "No real LAN interfaces detected; skipping avahi-daemon.conf write." >&2
             else
               _stb_tmp=$(mktemp)
-              printf '%s\n' \
-                ${
-                  lib.concatMapStringsSep " \\\n                " lib.escapeShellArg avahiDaemonConf
-                } > "$_stb_tmp"
+              sed "s/@ifaces@/$ifaces/" ${avahiDaemonConf} > "$_stb_tmp"
               sudo install -m 0644 -o root -g root "$_stb_tmp" /etc/avahi/avahi-daemon.conf
               rm -f "$_stb_tmp"
             fi
@@ -324,10 +329,8 @@ in
                 /etc/avahi/services/ssh.service
             ''}
 
-            if command -v systemctl >/dev/null 2>&1; then
-              sudo systemctl enable avahi-daemon.service >/dev/null 2>&1 || true
-              sudo systemctl restart avahi-daemon.service >/dev/null 2>&1 || true
-            fi
+            sudo systemctl enable avahi-daemon.service
+            sudo systemctl restart avahi-daemon.service
           '';
         };
 
@@ -351,31 +354,23 @@ in
             ${pkgs.stubbe.setup.text {
               name = "10-stubbedev.conf";
               target = "/etc/ssh/sshd_config.d/10-stubbedev.conf";
-              text = ''
-                PasswordAuthentication no
-                KbdInteractiveAuthentication no
-                PermitRootLogin no
-                ClientAliveInterval 60
-                ClientAliveCountMax 3
-              '';
+              text = lib.generators.toKeyValue {
+                mkKeyValue = lib.generators.mkKeyValueDefault {
+                  mkValueString = yesNo;
+                } " ";
+              } (sshdLogin // sshdKeepalive);
             }}
 
-            if command -v systemctl >/dev/null 2>&1; then
-              if systemctl cat sshd.service >/dev/null 2>&1; then
-                svc=sshd.service
-              elif systemctl cat ssh.service >/dev/null 2>&1; then
-                svc=ssh.service
-              else
-                svc=""
-              fi
-              if [ -n "$svc" ]; then
-                sudo systemctl enable "$svc" >/dev/null 2>&1 || true
-                sudo systemctl restart "$svc" >/dev/null 2>&1 || true
-              fi
+            if systemctl cat sshd.service >/dev/null 2>&1; then
+              svc=sshd.service
+            else
+              svc=ssh.service
             fi
+            sudo systemctl enable "$svc"
+            sudo systemctl restart "$svc"
 
             if command -v ufw >/dev/null 2>&1; then
-              sudo ufw allow ssh >/dev/null 2>&1 || true
+              sudo ufw allow ssh >/dev/null
             fi
             if command -v firewall-cmd >/dev/null 2>&1 \
                && sudo firewall-cmd --state >/dev/null 2>&1; then

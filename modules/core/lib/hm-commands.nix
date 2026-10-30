@@ -19,6 +19,17 @@
             expand ? false,
             complete ? null,
           }:
+          assert lib.assertOneOf "stubbe.lib.hm ${name} platform" platform [
+            "all"
+            "nixos"
+            "standalone"
+          ];
+          assert lib.assertOneOf "stubbe.lib.hm ${name} group" group [
+            "wrapper"
+            "rebuild"
+            "meta"
+            "hidden"
+          ];
           {
             inherit
               name
@@ -44,9 +55,7 @@
             name = "upgrade";
             platform = "all";
             group = "wrapper";
-            desc = "Update system packages and apply switch (auto-prunes";
-            extra = [ "old generations, keeping current + 1 previous)" ];
-            summary = "Update system packages and apply switch";
+            desc = "Update system packages and apply switch";
           }
           {
             name = "whoami";
@@ -173,7 +182,7 @@
             platform = "all";
             group = "rebuild";
             desc = "Build and activate (default boot entry on NixOS);";
-            extra = [ "auto-prunes old generations to current + 1 previous" ];
+            extra = [ "NixOS keeps the current system generation + 1 previous" ];
             summary = "Build and activate the configuration";
           }
           {

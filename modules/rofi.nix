@@ -11,6 +11,8 @@ _: {
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
     lib.mkIf config.features.lysWm {
+      home.sessionVariables.ROFI_SENSIBLE_TERMINAL = config.stubbe.paths.terminal;
+
       programs.rofi = {
         enable = true;
         package = config.stubbe.gfx.wrap pkgs.rofi;

@@ -42,10 +42,6 @@ in
 
       environment.systemPackages = with pkgs; [
         catppuccin-kvantum
-        # Cursor theme system-wide (not just home-manager) so it lands in
-        # /run/current-system/sw/share/icons — where the greetd greeter, running
-        # as the unprivileged `greeter` user that cannot read a 0700 $HOME, can
-        # actually find it. Without it the login screen falls back to the huge
         vimix-cursors
       ];
     };
@@ -65,7 +61,7 @@ in
           custom_palette = false;
           icon_theme = theme.icon;
           standard_dialogs = "default";
-          style = "kvantum";
+          style = config.qt.style.name;
         };
         Interface = {
           activate_item_on_single_click = 1;
@@ -94,6 +90,7 @@ in
 
       gtk = {
         enable = true;
+        gtk2.force = true;
 
         theme = {
           name = theme.gtk;
@@ -116,11 +113,10 @@ in
         };
       };
 
-      # Style stays qtct-managed (Appearance.style above): qt.style.name would
-      # also export QT_STYLE_OVERRIDE, which the current setup never does.
       qt = {
         enable = true;
         platformTheme.name = "qtct";
+        style.name = "kvantum";
 
         qt5ctSettings = qtCtSettings;
         qt6ctSettings = qtCtSettings;
@@ -150,11 +146,6 @@ in
             vimix-icon-theme
             hicolor-icon-theme
             gnome-themes-extra # includes the Adwaita-dark GTK theme
-
-            # qtct installs its own launchers; these style plugins stay manual
-            # because qt.style.name would export QT_STYLE_OVERRIDE.
-            libsForQt5.qtstyleplugin-kvantum
-            kdePackages.qtstyleplugin-kvantum
           ]);
 
         file = {

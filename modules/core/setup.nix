@@ -26,13 +26,10 @@ _: {
             exec >/dev/tty 2>&1
           fi
 
-          SUDO="$(command -v sudo || true)"
-
-          if [ -z "$SUDO" ]; then
-            exit 0
+          if ! command -v sudo >/dev/null; then
+            echo "setup-${name}: sudo not found; this privileged step cannot run" >&2
+            exit 1
           fi
-
-          sudo() { "$SUDO" "$@"; }
 
           stateHash=$(
             # shellcheck disable=SC2043 # nix-generated list: one path or many
@@ -104,8 +101,8 @@ _: {
                   default = false;
                   description = ''
                     Run behind sudo with the shared prompt scaffolding, and only
-                    on non-NixOS hosts. A `sudo` shell function is in scope, so
-                    the script never has to locate the binary itself.
+                    on the "linux" platform. PATH is restored to the standard
+                    system locations first, so `sudo` resolves directly.
                   '';
                 };
 
@@ -146,6 +143,11 @@ _: {
           )
         );
       };
+
+      config.assertions = lib.mapAttrsToList (name: s: {
+        assertion = s.privileged || (s.preCheck == "" && s.body == "" && s.stateInputs == [ ]);
+        message = "stubbe.setup.${name}: preCheck, body and stateInputs only apply to privileged steps.";
+      }) config.stubbe.setup;
 
       config.home.activation = lib.mapAttrs (
         name: setup:

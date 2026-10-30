@@ -10,12 +10,15 @@
     let
       c = pkgs.stubbe.withHash;
 
+      onAndroid = config.host.platform == "android";
+      androidRuntimeDir = "/tmp/runtime-${config.home.username}";
+
       # Only a distro keeps a trust store at /etc/ssl. nix-on-droid generates
       # /etc from the store with no certificates in it, so Android points at
       # nixpkgs' bundle. On a distro the OS store wins deliberately: it is the
       # only one srv's mkcert CA can be added to.
       tls =
-        if config.host.platform == "android" then
+        if onAndroid then
           {
             dir = "${pkgs.cacert}/etc/ssl/certs";
             file = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
@@ -26,8 +29,20 @@
             file = "/etc/ssl/certs/ca-certificates.crt";
           };
 
-      onAndroid = config.host.platform == "android";
-      androidRuntimeDir = "/tmp/runtime-${config.home.username}";
+      onDistro = config.host.platform == "linux";
+      dataDirs =
+        lib.optional onDistro "${config.xdg.dataHome}/flatpak/exports/share"
+        ++ [
+          "${config.home.profileDirectory}/share"
+          "/nix/var/nix/profiles/default/share"
+        ]
+        ++ lib.optionals onDistro [
+          "/var/lib/flatpak/exports/share"
+          "/usr/share/ubuntu"
+          "/usr/local/share"
+          "/usr/share"
+          "/var/lib/snapd/desktop"
+        ];
     in
     {
       home.activation.androidRuntimeDir = lib.mkIf onAndroid (
@@ -39,8 +54,6 @@
 
       home.sessionVariables = {
         XDG_RUNTIME_DIR = lib.mkIf onAndroid androidRuntimeDir;
-        # XCURSOR_THEME/XCURSOR_SIZE come from home.pointerCursor (theming.nix);
-        # lys-wm re-sets both from its env for non-NixOS sessions.
         NIXPKGS_ALLOW_UNFREE = "1";
         NIXPKGS_ALLOW_INSECURE = "1";
 
@@ -48,16 +61,13 @@
         # `nix-channel --add nixpkgs`.
         NIX_PATH = "nixpkgs=${inputs.nixpkgs}";
 
-        ROFI_SENSIBLE_TERMINAL = config.stubbe.paths.terminal;
+        XDG_DATA_DIRS = lib.mkForce "${lib.concatStringsSep ":" dataDirs}:$XDG_DATA_DIRS";
 
-        XDG_DATA_DIRS = lib.mkForce "${config.home.homeDirectory}/.local/share/flatpak/exports/share:${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:/var/lib/flatpak/exports/share:/usr/share/ubuntu:/usr/local/share:/usr/share:/var/lib/snapd/desktop:$XDG_DATA_DIRS";
-
-        MANPAGER = "sh -c 'col -bx | bat -l man -p'";
+        MANPAGER = "sh -c '${lib.getExe' pkgs.util-linux "col"} -bx | ${lib.getExe pkgs.bat} -l man -p'";
         MANROFFOPT = "-c";
         PAGER = "${pkgs.more}/bin/more";
 
         NODE_USE_SYSTEM_CA = "1";
-        NODE_EXTRA_CA_CERTS = "${config.home.homeDirectory}/.cache/node/extra-ca.pem";
         # The OS trust store, not `pkgs.cacert`: that bundle holds only public
         # roots and cannot learn the mkcert CA, so srv-served https sites fail
         # with "unable to get local issuer certificate".
@@ -67,9 +77,9 @@
         # Silences harmless but noisy VA-API probe failures (Electron bundles an
         # old libva; the 32-bit driver is the wrong ELF class). Mutes ALL libva
         # errors, so raise it when debugging video acceleration.
-        LIBVA_MESSAGING_LEVEL = "0";
+        LIBVA_MESSAGING_LEVEL = lib.mkIf config.features.desktop "0";
 
-        DEPLOYER_REMOTE_USER = "abs";
+        DEPLOYER_REMOTE_USER = lib.mkIf config.features.php "abs";
 
         # A shell-word string, not a config file: `#` is an argument fzf rejects,
         # not a comment.
@@ -111,7 +121,7 @@
         FZF_ALT_C_COMMAND = "";
 
         STARSHIP_LOG = "error";
-        GTK_THEME_VARIANT = "dark";
+        GTK_THEME_VARIANT = lib.mkIf config.features.theming "dark";
       };
 
       xdg.configFile."starship.toml".source = pkgs.stubbe.gen.toml "starship.toml" {

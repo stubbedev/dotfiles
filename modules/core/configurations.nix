@@ -3,9 +3,13 @@
   config,
   inputs,
   withSystem,
+  nixpkgsFor,
   ...
 }:
 let
+  flakeAttrModule = name: { host.flakeAttr = name; };
+  sharedFlakeAttrModule = name: { home-manager.sharedModules = [ (flakeAttrModule name) ]; };
+
   hostOptions = lib.types.submodule {
     options = {
       system = lib.mkOption {
@@ -43,33 +47,38 @@ in
 
   config.flake = {
     homeConfigurations = lib.mapAttrs (
-      _name: host:
+      name: host:
       withSystem host.system (
         { pkgs, ... }:
         inputs.home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
-          modules = [ host.module ];
+          modules = [
+            host.module
+            (flakeAttrModule name)
+          ];
         }
       )
     ) config.configurations.homeManager;
 
     nixosConfigurations = lib.mapAttrs (
-      _name: host:
+      name: host:
       inputs.nixpkgs.lib.nixosSystem {
         inherit (host) system;
-        modules = [ host.module ];
+        modules = [
+          host.module
+          (sharedFlakeAttrModule name)
+        ];
       }
     ) config.configurations.nixos;
 
     nixOnDroidConfigurations = lib.mapAttrs (
-      _name: host:
+      name: host:
       inputs.nix-on-droid.lib.nixOnDroidConfiguration {
-        pkgs = import inputs.nixpkgs {
-          inherit (host) system;
-          config = config.stubbe.lib.nixpkgsConfig;
-          overlays = builtins.attrValues config.flake.overlays;
-        };
-        modules = [ host.module ];
+        pkgs = nixpkgsFor host.system;
+        modules = [
+          host.module
+          (sharedFlakeAttrModule name)
+        ];
         # nix-on-droid otherwise loads its own 2024 home-manager, whose
         # stdlib-extended and module set predate every option this repo uses.
         home-manager-path = inputs.home-manager.outPath;

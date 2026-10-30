@@ -15,18 +15,7 @@ _: {
       hm = pkgs.stubbe.bashApp {
         name = "hm";
         text = ''
-          set -euo pipefail
-
-          hm_flake_dir="''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}"
-
-          has_cmd() {
-            command -v "$1" >/dev/null 2>&1
-          }
-
-          if has_cmd readlink; then
-            hm_flake_dir=$(readlink -f "$hm_flake_dir" 2>/dev/null || echo "$hm_flake_dir")
-          fi
-
+          hm_flake_dir=$(realpath -e "''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}")
           hm_flake_ref="path:$hm_flake_dir"
 
           is_nixos() {
@@ -37,23 +26,12 @@ _: {
             ${lib.boolToString (config.host.platform == "android")}
           }
 
-          # The GTK2 theme must not exist when HM asserts the config: an
-          # app-written ~/.gtkrc-2.0 makes the next activation refuse to
-          # clobber it and the theme silently reverts.
-          clear_gtkrc() {
-            rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
+          short_hostname() {
+            hostname -s
           }
 
-          # The configuration attribute this machine is defined under. The
-          # hostname answers it on NixOS; a host defined under another name
-          # says so in host.flakeAttr.
           host_attr() {
-            local attr="${config.host.flakeAttr}"
-            if [ -n "$attr" ]; then
-              echo "$attr"
-              return
-            fi
-            hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown
+            echo ${lib.escapeShellArg config.host.flakeAttr}
           }
 
           nixos_attr() {
@@ -149,20 +127,8 @@ _: {
           }
 
           run_gc() {
-            if [ "$#" -eq 0 ]; then
-              if is_nixos; then
-                sudo nix-collect-garbage -d
-              else
-                nix-collect-garbage -d
-              fi
-              return
-            fi
-
-            if is_nixos; then
-              sudo nix-collect-garbage "$@"
-            else
-              nix-collect-garbage "$@"
-            fi
+            [ "$#" -gt 0 ] || set -- -d
+            ${lib.optionalString (config.host.platform == "nixos") "sudo "}nix-collect-garbage "$@"
           }
 
           run_generations() {
@@ -175,10 +141,8 @@ _: {
             fi
           }
 
-
           sudo_keepalive_pid=""
           start_sudo_keepalive() {
-            has_cmd sudo || return 0
             [ -n "$sudo_keepalive_pid" ] && return 0
             echo "Requesting sudo..."
             sudo -v || return 1
@@ -209,41 +173,53 @@ _: {
           }
 
           flake_in_git() {
-            has_cmd git && flake_git rev-parse --is-inside-work-tree >/dev/null 2>&1
+            flake_git rev-parse --is-inside-work-tree >/dev/null 2>&1
           }
 
           flake_has_upstream() {
             flake_git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1
           }
 
+          abort_rebase() {
+            local git_dir
+            git_dir=$(flake_git rev-parse --absolute-git-dir)
+            if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+              flake_git rebase --abort
+            fi
+          }
+
           ensure_flakelock_driver() {
-            flake_git config merge.flakelock.name "keep current flake.lock (regenerated)" >/dev/null 2>&1 || true
-            flake_git config merge.flakelock.driver true >/dev/null 2>&1 || true
+            flake_git config merge.flakelock.name "keep current flake.lock (regenerated)"
+            flake_git config merge.flakelock.driver true
           }
 
           sync_flake_repo() {
             flake_in_git || return 0
             flake_has_upstream || return 0
-            flake_git fetch --quiet || return 0
+            if ! flake_git fetch --quiet; then
+              echo "hm: fetching $hm_flake_dir failed; updating against the local checkout" >&2
+              return 0
+            fi
             flake_git pull --rebase --autostash --quiet || {
-              flake_git rebase --abort >/dev/null 2>&1 || true
+              abort_rebase
+              echo "hm: rebasing $hm_flake_dir onto upstream failed; updating against the local checkout" >&2
             }
           }
 
           commit_flake_lock() {
             flake_in_git || return 0
-            flake_git diff --quiet -- flake.lock 2>/dev/null && return 0   # unchanged
-            flake_git add -- flake.lock || return 0
-            flake_git commit -m "chore: update flake.lock" -- flake.lock >/dev/null || return 0
+            flake_git diff --quiet -- flake.lock && return 0
+            flake_git add -- flake.lock
+            flake_git commit -m "chore: update flake.lock" -- flake.lock >/dev/null
             echo "Committed updated flake.lock"
             flake_has_upstream || return 0
             flake_git push --quiet 2>/dev/null && return 0
             flake_git pull --rebase --autostash --quiet || {
-              flake_git rebase --abort >/dev/null 2>&1 || true
+              abort_rebase
               echo "flake.lock committed locally; push failed (resolve manually)" >&2
               return 0
             }
-            flake_git push --quiet 2>/dev/null || \
+            flake_git push --quiet || \
               echo "flake.lock committed locally; push failed (resolve manually)" >&2
           }
 
@@ -258,7 +234,10 @@ _: {
                   fi
 
                   local ageKey token
-                  ageKey=$(${lib.getExe pkgs.ssh-to-age} -private-key -i "$HOME/.ssh/id_ed25519" 2>/dev/null) || return 0
+                  ageKey=$(${lib.getExe pkgs.ssh-to-age} -private-key -i "$HOME/.ssh/id_ed25519") || {
+                    echo "cache push: could not derive the age key from ~/.ssh/id_ed25519; skipping." >&2
+                    return 0
+                  }
                   token=$(SOPS_AGE_KEY="$ageKey" ${lib.getExe pkgs.sops} --decrypt \
                     --input-type binary --output-type binary "$tokenFile" 2>/dev/null) || {
                     echo "cache push: could not decrypt xilo-token; skipping." >&2
@@ -266,14 +245,14 @@ _: {
                   }
 
                   local path
-                  if is_nix_on_droid; then
-                    path=$(readlink -f "$HOME/.nix-profile" 2>/dev/null)
-                  elif is_nixos; then
-                    path=$(readlink -f /run/current-system 2>/dev/null)
-                  else
-                    path=$(readlink -f "$HOME/.local/state/nix/profiles/home-manager" 2>/dev/null)
-                  fi
-                  [ -n "$path" ] && [ -e "$path" ] || return 0
+                  path=$(realpath -e ${
+                    {
+                      android = ''"$HOME/.nix-profile"'';
+                      nixos = "/run/current-system";
+                      linux = ''"$HOME/.local/state/nix/profiles/home-manager"'';
+                    }
+                    .${config.host.platform}
+                  })
 
                   echo "Pushing $(basename "$path") closure to the cache…"
                   XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" \
@@ -288,11 +267,12 @@ _: {
           release_pinned_repos="PHPantom-dev/phpantom_lsp"
           bump_release_pins() {
             local repo latest name bumped=""
-            has_cmd curl || return 0
             for repo in $release_pinned_repos; do
-              latest=$(curl -fsSL --max-time 10 "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
-                | grep -om1 '"tag_name": *"[^"]*"' | cut -d'"' -f4) || true
-              [ -n "$latest" ] || continue
+              if ! latest=$(${lib.getExe pkgs.curl} -fsSL --max-time 10 "https://api.github.com/repos/$repo/releases/latest" \
+                | ${lib.getExe pkgs.jq} -er .tag_name); then
+                echo "hm: could not read the latest $repo release; keeping its pin" >&2
+                continue
+              fi
               grep -q "github:$repo/$latest" "$hm_flake_dir/flake.nix" && continue
               sed -i "s|github:$repo/[^\"]*|github:$repo/$latest|" "$hm_flake_dir/flake.nix"
               name=''${repo##*/}
@@ -301,58 +281,70 @@ _: {
             done
             [ -n "$bumped" ] || return 0
             if flake_in_git; then
-              flake_git add -- flake.nix >/dev/null 2>&1 || return 0
-              flake_git commit -qm "chore: bump release pins:$bumped" -- flake.nix >/dev/null 2>&1 || true
+              flake_git add -- flake.nix
+              flake_git commit -qm "chore: bump release pins:$bumped" -- flake.nix
             fi
           }
 
+          update_host_packages() {
+            ${
+              if config.host.platform == "linux" then
+                ''
+                  has_cmd() {
+                    command -v "$1" >/dev/null 2>&1
+                  }
+
+                  local needs_sudo="false"
+
+                  if has_cmd pacman || has_cmd apt || has_cmd dnf || has_cmd snap; then
+                    needs_sudo="true"
+                  fi
+
+                  ensure_sudo "$needs_sudo"
+
+                  if has_cmd pacman; then
+                    echo "Updating pacman packages"
+                    sudo pacman -Syu --noconfirm
+                  fi
+
+                  if has_cmd apt; then
+                    echo "Updating apt packages"
+                    sudo apt-get -qq update
+                    sudo DEBIAN_FRONTEND=noninteractive apt-get -qq -y upgrade
+                    sudo apt-get -qq -y autoremove
+                  fi
+
+                  if has_cmd dnf; then
+                    echo "Updating dnf packages"
+                    sudo dnf upgrade -y
+                  fi
+
+                  if has_cmd snap; then
+                    echo "Updating snap packages"
+                    sudo snap refresh
+                  fi
+
+                  if has_cmd flatpak; then
+                    echo "Updating flatpak packages"
+                    flatpak update -y
+                    flatpak uninstall --unused -y
+                  fi
+                ''
+              else
+                ":"
+            }
+          }
+
           update_system() {
-            local needs_sudo="false"
-
-            if has_cmd pacman || has_cmd apt || has_cmd dnf || has_cmd snap; then
-              needs_sudo="true"
+            update_host_packages
+            echo "Updating nix inputs"
+            if flake_in_git; then
+              ensure_flakelock_driver
+              sync_flake_repo
             fi
-
-            ensure_sudo "$needs_sudo"
-
-            if has_cmd pacman; then
-              echo "Updating pacman packages"
-              sudo pacman -Syu --noconfirm
-            fi
-
-            if has_cmd apt; then
-              echo "Updating apt packages"
-              sudo apt-get -qq update
-              sudo DEBIAN_FRONTEND=noninteractive apt-get -qq -y upgrade
-              sudo apt-get -qq -y autoremove
-            fi
-
-            if has_cmd dnf; then
-              echo "Updating dnf packages"
-              sudo dnf upgrade -y
-            fi
-
-            if has_cmd snap; then
-              echo "Updating snap packages"
-              sudo snap refresh
-            fi
-
-            if has_cmd flatpak; then
-              echo "Updating flatpak packages"
-              flatpak update -y
-              flatpak uninstall --unused -y
-            fi
-
-            if has_cmd nix; then
-              echo "Updating nix inputs"
-              if flake_in_git; then
-                ensure_flakelock_driver
-                sync_flake_repo
-              fi
-              bump_release_pins
-              nix flake update --flake "$hm_flake_ref" --quiet
-              commit_flake_lock
-            fi
+            bump_release_pins
+            nix flake update --flake "$hm_flake_ref" --quiet
+            commit_flake_lock
           }
 
           usage() {
@@ -390,7 +382,7 @@ _: {
             fi
             local pubkey host
             pubkey=$(${lib.getExe pkgs.ssh-to-age} < "$HOME/.ssh/id_ed25519.pub")
-            host=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
+            host=$(short_hostname)
             printf '%s %s\n' "$host" "$pubkey"
           }
 
@@ -427,10 +419,10 @@ _: {
             if [ -z "$name" ]; then
               local local_pubkey=""
               if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
-                local_pubkey=$(${lib.getExe pkgs.ssh-to-age} < "$HOME/.ssh/id_ed25519.pub" 2>/dev/null || true)
+                local_pubkey=$(${lib.getExe pkgs.ssh-to-age} < "$HOME/.ssh/id_ed25519.pub")
               fi
               if [ -n "$local_pubkey" ] && [ "$pubkey" = "$local_pubkey" ]; then
-                name=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
+                name=$(short_hostname)
               else
                 name="''${pubkey: -8}"
               fi
@@ -552,7 +544,6 @@ _: {
 
           hm_clean() {
             local root="''${1:-$HOME}"
-            has_cmd fzf || { echo "hm clean: fzf not found" >&2; return 1; }
 
             echo "Scanning $root for reclaimable space (build artifacts, caches, core dumps)..." >&2
 
@@ -685,7 +676,6 @@ _: {
               shift
               prime_sudo_nixos
               update_system
-              clear_gtkrc
               run_hm_subcmd switch "$@" && push_to_cache
               ;;
             whoami)
@@ -710,26 +700,36 @@ _: {
               ;;
             iso)
               shift
-              nixos-iso "$@"
+              ${
+                if config.features.ops then
+                  ''nixos-iso "$@"''
+                else
+                  ''
+                    echo "hm iso: the installer ISO builder is part of features.ops, which this host disables." >&2
+                    exit 2
+                  ''
+              }
               ;;
             help|-h|--help)
               usage
               ;;
             switch)
-              clear_gtkrc
               shift
               prime_sudo_nixos
               run_hm_subcmd switch "$@" && push_to_cache
               ;;
-            boot|test|build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
-              clear_gtkrc
+            boot|test)
+              subcmd="$1"
+              shift
+              run_hm_subcmd "$subcmd" "$@"
+              ;;
+            build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
               subcmd="$1"
               shift
               run_hm_subcmd "$subcmd" "$@"
               ;;
             rollback)
               shift
-              clear_gtkrc
               run_rollback "$@"
               ;;
             gc)
@@ -745,12 +745,15 @@ _: {
               exit 2
               ;;
             *)
-              clear_gtkrc
-              if is_nixos; then
-                echo "hm: '$1' is not supported on NixOS — the home-manager CLI is not available in submodule mode. Try 'hm help'." >&2
-                exit 2
-              fi
-              home-manager "$@"
+              ${
+                if config.host.platform == "linux" then
+                  ''home-manager "$@"''
+                else
+                  ''
+                    echo "hm: '$1' is not supported here — there is no standalone home-manager CLI on ${config.host.platform}. Try 'hm help'." >&2
+                    exit 2
+                  ''
+              }
               ;;
           esac
         '';

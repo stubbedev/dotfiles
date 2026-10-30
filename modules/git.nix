@@ -2,6 +2,7 @@ _: {
   flake.modules.homeManager.git =
     {
       config,
+      lib,
       pkgs,
       ...
     }:
@@ -106,6 +107,8 @@ _: {
         enable = true;
         settings = lazygitSettings;
       };
+
+      stubbe.zshCompletions._lazygit = "${lib.getExe config.programs.lazygit.package} completion zsh";
 
       stubbe.mutable.".config/lazygit/state.yml" = {
         method = "copy";

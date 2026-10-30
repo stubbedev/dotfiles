@@ -8,7 +8,7 @@
 #   pkgs.stubbe.*    (here + modules/core/pkgs/*.nix)  anything that BUILDS or
 #                    needs `pkgs`. Re-exports all of stubbe.lib, so
 #                    pkgs.stubbe.colors resolves too.
-#   config.stubbe.*  (paths/gfx/setup/mutable/mcp)  needs the evaluated config
+#   config.stubbe.*  (paths/gfx/setup/mutable/lsp)  needs the evaluated config
 #                    ($HOME, hostname, features) or must merge contributions
 #                    from many modules.
 #

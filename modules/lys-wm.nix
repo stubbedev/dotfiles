@@ -19,6 +19,20 @@ let
 
     exec systemd-cat -t lys-wm lys-wm --systemd
   '';
+
+  greetdSettings =
+    {
+      launcher,
+      agreety,
+      user,
+    }:
+    {
+      initial_session = {
+        command = launcher;
+        inherit user;
+      };
+      default_session.command = "${agreety} --cmd ${launcher}";
+    };
 in
 {
   flake.modules.nixos.lysWm =
@@ -42,12 +56,10 @@ in
 
         services.greetd = {
           enable = true;
-          settings = {
-            initial_session = {
-              command = "${launcher}";
-              user = config.host.primaryUser;
-            };
-            default_session.command = "${lib.getExe' config.services.greetd.package "agreety"} --cmd ${launcher}";
+          settings = greetdSettings {
+            launcher = "${launcher}";
+            agreety = lib.getExe' config.services.greetd.package "agreety";
+            user = config.host.primaryUser;
           };
         };
       };
@@ -136,8 +148,6 @@ in
           XDG_SESSION_DESKTOP = "lys-wm";
           GDK_BACKEND = "wayland";
           GTK_USE_PORTAL = "0";
-          QT_QPA_PLATFORMTHEME = "qt5ct";
-          QT_STYLE_OVERRIDE = "kvantum";
           COLOR_SCHEME = "prefer-dark";
           ELECTRON_OZONE_PLATFORM_HINT = "auto";
           MOZ_ENABLE_WAYLAND = "1";
@@ -420,7 +430,7 @@ in
                 if ! getent passwd greeter >/dev/null 2>&1; then
                   sudo useradd --system --create-home --home-dir /var/lib/greetd \
                     --shell /usr/sbin/nologin --user-group \
-                    --groups video,input greeter 2>/dev/null || true
+                    --groups video,input greeter
                 fi
 
                 ${pkgs.stubbe.setup.text {
@@ -430,21 +440,20 @@ in
                   text = "#!/bin/sh\n" + greetdSessionScript;
                 }}
 
-                ${pkgs.stubbe.setup.text {
-                  name = "greetd-config.toml";
+                ${pkgs.stubbe.setup.file {
+                  source = pkgs.stubbe.gen.toml "greetd-config.toml" (
+                    lib.recursiveUpdate
+                      (greetdSettings {
+                        inherit launcher;
+                        agreety = "agreety";
+                        user = config.home.username;
+                      })
+                      {
+                        terminal.vt = 7;
+                        default_session.user = "greeter";
+                      }
+                  );
                   target = "/etc/greetd/config.toml";
-                  text = ''
-                    [terminal]
-                    vt = 7
-
-                    [initial_session]
-                    command = "${launcher}"
-                    user = "${config.home.username}"
-
-                    [default_session]
-                    command = "agreety --cmd ${launcher}"
-                    user = "greeter"
-                  '';
                 }}
 
                 ${pkgs.stubbe.setup.text {
@@ -469,7 +478,7 @@ in
                     if systemctl cat "$dm.service" >/dev/null 2>&1 \
                        && systemctl is-enabled --quiet "$dm.service" 2>/dev/null; then
                       echo "Disabling existing display manager: $dm" >&2
-                      sudo systemctl disable "$dm.service" >/dev/null 2>&1 || true
+                      sudo systemctl disable "$dm.service"
                     fi
                   done
 

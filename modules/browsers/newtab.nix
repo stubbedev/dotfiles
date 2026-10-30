@@ -1,6 +1,7 @@
 # Browsers refuse to inject extension content scripts into the built-in new tab
 # page (about:newtab, chrome://newtab) — that is why Tridactyl and SurfingKeys
-# show a "can't run here" banner there. Pointing both browsers at this page
+# show a "can't run here" banner there. Both browsers point at this page,
+# served by srv over https, so the extensions run on it.
 { inputs, ... }:
 {
   flake.modules.homeManager.newtab =
@@ -117,14 +118,11 @@
             ${srvBin} add ${lib.escapeShellArg root} \
               --domain start.local --name start-local --local --daemon </dev/null >/dev/null \
               || echo "srv-newtab: 'srv add' failed; will retry next switch." >&2
-          elif ${srvBin} add --help 2>/dev/null | grep -q -- '--daemon' \
-              && ! grep -q '^daemon_served: true' \
+          elif ! grep -q '^daemon_served: true' \
                    "$HOME/.config/srv/sites/start-local/metadata.yml" 2>/dev/null; then
             # One-time migration off the nginx container: re-add the site
-            # daemon-served. The --daemon support check keeps the nginx site
-            # serving until the new srv binary is in the system closure; the
-            # daemon_served check keeps an already-migrated site from being
-            # removed and re-added on every switch. remove needs --yes —
+            # daemon-served. The daemon_served check keeps an already-migrated
+            # site from being removed and re-added on every switch. remove needs --yes —
             # srv refuses destructive actions without it, and a bare failure
             # here would leave "already exists" to kill the re-add below.
             ${srvBin} remove start-local --yes </dev/null >/dev/null 2>&1 || true

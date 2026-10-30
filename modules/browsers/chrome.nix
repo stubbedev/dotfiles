@@ -334,23 +334,5 @@ _: {
         profileName = "nix-google-chrome-stable";
         programGlob = "/nix/store/*/share/google/chrome/{chrome,chrome-sandbox}";
       };
-
-      stubbe.setup.chromePolicy = {
-        privileged = true;
-        title = "Installing Chrome new-tab policy";
-        body = ''
-          Drop a Chrome enterprise policy at
-          /etc/opt/chrome/policies/managed/stubbedev-newtab.json. It points the
-          new tab page, new windows and the homepage at the local new-tab page
-          (https://start.local, served by srv), and force-installs the managed
-          extensions (SurfingKeys, Bitwarden, React DevTools, …).
-        '';
-        script = pkgs.stubbe.setup.file {
-          source = pkgs.stubbe.gen.json "stubbedev-newtab.json" (
-            pkgs.stubbe.chromePolicy pkgs.stubbe.newtabUrl
-          );
-          target = "/etc/opt/chrome/policies/managed/stubbedev-newtab.json";
-        };
-      };
     };
 }

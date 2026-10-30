@@ -94,15 +94,13 @@ _: {
       ...
     }:
     let
-      secretsExec =
-        if builtins.pathExists /usr/bin/ksecretd then
-          "/usr/bin/ksecretd"
-        else if builtins.pathExists /usr/bin/gnome-keyring-daemon then
-          "/usr/bin/gnome-keyring-daemon --start --foreground --components=secrets"
-        else if builtins.pathExists /usr/bin/pass-secret-service then
-          "/usr/bin/pass-secret-service"
-        else
-          null;
+      pamFiles = [
+        "/etc/pam.d/login"
+        "/etc/pam.d/ly"
+        "/etc/pam.d/lightdm"
+        "/etc/pam.d/gdm"
+        "/etc/pam.d/greetd"
+      ];
     in
     {
       home.packages = lib.mkIf config.features.desktop (
@@ -116,25 +114,6 @@ _: {
           seahorse # GUI keyring manager
         ]
       );
-
-      systemd.user.services = lib.mkIf (secretsExec != null && config.features.lysWm) {
-        secrets-service = {
-          Unit = {
-            Description = "D-Bus secrets service (org.freedesktop.secrets)";
-            After = [ config.wayland.systemd.target ];
-            PartOf = [ config.wayland.systemd.target ];
-          };
-          Install.WantedBy = [ config.wayland.systemd.target ];
-          Service = {
-            Type = "dbus";
-            BusName = "org.freedesktop.secrets";
-            ExecCondition = "/bin/sh -c '! ${lib.getExe' pkgs.systemd "busctl"} --user status org.freedesktop.secrets 2>/dev/null'";
-            ExecStart = secretsExec;
-            Restart = "on-failure";
-            RestartSec = "2s";
-          };
-        };
-      };
 
       stubbe.setup = {
         # The keyring literally named `login` is the only one PAM auto-unlocks
@@ -156,31 +135,19 @@ _: {
           '';
         };
 
-        keyringPam = lib.mkIf (config.features.lysWm || config.features.theming) {
+        keyringPam = lib.mkIf config.features.desktop {
           privileged = true;
           title = "GNOME Keyring PAM setup";
           body = ''
             This will add GNOME Keyring PAM lines to login session files
             to enable automatic keyring unlock on login.
           '';
-          stateInputs = [
-            "/etc/pam.d/login"
-            "/etc/pam.d/ly"
-            "/etc/pam.d/lightdm"
-            "/etc/pam.d/gdm"
-            "/etc/pam.d/greetd"
-          ];
+          stateInputs = pamFiles;
           script = ''
             authLine="auth optional pam_gnome_keyring.so"
             sessionLine="session optional pam_gnome_keyring.so auto_start"
             passwordLine="password optional pam_gnome_keyring.so use_authtok"
-            pamFiles=(
-              /etc/pam.d/login
-              /etc/pam.d/ly
-              /etc/pam.d/lightdm
-              /etc/pam.d/gdm
-              /etc/pam.d/greetd
-            )
+            pamFiles=(${lib.escapeShellArgs pamFiles})
             hasPhase() {
               local file="$1" phase="$2"
               grep -qE "^[[:space:]]*-?''${phase}[[:space:]]+\S+[[:space:]]+.*pam_gnome_keyring\.so" "$file"

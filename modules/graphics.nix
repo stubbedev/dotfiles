@@ -7,8 +7,6 @@ _: {
       ...
     }:
     let
-      # Set per host (host.graphicsNvidia) instead of probing /proc, which
-      # forced --impure on every rebuild.
       hasNvidia = config.host.graphicsNvidia;
     in
     {

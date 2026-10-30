@@ -35,6 +35,24 @@ _: {
         # are vendored inline below.
         script =
           let
+            polkitActions = {
+              "org.blueman.network.setup" = {
+                description = "Configure Bluetooth Network";
+                message = "Configuring networking requires privileges";
+              };
+              "org.blueman.dhcp.client" = {
+                description = "Launch DHCP client";
+                message = "Launching DHCP client requires privileges";
+              };
+              "org.blueman.pppd.pppconnect" = {
+                description = "Launch PPP daemon";
+                message = "Launching PPP daemon requires privileges";
+              };
+              "org.blueman.rfkill.setstate" = {
+                description = "Set RfKill State";
+                message = "Setting RfKill State requires privileges";
+              };
+            };
             links = [
               {
                 source = "${pkgs.blueman}/lib/systemd/system/blueman-mechanism.service";
@@ -63,38 +81,18 @@ _: {
                   <vendor>The Blueman Project</vendor>
                   <vendor_url>https://github.com/blueman-project/blueman</vendor_url>
                   <icon_name>blueman</icon_name>
-                  <action id="org.blueman.network.setup">
-                    <description>Configure Bluetooth Network</description>
-                    <message>Configuring networking requires privileges</message>
-                    <defaults>
-                      <allow_inactive>no</allow_inactive>
-                      <allow_active>auth_admin_keep</allow_active>
-                    </defaults>
-                  </action>
-                  <action id="org.blueman.dhcp.client">
-                    <description>Launch DHCP client</description>
-                    <message>Launching DHCP client requires privileges</message>
-                    <defaults>
-                      <allow_inactive>no</allow_inactive>
-                      <allow_active>auth_admin_keep</allow_active>
-                    </defaults>
-                  </action>
-                  <action id="org.blueman.pppd.pppconnect">
-                    <description>Launch PPP daemon</description>
-                    <message>Launching PPP daemon requires privileges</message>
-                    <defaults>
-                      <allow_inactive>no</allow_inactive>
-                      <allow_active>auth_admin_keep</allow_active>
-                    </defaults>
-                  </action>
-                  <action id="org.blueman.rfkill.setstate">
-                    <description>Set RfKill State</description>
-                    <message>Setting RfKill State requires privileges</message>
-                    <defaults>
-                      <allow_inactive>no</allow_inactive>
-                      <allow_active>auth_admin_keep</allow_active>
-                    </defaults>
-                  </action>
+                  ${lib.concatStrings (
+                    lib.mapAttrsToList (id: action: ''
+                      <action id="${id}">
+                        <description>${action.description}</description>
+                        <message>${action.message}</message>
+                        <defaults>
+                          <allow_inactive>no</allow_inactive>
+                          <allow_active>auth_admin_keep</allow_active>
+                        </defaults>
+                      </action>
+                    '') polkitActions
+                  )}
                 </policyconfig>
               '';
             }}
@@ -112,16 +110,7 @@ _: {
                 // someone who is already in sudo. Nothing here grants anything to a remote
                 // or inactive session.
                 polkit.addRule(function (action, subject) {
-                  var allowed = ${
-                    builtins.toJSON (
-                      lib.genAttrs [
-                        "org.blueman.network.setup"
-                        "org.blueman.dhcp.client"
-                        "org.blueman.rfkill.setstate"
-                        "org.blueman.pppd.pppconnect"
-                      ] (_: true)
-                    )
-                  };
+                  var allowed = ${builtins.toJSON (lib.mapAttrs (_: _: true) polkitActions)};
 
                   if (allowed[action.id] && subject.local && subject.active && subject.isInGroup("sudo")) {
                     return polkit.Result.YES;

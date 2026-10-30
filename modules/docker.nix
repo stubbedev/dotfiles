@@ -1,32 +1,43 @@
-_: {
+let
+  # registry:3 = distribution v3: same on-disk layout as v2, non-root by
+  # default. Major tag, not :latest, so a v4 can't surprise us.
+  registry = {
+    image = "registry:3";
+    port = 5000;
+    volume = "registry-data:/var/lib/registry";
+  };
+
+  registryPublish = "${toString registry.port}:${toString registry.port}";
+  registryHost = "localhost:${toString registry.port}";
+
+  daemonSettings = {
+    features.containerd-snapshotter = true;
+    insecure-registries = [ registryHost ];
+
+    # Unrotated json-file logs are unbounded: a single chatty container once
+    # left a 21G log behind. Cap them.
+    log-driver = "json-file";
+    log-opts = {
+      max-size = "50m";
+      max-file = "3";
+    };
+  };
+in
+{
   flake.modules.nixos.docker =
     { config, lib, ... }:
     lib.mkIf config.stubbe.userFeatures.docker {
       virtualisation.docker = {
         enable = true;
-
-        daemon.settings = {
-          features.containerd-snapshotter = true;
-          insecure-registries = [ "localhost:5000" ];
-
-          # Unrotated json-file logs are unbounded: a single chatty container
-          # once left a 21G log behind. Cap them.
-          log-driver = "json-file";
-          log-opts = {
-            max-size = "50m";
-            max-file = "3";
-          };
-        };
+        daemon.settings = daemonSettings;
       };
 
       virtualisation.oci-containers = {
         backend = "docker";
         containers.registry = {
-          # registry:3 = distribution v3: same on-disk layout as v2, non-root
-          # by default. Major tag, not :latest, so a v4 can't surprise us.
-          image = "registry:3";
-          ports = [ "5000:5000" ];
-          volumes = [ "registry-data:/var/lib/registry" ];
+          inherit (registry) image;
+          ports = [ registryPublish ];
+          volumes = [ registry.volume ];
           autoStart = true;
         };
       };
@@ -135,8 +146,8 @@ _: {
           ${config.home.username} to the docker group so non-root containers
           work without sudo, merges required keys into /etc/docker/daemon.json
           (features.containerd-snapshotter, log rotation, insecure-registries
-          for localhost:5000; drops legacy storage-driver), and starts a local
-          registry:3 container on :5000 backed by the registry-data volume.
+          for ${registryHost}; drops legacy storage-driver), and starts a local
+          ${registry.image} container on :${toString registry.port} backed by the registry-data volume.
         '';
         script = ''
           # Group first: the socket unit's SocketGroup needs it to exist.
@@ -162,21 +173,12 @@ _: {
           done
           if [ "$_stb_changed" = 1 ]; then
             sudo systemctl daemon-reload
-            sudo systemctl enable containerd.service docker.socket docker.service >/dev/null 2>&1 || true
-            sudo systemctl restart containerd.service docker.service >/dev/null 2>&1 || true
+            sudo systemctl enable --quiet containerd.service docker.socket docker.service
+            sudo systemctl restart containerd.service docker.service
           fi
 
           _stb_patch=${
-            pkgs.stubbe.gen.json "docker-daemon-patch.json" {
-              features.containerd-snapshotter = true;
-              insecure-registries = [ "localhost:5000" ];
-              log-driver = "json-file";
-              log-opts = {
-                max-size = "50m";
-                max-file = "3";
-              };
-              live-restore = true;
-            }
+            pkgs.stubbe.gen.json "docker-daemon-patch.json" (daemonSettings // { live-restore = true; })
           }
 
           sudo mkdir -p /etc/docker
@@ -198,12 +200,12 @@ _: {
           if ! sudo test -f /etc/docker/daemon.json || \
              ! sudo cmp -s "$_stb_new" /etc/docker/daemon.json; then
             sudo install -m 0644 -o root -g root "$_stb_new" /etc/docker/daemon.json
-            sudo systemctl restart docker.service >/dev/null 2>&1 || true
+            sudo systemctl restart docker.service
           fi
           rm -f "$_stb_current" "$_stb_new"
 
           _stb_running=$(sudo docker inspect registry --format '{{.Config.Image}}' 2>/dev/null || true)
-          if [ "$_stb_running" != "registry:3" ]; then
+          if [ "$_stb_running" != ${lib.escapeShellArg registry.image} ]; then
             # Missing, or still the legacy v2 container: (re)create. The
             # registry-data volume carries over - v3 reads the v2 layout.
             # First-install case: wait for the fresh daemon to accept
@@ -218,9 +220,9 @@ _: {
             sudo docker run -d \
               --name registry \
               --restart=always \
-              -p 5000:5000 \
-              -v registry-data:/var/lib/registry \
-              registry:3 >/dev/null
+              -p ${registryPublish} \
+              -v ${registry.volume} \
+              ${registry.image} >/dev/null
           fi
         '';
       };

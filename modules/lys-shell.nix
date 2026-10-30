@@ -61,13 +61,6 @@
         ];
       };
 
-      hasBattery =
-        let
-          psu = /. + "/sys/class/power_supply";
-        in
-        builtins.pathExists psu
-        && lib.any (lib.hasPrefix "BAT") (builtins.attrNames (builtins.readDir psu));
-
       lysShellBin = lib.getExe' lysShellPackage "lys-shell";
 
       # The shell starts the lock as `lys-login lock` from the PATH, so the lock
@@ -104,6 +97,8 @@
           (gfx.wrap pkgs.awww)
           (gfx.wrapExe "awww-daemon" pkgs.awww)
         ];
+
+        stubbe.zshCompletions._lys-shell = "${lysShellBin} completions zsh";
 
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
@@ -184,7 +179,7 @@
                       "microphone"
                       "brightness"
                     ]
-                    ++ lib.optional hasBattery "battery"
+                    ++ lib.optional config.host.battery "battery"
                     ++ [
                       "network"
                       "bluetooth"

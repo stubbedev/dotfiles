@@ -69,35 +69,30 @@ _: {
         "${final.egl-gbm}/share/egl/egl_external_platform.d/15_nvidia_gbm.json"
       ];
     in
-    {
-      nvidia = hasNvidia;
-
-      wrap =
-        name: programPath:
-        final.runCommand name { nativeBuildInputs = [ final.makeWrapper ]; } (
-          if hasNvidia then
-            ''
-              # glvnd (linked by the program itself) dispatches to the NVIDIA
-              # vendor ICD from the host OS. Nothing bundled, nothing to keep
-              # in version lockstep.
-              makeWrapper ${programPath} $out/bin/${name} \
-                --set __GLX_VENDOR_LIBRARY_NAME nvidia \
-                --suffix __EGL_VENDOR_LIBRARY_FILENAMES : /usr/share/glvnd/egl_vendor.d/10_nvidia.json \
-                --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${eglExternalPlatforms}" \
-                --suffix LD_LIBRARY_PATH : "${hostDriverLibs}" \
-                --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
-                --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}"
-            ''
-          else
-            let
-              nixGL = final.nixgl.nixGLIntel;
-            in
-            ''
-              makeWrapper ${nixGL}/bin/${nixGL.name} $out/bin/${name} \
-                --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
-                --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" \
-                --add-flag "${programPath}"
-            ''
-        );
-    };
+    name: programPath:
+    final.runCommand name { nativeBuildInputs = [ final.makeWrapper ]; } (
+      if hasNvidia then
+        ''
+          # glvnd (linked by the program itself) dispatches to the NVIDIA
+          # vendor ICD from the host OS. Nothing bundled, nothing to keep
+          # in version lockstep.
+          makeWrapper ${programPath} $out/bin/${name} \
+            --set __GLX_VENDOR_LIBRARY_NAME nvidia \
+            --suffix __EGL_VENDOR_LIBRARY_FILENAMES : /usr/share/glvnd/egl_vendor.d/10_nvidia.json \
+            --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${eglExternalPlatforms}" \
+            --suffix LD_LIBRARY_PATH : "${hostDriverLibs}" \
+            --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
+            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}"
+        ''
+      else
+        let
+          nixGL = final.nixgl.nixGLIntel;
+        in
+        ''
+          makeWrapper ${nixGL}/bin/${nixGL.name} $out/bin/${name} \
+            --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
+            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" \
+            --add-flag "${programPath}"
+        ''
+    );
 }

@@ -11,9 +11,6 @@ _: {
         with pkgs;
         [
           bc
-          zsh-completions
-          zsh-patina
-          starship
 
           fd
           sd

@@ -1,7 +1,23 @@
-_:
+{ lib, ... }:
 let
+  nixosBrowser = "firefox.desktop";
+  videoPlayer = "mpv.desktop";
+  imageViewer = "imv.desktop";
+  fileManager = "pcmanfm.desktop";
+
+  browserHandlers =
+    browser:
+    lib.genAttrs [
+      "x-scheme-handler/http"
+      "x-scheme-handler/https"
+      "x-scheme-handler/about"
+      "x-scheme-handler/unknown"
+      "text/html"
+      "application/xhtml+xml"
+    ] (_: browser);
+
   mimeDefaults =
-    browser: lib:
+    browser:
     let
       videoTypes = [
         "video/mp4"
@@ -38,28 +54,18 @@ let
         "image/x-portable-anymap"
       ];
     in
-    {
-      "x-scheme-handler/http" = browser;
-      "x-scheme-handler/https" = browser;
-      "x-scheme-handler/about" = browser;
-      "x-scheme-handler/unknown" = browser;
-      "text/html" = browser;
-      "application/xhtml+xml" = browser;
-    }
-    // lib.genAttrs videoTypes (_: "mpv.desktop")
-    // lib.genAttrs imageTypes (_: "imv.desktop");
+    browserHandlers browser
+    // lib.genAttrs videoTypes (_: videoPlayer)
+    // lib.genAttrs imageTypes (_: imageViewer);
 in
 {
-  flake.modules.nixos.desktop =
-    { lib, ... }:
-    {
-      services.dbus.implementation = "broker";
+  flake.modules.nixos.desktop = _: {
+    services.dbus.implementation = "broker";
 
-      documentation.nixos.enable = false;
+    documentation.nixos.enable = false;
 
-      xdg.mime.defaultApplications = mimeDefaults "firefox.desktop" lib;
-
-    };
+    xdg.mime.defaultApplications = mimeDefaults nixosBrowser;
+  };
 
   flake.modules.homeManager.desktop =
     {
@@ -179,20 +185,14 @@ in
         # the explicit list: xdg.mime has no glob support.
         defaultApplications =
           let
-            browser =
-              if config.host.platform == "nixos" then "firefox.desktop" else "com.google.Chrome.desktop";
+            browser = if config.host.platform == "nixos" then nixosBrowser else "com.google.Chrome.desktop";
           in
-          {
-            "x-scheme-handler/http" = browser;
-            "x-scheme-handler/https" = browser;
-            "x-scheme-handler/about" = browser;
-            "x-scheme-handler/unknown" = browser;
-            "text/html" = browser;
-            "application/xhtml+xml" = browser;
-            "inode/directory" = "pcmanfm.desktop";
-            "x-scheme-handler/file" = "pcmanfm.desktop";
-            "video/*" = "mpv.desktop";
-            "image/*" = "imv.desktop";
+          browserHandlers browser
+          // {
+            "inode/directory" = fileManager;
+            "x-scheme-handler/file" = fileManager;
+            "video/*" = videoPlayer;
+            "image/*" = imageViewer;
           };
       };
 

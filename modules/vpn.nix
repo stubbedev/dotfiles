@@ -34,8 +34,6 @@ let
     in
     "${part 0 8}-${part 8 4}-4${part 13 3}-a${part 17 3}-${part 20 12}";
 
-  unitOf = provider: "nm-vpn-profile-${provider}";
-
   profileTarget = provider: "/etc/NetworkManager/system-connections/${provider}.nmconnection";
 
   configOf = provider: home: "${home}/.config/vpn/${provider}/config";
@@ -99,43 +97,44 @@ in
       nmcli = lib.getExe' pkgs.networkmanager "nmcli";
     in
     lib.mkIf config.stubbe.userFeatures.vpn {
-      systemd.services = lib.genAttrs (map unitOf providers) (
-        name:
-        let
-          provider = lib.removePrefix "nm-vpn-profile-" name;
-          configPath = configOf provider home;
-          uuid = uuidOf provider;
-        in
-        {
-          description = "Provision the ${provider} NetworkManager VPN profile";
-          wantedBy = [ "multi-user.target" ];
-          after = [ "NetworkManager.service" ];
-          unitConfig.ConditionPathExists = configPath;
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStart = pkgs.stubbe.shellScript "nm-vpn-profile-${provider}" ''
-              set -euo pipefail
+      systemd.services = lib.listToAttrs (
+        map (
+          provider:
+          let
+            configPath = configOf provider home;
+            uuid = uuidOf provider;
+          in
+          lib.nameValuePair "nm-vpn-profile-${provider}" {
+            description = "Provision the ${provider} NetworkManager VPN profile";
+            wantedBy = [ "multi-user.target" ];
+            after = [ "NetworkManager.service" ];
+            unitConfig.ConditionPathExists = configPath;
+            serviceConfig = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              ExecStart = pkgs.stubbe.shellScript "nm-vpn-profile-${provider}" ''
+                set -euo pipefail
 
-              # Written only when it is missing: once written the profile is
-              # user state, owned by NetworkManager and the lys-shell widget that
-              # edits it, not something a switch gets to clobber.
-              if [ ! -e "${profileTarget provider}" ]; then
-                keyfile_tmp=$(mktemp)
-                trap 'rm -f "$keyfile_tmp"' EXIT
+                # Written only when it is missing: once written the profile is
+                # user state, owned by NetworkManager and the lys-shell widget that
+                # edits it, not something a switch gets to clobber.
+                if [ ! -e "${profileTarget provider}" ]; then
+                  keyfile_tmp=$(mktemp)
+                  trap 'rm -f "$keyfile_tmp"' EXIT
 
-                # shellcheck source=/dev/null
-                source "${configPath}"
-                ${keyfileBody provider uuid}
+                  # shellcheck source=/dev/null
+                  source "${configPath}"
+                  ${keyfileBody provider uuid}
 
-                install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
-                ${nmcli} connection reload >/dev/null 2>&1 || true
-              fi
+                  install -D -m 0600 -o root -g root "$keyfile_tmp" "${profileTarget provider}"
+                  ${nmcli} connection load "${profileTarget provider}"
+                fi
 
-              ${persist nmcli uuid}
-            '';
-          };
-        }
+                ${persist nmcli uuid}
+              '';
+            };
+          }
+        ) providers
       );
     };
 
@@ -147,10 +146,17 @@ in
       ...
     }:
     lib.mkIf config.features.vpn {
-      sops.secrets.vpn-konform-config = pkgs.stubbe.secret {
-        name = "vpn-konform-config.env";
-        path = "${config.home.homeDirectory}/.config/vpn/konform/config";
-      };
+      sops.secrets = lib.listToAttrs (
+        map (
+          provider:
+          lib.nameValuePair "vpn-${provider}-config" (
+            pkgs.stubbe.secret {
+              name = "vpn-${provider}-config.env";
+              path = configOf provider config.home.homeDirectory;
+            }
+          )
+        ) providers
+      );
 
       stubbe.setup.vpnProfile =
         let
@@ -182,7 +188,7 @@ in
                 provider:
                 let
                   uuid = uuidOf provider;
-                  cfg = "${home}/.config/vpn/${provider}/config";
+                  cfg = configOf provider home;
                 in
                 ''
                   ${pkgs.stubbe.setup.requirePath cfg}

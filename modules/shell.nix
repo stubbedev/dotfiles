@@ -26,94 +26,71 @@
       ...
     }:
     let
-      system = pkgs.stdenv.hostPlatform.system;
-
       hmSpec = pkgs.stubbe.hm;
 
+      onAndroid = config.host.platform == "android";
+      inherit (config.stubbe) launchers;
+      avahiHostsCache = "${config.xdg.cacheHome}/zsh-avahi-hosts";
+
+      gitShorthandDocs = {
+        gcm = "treeman git commit — auto ticket prefix; trailing \\ opens editor";
+        gp = "treeman git push — warns on protected/diverged branches";
+        gcb = "treeman git switch — checkout/create branch, worktree-aware (cd)";
+        ga = "treeman git add — interactive stage picker";
+        gsd = "treeman git diff — working-tree diff";
+        gd = "treeman git diff --pick — three-dot diff vs a picked branch";
+        gcd = "treeman git diff --pick --patch — export three-dot diff to a file";
+        gst = "treeman git status — short status";
+        gg = "treeman git pull — current branch (--all for all)";
+        gf = "treeman git fetch (--all for all remotes)";
+        gsa = "treeman git stash — stash all local changes";
+        gcs = "treeman git stash clear — drop the entire stash stack";
+        gw = "treeman git wipe — stash + drop local changes (--all clears stack)";
+        ggo = "treeman git pull --pick — pull a selected origin branch";
+        gl = "treeman git log — interactive log (cherry-pick/revert/copy)";
+        gsp = "treeman git stash pop — pick a stash to pop";
+        gwt = "treeman worktree switch — switch/create a branch worktree (cd; `-` toggles previous)";
+        gwtd = "treeman worktree delete — remove a worktree (picker with no arg)";
+        gwte = "treeman worktree back — cd to main repo root (keeps the worktree)";
+        gwtc = "treeman worktree back --remove — cd to main root and drop the exited worktree if clean";
+      };
+
+      launcherBindings = lib.filter (b: launchers ? ${b.launcher}) [
+        {
+          key = "^[A";
+          launcher = "tmux-lazy-docker";
+        }
+        {
+          key = "^[t";
+          launcher = "tmux-new-session";
+        }
+        {
+          key = "^[g";
+          launcher = "tmux-lazy-git";
+        }
+        {
+          key = "^[a";
+          launcher = "tmux-system-monitor";
+        }
+        {
+          key = "^[f";
+          launcher = "tmux-pick-project";
+        }
+        {
+          key = "^[d";
+          launcher = "tmux-pick-session";
+        }
+      ];
+
       zshFiles = {
-        "apaths" = /* zsh */ ''
-
-          function _apaths_init {
-            local -a STUBBE_APP_PATHS=(
-              "$HOME/.local/share/applications"
-              "$HOME/.local/share/flatpak/exports/share"
-            )
-            local -a new_apaths=()
-            local _ap
-            for _ap in "''${STUBBE_APP_PATHS[@]}"; do
-              [[ -d "$_ap" ]] || continue
-              [[ ":$XDG_DATA_DIRS:" == *":$_ap:"* ]] && continue
-              new_apaths+=("$_ap")
-            done
-            (( ''${#new_apaths} )) && XDG_DATA_DIRS="''${(j/:/)new_apaths}:$XDG_DATA_DIRS"
-            export XDG_DATA_DIRS
-          }
-          _apaths_init
-          unfunction _apaths_init
-        '';
-        "sysfuncs" = /* zsh */ ''
-          # shellcheck disable=SC1091
-
-          function is_binary {
-            command -v "$1" &>/dev/null
-          }
-
-          function are_binary {
-            local arg
-            for arg in "$@"; do
-              is_binary "$arg" || return 1
-            done
-          }
-
-          function is_file {
-            [[ -f "$1" ]]
-          }
-
-          function src_zsh {
-            exec zsh
-          }
-        '';
         "funcs" = /* zsh */ ''
-          # shellcheck disable=SC1091
+          ${lib.optionalString config.features.treeman ''
+            typeset -gA _git_shorthand_docs=(
+              ${lib.concatStringsSep "\n  " (
+                lib.mapAttrsToList (name: doc: "${name} ${lib.escapeShellArg doc}") gitShorthandDocs
+              )}
+            )
 
-
-          typeset -gA _git_shorthand_docs=(
-            gcm 'treeman git commit — auto ticket prefix; trailing \ opens editor'
-            gp 'treeman git push — warns on protected/diverged branches'
-            gcb 'treeman git switch — checkout/create branch, worktree-aware (cd)'
-            ga 'treeman git add — interactive stage picker'
-            gsd 'treeman git diff — working-tree diff'
-            gd 'treeman git diff --pick — three-dot diff vs a picked branch'
-            gcd 'treeman git diff --pick --patch — export three-dot diff to a file'
-            gst 'treeman git status — short status'
-            gg 'treeman git pull — current branch (--all for all)'
-            gf 'treeman git fetch (--all for all remotes)'
-            gsa 'treeman git stash — stash all local changes'
-            gcs 'treeman git stash clear — drop the entire stash stack'
-            gw 'treeman git wipe — stash + drop local changes (--all clears stack)'
-            ggo 'treeman git pull --pick — pull a selected origin branch'
-            gl 'treeman git log — interactive log (cherry-pick/revert/copy)'
-            gsp 'treeman git stash pop — pick a stash to pop'
-            gwt 'treeman worktree switch — switch/create a branch worktree (cd; `-` toggles previous)'
-            gwtd 'treeman worktree delete — remove a worktree (picker with no arg)'
-            gwte 'treeman worktree back — cd to main repo root (keeps the worktree)'
-            gwtc 'treeman worktree back --remove — cd to main root and drop the exited worktree if clean'
-          )
-
-          function in_git_repo {
-            local dir=$PWD
-            while [[ $dir != / ]]; do
-              [[ -e $dir/.git ]] && { _git_root=$dir; return 0; }
-              dir=''${dir:h}
-            done
-            return 1
-          }
-
-          function _in_linked_worktree {
-            [[ -f "$_git_root/.git" ]]
-          }
-
-          if are_binary git treeman; then
             alias gcm='treeman git commit'
             alias gp='treeman git push'
             alias ga='treeman git add'
@@ -145,59 +122,53 @@
 
             gwte() { local p; p=$(treeman worktree back)                && cd "''${p%%$'\n'*}"; }
             gwtc() { local p; p=$(treeman worktree back --remove --force) && cd "''${p%%$'\n'*}"; }
-          fi
+          ''}
 
-          if is_binary ss; then
+          ${lib.optionalString (!onAndroid) ''
             function onport {
               ss -lptn " sport = :$1"
             }
-          fi
+          ''}
 
-          if are_binary ssh openssl; then
-            function remote_passwd {
-              local _user="$1" _host="$2"
-              if [[ -z "$_user" || -z "$_host" ]]; then
-                echo "usage: remote_passwd <user> <host>"
-                return 1
-              fi
-              local _oldpass _newpass _confirm
-              read -rs "_oldpass?Current password for $_user@$_host: "; echo
-              read -rs "_newpass?New password: "; echo
-              read -rs "_confirm?Confirm new password: "; echo
-              if [[ "$_newpass" != "$_confirm" ]]; then
-                echo "passwords do not match"
-                return 1
-              fi
-              local _hash=$(openssl passwd -6 "$_newpass") || return 1
-              echo "$_oldpass" | ssh "$_user@$_host" "sudo -S -p ''' usermod -p '$_hash' '$_user'"
-            }
-          fi
+          function remote_passwd {
+            local _user="$1" _host="$2"
+            if [[ -z "$_user" || -z "$_host" ]]; then
+              echo "usage: remote_passwd <user> <host>"
+              return 1
+            fi
+            local _oldpass _newpass _confirm
+            read -rs "_oldpass?Current password for $_user@$_host: "; echo
+            read -rs "_newpass?New password: "; echo
+            read -rs "_confirm?Confirm new password: "; echo
+            if [[ "$_newpass" != "$_confirm" ]]; then
+              echo "passwords do not match"
+              return 1
+            fi
+            local _hash=$(${lib.getExe pkgs.openssl} passwd -6 "$_newpass") || return 1
+            echo "$_oldpass" | ssh "$_user@$_host" "sudo -S -p ''' usermod -p '$_hash' '$_user'"
+          }
 
-          if is_binary uv; then
+          ${lib.optionalString config.programs.uv.enable ''
             function pysrc {
-              if ! is_file "$PWD/venv/bin/activate"; then
-                uv venv ./venv
-              fi
-              is_file "$PWD/venv/bin/activate" && source "$PWD/venv/bin/activate"
+              [[ -f "$PWD/venv/bin/activate" ]] || uv venv ./venv || return
+              source "$PWD/venv/bin/activate"
             }
-          fi
+          ''}
 
-          if is_binary fzf; then
-            function fzf-project-picker {
-              SELECTED_DIR="$(fzf-pick-project "$@")"
-              if [[ -n "$SELECTED_DIR" ]]; then
-                cd "$SELECTED_DIR"
-              fi
-              clear
-            }
-            function fzf-directory-picker {
-              SELECTED_DIR="$(fzf-pick-directory "$@")"
-              if [[ -n "$SELECTED_DIR" ]]; then
-                cd "$SELECTED_DIR"
-              fi
-              clear
-            }
-          fi
+          function fzf-project-picker {
+            SELECTED_DIR="$(fzf-pick-project "$@")"
+            if [[ -n "$SELECTED_DIR" ]]; then
+              cd "$SELECTED_DIR"
+            fi
+            clear
+          }
+          function fzf-directory-picker {
+            SELECTED_DIR="$(fzf-pick-directory "$@")"
+            if [[ -n "$SELECTED_DIR" ]]; then
+              cd "$SELECTED_DIR"
+            fi
+            clear
+          }
         '';
         "aliases" = /* zsh */ ''
           alias la='ls -laF'
@@ -208,32 +179,11 @@
           alias rm='rm -i'
           alias cp='cp -i'
           alias mv='mv -i'
-
-          if is_binary clip; then
-            alias pbcopy='clip'
-          elif is_binary xclip; then
-            alias pbcopy='xclip -selection clipboard'
-          fi
-
-          if is_binary wl-paste; then
-            alias pbpaste='wl-paste --no-newline'
-          elif is_binary xclip; then
-            alias pbpaste='xclip -selection clipboard -o'
-          fi
-
-          if is_binary gzip; then
-            alias gzcat='gzip -dc'
-          fi
-
-          if is_binary nvim; then
-            alias svim='nvim -u NONE'
-          fi
-
-          if is_binary eza; then
-            alias ls='eza'
-          else
-            alias ls='ls --color'
-          fi
+          alias pbcopy='clip'
+          ${lib.optionalString config.features.desktop "alias pbpaste='${lib.getExe' pkgs.wl-clipboard "wl-paste"} --no-newline'"}
+          alias gzcat='${lib.getExe' pkgs.gzip "gzip"} -dc'
+          alias svim='nvim -u NONE'
+          alias ls='eza'
         '';
         "settings" = /* zsh */ ''
           function _settings_init {
@@ -250,25 +200,26 @@
               bindkey "$key" "$widget"
             }
 
-            local _reload_cmd='[[ -n $TMUX ]] && tmux source-file "$HOME/.config/tmux/tmux.conf"; src_zsh'
+            local _reload_cmd='[[ -n $TMUX ]] && tmux source-file "$HOME/.config/tmux/tmux.conf"; exec zsh'
             _bind_run "^[R" "$_reload_cmd"
             _bind_run "^[r" "$_reload_cmd"
             _bind_run "^[o" "nvim"
             _bind_run "^[O" "nvim ."
-            function _git_shorthand_descriptions {
-              (( CURRENT != 1 )) && return 1
-              (( ''${#_git_shorthand_docs} == 0 )) && return 1
+            ${lib.optionalString config.features.treeman ''
+              function _git_shorthand_descriptions {
+                (( CURRENT != 1 )) && return 1
 
-              local -a git_cmds
-              local func
-              for func in "''${(@k)_git_shorthand_docs}"; do
-                git_cmds+=("''${func}:''${_git_shorthand_docs[$func]}")
-              done
+                local -a git_cmds
+                local func
+                for func in "''${(@k)_git_shorthand_docs}"; do
+                  git_cmds+=("''${func}:''${_git_shorthand_docs[$func]}")
+                done
 
-              _describe -t git-shortcuts 'git shortcuts' git_cmds
-            }
+                _describe -t git-shortcuts 'git shortcuts' git_cmds
+              }
+            ''}
 
-            zstyle ':completion:*' completer _expand _expand_alias _git_shorthand_descriptions _complete _ignored
+            zstyle ':completion:*' completer _expand _expand_alias ${lib.optionalString config.features.treeman "_git_shorthand_descriptions "}_complete _ignored
             zstyle ':completion:*' fzf-tab true
             zstyle ':completion:*' complete-options true
             zstyle ':completion:*' complete-aliases true
@@ -280,107 +231,41 @@
             zstyle ':completion:*:descriptions' format '[%d]'
             zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
             zstyle ':completion:*' menu no
-            if is_binary eza; then
-                zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
-            fi
+            zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
             zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept --height=40% --reverse --info=inline
             zstyle ':fzf-tab:*' switch-group '<' '>'
             zstyle ':fzf-tab:*' fuzzy-search true
 
-            function _avahi_ssh_hosts {
-              local cache="''${XDG_CACHE_HOME:-$HOME/.cache}/zsh-avahi-hosts"
-              if [[ -s $cache ]]; then
-                reply=( ''${(f)"$(<$cache)"} )
-              else
-                reply=()
-              fi
-            }
-            zstyle -e ':completion:*:hosts' hosts '_avahi_ssh_hosts'
+            ${lib.optionalString config.features.avahi ''
+              function _avahi_ssh_hosts {
+                local cache=${lib.escapeShellArg avahiHostsCache}
+                if [[ -s $cache ]]; then
+                  reply=( ''${(f)"$(<$cache)"} )
+                else
+                  reply=()
+                fi
+              }
+              zstyle -e ':completion:*:hosts' hosts '_avahi_ssh_hosts'
+            ''}
 
             HYPHEN_INSENSITIVE=false
             DISABLE_AUTO_TITLE=true
             VIM_MODE_NO_DEFAULT_BINDINGS=true
             KEYTIMEOUT=1
-            ARTISAN_OPEN_ON_MAKE_EDITOR=nvim
+            ${lib.optionalString config.features.php "ARTISAN_OPEN_ON_MAKE_EDITOR=nvim"}
             ZSH_AUTOSUGGEST_MANUAL_REBIND=1
             ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
             setopt COMPLETE_ALIASES
 
-            _bind_run "^[A" "tmux-lazy-docker"
-            _bind_run "^[t" "tmux-new-session"
-            _bind_run "^[g" "tmux-lazy-git"
-            _bind_run "^[a" "tmux-system-monitor"
-
-            if is_binary fzf; then
-                _bind_run "^[f" "tmux-pick-project"
-                _bind_run "^[F" "fzf-project-picker"
-                _bind_run "^[d" "tmux-pick-session"
-                _bind_run "^[D" "fzf-directory-picker"
-            fi
-
-            if is_binary pyenv; then
-                export PYENV_ROOT="$HOME/.pyenv"
-                [[ ":$PATH:" == *":$PYENV_ROOT/bin:"* ]]    || PATH="$PYENV_ROOT/bin:$PATH"
-                [[ ":$PATH:" == *":$PYENV_ROOT/shims:"* ]] || PATH="$PYENV_ROOT/shims:$PATH"
-                function pyenv {
-                    unfunction pyenv
-                    eval "$(command pyenv init -)"
-                    eval "$(command pyenv virtualenv-init -)"
-                    pyenv "$@"
-                }
-            fi
+            ${lib.concatMapStringsSep "\n" (b: ''_bind_run "${b.key}" "${b.launcher}"'') launcherBindings}
+            _bind_run "^[F" "fzf-project-picker"
+            _bind_run "^[D" "fzf-directory-picker"
 
             unfunction _bind_run
           }
           _settings_init
           unfunction _settings_init
-        '';
-        "completions/_git_shortcuts" = /* zsh */ ''
-          _git_shortcuts() {
-            case $service in
-              gcb|gd|gcd|ggo|gwt)
-                local now=$EPOCHSECONDS
-                if (( now - ''${_gsc_br_time:-0} > 5 )) || [[ ''${_gsc_br_pwd:-} != $PWD ]]; then
-                  _list_git_branches
-                  typeset -ga _gsc_br_cache=("''${reply[@]}")
-                  typeset -g _gsc_br_time=$now _gsc_br_pwd=$PWD
-                fi
-                local _cur=$(git branch --show-current 2>/dev/null)
-                local -a _filtered=()
-                local _b
-                for _b in "''${_gsc_br_cache[@]}"; do
-                  [[ "$_b" == "$_cur" ]] && continue
-                  _filtered+=("$_b")
-                done
-                _describe 'branches' _filtered
-                ;;
-              gwtd)
-                local now=$EPOCHSECONDS
-                if (( now - ''${_gsc_wt_time:-0} > 5 )) || [[ ''${_gsc_wt_pwd:-} != $PWD ]]; then
-                  local -a _wt_list=()
-                  local _path _branch
-                  while IFS=$'\t' read -r _path _branch; do
-                    _wt_list+=("$_branch")
-                  done < <(_list_worktrees)
-                  typeset -ga _gsc_wt_cache=("''${_wt_list[@]}")
-                  typeset -g _gsc_wt_time=$now _gsc_wt_pwd=$PWD
-                fi
-                _describe 'worktrees' _gsc_wt_cache
-                ;;
-              gg|gf|gw)
-                _arguments '1:flag:((--all\:"include\ all\ remotes/stash"))'
-                ;;
-              gwte|gwtc)
-                return 0
-                ;;
-              *)
-                return 1
-                ;;
-            esac
-          }
-
-          _git_shortcuts "$@"
         '';
         "completions/_hm" = /* zsh */ ''
           #compdef hm
@@ -450,13 +335,9 @@
                     ;;
                   remove-generations)
                     local -a generations
-                    if (( ''${+commands[home-manager]} )); then
-                      generations=(''${(f)"$(home-manager generations 2>/dev/null | grep -o '^[0-9]\+' || true)"})
-                      if [[ ''${#generations} -gt 0 ]]; then
-                        _describe 'generation IDs' generations
-                      else
-                        _message 'generation ID'
-                      fi
+                    generations=(''${(f)"$(home-manager generations 2>/dev/null | grep -o '^[0-9]\+')"})
+                    if [[ ''${#generations} -gt 0 ]]; then
+                      _describe 'generation IDs' generations
                     else
                       _message 'generation ID'
                     fi
@@ -583,6 +464,48 @@
 
           _hm "$@"
         '';
+      }
+      // lib.optionalAttrs config.features.treeman {
+        "completions/_git_shortcuts" = /* zsh */ ''
+          zmodload -F zsh/datetime p:EPOCHSECONDS
+
+          _git_shortcuts() {
+            case $service in
+              gcb|gd|gcd|ggo|gwt)
+                local now=$EPOCHSECONDS
+                if (( now - ''${_gsc_br_time:-0} > 5 )) || [[ ''${_gsc_br_pwd:-} != $PWD ]]; then
+                  local -a _refs
+                  _refs=(''${(f)"$(git for-each-ref --format='%(refname:lstrip=2)' refs/heads 2>/dev/null
+                    git for-each-ref --format='%(refname:lstrip=3)' refs/remotes 2>/dev/null)"})
+                  typeset -ga _gsc_br_cache=(''${(u)_refs:#HEAD})
+                  typeset -g _gsc_br_time=$now _gsc_br_pwd=$PWD
+                fi
+                local _cur=$(git branch --show-current 2>/dev/null)
+                local -a _filtered=(''${_gsc_br_cache:#$_cur})
+                _describe 'branches' _filtered
+                ;;
+              gwtd)
+                local now=$EPOCHSECONDS
+                if (( now - ''${_gsc_wt_time:-0} > 5 )) || [[ ''${_gsc_wt_pwd:-} != $PWD ]]; then
+                  typeset -ga _gsc_wt_cache=(''${(f)"$(git worktree list --porcelain 2>/dev/null | sed -n 's|^branch refs/heads/||p')"})
+                  typeset -g _gsc_wt_time=$now _gsc_wt_pwd=$PWD
+                fi
+                _describe 'worktrees' _gsc_wt_cache
+                ;;
+              gg|gf|gw)
+                _arguments '1:flag:((--all\:"include\ all\ remotes/stash"))'
+                ;;
+              gwte|gwtc)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          _git_shortcuts "$@"
+        '';
       };
 
       sourceableZshFiles = lib.filter (n: !(lib.hasPrefix "completions/" n)) (lib.attrNames zshFiles);
@@ -616,16 +539,18 @@
           src = "${pkgs.zsh-autosuggestions}/share/zsh/plugins/zsh-autosuggestions";
           file = "zsh-autosuggestions.zsh";
         }
-        {
-          name = "zsh-fzf-artisan";
-          src = inputs.zsh-fzf-artisan;
-          file = "artisan.plugin.zsh";
-        }
-        {
-          name = "zsh-fzf-npm-run";
-          src = inputs.zsh-fzf-npm-run;
-          file = "zsh-fzf-npm-run.plugin.zsh";
-        }
+      ]
+      ++ lib.optional config.features.php {
+        name = "zsh-fzf-artisan";
+        src = inputs.zsh-fzf-artisan;
+        file = "artisan.plugin.zsh";
+      }
+      ++ lib.optional config.features.development {
+        name = "zsh-fzf-npm-run";
+        src = inputs.zsh-fzf-npm-run;
+        file = "zsh-fzf-npm-run.plugin.zsh";
+      }
+      ++ [
         {
           name = "zsh-vim-mode";
           src = inputs.zsh-vim-mode;
@@ -645,23 +570,11 @@
       zshCompletions = pkgs.runCommandLocal "stubbe-zsh-completions" { } ''
         dir=$out/share/zsh/site-functions
         mkdir -p $dir
-        ${lib.getExe pkgs.lazygit} completion zsh > $dir/_lazygit
-        ${lib.optionalString config.features.srv ''
-          ${inputs.srv.packages.${system}.srv}/bin/srv completion zsh > $dir/_srv
-        ''}
-        ${lib.optionalString config.features.treeman ''
-          ${inputs.treeman.packages.${system}.treeman}/bin/treeman completion zsh > $dir/_treeman
-        ''}
-        ${lib.optionalString config.features.lysShell ''
-          ${pkgs.lys-shell}/bin/lys-shell completions zsh > $dir/_lys-shell
-        ''}
-        ${lib.optionalString config.features.development ''
-          ${lib.getExe' pkgs.xilo "xilo"} completion zsh > $dir/_xilo
-        ''}
-        ${lib.optionalString config.features.php ''
-          ${pkgs.frankenphp}/bin/frankenphp completion zsh \
-            | sed 's/caddy/frankenphp/g' > $dir/_frankenphp
-        ''}
+        ${lib.concatStrings (
+          lib.mapAttrsToList (name: command: ''
+            ${command} > $dir/${name}
+          '') config.stubbe.zshCompletions
+        )}
       '';
 
       # Interpolated into both the .zshrc and the zcompdump builder, so runtime
@@ -716,14 +629,14 @@
         export HOME=$TMPDIR
         zsh -f <<'ZSHEOF'
         ${fpathLine}
-        source ${zshConfig}/sysfuncs
-        source ${zshConfig}/funcs
         autoload -Uz compinit
         compinit -u -d "$out/zcompdump"
-        {
-          print -r -- "autoload -Uz _git_shortcuts"
-          print -r -- "compdef _git_shortcuts ''${(k)_git_shorthand_docs}"
-        } >> "$out/zcompdump"
+        ${lib.optionalString config.features.treeman ''
+          {
+            print -r -- "autoload -Uz _git_shortcuts"
+            print -r -- "compdef _git_shortcuts ${lib.concatStringsSep " " (lib.attrNames gitShorthandDocs)}"
+          } >> "$out/zcompdump"
+        ''}
         zcompile "$out/zcompdump"
         ZSHEOF
       '';
@@ -733,120 +646,115 @@
       ) pluginSpecs;
     in
     {
-      # Terminals and tmux spawn $SHELL. Pointing it at the nix zsh skips the
-      # distro-zsh hop through the .zshenv exec below; logins via passwd (TTY,
-      # ssh) still take that hop.
-      home.sessionVariables.SHELL = zshBin;
-
-      programs.zsh = {
-        enable = true;
-        enableCompletion = true;
-        completionInit = ''
-          autoload -Uz compinit
-          compinit -C -d ${zcompdump}/zcompdump
+      options.stubbe.zshCompletions = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = ''
+          Generated zsh completion functions, keyed by file name (`_<cmd>`): each
+          value is a shell command that prints the completion script. Each
+          aspect registers the completion of the tool it installs.
         '';
-        # Sourced from .zshenv, before Ubuntu's /etc/zsh/zshrc can run its own
-        # compinit against the system fpath. The no_aliases line is the alias
-        # guard for AI agents: their tool shells are non-interactive zsh that
-        # source a snapshot re-defining every alias (rm -i, cp -i, ls=eza, the
-        # treeman git wrappers), which then hijack the commands they run. zshenv
-        # is read before the -c command, and the option survives the snapshot,
-        # so the definitions stay but never expand. Interactive shells - a real
-        # terminal, or a pty the human is driving - keep their aliases.
-        #
-        # The exec swaps an interactive distro zsh for the nix one: fzf-tab's
-        # compiled module links nix glibc and fails to load into a host-glibc
-        # zsh. Done here, not via chsh, so a broken profile leaves you in the
-        # distro zsh instead of locked out. argv0 carries login-ness across.
-        # No-op on NixOS, where the running zsh is already a store path.
-        envExtra = ''
-          [[ -o interactive && -z $ZSH_EXECUTION_STRING && -x ${zshBin} \
-            && ''${''${:-/proc/$$/exe}:A} != /nix/store/* ]] &&
-            exec -a "$ZSH_ARGZERO" ${zshBin} -i
-          skip_global_compinit=1
-          [[ -o interactive ]] || setopt no_aliases
-        '';
-        history = {
-          path = "${config.home.homeDirectory}/.zsh_history";
-          size = 10000;
-          save = 10000;
-          extended = true;
-          share = true;
-          append = true;
-          ignoreAllDups = true;
-        };
-        initContent = lib.mkMerge [
-          (lib.mkOrder 500 ''
-            source ${zshConfig}/apaths
-            source ${zshConfig}/sysfuncs
-            source ${zshConfig}/funcs
-            ${fpathLine}
-          '')
-          # fzf-tab must load right after compinit and patina last, so its ZLE
-          # hooks wrap the final widget set.
-          (lib.mkOrder 1000 ''
-            source ${zshConfig}/aliases
-            ${sourcePlugins}
-            source ${zshConfig}/settings
-            (( $+commands[fzf] ))      && source ${fzfInit}
-            (( $+commands[starship] )) && source ${starshipInit}
-            (( $+commands[zoxide] ))   && source ${zoxideInit}
-            ${lib.optionalString config.programs.direnv-instant.enable "source ${direnvInstantInit}"}
-            ${lib.optionalString (config.host.platform == "android") ''
-              if ! ${lib.getExe pkgs.zsh-patina} status >/dev/null 2>&1; then
-                ${lib.getExe pkgs.zsh-patina} start
-                _patina_stop_on_exit() { ${lib.getExe pkgs.zsh-patina} stop >/dev/null }
-                autoload -Uz add-zsh-hook
-                add-zsh-hook zshexit _patina_stop_on_exit
-              fi
-            ''}
-            _patina_init="${config.xdg.cacheHome}/zsh/patina-init.zsh"
-            [[ -f "$_patina_init" ]] && source "$_patina_init"
-            unset _patina_init
-          '')
-        ];
       };
 
-      home.file = {
-        ".prettierrc.json".source = pkgs.stubbe.gen.json "prettierrc.json" {
-          printWidth = 80;
-          useTabs = true;
-          singleQuote = true;
-          overrides = [
-            {
-              files = [
-                "*.md"
-                "*.mdx"
-              ];
-              options = {
-                proseWrap = "always";
-                printWidth = 80;
-              };
-            }
+      config = {
+        home.packages = with pkgs; [
+          zsh-completions
+          zsh-patina
+          starship
+        ];
+
+        # Terminals and tmux spawn $SHELL. Pointing it at the nix zsh skips the
+        # distro-zsh hop through the .zshenv exec below; logins via passwd (TTY,
+        # ssh) still take that hop.
+        home.sessionVariables.SHELL = zshBin;
+
+        programs.zsh = {
+          enable = true;
+          enableCompletion = true;
+          completionInit = ''
+            autoload -Uz compinit
+            compinit -C -d ${zcompdump}/zcompdump
+          '';
+          # Sourced from .zshenv, before Ubuntu's /etc/zsh/zshrc can run its own
+          # compinit against the system fpath. The no_aliases line is the alias
+          # guard for AI agents: their tool shells are non-interactive zsh that
+          # source a snapshot re-defining every alias (rm -i, cp -i, ls=eza, the
+          # treeman git wrappers), which then hijack the commands they run. zshenv
+          # is read before the -c command, and the option survives the snapshot,
+          # so the definitions stay but never expand. Interactive shells - a real
+          # terminal, or a pty the human is driving - keep their aliases.
+          #
+          # The exec swaps an interactive distro zsh for the nix one: fzf-tab's
+          # compiled module links nix glibc and fails to load into a host-glibc
+          # zsh. Done here, not via chsh, so a broken profile leaves you in the
+          # distro zsh instead of locked out. argv0 carries login-ness across.
+          # No-op on NixOS, where the running zsh is already a store path.
+          envExtra = ''
+            [[ -o interactive && -z $ZSH_EXECUTION_STRING && -x ${zshBin} \
+              && ''${''${:-/proc/$$/exe}:A} != /nix/store/* ]] &&
+              exec -a "$ZSH_ARGZERO" ${zshBin} -i
+            skip_global_compinit=1
+            [[ -o interactive ]] || setopt no_aliases
+          '';
+          history = {
+            path = "${config.home.homeDirectory}/.zsh_history";
+            size = 10000;
+            save = 10000;
+            extended = true;
+            share = true;
+            append = true;
+            ignoreAllDups = true;
+          };
+          initContent = lib.mkMerge [
+            (lib.mkOrder 500 ''
+              source ${zshConfig}/funcs
+              ${fpathLine}
+            '')
+            # fzf-tab must load right after compinit and patina last, so its ZLE
+            # hooks wrap the final widget set.
+            (lib.mkOrder 1000 ''
+              source ${zshConfig}/aliases
+              ${sourcePlugins}
+              source ${zshConfig}/settings
+              source ${fzfInit}
+              source ${starshipInit}
+              source ${zoxideInit}
+              ${lib.optionalString config.programs.direnv-instant.enable "source ${direnvInstantInit}"}
+              ${lib.optionalString (config.host.platform == "android") ''
+                if ! ${lib.getExe pkgs.zsh-patina} status >/dev/null 2>&1; then
+                  ${lib.getExe pkgs.zsh-patina} start
+                  _patina_stop_on_exit() { ${lib.getExe pkgs.zsh-patina} stop >/dev/null }
+                  autoload -Uz add-zsh-hook
+                  add-zsh-hook zshexit _patina_stop_on_exit
+                fi
+              ''}
+              _patina_init="${config.xdg.cacheHome}/zsh/patina-init.zsh"
+              [[ -f "$_patina_init" ]] && source "$_patina_init"
+              unset _patina_init
+            '')
           ];
         };
-      };
 
-      stubbe.setup.zshPatina.script = ''
-        export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-        _patina_cache='${config.xdg.cacheHome}/zsh'
-        mkdir -p "$_patina_cache"
-        if ${lib.getExe pkgs.zsh-patina} activate > "$_patina_cache/patina-init.zsh.tmp" 2>/dev/null; then
-          mv "$_patina_cache/patina-init.zsh.tmp" "$_patina_cache/patina-init.zsh"
-          ${lib.getExe pkgs.zsh} -c 'zcompile "$1"' _ "$_patina_cache/patina-init.zsh" || true
-        else
-          rm -f "$_patina_cache/patina-init.zsh.tmp"
-        fi
-        unset _patina_cache
-      '';
+        stubbe.setup.zshPatina.script = ''
+          export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+          _patina_cache='${config.xdg.cacheHome}/zsh'
+          mkdir -p "$_patina_cache"
+          if ${lib.getExe pkgs.zsh-patina} activate > "$_patina_cache/patina-init.zsh.tmp"; then
+            mv "$_patina_cache/patina-init.zsh.tmp" "$_patina_cache/patina-init.zsh"
+            ${lib.getExe pkgs.zsh} -c 'zcompile "$1"' _ "$_patina_cache/patina-init.zsh"
+          else
+            rm -f "$_patina_cache/patina-init.zsh.tmp"
+            echo "zsh-patina activate failed; syntax highlighting stays off" >&2
+          fi
+          unset _patina_cache
+        '';
 
-      # The hook script is generated at switch time, not built: `zsh-patina
-      # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
-      # script never starts the daemon itself, so without this unit highlighting
-      # silently does nothing after a reboot.
-      # User units, which nothing runs on Android: nix-on-droid has no init.
-      systemd.user = lib.mkIf (config.host.platform != "android") {
-        services.zsh-patina = {
+        # The hook script is generated at switch time, not built: `zsh-patina
+        # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
+        # script never starts the daemon itself, so without this unit highlighting
+        # silently does nothing after a reboot.
+        # User units, which nothing runs on Android: nix-on-droid has no init.
+        systemd.user.services.zsh-patina = lib.mkIf (!onAndroid) {
           Unit.Description = "zsh-patina syntax highlighting daemon";
           Service = {
             ExecStart = "${lib.getExe pkgs.zsh-patina} start --no-daemon";
@@ -855,21 +763,21 @@
           Install.WantedBy = [ "default.target" ];
         };
 
-        services.zsh-avahi-hosts = {
+        systemd.user.services.zsh-avahi-hosts = lib.mkIf config.features.avahi {
           Unit.Description = "Refresh avahi .local host cache for zsh completion";
           Service = {
             Type = "oneshot";
             ExecStart =
               let
-                cacheFile = "${config.xdg.cacheHome}/zsh-avahi-hosts";
+                cacheFile = avahiHostsCache;
               in
               pkgs.stubbe.shellScript "zsh-avahi-hosts-refresh" ''
-                set -u
+                set -u -o pipefail
                 mkdir -p "$(dirname '${cacheFile}')"
                 tmp='${cacheFile}.tmp'
-                if ${pkgs.avahi}/bin/avahi-browse -atrp 2>/dev/null \
+                if ${pkgs.avahi}/bin/avahi-browse -atrp \
                      | ${lib.getExe pkgs.gawk} -F';' '$1=="=" && $3=="IPv4" && ($5=="_workstation._tcp" || $5 ~ /ssh/) && $7!="" {print $7}' \
-                     | sort -u > "$tmp" 2>/dev/null; then
+                     | sort -u > "$tmp"; then
                   mv "$tmp" '${cacheFile}'
                 else
                   rm -f "$tmp"
@@ -880,7 +788,7 @@
           };
         };
 
-        timers.zsh-avahi-hosts = {
+        systemd.user.timers.zsh-avahi-hosts = lib.mkIf config.features.avahi {
           Unit.Description = "Periodic avahi host cache refresh";
           Timer = {
             OnBootSec = "30s";

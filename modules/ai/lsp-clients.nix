@@ -170,8 +170,7 @@ _: {
         // {
           filetypes = builtins.attrNames s.languages ++ s.fileNames or [ ];
         }
-        // lib.optionalAttrs (s ? settings) { options = s.settings; }
-        // lib.optionalAttrs (s ? initOptions) { init_options = s.initOptions; };
+        // lib.optionalAttrs (s ? settings) { options = s.settings; };
 
       # Claude's plugin `.lsp.json` dialect: extensions only, keyed with the
       # dot, so `fileNames` has no equivalent there.

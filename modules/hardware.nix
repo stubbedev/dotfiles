@@ -1,5 +1,14 @@
 _:
 let
+  inotifyLimits = {
+    "fs.inotify.max_user_watches" = 524288;
+    "fs.inotify.max_user_instances" = 512;
+  };
+
+  touchpadDriver = "/sys/bus/i2c/drivers/i2c_hid_acpi";
+  touchpadDevice = "i2c-SNSL0028:00";
+  touchpadRebindDescription = "Rebind wedged i2c-hid touchpad after dock undock";
+
   usbAutosuspendRules = ''
     ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_INTERFACES}=="*:03*", TEST=="power/control", ATTR{power/control}="on"
   '';
@@ -14,14 +23,18 @@ let
   '';
 
   touchpadRebindRules = ''
-    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", ENV{SYSTEMD_WANTS}+="touchpad-rebind.service"
+    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", TEST=="${touchpadDriver}/${touchpadDevice}", ENV{SYSTEMD_WANTS}+="touchpad-rebind.service"
+  '';
+
+  touchpadUndockRule = systemctl: ''
+    ACTION=="remove", SUBSYSTEM=="thunderbolt", ENV{DEVTYPE}=="thunderbolt_device", TEST=="${touchpadDriver}/${touchpadDevice}", RUN+="${systemctl} --no-block start touchpad-rebind.service"
   '';
 
   rebindTouchpadScript = ''
     set -u
 
-    drv=/sys/bus/i2c/drivers/i2c_hid_acpi
-    dev=i2c-SNSL0028:00
+    drv=${touchpadDriver}
+    dev=${touchpadDevice}
 
     [ -e "$drv/$dev" ] || exit 0
 
@@ -84,10 +97,7 @@ in
         # The 65536 default is exhausted by webpack-dev-server + octane --watch
         # over large node_modules trees → ENOSPC "file watchers reached". The
         # non-NixOS half is the inotifyLimits setup below.
-        kernel.sysctl = {
-          "fs.inotify.max_user_watches" = 524288;
-          "fs.inotify.max_user_instances" = 512;
-        };
+        kernel.sysctl = inotifyLimits;
       };
 
       hardware = {
@@ -115,12 +125,11 @@ in
         ${usbAutosuspendRules}
         ${usbAudioPowerRules}
         ${touchpadRebindRules}
-
-        ACTION=="remove", SUBSYSTEM=="thunderbolt", ENV{DEVTYPE}=="thunderbolt_device", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", RUN+="${lib.getExe' config.systemd.package "systemctl"} --no-block start touchpad-rebind.service"
+        ${touchpadUndockRule (lib.getExe' config.systemd.package "systemctl")}
       '';
 
       systemd.services.touchpad-rebind = {
-        description = "Rebind wedged i2c-hid touchpad after dock undock";
+        description = touchpadRebindDescription;
         serviceConfig.Type = "oneshot";
         script = rebindTouchpadScript;
       };
@@ -147,11 +156,11 @@ in
             ${pkgs.stubbe.setup.text {
               name = "60-inotify-limits.conf";
               target = "/etc/sysctl.d/60-inotify-limits.conf";
-              text = ''
-                # managed-by: stubbe inotify-limits
-                fs.inotify.max_user_watches = 524288
-                fs.inotify.max_user_instances = 512
-              '';
+              text =
+                pkgs.stubbe.managedBy "inotify-limits"
+                + lib.generators.toKeyValue {
+                  mkKeyValue = lib.generators.mkKeyValueDefault { } " = ";
+                } inotifyLimits;
             }}
 
             if command -v sysctl >/dev/null 2>&1; then
@@ -214,9 +223,7 @@ in
             ${pkgs.stubbe.setup.text {
               name = "91-touchpad-rebind-thunderbolt.rules";
               target = "/etc/udev/rules.d/91-touchpad-rebind-thunderbolt.rules";
-              text = ''
-                ACTION=="remove", SUBSYSTEM=="thunderbolt", ENV{DEVTYPE}=="thunderbolt_device", TEST=="/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-SNSL0028:00", RUN+="/usr/bin/systemctl --no-block start touchpad-rebind.service"
-              '';
+              text = touchpadUndockRule "/usr/bin/systemctl";
             }}
 
             ${pkgs.stubbe.setup.text {
@@ -230,7 +237,7 @@ in
               name = "touchpad-rebind.service";
               target = "/etc/systemd/system/touchpad-rebind.service";
               text = pkgs.stubbe.gen.unitText {
-                Unit.Description = "Rebind wedged i2c-hid touchpad after dock undock";
+                Unit.Description = touchpadRebindDescription;
                 Service = {
                   Type = "oneshot";
                   ExecStart = "/etc/udev/scripts/rebind-touchpad.sh";

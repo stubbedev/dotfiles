@@ -7,17 +7,8 @@
 { inputs, ... }:
 {
   flake.modules.nixos.srv =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
+    { config, lib, ... }:
     lib.mkIf config.stubbe.userFeatures.srv {
-      # certutil, so srv's vendored mkcert can trust the local CA in the
-      # browsers' NSS store (security.pki below only covers the system store).
-      environment.systemPackages = [ pkgs.nss.tools ];
-
       # Flake evals are restricted to the flake tree, so a runtime-generated
       # CA under $HOME is invisible here (builtins.pathExists silently returns
       # false). The cert is committed instead and the user's CAROOT below is
@@ -42,10 +33,14 @@
       rootCA = ../certs/mkcert-rootCA.pem;
     in
     lib.mkIf config.features.srv {
+      # certutil, so srv's vendored mkcert can trust the local CA in the
+      # browsers' NSS store (the system store only covers system TLS).
       home.packages = [
         srvPkg
         pkgs.nss.tools
       ];
+
+      stubbe.zshCompletions._srv = "${lib.getExe' srvPkg "srv"} completion zsh";
 
       # Declarative, not `srv daemon install`: that bakes a then-current store
       # path into ExecStart, which the next upgrade or GC deletes, leaving the
@@ -63,7 +58,12 @@
           Restart = "on-failure";
           RestartSec = 5;
           Environment = [
-            "PATH=/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin"
+            "PATH=${
+              if config.host.platform == "nixos" then
+                "/run/wrappers/bin:/run/current-system/sw/bin"
+              else
+                "/usr/local/bin:/usr/bin:/bin"
+            }"
             "XDG_CONFIG_HOME=${config.xdg.configHome}"
           ];
         };
@@ -84,7 +84,8 @@
       # user-owned databases, idempotent, no sudo. A stray `sudo` browser run
       # can leave a profile's NSS files root-owned: unreadable to us and to the
       # browser alike, so nothing is lost by moving them aside (the dir is
-      # ours) and starting a fresh DB. Best-effort: never blocks activation.
+      # ours) and starting a fresh DB. Best-effort: a failure is reported but
+      # never blocks activation.
       stubbe.setup.nssTrust = {
         script = ''
           certutil=${lib.getExe' pkgs.nss.tools "certutil"}
@@ -98,20 +99,20 @@
               for f in cert9.db key4.db pkcs11.txt; do
                 if [ -e "$dir$f" ]; then mv -f "$dir$f" "$dir$f.unowned-bak"; fi
               done
-              "$certutil" -N --empty-password -d "sql:$dir" >/dev/null 2>&1 || continue
+              if ! "$certutil" -N --empty-password -d "sql:$dir"; then
+                echo "nssTrust: could not create an NSS database in $dir" >&2
+                continue
+              fi
             fi
-            "$certutil" -A -d "sql:$dir" -i ${rootCA} \
-              -n "mkcert development CA" -t "C,," >/dev/null 2>&1 || true
+            "$certutil" -A -d "sql:$dir" -i ${rootCA} -n "mkcert development CA" -t "C,," ||
+              echo "nssTrust: could not add the srv CA to $dir" >&2
           done
         '';
       };
 
-      # Auto-migrate off any imperatively-installed daemon unit. `srv daemon
-      # install` writes a *real* file at this path, which home-manager would
-      # refuse to replace ("Existing file would be clobbered") — this force
-      # flag merges onto the unit HM's systemd module already generates.
-      xdg.configFile = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
-        "systemd/user/srv-daemon.service".force = true;
-      };
+      # `srv daemon install` writes a *real* file at this path, which
+      # home-manager would refuse to replace ("Existing file would be
+      # clobbered"); force merges onto the unit HM's systemd module generates.
+      xdg.configFile."systemd/user/srv-daemon.service".force = true;
     };
 }

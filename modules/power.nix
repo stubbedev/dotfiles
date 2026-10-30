@@ -1,4 +1,35 @@
-_: {
+_:
+let
+  apmDescription = "Adaptive battery charging and power profile policy";
+  apmAfter = [
+    "power-profiles-daemon.service"
+    "upower.service"
+  ];
+  apmService = {
+    StateDirectory = "adaptive-power-manager";
+    Restart = "on-failure";
+    RestartSec = "10s";
+    NoNewPrivileges = true;
+    ProtectSystem = "strict";
+    ReadWritePaths = [ "/sys/class/power_supply" ];
+    ProtectHome = true;
+    PrivateTmp = true;
+    ProtectKernelTunables = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    LockPersonality = true;
+  };
+  apmWantedBy = "graphical.target";
+
+  chargeFlagTmpfiles = "d /run/battery-charge 0775 root users -";
+
+  lidSwitch = {
+    HandleLidSwitch = "suspend";
+    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitchDocked = "ignore";
+  };
+in
+{
   flake.modules.nixos.power =
     {
       lib,
@@ -15,11 +46,7 @@ _: {
       # handle-lid-switch inhibitor and applies the same policy itself,
       # including undocking or unplugging with the lid already closed,
       # which logind alone never acts on (systemd#7690).
-      services.logind.settings.Login = {
-        HandleLidSwitch = "suspend";
-        HandleLidSwitchExternalPower = "ignore";
-        HandleLidSwitchDocked = "ignore";
-      };
+      services.logind.settings.Login = lidSwitch;
 
       # For the CLI (status, full) in user shells; the daemon runs from its
       # own store path below.
@@ -27,7 +54,7 @@ _: {
 
       # battery-full's flag directory: group-writable so the user CLI can
       # drop a charge-to-full request without sudo.
-      systemd.tmpfiles.rules = [ "d /run/battery-charge 0775 root users -" ];
+      systemd.tmpfiles.rules = [ chargeFlagTmpfiles ];
 
       # Event-driven: UPower signals cover every AC edge, inotify the
       # battery-full flag, and the daemon's own wall-clock timer the
@@ -36,27 +63,11 @@ _: {
       # so ordering after it from multi-user is a cycle systemd breaks by
       # dropping this unit.
       systemd.services.adaptive-power-manager = {
-        description = "Adaptive battery charging and power profile policy";
-        after = [
-          "power-profiles-daemon.service"
-          "upower.service"
-        ];
-        wantedBy = [ "graphical.target" ];
-        serviceConfig = {
+        description = apmDescription;
+        after = apmAfter;
+        wantedBy = [ apmWantedBy ];
+        serviceConfig = apmService // {
           ExecStart = "${lib.getExe pkgs.adaptive-power-manager} run";
-          StateDirectory = "adaptive-power-manager";
-          Restart = "on-failure";
-          RestartSec = "10s";
-          # The sysfs threshold writes need root; everything else is contained.
-          NoNewPrivileges = true;
-          ProtectSystem = "strict";
-          ReadWritePaths = [ "/sys/class/power_supply" ];
-          ProtectHome = true;
-          PrivateTmp = true;
-          ProtectKernelTunables = true;
-          ProtectControlGroups = true;
-          RestrictSUIDSGID = true;
-          LockPersonality = true;
         };
       };
     };
@@ -142,7 +153,7 @@ _: {
               ${pkgs.stubbe.setup.text {
                 name = "adaptive-power-manager-tmpfiles.conf";
                 target = "/etc/tmpfiles.d/adaptive-power-manager.conf";
-                text = "d /run/battery-charge 0775 root users -\n";
+                text = chargeFlagTmpfiles + "\n";
               }}
 
               ${pkgs.stubbe.setup.text {
@@ -150,26 +161,14 @@ _: {
                 target = "/etc/systemd/system/adaptive-power-manager.service";
                 text = toUnit {
                   Unit = {
-                    Description = "Adaptive battery charging and power profile policy";
-                    After = "power-profiles-daemon.service upower.service";
+                    Description = apmDescription;
+                    After = apmAfter;
                   };
-                  Service = {
+                  Service = apmService // {
                     Type = "simple";
                     ExecStart = "${binPath} run";
-                    StateDirectory = "adaptive-power-manager";
-                    Restart = "on-failure";
-                    RestartSec = "10s";
-                    NoNewPrivileges = true;
-                    ProtectSystem = "strict";
-                    ReadWritePaths = "/sys/class/power_supply";
-                    ProtectHome = true;
-                    PrivateTmp = true;
-                    ProtectKernelTunables = true;
-                    ProtectControlGroups = true;
-                    RestrictSUIDSGID = true;
-                    LockPersonality = true;
                   };
-                  Install.WantedBy = "graphical.target";
+                  Install.WantedBy = apmWantedBy;
                 };
               }}
 
@@ -195,7 +194,7 @@ _: {
         #   - thermald refuses to start where thinkpad_acpi/dytc_lapmode exists.
         #   - wifi powersave toggling: NetworkManager already sets powersave=3,
         #     and the AC half turns it back off for a net loss.
-        #   - USB autosuspend is disabled on purpose (modules/hardware.nix).
+        #   - USB autosuspend: modules/hardware.nix owns it.
         batteryPower = {
           privileged = true;
           title = "Installing battery power tuning";
@@ -259,15 +258,7 @@ _: {
             ${pkgs.stubbe.setup.text {
               name = "10-lid.conf";
               target = "/etc/systemd/logind.conf.d/10-lid.conf";
-              text =
-                pkgs.stubbe.managedBy "logind-lid"
-                + pkgs.stubbe.gen.iniText {
-                  Login = {
-                    HandleLidSwitch = "suspend";
-                    HandleLidSwitchExternalPower = "ignore";
-                    HandleLidSwitchDocked = "ignore";
-                  };
-                };
+              text = pkgs.stubbe.managedBy "logind-lid" + pkgs.stubbe.gen.iniText { Login = lidSwitch; };
             }}
 
             if command -v systemctl >/dev/null 2>&1; then

@@ -27,7 +27,7 @@ set -euo pipefail
 #   -h, --help       Show this message
 
 usage() {
-  sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '/^# stb-install-nixos /,/^$/p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 REPO_URL="git@github.com:stubbedev/dotfiles.git"
@@ -140,8 +140,8 @@ fi
 # before nixos-install rather than chasing a 'certificate not yet valid'
 # error mid-install.
 echo "==> Syncing clock (NTP)"
-timedatectl set-ntp true 2>/dev/null || true
-systemctl start systemd-timesyncd 2>/dev/null || true
+timedatectl set-ntp true \
+  || echo "stb-install-nixos: could not enable NTP; the clock may be wrong" >&2
 # Wait briefly for an initial sync; don't block forever — offline mirror
 # installs are still possible.
 for _ in $(seq 1 20); do
@@ -270,8 +270,8 @@ if [ "$RESUME" -eq 0 ]; then
   echo "Eligible install disks (live USB '${live_disk:-unknown}' excluded):"
   i=0
   for d in "${eligible[@]}"; do
-    sz=$(lsblk -dno SIZE  "/dev/$d" 2>/dev/null | tr -d ' ')
-    model=$(lsblk -dno MODEL "/dev/$d" 2>/dev/null | sed 's/[[:space:]]*$//')
+    sz=$(lsblk -dno SIZE  "/dev/$d" | tr -d ' ')
+    model=$(lsblk -dno MODEL "/dev/$d" | sed 's/[[:space:]]*$//')
     printf "  [%d] %-12s %-10s %s\n" "$((i+1))" "$d" "$sz" "$model"
     i=$((i+1))
   done
@@ -304,7 +304,7 @@ if [ "$RESUME" -eq 0 ]; then
 
   MIN_BYTES=$(( 20 * 1024 * 1024 * 1024 ))
   for d in "${candidates[@]}"; do
-    sz=$(lsblk -dno SIZE --bytes "/dev/$d" 2>/dev/null || echo 0)
+    sz=$(lsblk -dno SIZE --bytes "/dev/$d")
     if (( sz < MIN_BYTES )); then
       echo "stb-install-nixos: /dev/$d is too small ($(( sz / 1024 / 1024 / 1024 )) GiB < 20 GiB minimum)" >&2
       exit 1
@@ -319,7 +319,7 @@ if [ "$RESUME" -eq 0 ]; then
       findmnt | grep -E "^/dev/${d}" >&2 || true
       exit 1
     fi
-    child_types="$(lsblk -no TYPE "/dev/$d" 2>/dev/null | tail -n +2 | sort -u)"
+    child_types="$(lsblk -no TYPE "/dev/$d" | tail -n +2 | sort -u)"
     if echo "$child_types" | grep -qE '^(raid[0-9]+|crypt|lvm)$'; then
       echo "stb-install-nixos: /dev/$d has md/LUKS/LVM children, refusing" >&2
       lsblk "/dev/$d" >&2 || true
@@ -358,13 +358,13 @@ if [ "$RESUME" -eq 0 ]; then
   echo ""
   echo "==> Wiping ${#candidates[@]} disk(s)"
   for d in "${candidates[@]}"; do
-    rota=$(lsblk -dno ROTA "/dev/$d" 2>/dev/null | head -1 | tr -d ' ')
+    rota=$(lsblk -dno ROTA "/dev/$d" | head -1 | tr -d ' ')
     if [ "$rota" = "0" ]; then
       # SSDs: blkdiscard is orders of magnitude faster than overwriting
       # and resets the FTL's wear-leveling state. Best-effort — discard
       # may be refused on some host bridges / hardware-RAID virtual disks.
       echo "  blkdiscard /dev/$d (SSD)"
-      blkdiscard -f "/dev/$d" 2>/dev/null \
+      blkdiscard -f "/dev/$d" \
         || echo "  blkdiscard failed on /dev/$d, falling back to wipefs only" >&2
     fi
     wipefs -a "/dev/$d"
@@ -526,15 +526,15 @@ if [ -d /root/.ssh ]; then
 fi
 
 # Secure Boot first-boot prep. lanzaboote requires sbctl keys generated
-# and enrolled into firmware before signed boot works. We detect by
-# probing for sbctl in the installed system; auto-enrolling is risky
+# and enrolled into firmware before signed boot works. The host's
+# host.secureBoot flag says whether it is in use; auto-enrolling is risky
 # (some firmware refuses to revert) so we generate keys but leave
 # enrollment to the user on first boot. The user-facing hint moves to
 # the final summary so it doesn't get buried in earlier output.
-sbctl_present=false
-if nixos-enter --root /mnt -c 'command -v sbctl' >/dev/null 2>&1; then
-  sbctl_present=true
-  if ! nixos-enter --root /mnt -c '[ -d /var/lib/sbctl/keys ]' 2>/dev/null; then
+secure_boot="$(nix --extra-experimental-features 'nix-command flakes' eval --json \
+  "${FLAKE_PATH}#nixosConfigurations.${FLAKE_ATTR}.config.host.secureBoot")"
+if [ "$secure_boot" = true ]; then
+  if [ ! -d /mnt/var/lib/sbctl/keys ]; then
     echo "==> Generating Secure Boot keys (sbctl create-keys)"
     nixos-enter --root /mnt -c 'sbctl create-keys' || \
       echo "  sbctl create-keys failed; generate manually after first boot" >&2
@@ -553,7 +553,7 @@ echo "  Transcript:     ${LOG}"
 echo ""
 echo "Log in as '${PRIMARY_USER}', then iterate via:"
 echo "  sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
-if [ "$sbctl_present" = true ]; then
+if [ "$secure_boot" = true ]; then
   echo ""
   echo "Secure Boot: keys are in /var/lib/sbctl. On first boot, put firmware"
   echo "in Setup Mode (clear platform keys in BIOS), then run:"

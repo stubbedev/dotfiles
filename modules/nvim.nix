@@ -111,11 +111,11 @@
                   fzf
                   git
                   ast-grep
+                  nix
 
                   # For the PR_SET_PDEATHSIG wrapper in src/nvim/lua/lsp.lua: some
                   # servers ignore the LSP processId and outlive an unclean exit.
                   util-linux
-                  nix
                 ]
                 ++ lib.optionals config.features.development [
                   nixd

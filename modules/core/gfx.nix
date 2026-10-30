@@ -18,8 +18,7 @@ _: {
       # pure eval and downgraded every wrapper on NVIDIA machines. The NVIDIA
       # wrapper is version-free - it dispatches to the host's own glvnd vendor
       # libs (see modules/core/pkgs/gl.nix).
-      gl = pkgs.stubbe.gl { hasNvidia = config.host.graphicsNvidia; };
-      mkGLWrapper = gl.wrap;
+      mkGLWrapper = pkgs.stubbe.gl { hasNvidia = config.host.graphicsNvidia; };
 
       linkAs =
         name: exe:
@@ -48,7 +47,7 @@ _: {
       # Make a non-GL tool able to dlopen the GPU vendor libraries it probes
       # (btop loading libnvidia-ml.so for NVIDIA stats). Unlike the wrappers
       # above this is NOT a no-op on NixOS: GL apps find their drivers via
-      # glvnd, but a plain dlopen by soname does not, and on NixOS the driver
+      # glvnd, but a plain dlopen by soname does not.
       withDriverLibs =
         program:
         let
@@ -80,8 +79,6 @@ _: {
           prefix ? { },
           run ? [ ],
           includeUpstream ? true,
-          extraPaths ? [ ],
-          mainProgram ? null,
         }:
         let
           exeList = if exes == null then [ (baseNameOf (lib.getExe pkg)) ] else exes;
@@ -114,9 +111,9 @@ _: {
         in
         pkgs.symlinkJoin {
           name = "${lib.getName pkg}-${pkg.version or "wrapped"}";
-          paths = map wrapOne exeList ++ extraPaths ++ lib.optional includeUpstream pkg;
+          paths = map wrapOne exeList ++ lib.optional includeUpstream pkg;
           meta = (pkg.meta or { }) // {
-            mainProgram = if mainProgram == null then mainExe else mainProgram;
+            mainProgram = mainExe;
             # symlinkJoin produces a single `out` that already merges every
             # joined path (bin, share/man, …). Inheriting pkg's multi-output
             # outputsToInstall (e.g. mpv's [ "out" "man" ]) would make buildEnv
@@ -141,9 +138,6 @@ _: {
           wrap = fn // {
             description = "Wrap a package's mainProgram for GL. Output binary keeps its own name.";
           };
-          wrapAs = fn2 // {
-            description = "`wrapAs <name> <pkg>`: wrap the mainProgram, exposing it under `<name>`.";
-          };
           wrapExe = fn2 // {
             description = "`wrapExe <exe> <pkg>`: wrap one named binary from a package, not its mainProgram.";
           };
@@ -158,7 +152,6 @@ _: {
       config.stubbe.gfx = {
         inherit
           wrap
-          wrapAs
           wrapExe
           withDriverLibs
           bundle
