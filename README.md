@@ -158,11 +158,9 @@ init/systemd and no `/etc`: `desktop`, `theming`, `media`, `browsers`,
 
 Two things are worth knowing on the phone:
 
-- **sops.** The phone shares the existing `~/.ssh/id_ed25519`, so its age
-  recipient is the `stubbe` entry already in `.sops.yaml`: copy the key into
-  the app's `~/.ssh/` (`chmod 600`), and the secrets aspect derives
-  `~/.config/sops/age/keys.txt` from it at activation. A machine with its own
-  key instead goes through `hm whoami` and `hm trust <name> <pubkey>`.
+- **sops.** Like any new machine, the phone needs an age recipient before its
+  first switch: `ssh-keygen -t ed25519` there, `hm whoami` for the age pubkey,
+  then `hm trust phone <pubkey>` on an existing host, commit and pull.
 - **`.local` names.** nix-on-droid's glibc has no mDNS NSS module, no D-Bus to
   run avahi against and a hardcoded `resolv.conf`, so the phone cannot resolve
   `laptop.local` by name. Its ssh config uses `mdns-ssh` instead, which
