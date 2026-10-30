@@ -17,6 +17,8 @@ in
         # home.stateVersion.
         system.stateVersion = "24.05";
 
+        environment.motd = null;
+
         user = {
           # zsh, with the same config every other host gets: nix-on-droid
           # otherwise logs in to bash. uid/gid are deliberately left at their
