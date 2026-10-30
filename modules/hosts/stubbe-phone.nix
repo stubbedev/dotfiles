@@ -19,6 +19,8 @@ in
 
         environment.motd = null;
 
+        terminal.font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFontMono-Regular.ttf";
+
         user = {
           # zsh, with the same config every other host gets: nix-on-droid
           # otherwise logs in to bash. uid/gid are deliberately left at their
