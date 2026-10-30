@@ -25,9 +25,20 @@
             dir = "/etc/ssl/certs";
             file = "/etc/ssl/certs/ca-certificates.crt";
           };
+
+      onAndroid = config.host.platform == "android";
+      androidRuntimeDir = "/tmp/runtime-${config.home.username}";
     in
     {
+      home.activation.androidRuntimeDir = lib.mkIf onAndroid (
+        lib.hm.dag.entryBefore [ "writeBoundary" ] ''
+          export XDG_RUNTIME_DIR=${lib.escapeShellArg androidRuntimeDir}
+          mkdir -p -m 0700 "$XDG_RUNTIME_DIR"
+        ''
+      );
+
       home.sessionVariables = {
+        XDG_RUNTIME_DIR = lib.mkIf onAndroid androidRuntimeDir;
         # XCURSOR_THEME/XCURSOR_SIZE come from home.pointerCursor (theming.nix);
         # lys-wm re-sets both from its env for non-NixOS sessions.
         NIXPKGS_ALLOW_UNFREE = "1";

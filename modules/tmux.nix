@@ -562,6 +562,10 @@ _: {
 
       home.sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
 
+      stubbe.setup.tmuxTmpdir = lib.mkIf (config.host.platform == "android") {
+        script = ''mkdir -p -m 0700 "${tmuxTmpdir}"'';
+      };
+
       # User units, which nothing runs on Android: nix-on-droid has no init,
       # so tmux is started from the shell there.
       systemd.user = lib.mkIf (config.host.platform != "android") {
