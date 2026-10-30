@@ -73,7 +73,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     lys-shell = {
-      url = "git+https://github.com/stubbedev/lys-shell.git?ref=master";
+      url = "github:stubbedev/lys-shell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     lys-wm = {
