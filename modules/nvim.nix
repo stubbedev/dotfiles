@@ -5,6 +5,7 @@
 {
   flake.modules.homeManager.nvim =
     {
+      config,
       lib,
       pkgs,
       ...
@@ -102,74 +103,75 @@
 
               specs.treesitter = treesitter-runtime;
 
-              runtimePkgs = with pkgs; [
-                nixd
-                lua-language-server
-                superhtml # html
-                biome # css, json
-                shell-lsp
-                taplo
-                yayamlls
-                marksman
+              runtimePkgs =
+                with pkgs;
+                [
+                  ripgrep
+                  fd
+                  fzf
+                  git
+                  ast-grep
 
-                # tsc (the Go compiler) has no tsserver *plugin* support, which is why vue and
-                # svelte each run a self-contained server below.
-                typescript
-                oxlint
-                oxfmt
-                vue-language-server
-                vtsls
-                svelte-language-server
+                  # For the PR_SET_PDEATHSIG wrapper in src/nvim/lua/lsp.lua: some
+                  # servers ignore the LSP processId and outlive an unclean exit.
+                  util-linux
+                  nix
+                ]
+                ++ lib.optionals config.features.development [
+                  nixd
+                  lua-language-server
+                  superhtml # html
+                  biome # css, json
+                  shell-lsp
+                  taplo
+                  yayamlls
+                  marksman
 
-                phpantom_lsp
-                templ
-                ruff
-                ty
-                rust-analyzer
-                gopls
-                golangci-lint-langserver
+                  # tsc (the Go compiler) has no tsserver *plugin* support, which is why vue and
+                  # svelte each run a self-contained server below.
+                  typescript
+                  oxlint
+                  oxfmt
+                  vue-language-server
+                  vtsls
+                  svelte-language-server
 
-                sqruff
-                postgres-language-server # deeper postgres semantics when a project wants it
+                  templ
+                  ruff
+                  ty
+                  rust-analyzer
+                  gopls
+                  golangci-lint-langserver
 
-                docker-language-server
-                clang-tools
-                lemminx
-                terraform-ls
+                  sqruff
+                  postgres-language-server # deeper postgres semantics when a project wants it
 
-                stylua
-                nixfmt
-                prettier
-                caddy
-                gofumpt
-                gotools # provides goimports
-                golangci-lint
-                markdownlint-cli2
-                statix
-                deadnix
+                  docker-language-server
+                  clang-tools
+                  lemminx
+                  terraform-ls
 
-                cargo
-                rustc
-                gomodifytags
-                gotests
-                impl
-                iferr
+                  stylua
+                  nixfmt
+                  prettier
+                  caddy
+                  gofumpt
+                  gotools # provides goimports
+                  golangci-lint
+                  markdownlint-cli2
+                  statix
+                  deadnix
 
-                ripgrep
-                fd
-                fzf
-                git
+                  cargo
+                  rustc
+                  gomodifytags
+                  gotests
+                  impl
+                  iferr
 
-                ast-grep
-
-                # For the PR_SET_PDEATHSIG wrapper in src/nvim/lua/lsp.lua: some
-                # servers ignore the LSP processId and outlive an unclean exit.
-                util-linux
-
-                nix
-
-                nodejs
-              ];
+                  nodejs
+                ]
+                ++ lib.optionals config.features.php [ phpantom_lsp ];
             };
           }
         )

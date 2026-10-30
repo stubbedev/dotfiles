@@ -59,6 +59,9 @@ in
               srv = false;
               treeman = false;
               php = false;
+              development = false;
+              harness = false;
+              claudeCode = false;
             };
           };
         };

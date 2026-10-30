@@ -251,36 +251,41 @@ _: {
           }
 
           push_to_cache() {
-            has_cmd ${lib.getExe' pkgs.xilo "xilo"} || return 0
+            ${
+              if config.features.development then
+                ''
+                  local tokenFile="$hm_flake_dir/secrets/xilo-token"
+                  if [ ! -f "$tokenFile" ]; then
+                    echo "cache push: secrets/xilo-token missing — run 'hm secret set xilo-token'. Skipping." >&2
+                    return 0
+                  fi
 
-            local tokenFile="$hm_flake_dir/secrets/xilo-token"
-            if [ ! -f "$tokenFile" ]; then
-              echo "cache push: secrets/xilo-token missing — run 'hm secret set xilo-token'. Skipping." >&2
-              return 0
-            fi
+                  local ageKey token
+                  ageKey=$(${lib.getExe pkgs.ssh-to-age} -private-key -i "$HOME/.ssh/id_ed25519" 2>/dev/null) || return 0
+                  token=$(SOPS_AGE_KEY="$ageKey" ${lib.getExe pkgs.sops} --decrypt \
+                    --input-type binary --output-type binary "$tokenFile" 2>/dev/null) || {
+                    echo "cache push: could not decrypt xilo-token; skipping." >&2
+                    return 0
+                  }
 
-            local ageKey token
-            ageKey=$(${lib.getExe pkgs.ssh-to-age} -private-key -i "$HOME/.ssh/id_ed25519" 2>/dev/null) || return 0
-            token=$(SOPS_AGE_KEY="$ageKey" ${lib.getExe pkgs.sops} --decrypt \
-              --input-type binary --output-type binary "$tokenFile" 2>/dev/null) || {
-              echo "cache push: could not decrypt xilo-token; skipping." >&2
-              return 0
+                  local path
+                  if is_nix_on_droid; then
+                    path=$(readlink -f "$HOME/.nix-profile" 2>/dev/null)
+                  elif is_nixos; then
+                    path=$(readlink -f /run/current-system 2>/dev/null)
+                  else
+                    path=$(readlink -f "$HOME/.local/state/nix/profiles/home-manager" 2>/dev/null)
+                  fi
+                  [ -n "$path" ] && [ -e "$path" ] || return 0
+
+                  echo "Pushing $(basename "$path") closure to the cache…"
+                  XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" \
+                    ${lib.getExe' pkgs.xilo "xilo"} push default "$path" --quiet \
+                    || echo "cache push failed (non-fatal)." >&2
+                ''
+              else
+                "return 0"
             }
-
-            local path
-            if is_nix_on_droid; then
-              path=$(readlink -f "$HOME/.nix-profile" 2>/dev/null)
-            elif is_nixos; then
-              path=$(readlink -f /run/current-system 2>/dev/null)
-            else
-              path=$(readlink -f "$HOME/.local/state/nix/profiles/home-manager" 2>/dev/null)
-            fi
-            [ -n "$path" ] && [ -e "$path" ] || return 0
-
-            echo "Pushing $(basename "$path") closure to the cache…"
-            XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" \
-              ${lib.getExe' pkgs.xilo "xilo"} push default "$path" --quiet \
-              || echo "cache push failed (non-fatal)." >&2
           }
 
           release_pinned_repos="PHPantom-dev/phpantom_lsp"

@@ -66,9 +66,17 @@
     # versions are written down here. (It used to scrape the releases atom at
     # eval time, which forced --impure on every rebuild.)
     yayamlls = final: _prev: {
-      yayamlls = final.runCommand "yayamlls" { meta.mainProgram = "yayamlls"; } ''
-        install -Dm555 ${inputs.yayamlls}/yayamlls $out/bin/yayamlls
-      '';
+      yayamlls =
+        final.runCommand "yayamlls"
+          {
+            meta = {
+              mainProgram = "yayamlls";
+              platforms = [ "x86_64-linux" ];
+            };
+          }
+          ''
+            install -Dm555 ${inputs.yayamlls}/yayamlls $out/bin/yayamlls
+          '';
     };
 
     phpantom_lsp = final: _prev: {
