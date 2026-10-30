@@ -65,7 +65,7 @@ in
               php = false;
               development = false;
               harness = false;
-              claudeCode = false;
+              claudeCode = true;
             };
           };
         };

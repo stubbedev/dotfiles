@@ -24,6 +24,8 @@ _: {
           gfx = false;
           flags = [
             "--dangerously-skip-permissions"
+          ]
+          ++ lib.optionals config.features.development [
             "--plugin-dir"
             "${shellLspPlugin}"
           ];
