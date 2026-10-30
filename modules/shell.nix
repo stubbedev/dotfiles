@@ -739,7 +739,7 @@
         p: "source ${zshPlugins}/${p.name}/${p.file}"
       ) pluginSpecs;
     in
-    lib.mkIf config.features.desktop {
+    {
       # Terminals and tmux spawn $SHELL. Pointing it at the nix zsh skips the
       # distro-zsh hop through the .zshenv exec below; logins via passwd (TTY,
       # ssh) still take that hop.
@@ -843,7 +843,8 @@
       # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
       # script never starts the daemon itself, so without this unit highlighting
       # silently does nothing after a reboot.
-      systemd.user = {
+      # User units, which nothing runs on Android: nix-on-droid has no init.
+      systemd.user = lib.mkIf (config.host.platform != "android") {
         services.zsh-patina = {
           Unit.Description = "zsh-patina syntax highlighting daemon";
           Service = {

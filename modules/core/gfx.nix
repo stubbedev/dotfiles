@@ -7,7 +7,12 @@ _: {
       ...
     }:
     let
+      # Android is proot'd glibc with no display server and no host GL stack:
+      # wrapping for glvnd/nixGL would only point at libraries that do not
+      # exist, so every wrapper degrades to a plain link.
+      onAndroid = config.host.platform == "android";
       onNixOS = config.host.platform == "nixos";
+      unwrapped = onNixOS || onAndroid;
 
       # Host-driven, not probed: the /proc check silently answered false under
       # pure eval and downgraded every wrapper on NVIDIA machines. The NVIDIA
@@ -25,14 +30,14 @@ _: {
 
       wrapAs =
         name: program:
-        if onNixOS then linkAs name (lib.getExe program) else mkGLWrapper name (lib.getExe program);
+        if unwrapped then linkAs name (lib.getExe program) else mkGLWrapper name (lib.getExe program);
 
       wrapExe =
-        exeName: program: if onNixOS then program else mkGLWrapper exeName (lib.getExe' program exeName);
+        exeName: program: if unwrapped then program else mkGLWrapper exeName (lib.getExe' program exeName);
 
       wrap =
         program:
-        if onNixOS then
+        if unwrapped then
           program
         else
           let
@@ -59,6 +64,8 @@ _: {
                 --suffix LD_LIBRARY_PATH : /run/opengl-driver/lib
             '';
           }
+        else if onAndroid then
+          program
         else
           mkGLWrapper name (lib.getExe program);
 

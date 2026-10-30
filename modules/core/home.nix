@@ -7,6 +7,12 @@
       pkgs,
       ...
     }:
+    let
+      # Only a distro target (linux) owns its nix client and nix.conf. NixOS
+      # writes /etc/nix/nix.conf, and nix-on-droid generates the only nix.conf
+      # that exists inside proot, so both must leave the user-level file alone.
+      onLinux = config.host.platform == "linux";
+    in
     {
       programs.home-manager.enable = true;
 
@@ -38,7 +44,7 @@
         ];
       };
 
-      targets.genericLinux = lib.mkIf (config.host.platform != "nixos") {
+      targets.genericLinux = lib.mkIf onLinux {
         enable = true;
         nixGL.packages = pkgs.nixgl;
       };
@@ -56,9 +62,12 @@
       # bootstrap client in /nix/var/nix/profiles/default/bin.
       # ~/.nix-profile/bin comes first in sessionPath, so installing it here
       # shadows that.
-      home.packages = lib.mkIf (config.host.platform != "nixos") [ config.nix.package ];
+      # Also Android's answer: nix-on-droid owns the nix client and generates
+      # the only nix.conf that exists inside proot, so nothing here may shadow
+      # either.
+      home.packages = lib.mkIf onLinux [ config.nix.package ];
 
-      nix.settings = lib.mkIf (config.host.platform != "nixos") {
+      nix.settings = lib.mkIf onLinux {
         inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
 
         # ~/.config/nix/nix.conf shadows /etc/nix/nix.conf for this user, so

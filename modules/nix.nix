@@ -122,6 +122,7 @@ in
       ...
     }:
     let
+      onAndroid = config.host.platform == "android";
       onNixOS = config.host.platform == "nixos";
       accessTokensFile = "${config.home.homeDirectory}/.config/nix/access-tokens.conf";
     in
@@ -140,12 +141,13 @@ in
       # Weekly expiry replaces both the old activation-time +2 prune of the
       # home-manager/profile/channels profiles and the hand-rolled store GC
       # timer. Store cleanup stays standalone-only: on NixOS the system
-      # nix.gc above already sweeps the whole store weekly.
+      # nix.gc above already sweeps the whole store weekly, and on Android
+      # `nix-on-droid trim` owns it.
       services.home-manager.autoExpire = {
-        enable = true;
+        enable = !onAndroid;
         timestamp = "-30 days";
         frequency = "weekly";
-        store.cleanup = lib.mkIf (!onNixOS) true;
+        store.cleanup = lib.mkIf (!onNixOS && !onAndroid) true;
       };
 
       # Anonymous api.github.com allows 60 requests/hr, and `nix flake update`

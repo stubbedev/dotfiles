@@ -25,7 +25,7 @@
 
             python3
           ]
-          ++ [
+          ++ lib.optionals config.features.desktop [
             # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
             # the .desktop entry rofi needs.
             (gfx.bundle { pkg = pkgs.neovide; })

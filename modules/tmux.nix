@@ -93,7 +93,7 @@ _: {
         key: body: comment:
         padTo commentCol (prefix + padTo keyField key + body) + "# " + comment;
     in
-    lib.mkIf config.features.desktop {
+    {
       # The command palette every bind and hook in tmux.conf dispatches to.
       home.file.".config/tmux/scripts/commands.sh" = {
         executable = true;
@@ -562,7 +562,9 @@ _: {
 
       home.sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
 
-      systemd.user = {
+      # User units, which nothing runs on Android: nix-on-droid has no init,
+      # so tmux is started from the shell there.
+      systemd.user = lib.mkIf (config.host.platform != "android") {
         sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
 
         sockets.tmux = {

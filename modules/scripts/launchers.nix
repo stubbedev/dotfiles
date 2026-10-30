@@ -103,7 +103,6 @@ _: {
 
   flake.modules.homeManager.script-launchers =
     {
-      config,
       lib,
       pkgs,
       ...
@@ -254,6 +253,8 @@ _: {
       launcherBins = lib.mapAttrsToList (name: text: pkgs.stubbe.zshApp { inherit name text; }) launchers;
     in
     {
-      home.packages = lib.optionals config.features.desktop launcherBins;
+      # Plain CLI pickers: tmux binds dispatch to them on every platform, so
+      # they follow tmux rather than the GUI gate.
+      home.packages = launcherBins;
     };
 }

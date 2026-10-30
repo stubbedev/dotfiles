@@ -12,6 +12,10 @@ in
         imports = builtins.attrValues nixosModules ++ [ inputs.disko.nixosModules.disko ];
 
         networking.hostName = "stubbe-nixos";
+        # Advertised as desktop.local instead: the system hostname is the
+        # machine's name on other networks, the mDNS name is its name on the
+        # LAN, and only the latter has to line up with stubbe.lib.lanHosts.
+        host.mdnsName = "desktop";
         system.stateVersion = "26.05";
 
         boot.loader = {

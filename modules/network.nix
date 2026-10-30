@@ -1,4 +1,10 @@
-_: {
+let
+  # avahi ships this service definition: _ssh._tcp on port 22, instance name
+  # %h (the avahi host name, i.e. host.mdnsName). Both halves of this aspect
+  # publish it, so the path lives once.
+  sshServiceFile = pkgs: "${pkgs.avahi}/etc/avahi/services/ssh.service";
+in
+{
   flake.modules.nixos.network =
     {
       config,
@@ -42,14 +48,24 @@ _: {
         enable = true;
         nssmdns4 = false;
         openFirewall = true;
+        # Advertise _ssh._tcp (port 22, instance name = the host name below).
+        # It is how a machine that cannot run an mDNS resolver - the phone -
+        # finds this one by name: resolving the service needs no NSS module.
+        extraServiceFiles = lib.optionalAttrs config.services.openssh.enable {
+          ssh = sshServiceFile pkgs;
+        };
         # Real LAN NICs only. Without this, avahi advertises on docker0 / br-* /
         # veth* too, which collides the hostname with itself across bridges
         # (stubbe-nixos-2, -3, …) and leaks it into container networks.
         settings = {
-          server.allow-interfaces = [
-            "enp4s0"
-            "wlp3s0"
-          ];
+          server = {
+            allow-interfaces = [
+              "enp4s0"
+              "wlp3s0"
+            ];
+            # <mdnsName>.local, independent of the system hostname.
+            "host-name" = lib.mkIf (config.host.mdnsName != "") config.host.mdnsName;
+          };
           publish = {
             disable-publishing = false;
             disable-user-service-publishing = false;
@@ -74,7 +90,147 @@ _: {
       pkgs,
       ...
     }:
+    let
+      onAndroid = config.host.platform == "android";
+
+      # `ssh laptop` and `ssh laptop.local` for every LAN host, from the one
+      # catalogue. zsh needs no extra completion code: its _ssh_hosts reads
+      # Host and HostName lines straight out of ~/.ssh/config.
+      sshHosts = lib.concatMapAttrs (
+        name: user:
+        let
+          # Android is the one target whose resolver cannot answer a .local
+          # name (see mdnsSsh below), so only it routes through the helper.
+          block = {
+            inherit user;
+          }
+          // lib.optionalAttrs onAndroid {
+            ProxyCommand = "${mdnsSsh}/bin/mdns-ssh %h %p";
+          };
+        in
+        {
+          # HostName on the short alias only: `Host laptop.local` would restate
+          # the pattern it already matched.
+          "${name}" = block // {
+            HostName = "${name}.local";
+          };
+          "${name}.local" = block;
+        }
+      ) pkgs.stubbe.lanHosts;
+
+      # ProxyCommand for the phone, which cannot resolve a .local name itself:
+      # nix-on-droid ships glibc with no mDNS NSS module, no D-Bus for avahi,
+      # and a hardcoded resolv.conf. It resolves the _ssh._tcp record every
+      # other host publishes instead and relays stdio over that connection.
+      mdnsSsh =
+        pkgs.writers.writePython3Bin "mdns-ssh"
+          {
+            libraries = [ pkgs.python3Packages.zeroconf ];
+          }
+          ''
+            import os
+            import select
+            import socket
+            import sys
+
+            from zeroconf import Zeroconf
+
+            SERVICE = "_ssh._tcp.local."
+            SUFFIX = ".local"
+            TIMEOUT_MS = 5000
+            CHUNK = 65536
+
+
+            def resolve(name: str) -> str:
+                label = name[: -len(SUFFIX)] if name.endswith(SUFFIX) else name
+                zc = Zeroconf()
+                try:
+                    info = zc.get_service_info(
+                        SERVICE, f"{label}.{SERVICE}", timeout=TIMEOUT_MS
+                    )
+                finally:
+                    zc.close()
+                if info is None:
+                    sys.exit(f"mdns-ssh: {label} publishes no {SERVICE} record")
+                addresses = info.parsed_scoped_addresses()
+                if not addresses:
+                    sys.exit(f"mdns-ssh: {label} publishes no address")
+                return addresses[0]
+
+
+            def relay(remote: socket.socket) -> None:
+                stdin_fd = sys.stdin.fileno()
+                stdout_fd = sys.stdout.fileno()
+                watched = [stdin_fd, remote.fileno()]
+                while watched:
+                    readable, _, _ = select.select(watched, [], [])
+                    if stdin_fd in readable:
+                        data = os.read(stdin_fd, CHUNK)
+                        if data:
+                            remote.sendall(data)
+                        else:
+                            watched.remove(stdin_fd)
+                            remote.shutdown(socket.SHUT_WR)
+                    if remote.fileno() in readable:
+                        data = remote.recv(CHUNK)
+                        if not data:
+                            return
+                        os.write(stdout_fd, data)
+
+
+            def main() -> None:
+                if len(sys.argv) != 3:
+                    sys.exit("usage: mdns-ssh <host> <port>")
+                address = resolve(sys.argv[1])
+                port = int(sys.argv[2])
+                with socket.create_connection((address, port)) as remote:
+                    relay(remote)
+
+
+            main()
+          '';
+
+      # The daemon.conf both halves of this aspect agree on. $ifaces is a
+      # shell variable, interpolated when the activation runs.
+      avahiDaemonConf = [
+        "# Managed by stubbe - modules/network.nix"
+        "[server]"
+        "allow-interfaces=$ifaces"
+        "use-ipv4=yes"
+      ]
+      ++ lib.optional (config.host.mdnsName != "") "host-name=${config.host.mdnsName}"
+      ++ [
+        "use-ipv6=yes"
+        "ratelimit-interval-usec=1000000"
+        "ratelimit-burst=1000"
+        ""
+        "[publish]"
+        "publish-addresses=yes"
+        "publish-hinfo=yes"
+        "publish-workstation=yes"
+        "publish-domain=yes"
+        ""
+        "[reflector]"
+        ""
+        "[rlimits]"
+      ];
+    in
     {
+      # HM owns the file from here on: a hand-written ~/.ssh/config would
+      # otherwise make activation refuse to clobber it.
+      programs.ssh = {
+        enable = true;
+        # HM's legacy default block pins ControlMaster/ControlPath values that
+        # nothing here uses; ssh's own defaults are what we run with.
+        enableDefaultConfig = false;
+        settings = sshHosts;
+      };
+
+      home = {
+        file.".ssh/config".force = true;
+        packages = lib.mkIf onAndroid [ pkgs.openssh ];
+      };
+
       stubbe.setup = {
         avahi = lib.mkIf config.features.avahi {
           privileged = true;
@@ -151,26 +307,18 @@ _: {
             else
               _stb_tmp=$(mktemp)
               printf '%s\n' \
-                '# Managed by stubbe — modules/network.nix' \
-                '[server]' \
-                "allow-interfaces=$ifaces" \
-                'use-ipv4=yes' \
-                'use-ipv6=yes' \
-                'ratelimit-interval-usec=1000000' \
-                'ratelimit-burst=1000' \
-                "" \
-                '[publish]' \
-                'publish-addresses=yes' \
-                'publish-hinfo=yes' \
-                'publish-workstation=yes' \
-                'publish-domain=yes' \
-                "" \
-                '[reflector]' \
-                "" \
-                '[rlimits]' > "$_stb_tmp"
+                ${
+                  lib.concatMapStringsSep " \\\n                " lib.escapeShellArg avahiDaemonConf
+                } > "$_stb_tmp"
               sudo install -m 0644 -o root -g root "$_stb_tmp" /etc/avahi/avahi-daemon.conf
               rm -f "$_stb_tmp"
             fi
+
+            ${lib.optionalString config.features.openssh ''
+              sudo install -d -m 0755 /etc/avahi/services
+              sudo install -m 0644 ${sshServiceFile pkgs} \
+                /etc/avahi/services/ssh.service
+            ''}
 
             if command -v systemctl >/dev/null 2>&1; then
               sudo systemctl enable avahi-daemon.service >/dev/null 2>&1 || true

@@ -116,8 +116,10 @@ _: {
       };
     in
     {
-      # Client from nix, same rev as the engine unit above.
-      home.packages = [
+      # Client from nix, same rev as the engine unit above. Gated on the
+      # feature, so a host that has no engine (Android: no socket, no systemd)
+      # does not get a client that can only talk to a daemon it cannot run.
+      home.packages = lib.mkIf config.features.docker [
         pkgs.docker
         pkgs.docker-compose
       ];

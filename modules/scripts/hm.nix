@@ -33,6 +33,13 @@ _: {
             [ -r /etc/os-release ] && grep -q '^ID=nixos' /etc/os-release
           }
 
+          # Android: nix-on-droid's proot binds the real filesystem at
+          # /android, and its own command is what builds and activates the
+          # generation there.
+          is_nix_on_droid() {
+            [ -d /android/data/data/com.termux.nix ]
+          }
+
           # The GTK2 theme must not exist when HM asserts the config: an
           # app-written ~/.gtkrc-2.0 makes the next activation refuse to
           # clobber it and the theme silently reverts.
@@ -40,12 +47,37 @@ _: {
             rm -f "$HOME/.gtkrc-2.0" >/dev/null 2>&1
           }
 
+          # The configuration attribute this machine is defined under. The
+          # hostname answers it on NixOS; a host defined under another name
+          # says so in host.flakeAttr.
+          host_attr() {
+            local attr="${config.host.flakeAttr}"
+            if [ -n "$attr" ]; then
+              echo "$attr"
+              return
+            fi
+            hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown
+          }
+
           nixos_attr() {
-            echo "''${HM_NIXOS_CONFIG:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo unknown)}"
+            echo "''${HM_NIXOS_CONFIG:-$(host_attr)}"
           }
 
           run_hm_subcmd() {
             local subcmd="$1"; shift
+
+            if is_nix_on_droid; then
+              case "$subcmd" in
+                switch|build)
+                  nix-on-droid "$subcmd" --flake "$hm_flake_ref#$(host_attr)" "$@"
+                  ;;
+                *)
+                  echo "hm $subcmd: unavailable on Android. Supported rebuild verbs: switch, build." >&2
+                  return 1
+                  ;;
+              esac
+              return
+            fi
 
             case "$subcmd" in
               switch|boot|test|build|repl)
@@ -109,7 +141,9 @@ _: {
           }
 
           run_rollback() {
-            if is_nixos; then
+            if is_nix_on_droid; then
+              nix-on-droid rollback
+            elif is_nixos; then
               sudo nixos-rebuild switch --rollback "$@"
             else
               echo "hm rollback: not implemented for standalone home-manager. Use 'home-manager generations' to list, then run '<gen>/activate' from the desired generation." >&2
@@ -135,7 +169,9 @@ _: {
           }
 
           run_generations() {
-            if is_nixos; then
+            if is_nix_on_droid; then
+              nix-on-droid generations "$@"
+            elif is_nixos; then
               nixos-rebuild list-generations "$@"
             else
               home-manager generations "$@"
@@ -232,7 +268,9 @@ _: {
             }
 
             local path
-            if is_nixos; then
+            if is_nix_on_droid; then
+              path=$(readlink -f "$HOME/.nix-profile" 2>/dev/null)
+            elif is_nixos; then
               path=$(readlink -f /run/current-system 2>/dev/null)
             else
               path=$(readlink -f "$HOME/.local/state/nix/profiles/home-manager" 2>/dev/null)
@@ -335,6 +373,11 @@ _: {
           a home-manager counterpart (boot/test/dry-activate/dry-build/build-vm
           /repl) error on non-NixOS. Unknown args fall through to home-manager
           on non-NixOS.
+
+          On Android (nix-on-droid) switch and build delegate to
+          `nix-on-droid <cmd> --flake <flake>#<host>`; the host attr is
+          host.flakeAttr, since neither the hostname nor $USER names the
+          configuration there. Every other verb errors.
           EOF
           }
 

@@ -9,6 +9,22 @@
     }:
     let
       c = pkgs.stubbe.withHash;
+
+      # Only a distro keeps a trust store at /etc/ssl. nix-on-droid generates
+      # /etc from the store with no certificates in it, so Android points at
+      # nixpkgs' bundle. On a distro the OS store wins deliberately: it is the
+      # only one srv's mkcert CA can be added to.
+      tls =
+        if config.host.platform == "android" then
+          {
+            dir = "${pkgs.cacert}/etc/ssl/certs";
+            file = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          }
+        else
+          {
+            dir = "/etc/ssl/certs";
+            file = "/etc/ssl/certs/ca-certificates.crt";
+          };
     in
     {
       home.sessionVariables = {
@@ -34,8 +50,8 @@
         # The OS trust store, not `pkgs.cacert`: that bundle holds only public
         # roots and cannot learn the mkcert CA, so srv-served https sites fail
         # with "unable to get local issuer certificate".
-        SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
-        SSL_CERT_DIR = "/etc/ssl/certs";
+        SSL_CERT_FILE = tls.file;
+        SSL_CERT_DIR = tls.dir;
 
         # Silences harmless but noisy VA-API probe failures (Electron bundles an
         # old libva; the 32-bit driver is the wrong ELF class). Mutes ALL libva

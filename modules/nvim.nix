@@ -5,7 +5,6 @@
 {
   flake.modules.homeManager.nvim =
     {
-      config,
       lib,
       pkgs,
       ...
@@ -176,7 +175,7 @@
         )
       ];
     in
-    lib.mkIf config.features.desktop {
+    {
       home.packages = [ nvim ];
       home.sessionVariables = {
         EDITOR = lib.getExe nvim;

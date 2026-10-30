@@ -121,6 +121,56 @@ Or directly with home-manager:
 home-manager switch --flake .#stubbe
 ```
 
+## LAN NAMES AND SSH
+
+Every machine publishes one mDNS name, `host.mdnsName` — `desktop.local` on
+`stubbe-nixos`, `laptop.local` on the standalone host — and that value is fed
+to avahi's `host-name`, so the name is the same on every interface instead of
+whatever avahi's collision counter made it (`stubbe-nixos-5.local` and
+friends).
+
+`stubbe.lib.lanHosts` (`modules/core/lib/lan-hosts.nix`) is the catalogue of
+those names and the users they log in as, and `~/.ssh/config` is generated
+from it: `ssh laptop`, `ssh laptop.local`, `ssh desktop` and `ssh
+desktop.local` all resolve, and completion lists them because zsh's
+`_ssh_hosts` reads the file itself. Hosts that run avahi also publish
+`_ssh._tcp`.
+
+## ANDROID (NIX-ON-DROID)
+
+`phone` is the same module set as every other host, built by the F-Droid
+nix-on-droid app (the `nix-on-droid` flake input, `configurations.nixOnDroid`):
+
+```sh
+git clone --depth 1 https://github.com/stubbedev/dotfiles.git ~/.stubbe
+cd ~/.stubbe && nix-on-droid switch --flake .#phone
+```
+
+After that first switch `hm switch` delegates to `nix-on-droid switch --flake
+<flake>#phone`; `hm` finds that attribute through `host.flakeAttr`, since
+neither the device's hostname nor `$USER` names anything in the flake.
+
+Switched off there because proot has no display server, no D-Bus, no
+init/systemd and no `/etc`: `desktop`, `theming`, `media`, `browsers`,
+`slack`, `lysWm`, `lysShell`, `avahi`, `openssh`, `vpn`, `docker`, `srv`,
+`treeman` and `php`. The shell, tmux and nvim configs are deliberately not
+`features.desktop`-gated, so they come along.
+
+Two things are worth knowing on the phone:
+
+- **sops.** Like any new machine, the phone needs an age recipient before its
+  first switch: `ssh-keygen -t ed25519` there, `hm whoami` for the age pubkey,
+  then `hm trust phone <pubkey>` on an existing host, commit and pull.
+- **`.local` names.** nix-on-droid's glibc has no mDNS NSS module, no D-Bus to
+  run avahi against and a hardcoded `resolv.conf`, so the phone cannot resolve
+  `laptop.local` by name. Its ssh config uses `mdns-ssh` instead, which
+  resolves the `_ssh._tcp` record the other hosts publish and relays the
+  connection. `phone` does not publish anything, so the LAN cannot reach it.
+
+`nixOnDroidConfigurations` is not an output `nix flake check` knows, so
+`eval-nix-on-droid-phone` covers its home-manager half only; `user.uid`/`gid`
+come from the device and need an aarch64 builder.
+
 ## NIXOS INSTALLER ISO
 
 Build a bootable installer ISO that mirrors the `stubbe-nixos` host:

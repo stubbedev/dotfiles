@@ -161,6 +161,16 @@
       url = "github:BirdeeHub/nix-wrapper-modules";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # The Android host: nix-on-droid, the F-Droid app that runs a proot'd Nix
+    # environment on Termux. master, not release-24.05: the release branch
+    # pins a proot that cannot run glibc 2.42 (nixpkgs >= 26.05), master pins
+    # one built for it. nixpkgs follows ours, so the phone shares the packages
+    # and overlays of every other host.
+    nix-on-droid = {
+      url = "github:nix-community/nix-on-droid/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
   outputs =

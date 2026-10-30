@@ -7,6 +7,7 @@ _: {
           type = lib.types.enum [
             "linux"
             "nixos"
+            "android"
           ];
           default = "linux";
           description = ''
@@ -15,7 +16,34 @@ _: {
             /etc/pam.d, udev rules, polkit, apparmor, host packages — is
             managed by `stubbe.setup.<name>.privileged` activations. "nixos"
             means the matching NixOS module owns those files instead, and every
-            privileged activation is gated off.
+            privileged activation is gated off. "android" means nix-on-droid
+            inside Termux: a proot'd glibc environment with no init, no
+            D-Bus, no /etc and no /usr, where neither a privileged activation
+            nor a systemd unit can run at all.
+          '';
+        };
+
+        mdnsName = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = ''
+            The name this host advertises over mDNS: it is reachable as
+            `<mdnsName>.local`, which is the key it carries in
+            `stubbe.lib.lanHosts` (modules/core/lib/lan-hosts.nix). Empty
+            leaves avahi on the system hostname, which then also gains
+            avahi's collision counter suffix (`-2`, `-3`, …) whenever an
+            interface publishes it twice.
+          '';
+        };
+
+        flakeAttr = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = ''
+            The attribute this machine's configuration is defined under, when
+            that differs from its hostname. `hm` defaults to `hostname -s` for
+            NixOS and to `$USER` for standalone home-manager, neither of which
+            matches the nix-on-droid host name on Android.
           '';
         };
 
@@ -96,6 +124,16 @@ _: {
               2. Audit the persistence list in modules/impermanence.nix; add
                  anything host-specific.
               3. Flip this flag to true; rebuild; reboot.
+          '';
+        };
+
+        mdnsName = lib.mkOption {
+          type = lib.types.str;
+          default = "";
+          description = ''
+            The name this host advertises over mDNS, fed to
+            `services.avahi.settings.server."host-name"`; see the
+            home-manager half of this option for why it is standardized.
           '';
         };
 

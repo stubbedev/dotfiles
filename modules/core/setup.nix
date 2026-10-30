@@ -62,8 +62,12 @@ _: {
           echo ""
         '';
 
-      onNixOS = config.host.platform == "nixos";
-      wanted = lib.filterAttrs (_: s: s.enable && !(s.privileged && onNixOS)) config.stubbe.setup;
+      # A privileged step writes /etc through sudo, which only a distro
+      # (platform "linux") puts in our hands: NixOS owns those files in its own
+      # module, and Android's /etc is generated from the store by nix-on-droid.
+      wanted = lib.filterAttrs (
+        _: s: s.enable && !(s.privileged && config.host.platform != "linux")
+      ) config.stubbe.setup;
     in
     {
       options.stubbe.setup = lib.mkOption {
