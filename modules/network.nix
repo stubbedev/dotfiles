@@ -133,7 +133,7 @@ in
             import socket
             import sys
 
-            from zeroconf import Zeroconf
+            from zeroconf import InterfaceChoice, IPVersion, Zeroconf
 
             SERVICE = "_ssh._tcp.local."
             SUFFIX = ".local"
@@ -143,7 +143,11 @@ in
 
             def resolve(name: str) -> str:
                 label = name[: -len(SUFFIX)] if name.endswith(SUFFIX) else name
-                zc = Zeroconf()
+                zc = Zeroconf(
+                    interfaces=InterfaceChoice.Default,
+                    ip_version=IPVersion.V4Only,
+                    unicast=True,
+                )
                 try:
                     info = zc.get_service_info(
                         SERVICE, f"{label}.{SERVICE}", timeout=TIMEOUT_MS
