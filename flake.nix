@@ -72,15 +72,47 @@
       url = "github:stubbedev/notmuch-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lys-lib = {
+      url = "github:stubbedev/lys-lib";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
+    lys-ui = {
+      url = "github:stubbedev/lys-ui";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        lys-lib.follows = "lys-lib";
+      };
+    };
+    lys-secrets = {
+      url = "github:stubbedev/lys-secrets";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        home-manager.follows = "home-manager";
+      };
+    };
     lys-shell = {
       url = "github:stubbedev/lys-shell";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        lys-lib.follows = "lys-lib";
+        lys-login.follows = "lys-login";
+        lys-secrets.follows = "lys-secrets";
+        lys-wm.follows = "lys-wm";
+      };
     };
     lys-wm = {
       url = "github:stubbedev/lys-wm";
       inputs = {
         nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
         lys-shell.follows = "lys-shell";
+        lys-ui.follows = "lys-ui";
       };
     };
     # The session lock and greeter split out of lys-shell. Only the lock is used
@@ -89,6 +121,8 @@
       url = "github:stubbedev/lys-login";
       inputs = {
         nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        lys-secrets.follows = "lys-secrets";
         lys-shell.follows = "lys-shell";
         lys-wm.follows = "lys-wm";
       };
