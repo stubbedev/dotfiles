@@ -103,6 +103,7 @@ _: {
 
   flake.modules.homeManager.script-launchers =
     {
+      config,
       lib,
       pkgs,
       ...
@@ -250,11 +251,18 @@ _: {
         '';
       };
 
-      launcherBins = lib.mapAttrsToList (name: text: pkgs.stubbe.zshApp { inherit name text; }) launchers;
+      toolFeature = {
+        "tmux-claude" = config.features.claudeCode;
+        "tmux-harness" = config.features.harness;
+        "tmux-lazy-docker" = config.features.docker;
+        "tmux-system-monitor" = config.features.desktop;
+      };
+
+      wanted = lib.filterAttrs (name: _: toolFeature.${name} or true) launchers;
+
+      launcherBins = lib.mapAttrsToList (name: text: pkgs.stubbe.zshApp { inherit name text; }) wanted;
     in
     {
-      # Plain CLI pickers: tmux binds dispatch to them on every platform, so
-      # they follow tmux rather than the GUI gate.
       home.packages = launcherBins;
     };
 }

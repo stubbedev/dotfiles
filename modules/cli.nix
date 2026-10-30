@@ -21,26 +21,18 @@ _: {
           bat
           fzf
           ripgrep
-          ast-grep
           zoxide
-          difftastic
-          just
 
           curl
           wget
           rsync
           tree
-          tokei
 
           jq
           yq
-          jless
 
           gnugrep
           gawk
-
-          lazydocker
-          gh
 
           zip
           unzip
@@ -52,7 +44,13 @@ _: {
           gnutar
           coreutils
           gettext
-
+        ]
+        ++ lib.optionals config.features.development [
+          ast-grep
+          difftastic
+          just
+          tokei
+          jless
           hyperfine
         ]
         # rar is a closed-source x86 binary; the platforms it covers are in its

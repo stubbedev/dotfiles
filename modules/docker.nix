@@ -122,6 +122,7 @@ _: {
       home.packages = lib.mkIf config.features.docker [
         pkgs.docker
         pkgs.docker-compose
+        pkgs.lazydocker
       ];
 
       stubbe.setup.docker = lib.mkIf config.features.docker {

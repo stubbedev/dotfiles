@@ -23,6 +23,19 @@ _: {
           '';
         };
 
+        profile = lib.mkOption {
+          type = lib.types.enum [
+            "workstation"
+            "mobile"
+          ];
+          default = "workstation";
+          description = ''
+            What the machine is for. Every `features.*` flag defaults from it
+            (modules/core/features.nix): "workstation" is the full desktop and
+            development set, "mobile" a terminal-only set for a phone.
+          '';
+        };
+
         mdnsName = lib.mkOption {
           type = lib.types.str;
           default = "";
