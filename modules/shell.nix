@@ -799,6 +799,7 @@
             (( $+commands[starship] )) && source ${starshipInit}
             (( $+commands[zoxide] ))   && source ${zoxideInit}
             ${lib.optionalString config.programs.direnv-instant.enable "source ${direnvInstantInit}"}
+            ${lib.optionalString (config.host.platform == "android") "${lib.getExe pkgs.zsh-patina} start"}
             _patina_init="${config.xdg.cacheHome}/zsh/patina-init.zsh"
             [[ -f "$_patina_init" ]] && source "$_patina_init"
             unset _patina_init
