@@ -163,7 +163,6 @@ in
       # On NixOS the system nix.conf carries the same line (see the nixos
       # module above) and generating a user nix.conf here would shadow it.
       sops = lib.mkIf (!onNixOS) {
-        secrets.github-token = pkgs.stubbe.secret { name = "github-token"; };
         templates."nix-access-tokens.conf" = {
           content = "access-tokens = github.com=${config.sops.placeholder.github-token}";
           path = accessTokensFile;

@@ -168,10 +168,6 @@ _: {
         '';
         "tmux-claude" = ''
 
-          if ! command -v claude &>/dev/null; then
-            exit 0
-          fi
-
           inline=0
           if [[ "$1" == "--inline" ]]; then
             inline=1
@@ -187,10 +183,6 @@ _: {
         '';
         "tmux-harness" = ''
 
-          if ! command -v harness &>/dev/null; then
-            exit 0
-          fi
-
           if [[ -z "$TMUX" ]]; then
             harness "$@"
           else
@@ -199,10 +191,6 @@ _: {
           fi
         '';
         "tmux-lazy-docker" = ''
-
-          if ! command -v lazydocker &>/dev/null; then
-            exit 0
-          fi
 
           exec lazydocker
         '';
@@ -213,15 +201,7 @@ _: {
             exit 0
           fi
 
-          if command -v lazygit &>/dev/null; then
-            bin=lazygit
-          elif command -v bit &>/dev/null; then
-            bin=bit
-          else
-            exit 0
-          fi
-
-          exec "$bin"
+          exec lazygit
         '';
         "tmux-pick-directory" = ''
 
@@ -239,15 +219,7 @@ _: {
         '';
         "tmux-system-monitor" = ''
 
-          if command -v btop &>/dev/null; then
-            monitor=btop
-          elif command -v htop &>/dev/null; then
-            monitor=htop
-          else
-            exit 0
-          fi
-
-          exec "$monitor"
+          exec btop
         '';
       };
 

@@ -30,14 +30,11 @@ _: {
           hm_flake_ref="path:$hm_flake_dir"
 
           is_nixos() {
-            [ -r /etc/os-release ] && grep -q '^ID=nixos' /etc/os-release
+            ${lib.boolToString (config.host.platform == "nixos")}
           }
 
-          # Android: nix-on-droid's proot binds the real filesystem at
-          # /android, and its own command is what builds and activates the
-          # generation there.
           is_nix_on_droid() {
-            [ -d /android/data/data/com.termux.nix ]
+            ${lib.boolToString (config.host.platform == "android")}
           }
 
           # The GTK2 theme must not exist when HM asserts the config: an

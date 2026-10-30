@@ -389,25 +389,18 @@
             local context state line
             typeset -A opt_args
 
-            local -i _hm_is_nixos=0
-            if [[ -r /etc/os-release ]] && grep -q '^ID=nixos' /etc/os-release; then
-              _hm_is_nixos=1
-            fi
-
             local -a commands
             commands=(
               ${hmSpec.renderZsh "    " "all"}
+              ${
+                {
+                  nixos = hmSpec.renderZsh "    " "nixos";
+                  linux = hmSpec.renderZsh "    " "standalone";
+                  android = "";
+                }
+                .${config.host.platform}
+              }
             )
-
-            if (( _hm_is_nixos )); then
-              commands+=(
-                ${hmSpec.renderZsh "      " "nixos"}
-              )
-            else
-              commands+=(
-                ${hmSpec.renderZsh "      " "standalone"}
-              )
-            fi
 
             local -a global_opts
             global_opts=(
