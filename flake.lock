@@ -155,7 +155,7 @@
     "flake-parts_10": {
       "inputs": {
         "nixpkgs-lib": [
-          "shell-lsp",
+          "srv",
           "nixpkgs"
         ]
       },
@@ -176,27 +176,6 @@
     "flake-parts_11": {
       "inputs": {
         "nixpkgs-lib": [
-          "srv",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1790898470,
-        "narHash": "sha256-zTwuwezD0w3hpga6a6P8emidzAZFyWqlNeRBlpWOOl8=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "024633cd702b10285db5cb19b40ad48d2399ba60",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "flake-parts_12": {
-      "inputs": {
-        "nixpkgs-lib": [
           "treeman",
           "nixpkgs"
         ]
@@ -215,7 +194,7 @@
         "type": "github"
       }
     },
-    "flake-parts_13": {
+    "flake-parts_12": {
       "inputs": {
         "nixpkgs-lib": [
           "xilo",
@@ -341,7 +320,7 @@
     "flake-parts_7": {
       "inputs": {
         "nixpkgs-lib": [
-          "maestro",
+          "nix-mcp",
           "nixpkgs"
         ]
       },
@@ -362,7 +341,7 @@
     "flake-parts_8": {
       "inputs": {
         "nixpkgs-lib": [
-          "nix-mcp",
+          "notmuch-mcp",
           "nixpkgs"
         ]
       },
@@ -383,7 +362,7 @@
     "flake-parts_9": {
       "inputs": {
         "nixpkgs-lib": [
-          "notmuch-mcp",
+          "shell-lsp",
           "nixpkgs"
         ]
       },
@@ -404,24 +383,6 @@
     "flake-utils": {
       "inputs": {
         "systems": "systems_2"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    },
-    "flake-utils_2": {
-      "inputs": {
-        "systems": "systems_3"
       },
       "locked": {
         "lastModified": 1731533236,
@@ -792,40 +753,6 @@
         "type": "github"
       }
     },
-    "maestro": {
-      "inputs": {
-        "flake-parts": "flake-parts_7",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1793299692,
-        "narHash": "sha256-4VedmweNRt7pvRwXVTtomSvvfMlB4b5eFPVEDp32suw=",
-        "owner": "stubbedev",
-        "repo": "maestro",
-        "rev": "a0d9f8fdcaba4b514c2df7bc0c81d4357521c9ed",
-        "type": "github"
-      },
-      "original": {
-        "owner": "stubbedev",
-        "repo": "maestro",
-        "type": "github"
-      }
-    },
-    "mongodb-php-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1792050042,
-        "narHash": "sha256-fN3MvadLMIZ4Yo/iGU+Vas4lNk17sg4Go/hqazIUQaQ=",
-        "type": "tarball",
-        "url": "https://pecl.php.net/get/mongodb"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://pecl.php.net/get/mongodb"
-      }
-    },
     "nix-formatter-pack": {
       "inputs": {
         "nixpkgs": [
@@ -854,7 +781,7 @@
     },
     "nix-mcp": {
       "inputs": {
-        "flake-parts": "flake-parts_8",
+        "flake-parts": "flake-parts_7",
         "nixpkgs": "nixpkgs"
       },
       "locked": {
@@ -1071,7 +998,7 @@
     },
     "notmuch-mcp": {
       "inputs": {
-        "flake-parts": "flake-parts_9",
+        "flake-parts": "flake-parts_8",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -1087,28 +1014,6 @@
       "original": {
         "owner": "stubbedev",
         "repo": "notmuch-mcp",
-        "type": "github"
-      }
-    },
-    "phpantom_lsp": {
-      "inputs": {
-        "flake-utils": "flake-utils_2",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1791346348,
-        "narHash": "sha256-OTMe7T/TK9lpQGXPQA8VIfZ+SA6/7T/2WBdwym3A+0E=",
-        "owner": "PHPantom-dev",
-        "repo": "phpantom_lsp",
-        "rev": "1756b1f920c1290d4c4fdd4d2c902fad53a75cd3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "PHPantom-dev",
-        "ref": "0.11.1",
-        "repo": "phpantom_lsp",
         "type": "github"
       }
     },
@@ -1160,14 +1065,11 @@
         "lys-shell": "lys-shell",
         "lys-ui": "lys-ui",
         "lys-wm": "lys-wm",
-        "maestro": "maestro",
-        "mongodb-php-src": "mongodb-php-src",
         "nix-mcp": "nix-mcp",
         "nix-on-droid": "nix-on-droid",
         "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_2",
         "notmuch-mcp": "notmuch-mcp",
-        "phpantom_lsp": "phpantom_lsp",
         "shell-lsp": "shell-lsp",
         "sops-nix": "sops-nix",
         "srv": "srv",
@@ -1220,7 +1122,7 @@
     },
     "shell-lsp": {
       "inputs": {
-        "flake-parts": "flake-parts_10",
+        "flake-parts": "flake-parts_9",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -1261,7 +1163,7 @@
     },
     "srv": {
       "inputs": {
-        "flake-parts": "flake-parts_11",
+        "flake-parts": "flake-parts_10",
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
@@ -1308,21 +1210,6 @@
         "type": "github"
       }
     },
-    "systems_3": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
@@ -1346,7 +1233,7 @@
     },
     "treeman": {
       "inputs": {
-        "flake-parts": "flake-parts_12",
+        "flake-parts": "flake-parts_11",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -1403,7 +1290,7 @@
     },
     "xilo": {
       "inputs": {
-        "flake-parts": "flake-parts_13",
+        "flake-parts": "flake-parts_12",
         "nixpkgs": [
           "nixpkgs"
         ]

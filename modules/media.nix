@@ -72,16 +72,6 @@
         pavucontrol-wrapped
 
         (gfx.bundle { pkg = readest; })
-
-        # Bare, not gfx.bundle: GTK4 + WebKit crashes when nixGL's GL init
-        # mixes with the host driver (same reason as pavucontrol above).
-        stremio-linux-shell
-
-        # The standalone server + tray: its own node/ffmpeg are symlinked from
-        # nixpkgs at build time, so this is the web UI (localhost:11470) only.
-        stremio-service
-
-        (gfx.bundle { pkg = libreoffice-stable; })
       ];
     };
 }

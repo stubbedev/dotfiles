@@ -43,47 +43,6 @@ _: {
           languages.vue = "vue";
         };
 
-        svelte = {
-          command = lib.getExe' pkgs.svelte-language-server "svelteserver";
-          args = [ "--stdio" ];
-          languages.svelte = "svelte";
-        };
-
-        phpantom = {
-          command = lib.getExe' pkgs.phpantom_lsp "phpantom_lsp";
-          languages.php = "php";
-        };
-
-        gopls = {
-          command = lib.getExe' pkgs.gopls "gopls";
-          languages.go = "go";
-          settings.gopls = {
-            gofumpt = true;
-            analyses = {
-              unusedparams = true;
-              shadow = true;
-            };
-            staticcheck = true;
-          };
-        };
-
-        templ = {
-          command = lib.getExe' pkgs.templ "templ";
-          args = [ "lsp" ];
-          languages.templ = "templ";
-        };
-
-        ty = {
-          command = lib.getExe' pkgs.ty "ty";
-          args = [ "server" ];
-          languages.py = "python";
-        };
-
-        rust_analyzer = {
-          command = lib.getExe' pkgs.rust-analyzer "rust-analyzer";
-          languages.rs = "rust";
-        };
-
         lua_ls = {
           command = lib.getExe' pkgs.lua-language-server "lua-language-server";
           languages.lua = "lua";
@@ -150,11 +109,6 @@ _: {
           languages.toml = "toml";
         };
 
-        sqruff = {
-          command = lib.getExe' pkgs.sqruff "sqruff";
-          args = [ "lsp" ];
-          languages.sql = "sql";
-        };
       };
 
       # harness's `lsp` map: a filetype matches a file named "<filetype>" or

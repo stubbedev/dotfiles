@@ -37,7 +37,6 @@
           config.stubbe.paths.nixBin
           "$HOME/.local/bin"
         ]
-        ++ lib.optional config.features.php "$HOME/.config/composer/vendor/bin"
         ++ [
           "/usr/local/bin"
           "/usr/bin"

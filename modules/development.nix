@@ -8,7 +8,6 @@
       ...
     }:
     let
-      inherit (config.stubbe) gfx;
       nodeCaBundle = "${config.xdg.cacheHome}/node/extra-ca.pem";
     in
     {
@@ -35,26 +34,9 @@
           ];
         };
 
-        # Language toolchains (go, rust, the C/C++ linker stack) are deliberately
-        # absent: each repo's flake dev shell owns them, loaded by direnv on cd.
-        # Only what is repo-agnostic stays.
-        home.packages =
-          with pkgs;
-          [
-            nodejs_24
-            pnpm
-
-            python3
-          ]
-          ++ lib.optionals config.features.desktop [
-            # gfx.bundle, not a bare wrap: a bare nixGL wrap emits only bin/, losing
-            # the .desktop entry rofi needs.
-            (gfx.bundle { pkg = pkgs.neovide; })
-          ];
-
+        # Language toolchains and runtimes are deliberately absent: each repo's
+        # flake dev shell owns them, loaded by direnv on cd.
         programs = {
-          uv.enable = true;
-
           # silent drops status lines only; errors still print. The zsh hook
           # is direnv-instant's (below).
           direnv = {

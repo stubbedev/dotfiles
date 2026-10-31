@@ -15,7 +15,6 @@ in
       "lys-shell"
       "lys-wm"
       "lys-login"
-      "phpantom_lsp"
       "shell-lsp"
       "claude-code"
       "xilo"
@@ -134,20 +133,6 @@ in
             });
           })
         ];
-      };
-
-      mago-runpath = final: prev: {
-        mago =
-          final.runCommand prev.mago.name
-            {
-              nativeBuildInputs = [ final.patchelf ];
-              inherit (prev.mago) meta;
-            }
-            ''
-              cp -r ${prev.mago} $out
-              chmod -R u+w $out
-              patchelf --set-rpath "$(patchelf --print-rpath $out/bin/mago | tr ':' '\n' | grep -v '/rustlib/' | paste -sd: -)" $out/bin/mago
-            '';
       };
 
       stubbe-packages = _final: prev: {

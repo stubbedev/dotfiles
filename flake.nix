@@ -43,12 +43,6 @@
       url = "github:stubbedev/harness";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Composer, natively: a Go port of Composer installed as `composer`
-    # (modules/php.nix). flake.lock pins it; `nix flake update maestro` moves it.
-    maestro = {
-      url = "github:stubbedev/maestro";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     shell-lsp = {
       url = "github:stubbedev/shell-lsp";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -113,8 +107,7 @@
         lys-ui.follows = "lys-ui";
       };
     };
-    # The session lock and greeter split out of lys-shell. Only the lock is used
-    # here; greetd's agreety session stays the display manager.
+    # The session lock everywhere, and the display manager on NixOS.
     lys-login = {
       url = "github:stubbedev/lys-login";
       inputs = {
@@ -136,10 +129,6 @@
     zsh-fzf-npm-run = {
       url = "github:stubbedev/zsh-fzf-npm-run";
       flake = false;
-    };
-    phpantom_lsp = {
-      url = "github:PHPantom-dev/phpantom_lsp/0.11.1";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     disko = {
       url = "github:nix-community/disko";
@@ -165,15 +154,6 @@
     };
     libembroidery-src = {
       url = "github:Embroidermodder/libembroidery";
-      flake = false;
-    };
-    # Unversioned PECL URL: always resolves to the newest mongodb release, so
-    # the version is whatever `nix flake update mongodb-php-src` last pulled
-    # rather than a hand-written hash. The PECL release tarball bundles
-    # libmongoc/libmongocrypt, so it needs no submodule fetch.
-    mongodb-php-src = {
-      url = "https://pecl.php.net/get/mongodb";
-      type = "tarball";
       flake = false;
     };
     tridactyl-theme-src = {

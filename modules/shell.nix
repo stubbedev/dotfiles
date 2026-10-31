@@ -148,13 +148,6 @@
             echo "$_oldpass" | ssh "$_user@$_host" "sudo -S -p ''' usermod -p '$_hash' '$_user'"
           }
 
-          ${lib.optionalString config.programs.uv.enable ''
-            function pysrc {
-              [[ -f "$PWD/venv/bin/activate" ]] || uv venv ./venv || return
-              source "$PWD/venv/bin/activate"
-            }
-          ''}
-
           function fzf-project-picker {
             SELECTED_DIR="$(fzf-pick-project "$@")"
             if [[ -n "$SELECTED_DIR" ]]; then
@@ -252,7 +245,7 @@
             DISABLE_AUTO_TITLE=true
             VIM_MODE_NO_DEFAULT_BINDINGS=true
             KEYTIMEOUT=1
-            ${lib.optionalString config.features.php "ARTISAN_OPEN_ON_MAKE_EDITOR=nvim"}
+            ${lib.optionalString config.features.development "ARTISAN_OPEN_ON_MAKE_EDITOR=nvim"}
             ZSH_AUTOSUGGEST_MANUAL_REBIND=1
             ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
@@ -540,16 +533,18 @@
           file = "zsh-autosuggestions.zsh";
         }
       ]
-      ++ lib.optional config.features.php {
-        name = "zsh-fzf-artisan";
-        src = inputs.zsh-fzf-artisan;
-        file = "artisan.plugin.zsh";
-      }
-      ++ lib.optional config.features.development {
-        name = "zsh-fzf-npm-run";
-        src = inputs.zsh-fzf-npm-run;
-        file = "zsh-fzf-npm-run.plugin.zsh";
-      }
+      ++ lib.optionals config.features.development [
+        {
+          name = "zsh-fzf-artisan";
+          src = inputs.zsh-fzf-artisan;
+          file = "artisan.plugin.zsh";
+        }
+        {
+          name = "zsh-fzf-npm-run";
+          src = inputs.zsh-fzf-npm-run;
+          file = "zsh-fzf-npm-run.plugin.zsh";
+        }
+      ]
       ++ [
         {
           name = "zsh-vim-mode";

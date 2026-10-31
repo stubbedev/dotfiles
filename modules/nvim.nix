@@ -127,47 +127,26 @@
                   yayamlls
                   marksman
 
-                  # tsc (the Go compiler) has no tsserver *plugin* support, which is why vue and
-                  # svelte each run a self-contained server below.
+                  # tsc (the Go compiler) has no tsserver *plugin* support, which is why vue
+                  # runs a self-contained server below.
                   typescript
                   oxlint
                   oxfmt
                   vue-language-server
                   vtsls
-                  svelte-language-server
-
-                  templ
-                  ruff
-                  ty
-                  rust-analyzer
-                  gopls
-                  golangci-lint-langserver
-
-                  sqruff
-                  postgres-language-server # deeper postgres semantics when a project wants it
 
                   docker-language-server
                   lemminx
-                  terraform-ls
 
                   stylua
                   nixfmt
                   prettier
-                  caddy
-                  gofumpt
-                  golangci-lint
                   markdownlint-cli2
                   statix
                   deadnix
 
-                  gomodifytags
-                  gotests
-                  impl
-                  iferr
-
                   nodejs
-                ]
-                ++ lib.optionals config.features.php [ phpantom_lsp ];
+                ];
             };
           }
         )

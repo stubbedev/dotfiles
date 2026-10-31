@@ -264,28 +264,6 @@ _: {
             }
           }
 
-          release_pinned_repos="PHPantom-dev/phpantom_lsp"
-          bump_release_pins() {
-            local repo latest name bumped=""
-            for repo in $release_pinned_repos; do
-              if ! latest=$(${lib.getExe pkgs.curl} -fsSL --max-time 10 "https://api.github.com/repos/$repo/releases/latest" \
-                | ${lib.getExe pkgs.jq} -er .tag_name); then
-                echo "hm: could not read the latest $repo release; keeping its pin" >&2
-                continue
-              fi
-              grep -q "github:$repo/$latest" "$hm_flake_dir/flake.nix" && continue
-              sed -i "s|github:$repo/[^\"]*|github:$repo/$latest|" "$hm_flake_dir/flake.nix"
-              name=''${repo##*/}
-              echo "Bumped $name pin to $latest"
-              bumped="$bumped $name→$latest"
-            done
-            [ -n "$bumped" ] || return 0
-            if flake_in_git; then
-              flake_git add -- flake.nix
-              flake_git commit -qm "chore: bump release pins:$bumped" -- flake.nix
-            fi
-          }
-
           update_host_packages() {
             ${
               if config.host.platform == "linux" then
@@ -342,7 +320,6 @@ _: {
               ensure_flakelock_driver
               sync_flake_repo
             fi
-            bump_release_pins
             nix flake update --flake "$hm_flake_ref" --quiet
             commit_flake_lock
           }

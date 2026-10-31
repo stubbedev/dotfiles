@@ -79,8 +79,6 @@
         # errors, so raise it when debugging video acceleration.
         LIBVA_MESSAGING_LEVEL = lib.mkIf config.features.desktop "0";
 
-        DEPLOYER_REMOTE_USER = lib.mkIf config.features.php "abs";
-
         # A shell-word string, not a config file: `#` is an argument fzf rejects,
         # not a comment.
         # Binding tab here costs it the default multi-select toggle, which moves

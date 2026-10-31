@@ -12,7 +12,7 @@ let
       profiles = workstation;
     };
     development = {
-      description = "Language toolchains beyond the CLI baseline (node, python). Project toolchains (go, rust, C/C++) come from each repo's flake dev shell, loaded by direnv.";
+      description = "Editor language servers and formatters, direnv with its dev-shell integration, and the repo-agnostic dev CLI tools. Language runtimes and toolchains come from each repo's flake dev shell.";
       profiles = workstation;
     };
     ops = {
@@ -32,7 +32,7 @@ let
       profiles = workstation;
     };
     lysWm = {
-      description = "The lys-wm compositor, its session, and login (greetd autologin).";
+      description = "The lys-wm compositor, its session, and login (the lys-login display manager on NixOS, greetd autologin elsewhere).";
       profiles = workstation;
     };
     lysShell = {
@@ -44,7 +44,7 @@ let
       profiles = workstation;
     };
     media = {
-      description = "Image, video and audio tooling, plus the office suite.";
+      description = "Image, video and audio tooling.";
       profiles = workstation;
     };
     vpn = {
@@ -57,10 +57,6 @@ let
     };
     treeman = {
       description = "treeman per-worktree DB orchestrator plus the treemand user daemon.";
-      profiles = workstation;
-    };
-    php = {
-      description = "PHP: static CLI interpreter plus FrankenPHP and composer.";
       profiles = workstation;
     };
     claudeCode = {
