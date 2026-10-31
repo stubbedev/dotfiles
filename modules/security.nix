@@ -87,7 +87,6 @@ _: {
         "/etc/pam.d/ly"
         "/etc/pam.d/lightdm"
         "/etc/pam.d/gdm"
-        "/etc/pam.d/greetd"
       ];
     in
     {

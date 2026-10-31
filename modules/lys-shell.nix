@@ -134,10 +134,7 @@
               # The upstream default pam-service `system-auth` does not exist on
               # NixOS, so a dedicated /etc/pam.d/lys-shell is provisioned instead.
               login = {
-                lock = {
-                  pam-service = "lys-shell";
-                  lock-on-start = config.host.platform != "nixos";
-                };
+                lock.pam-service = "lys-shell";
                 background-mode = "image";
                 background-image = config.stubbe.paths.wallpaper;
                 date-format = "%A, %d %B %Y";

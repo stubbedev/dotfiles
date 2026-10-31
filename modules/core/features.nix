@@ -32,7 +32,7 @@ let
       profiles = workstation;
     };
     lysWm = {
-      description = "The lys-wm compositor, its session, and login (the lys-login display manager on NixOS, greetd autologin elsewhere).";
+      description = "The lys-wm compositor, its session, and login (the lys-login display manager).";
       profiles = workstation;
     };
     lysShell = {

@@ -1,6 +1,6 @@
 { inputs, ... }:
 let
-  greetdSessionScript = ''
+  sessionScript = ''
     [ -n "''${USER:-}" ] || USER="$(id -un)"
     [ -n "''${HOME:-}" ] || HOME="$(getent passwd "$USER" | cut -d: -f6)"
     export USER HOME
@@ -69,6 +69,14 @@ in
       lysWm = gfx.bundle {
         pkg = pkgs.lys-wm;
         exes = [ "lys-wm" ];
+      };
+
+      lysLoginPackage = rec {
+        version = "0.2.0";
+        deb = pkgs.fetchurl {
+          url = "https://github.com/stubbedev/lys-login/releases/download/v${version}/lys-login_${version}_amd64.deb";
+          hash = "sha256-AoIBwrOVx9Eqd+QsoRMSWHEx6ap+B79RyKhjJOrsno4=";
+        };
       };
 
       bind = chord: action: { inherit chord action; };
@@ -376,132 +384,96 @@ in
             }
           );
 
-          greetd = {
-            privileged = true;
-            title = "Installing greetd (autologin login manager, replaces SDDM)";
-            body = ''
-              Install greetd (which ships the agreety fallback greeter) via the
-              host package manager, drop the shared lys-wm session launcher into
-              /etc/greetd, write /etc/greetd/config.toml (autologin into lys-wm,
-              agreety on logout), and make greetd the system display manager in
-              place of SDDM.
+          lysLogin =
+            let
+              unitFile = "/usr/lib/systemd/system/lys-login.service";
+              dmLink = "/etc/systemd/system/display-manager.service";
+              launcher = "/usr/local/bin/lys-wm-session";
+            in
+            {
+              privileged = true;
+              title = "Installing lys-login (the display manager, in place of greetd, GDM or SDDM)";
+              body = ''
+                Install lys-login's ${lysLoginPackage.version} package, show its greeter in
+                this profile's lys-wm, offer the lys-wm session from
+                /usr/local/share/wayland-sessions, and make lys-login the display
+                manager: every other display manager is disabled,
+                display-manager.service points at lys-login.service and
+                graphical.target is the default. Nothing is restarted, so it takes
+                effect on the next reboot and the current session survives.
 
-              The display-manager swap disables any enabled DM (sddm/gdm/lightdm/…),
-              repoints /etc/systemd/system/display-manager.service at
-              greetd.service, and sets graphical.target as default. It does NOT
-              restart the display manager — it takes effect on next reboot, so the
-              current session survives.
-
-              Recovery if autologin ever fails to render: switch to a text console
-              (Ctrl+Alt+F3) and log in there to fix or roll back.
-            '';
-            # Purging another DM's package (deb-systemd-helper purge) deletes the
-            # shared display-manager.service alias it once owned, silently
-            # disabling greetd; re-run when the alias disappears.
-            stateInputs = [ "/etc/systemd/system/display-manager.service" ];
-            script =
-              let
-                launcher = "/etc/greetd/lys-wm-session.sh";
-              in
-              ''
-                ${pkgs.stubbe.setup.hostPackage {
-                  detect = "greetd";
-                  apt = [ "greetd" ];
-                  dnf = [ "greetd" ];
-                  pacman = [ "greetd" ];
-                }}
-
-                if ! getent passwd greeter >/dev/null 2>&1; then
-                  sudo useradd --system --create-home --home-dir /var/lib/greetd \
-                    --shell /usr/sbin/nologin --user-group \
-                    --groups video,input greeter
+                If the greeter does not come up, switch to a text console
+                (Ctrl+Alt+F3), log in and read `journalctl -u lys-login -b`.
+              '';
+              # Purging another DM's package (deb-systemd-helper purge) deletes the
+              # shared display-manager.service alias it once owned, silently
+              # disabling lys-login; re-run when the alias disappears.
+              stateInputs = [ dmLink ];
+              script = ''
+                if ! command -v apt-get >/dev/null 2>&1; then
+                  echo "lys-login is installed from its .deb here; this host has no apt-get." >&2
+                  exit 1
+                fi
+                if [ "$(dpkg-query -W lys-login 2>/dev/null | cut -f2)" != ${lib.escapeShellArg lysLoginPackage.version} ]; then
+                  sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confold ${lysLoginPackage.deb}
                 fi
 
+                exec_start=$(sed -n 's|^\(ExecStart=.* --compositor \)/usr/bin/lys-wm |\1${lib.getExe lysWm} |p' ${unitFile})
+                if [ -z "$exec_start" ]; then
+                  echo "${unitFile} has no ExecStart with --compositor /usr/bin/lys-wm to point at this profile's lys-wm." >&2
+                  exit 1
+                fi
+                sudo install -d -m 0755 /etc/systemd/system/lys-login.service.d
+                printf '[Service]\nExecStart=\n%s\n' "$exec_start" | sudo tee /etc/systemd/system/lys-login.service.d/lys-wm.conf >/dev/null
+
                 ${pkgs.stubbe.setup.text {
-                  name = "lys-wm-session.sh";
+                  name = "lys-wm-session";
                   target = launcher;
                   mode = "0755";
-                  text = "#!/bin/sh\n" + greetdSessionScript;
-                }}
-
-                ${pkgs.stubbe.setup.file {
-                  source = pkgs.stubbe.gen.toml "greetd-config.toml" {
-                    terminal.vt = 7;
-                    initial_session = {
-                      command = launcher;
-                      user = config.home.username;
-                    };
-                    default_session = {
-                      command = "agreety --cmd ${launcher}";
-                      user = "greeter";
-                    };
-                  };
-                  target = "/etc/greetd/config.toml";
+                  text = "#!/bin/sh\n" + sessionScript;
                 }}
 
                 ${pkgs.stubbe.setup.text {
-                  name = "greetd-plymouth-order.conf";
-                  target = "/etc/systemd/system/greetd.service.d/plymouth-order.conf";
+                  name = "lys-wm.desktop";
+                  target = "/usr/local/share/wayland-sessions/lys-wm.desktop";
                   text = ''
-                    [Unit]
-                    After=plymouth-quit.service plymouth-quit-wait.service
+                    [Desktop Entry]
+                    Name=lys-wm
+                    Comment=lys-wm with this profile's environment
+                    Exec=${launcher}
+                    Type=Application
+                    DesktopNames=lys-wm
                   '';
                 }}
                 ${pkgs.stubbe.setup.reloadUnits}
 
-                current_dm=""
-                if [ -L /etc/systemd/system/display-manager.service ]; then
-                  current_dm=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
+                for dm in greetd gdm gdm3 sddm lightdm lxdm xdm ly; do
+                  if systemctl is-enabled --quiet "$dm.service" 2>/dev/null; then
+                    echo "Disabling the display manager $dm." >&2
+                    sudo systemctl disable "$dm.service"
+                  fi
+                done
+
+                if [ "$(readlink -f ${dmLink})" != ${unitFile} ]; then
+                  sudo rm -f ${dmLink}
+                fi
+                sudo systemctl enable lys-login.service
+                if [ "$(readlink -f ${dmLink})" != ${unitFile} ]; then
+                  echo "Enabling lys-login.service left ${dmLink} pointing at $(readlink -f ${dmLink}), not ${unitFile}." >&2
+                  exit 1
                 fi
 
-                if [ "$current_dm" = "greetd" ]; then
-                  echo "greetd is already the default display manager; config refreshed." >&2
-                else
-                  for dm in sddm gdm gdm3 lightdm lxdm xdm; do
-                    if systemctl cat "$dm.service" >/dev/null 2>&1 \
-                       && systemctl is-enabled --quiet "$dm.service" 2>/dev/null; then
-                      echo "Disabling existing display manager: $dm" >&2
-                      sudo systemctl disable "$dm.service"
-                    fi
-                  done
-
-                  if [ -L /etc/systemd/system/display-manager.service ]; then
-                    tgt=$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)
-                    if [ "$tgt" != "greetd" ]; then
-                      sudo rm -f /etc/systemd/system/display-manager.service
-                    fi
-                  fi
-
-                  sudo systemctl enable greetd.service
-
-                  if [ ! -L /etc/systemd/system/display-manager.service ] \
-                     || [ "$(basename "$(readlink /etc/systemd/system/display-manager.service)" .service)" != "greetd" ]; then
-                    greetd_unit=$(systemctl show -p FragmentPath greetd.service --value 2>/dev/null)
-                    if [ -n "$greetd_unit" ] && [ -e "$greetd_unit" ]; then
-                      echo "Materialising display-manager.service → $greetd_unit." >&2
-                      sudo rm -f /etc/systemd/system/display-manager.service
-                      sudo ln -sf "$greetd_unit" /etc/systemd/system/display-manager.service
-                    else
-                      echo "ERROR: greetd.service has no readable FragmentPath. Display manager alias not set." >&2
-                      exit 1
-                    fi
-                  fi
-
-                  if command -v apt-get >/dev/null 2>&1 && [ -d /etc/X11 ]; then
-                    greetd_bin=$(command -v greetd 2>/dev/null || echo /usr/bin/greetd)
-                    echo "$greetd_bin" | sudo tee /etc/X11/default-display-manager >/dev/null
-                  fi
-
-                  if [ "$(sudo systemctl get-default 2>/dev/null)" != "graphical.target" ]; then
-                    sudo systemctl set-default graphical.target >/dev/null
-                  fi
-
-                  echo "" >&2
-                  echo "greetd is now the default display manager (effective on next reboot)." >&2
-                  echo "Not restarting the display manager, to avoid killing the current session." >&2
+                if [ -d /etc/X11 ]; then
+                  echo /usr/bin/lys-login | sudo tee /etc/X11/default-display-manager >/dev/null
                 fi
+
+                if [ "$(systemctl get-default)" != graphical.target ]; then
+                  sudo systemctl set-default graphical.target >/dev/null
+                fi
+
+                echo "lys-login is the display manager from the next reboot; nothing was restarted." >&2
               '';
-          };
+            };
         };
       };
     };
