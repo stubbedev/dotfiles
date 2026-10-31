@@ -19,20 +19,6 @@ let
 
     exec systemd-cat -t lys-wm lys-wm --systemd
   '';
-
-  greetdSettings =
-    {
-      launcher,
-      agreety,
-      user,
-    }:
-    {
-      initial_session = {
-        command = launcher;
-        inherit user;
-      };
-      default_session.command = "${agreety} --cmd ${launcher}";
-    };
 in
 {
   flake.modules.nixos.lysWm =
@@ -42,9 +28,6 @@ in
       pkgs,
       ...
     }:
-    let
-      launcher = pkgs.stubbe.shellScript "lys-wm-greetd-session" greetdSessionScript;
-    in
     {
       imports = [ inputs.lys-wm.nixosModules.default ];
 
@@ -54,13 +37,10 @@ in
           package = pkgs.lys-wm;
         };
 
-        services.greetd = {
+        programs.lys-login.greeter = {
           enable = true;
-          settings = greetdSettings {
-            launcher = "${launcher}";
-            agreety = lib.getExe' config.services.greetd.package "agreety";
-            user = config.host.primaryUser;
-          };
+          displayManager = "lys-login";
+          compositorPackage = config.programs.lys-wm.package;
         };
       };
     };
@@ -315,6 +295,10 @@ in
 
         xdg.configFile."lys-wm/config.yaml".source = pkgs.stubbe.gen.yaml "lys-wm-config.yaml" settings;
 
+        home.file.".profile" = lib.mkIf (config.host.platform == "nixos") {
+          text = ". ${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh\n";
+        };
+
         wayland.systemd.target = "lys-wm-session.target";
 
         services.hypridle = {
@@ -441,18 +425,17 @@ in
                 }}
 
                 ${pkgs.stubbe.setup.file {
-                  source = pkgs.stubbe.gen.toml "greetd-config.toml" (
-                    lib.recursiveUpdate
-                      (greetdSettings {
-                        inherit launcher;
-                        agreety = "agreety";
-                        user = config.home.username;
-                      })
-                      {
-                        terminal.vt = 7;
-                        default_session.user = "greeter";
-                      }
-                  );
+                  source = pkgs.stubbe.gen.toml "greetd-config.toml" {
+                    terminal.vt = 7;
+                    initial_session = {
+                      command = launcher;
+                      user = config.home.username;
+                    };
+                    default_session = {
+                      command = "agreety --cmd ${launcher}";
+                      user = "greeter";
+                    };
+                  };
                   target = "/etc/greetd/config.toml";
                 }}
 

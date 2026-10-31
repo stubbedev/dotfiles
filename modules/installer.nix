@@ -185,9 +185,9 @@ in
           wireless.iwd.enable = true;
         };
 
-        services = {
-          greetd.enable = lib.mkForce false;
+        programs.lys-login.greeter.enable = lib.mkForce false;
 
+        services = {
           xserver.enable = lib.mkForce false;
           getty.autologinUser = lib.mkForce "root";
 

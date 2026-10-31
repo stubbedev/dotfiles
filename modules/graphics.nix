@@ -68,10 +68,7 @@ _: {
         wantedBy = [ "multi-user.target" ];
         # Stop order is the reverse of start order, so this runs after the
         # compositor has released the GPU.
-        before = [
-          "greetd.service"
-          "display-manager.service"
-        ];
+        before = [ "display-manager.service" ];
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;

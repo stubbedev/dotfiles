@@ -136,7 +136,7 @@
               login = {
                 lock = {
                   pam-service = "lys-shell";
-                  lock-on-start = true;
+                  lock-on-start = config.host.platform != "nixos";
                 };
                 background-mode = "image";
                 background-image = config.stubbe.paths.wallpaper;
