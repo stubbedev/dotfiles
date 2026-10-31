@@ -222,117 +222,127 @@ _: {
         includeUpstream = false;
       };
     in
-    lib.mkIf config.features.browsers {
-      home.packages = [ chrome ];
+    {
+      options.stubbe.chrome = lib.mkOption {
+        type = lib.types.package;
+        readOnly = true;
+        internal = true;
+        description = "The wrapped Chrome this module installs, for the NixOS half to link at /opt.";
+      };
 
-      xdg.desktopEntries."com.google.Chrome" = {
-        name = "Google Chrome";
-        genericName = "Web Browser";
-        comment = "Access the Internet";
-        exec = "google-chrome-stable %U";
-        icon = "google-chrome";
-        categories = [
-          "Network"
-          "WebBrowser"
-        ];
-        mimeType = [
-          "application/pdf"
-          "application/rdf+xml"
-          "application/rss+xml"
-          "application/xhtml+xml"
-          "application/xhtml_xml"
-          "application/xml"
-          "image/gif"
-          "image/jpeg"
-          "image/png"
-          "image/webp"
-          "text/html"
-          "text/xml"
-          "x-scheme-handler/http"
-          "x-scheme-handler/https"
-          "x-scheme-handler/google-chrome"
-        ];
-        startupNotify = true;
-        terminal = false;
-        actions = {
-          new-window = {
-            name = "New Window";
-            exec = "google-chrome-stable";
-          };
-          new-private-window = {
-            name = "New Incognito Window";
-            exec = "google-chrome-stable --incognito";
+      config = lib.mkIf config.features.browsers {
+        stubbe.chrome = chrome;
+        home.packages = [ chrome ];
+
+        xdg.desktopEntries."com.google.Chrome" = {
+          name = "Google Chrome";
+          genericName = "Web Browser";
+          comment = "Access the Internet";
+          exec = "google-chrome-stable %U";
+          icon = "google-chrome";
+          categories = [
+            "Network"
+            "WebBrowser"
+          ];
+          mimeType = [
+            "application/pdf"
+            "application/rdf+xml"
+            "application/rss+xml"
+            "application/xhtml+xml"
+            "application/xhtml_xml"
+            "application/xml"
+            "image/gif"
+            "image/jpeg"
+            "image/png"
+            "image/webp"
+            "text/html"
+            "text/xml"
+            "x-scheme-handler/http"
+            "x-scheme-handler/https"
+            "x-scheme-handler/google-chrome"
+          ];
+          startupNotify = true;
+          terminal = false;
+          actions = {
+            new-window = {
+              name = "New Window";
+              exec = "google-chrome-stable";
+            };
+            new-private-window = {
+              name = "New Incognito Window";
+              exec = "google-chrome-stable --incognito";
+            };
           };
         };
-      };
 
-      home.sessionVariables.PLAYWRIGHT_MCP_EXECUTABLE_PATH = "${chrome}/bin/google-chrome-stable";
+        home.sessionVariables.PLAYWRIGHT_MCP_EXECUTABLE_PATH = "${chrome}/bin/google-chrome-stable";
 
-      # --extension clients skip the Playwright MCP Bridge approval dialog when
-      # this matches the extension's token; the launcher seeds it (see
-      # seedPlaywrightToken above). Regenerating it in the extension UI is undone
-      # on the next cold start.
-      sops.secrets.playwright-mcp-extension-token = pkgs.stubbe.secret {
-        name = "playwright-mcp-extension-token";
-      };
-      home.sessionVariables.PLAYWRIGHT_MCP_EXTENSION_TOKEN = "$(cat ${playwrightTokenPath} 2>/dev/null)";
+        # --extension clients skip the Playwright MCP Bridge approval dialog when
+        # this matches the extension's token; the launcher seeds it (see
+        # seedPlaywrightToken above). Regenerating it in the extension UI is undone
+        # on the next cold start.
+        sops.secrets.playwright-mcp-extension-token = pkgs.stubbe.secret {
+          name = "playwright-mcp-extension-token";
+        };
+        home.sessionVariables.PLAYWRIGHT_MCP_EXTENSION_TOKEN = "$(cat ${playwrightTokenPath} 2>/dev/null)";
 
-      xdg.configFile."surfingkeys/config.js".text = ''
-        // Managed by home-manager — modules/browsers/chrome.nix
-        //
-        // LazyVim-inspired keymap. Leader = <Space> (LazyVim's <leader>).
-        // / n N f gg G are SurfingKeys defaults already and match vim.
-        //
-        // `api` and `settings` are globals in the SurfingKeys config
-        // context — use them directly, exactly as SurfingKeys' own
-        // shipped example does. (`const { api } = window` is wrong: api
-        // is not a window property, so it would throw and abort the
-        // whole config — no theme, no binds.)
+        xdg.configFile."surfingkeys/config.js".text = ''
+          // Managed by home-manager — modules/browsers/chrome.nix
+          //
+          // LazyVim-inspired keymap. Leader = <Space> (LazyVim's <leader>).
+          // / n N f gg G are SurfingKeys defaults already and match vim.
+          //
+          // `api` and `settings` are globals in the SurfingKeys config
+          // context — use them directly, exactly as SurfingKeys' own
+          // shipped example does. (`const { api } = window` is wrong: api
+          // is not a window property, so it would throw and abort the
+          // whole config — no theme, no binds.)
 
-        // Keymap mirrors the Tridactyl tridactylrc binds (see
-        // modules/browsers/firefox.nix). / ? n N f gg G already
-        // match — they are SurfingKeys defaults and vim-standard.
+          // Keymap mirrors the Tridactyl tridactylrc binds (see
+          // modules/browsers/firefox.nix). / ? n N f gg G already
+          // match — they are SurfingKeys defaults and vim-standard.
 
-        // Tabs — Tridactyl H/L + [b/]b (E/R = SurfingKeys prev/next tab).
-        api.map('H', 'E');
-        api.map('L', 'R');
-        api.map('[b', 'E');
-        api.map(']b', 'R');
+          // Tabs — Tridactyl H/L + [b/]b (E/R = SurfingKeys prev/next tab).
+          api.map('H', 'E');
+          api.map('L', 'R');
+          api.map('[b', 'E');
+          api.map(']b', 'R');
 
-        // <Space> leader — mirrors the tridactylrc <Space> binds.
-        api.map('<Space>bd', 'x');       // tabclose
-        api.map('<Space>bo', 'gxx');     // tabonly (close other tabs)
-        api.map('<Space>bh', 'gx0');     // tabclosealltoleft
-        api.map('<Space>bl', 'gx$');     // tabclosealltoright
-        api.map('<Space><Space>', 'T');  // fillcmdline tab
-        api.map('<Space>,', 'T');        // fillcmdline taball
-        api.map('<Space>ff', 't');       // fillcmdline open
-        api.map('<Space>ft', 't');       // fillcmdline tabopen
-        api.map('<Space>qt', 'x');       // tabclose
-        // Tridactyl <Space>bp (pin), <Space>fw (winopen) and <Space>qq
-        // (qall) have no SurfingKeys equivalent — pinning is handled by
-        // the Tab Pinner extension instead.
+          // <Space> leader — mirrors the tridactylrc <Space> binds.
+          api.map('<Space>bd', 'x');       // tabclose
+          api.map('<Space>bo', 'gxx');     // tabonly (close other tabs)
+          api.map('<Space>bh', 'gx0');     // tabclosealltoleft
+          api.map('<Space>bl', 'gx$');     // tabclosealltoright
+          api.map('<Space><Space>', 'T');  // fillcmdline tab
+          api.map('<Space>,', 'T');        // fillcmdline taball
+          api.map('<Space>ff', 't');       // fillcmdline open
+          api.map('<Space>ft', 't');       // fillcmdline tabopen
+          api.map('<Space>qt', 'x');       // tabclose
+          // Tridactyl <Space>bp (pin), <Space>fw (winopen) and <Space>qq
+          // (qall) have no SurfingKeys equivalent — pinning is handled by
+          // the Tab Pinner extension instead.
 
-        // Hints — Tridactyl f (kept, SurfingKeys default) and F.
-        api.map('F', 'gf');              // hint into a background tab
+          // Hints — Tridactyl f (kept, SurfingKeys default) and F.
+          api.map('F', 'gf');              // hint into a background tab
 
-        // Half-page scroll on <C-d>/<C-u> (d/u are SurfingKeys defaults).
-        api.map('<Ctrl-d>', 'd');
-        api.map('<Ctrl-u>', 'u');
+          // Half-page scroll on <C-d>/<C-u> (d/u are SurfingKeys defaults).
+          api.map('<Ctrl-d>', 'd');
+          api.map('<Ctrl-u>', 'u');
 
-        // --- Appearance: mirror the Tridactyl Catppuccin command line ---
-        // "middle" = centred box, input on top, results below — like
-        // Tridactyl. ("bottom" flips it: input at the bottom, results above.)
-        settings.omnibarPosition = "middle";
-        settings.showModeStatus = true;      // always-on mode indicator
-        settings.theme = ${builtins.toJSON surfingkeysTheme};
-      '';
+          // --- Appearance: mirror the Tridactyl Catppuccin command line ---
+          // "middle" = centred box, input on top, results below — like
+          // Tridactyl. ("bottom" flips it: input at the bottom, results above.)
+          settings.omnibarPosition = "middle";
+          settings.showModeStatus = true;      // always-on mode indicator
+          settings.theme = ${builtins.toJSON surfingkeysTheme};
+        '';
 
-      # Ubuntu 24.04+ gates the userns sandbox on a matching AppArmor profile.
-      stubbe.setup.chromeApparmor = pkgs.stubbe.setup.apparmor {
-        appName = "Chrome";
-        profileName = "nix-google-chrome-stable";
-        programGlob = "/nix/store/*/share/google/chrome/{chrome,chrome-sandbox}";
+        # Ubuntu 24.04+ gates the userns sandbox on a matching AppArmor profile.
+        stubbe.setup.chromeApparmor = pkgs.stubbe.setup.apparmor {
+          appName = "Chrome";
+          profileName = "nix-google-chrome-stable";
+          programGlob = "/nix/store/*/share/google/chrome/{chrome,chrome-sandbox}";
+        };
       };
     };
 }

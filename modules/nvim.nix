@@ -147,7 +147,6 @@
                   postgres-language-server # deeper postgres semantics when a project wants it
 
                   docker-language-server
-                  clang-tools
                   lemminx
                   terraform-ls
 
@@ -156,14 +155,11 @@
                   prettier
                   caddy
                   gofumpt
-                  gotools # provides goimports
                   golangci-lint
                   markdownlint-cli2
                   statix
                   deadnix
 
-                  cargo
-                  rustc
                   gomodifytags
                   gotests
                   impl

@@ -80,12 +80,13 @@ in
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     lib.mkIf config.stubbe.userFeatures.browsers {
       systemd.tmpfiles.rules = [
-        "L+ /opt/google/chrome/chrome 0755 root root - ${pkgs.google-chrome}/bin/google-chrome-stable"
+        "L+ /opt/google/chrome/chrome 0755 root root - ${
+          config.home-manager.users.${config.host.primaryUser}.stubbe.chrome
+        }/bin/google-chrome-stable"
       ];
     };
 }
