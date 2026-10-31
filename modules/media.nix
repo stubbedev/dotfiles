@@ -27,15 +27,11 @@
         version = "unstable";
         src = inputs.libembroidery-src;
         nativeBuildInputs = [ pkgs.cmake ];
-        # Upstream tests have a -Wformat-security issue and arc_test fails on
-        # pre-1.0 main; the `sew` CLI itself builds and runs fine.
-        hardeningDisable = [ "format" ];
-        doCheck = false;
-        # CMakeLists installs `embroidery.h` from source root, but the header
-        # actually lives in `include/`. Patch the install path.
-        postPatch = ''
-          substituteInPlace CMakeLists.txt \
-            --replace-fail "FILES embroidery.h" "FILES include/embroidery.h"
+        buildFlags = [ "sew" ];
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 sew -t $out/bin
+          runHook postInstall
         '';
         meta = {
           description = "Library and `sew` CLI for reading/writing machine embroidery files";
