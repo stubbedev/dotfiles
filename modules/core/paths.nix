@@ -35,11 +35,12 @@ _: {
 
         wallpaper = lib.mkOption {
           type = lib.types.str;
-          default = "${config.stubbe.paths.dotfiles}/src/wallpapers/ballet.jpg";
-          defaultText = "\${config.stubbe.paths.dotfiles}/src/wallpapers/ballet.jpg";
+          default = "${../../src/wallpapers/ballet.jpg}";
+          defaultText = "src/wallpapers/ballet.jpg, copied to the store";
           description = ''
-            Desktop wallpaper, single source of truth: lys-shell's wallpaper and
-            lock screen both read it from the generated lys-shell config.
+            Desktop wallpaper, single source of truth: lys-shell's wallpaper, its
+            lock screen and the lys-login greeter all read it. A store path, so
+            the greeter's lys-greeter user can read it outside the 0700 home.
           '';
         };
       };

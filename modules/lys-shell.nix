@@ -1,4 +1,43 @@
 { inputs, ... }:
+let
+  greeterConfigPath = "/etc/lys-shell/config.yaml";
+
+  loginScreen =
+    { pkgs, wallpaper }:
+    let
+      c = pkgs.stubbe.withHash;
+    in
+    {
+      general = {
+        font-sans = "JetBrainsMono Nerd Font";
+        font-mono = "JetBrainsMono Nerd Font";
+      };
+
+      styling = {
+        theme-provider = "lys-shell";
+        appearance = "dark";
+        rounding = "sm";
+        palette = {
+          bg = c.base;
+          surface = c.mantle;
+          elevated = c.surface0;
+          fg = c.text;
+          fg-muted = c.subtext0;
+          primary = c.mauve;
+          inherit (c) red;
+          inherit (c) yellow;
+          inherit (c) green;
+          inherit (c) blue;
+        };
+      };
+
+      login = {
+        background-mode = "image";
+        background-image = wallpaper;
+        date-format = "%A, %d %B %Y";
+      };
+    };
+in
 {
   flake.modules.nixos.lysShell =
     {
@@ -30,6 +69,10 @@
             enable = true;
             package = pkgs.lys-login;
             lock.enable = true;
+            greeter.settings = loginScreen {
+              inherit pkgs;
+              inherit (config.home-manager.users.${config.host.primaryUser}.stubbe.paths) wallpaper;
+            };
           };
 
           xdg.portal.config.common.default = [
@@ -68,6 +111,11 @@
       lysLoginPackage = gfx.bundle { pkg = pkgs.lys-login; };
 
       sessionTarget = [ config.wayland.systemd.target ];
+
+      loginScreenSettings = loginScreen {
+        inherit pkgs;
+        inherit (config.stubbe.paths) wallpaper;
+      };
     in
     {
       imports = [
@@ -103,42 +151,11 @@
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
         xdg.configFile."lys-shell/config.yaml" = {
-          source =
-            let
-              c = pkgs.stubbe.withHash;
-            in
-            pkgs.stubbe.gen.yaml "lys-shell-config.yaml" {
-              general = {
-                font-sans = "JetBrainsMono Nerd Font";
-                font-mono = "JetBrainsMono Nerd Font";
-              };
-
-              styling = {
-                theme-provider = "lys-shell";
-                appearance = "dark";
-                rounding = "sm";
-                palette = {
-                  bg = c.base;
-                  surface = c.mantle;
-                  elevated = c.surface0;
-                  fg = c.text;
-                  fg-muted = c.subtext0;
-                  primary = c.mauve;
-                  inherit (c) red;
-                  inherit (c) yellow;
-                  inherit (c) green;
-                  inherit (c) blue;
-                };
-              };
-
+          source = pkgs.stubbe.gen.yaml "lys-shell-config.yaml" (
+            lib.recursiveUpdate loginScreenSettings {
               # The upstream default pam-service `system-auth` does not exist on
               # NixOS, so a dedicated /etc/pam.d/lys-shell is provisioned instead.
-              login = {
-                lock.pam-service = "lys-shell";
-                background-mode = "image";
-                background-image = config.stubbe.paths.wallpaper;
-                date-format = "%A, %d %B %Y";
-              };
+              login.lock.pam-service = "lys-shell";
 
               bar = {
                 location = "top";
@@ -317,8 +334,24 @@
                   label-show = false;
                 };
               };
-            };
+            }
+          );
           force = true;
+        };
+
+        stubbe.setup.lysLoginGreeterConfig = {
+          privileged = true;
+          title = "Theming the lys-login greeter";
+          body = ''
+            The greeter runs as lys-greeter and reads only ${greeterConfigPath},
+            so this installs the lock screen's look there: fonts, palette,
+            wallpaper and date format.
+          '';
+          stateInputs = [ greeterConfigPath ];
+          script = pkgs.stubbe.setup.file {
+            source = pkgs.stubbe.gen.yaml "lys-greeter-config.yaml" loginScreenSettings;
+            target = greeterConfigPath;
+          };
         };
 
         xdg.dataFile."dbus-1/services/org.freedesktop.Notifications.service".source =
