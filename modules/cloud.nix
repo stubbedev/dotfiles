@@ -24,5 +24,11 @@ _: {
       };
 
       sops.secrets.godaddy = pkgs.stubbe.secret { name = "godaddy"; };
+
+      sops.secrets.ssh-hosts = pkgs.stubbe.secret {
+        name = "ssh-hosts";
+        path = "${config.home.homeDirectory}/.ssh/hosts";
+      };
+      programs.ssh.includes = [ config.sops.secrets.ssh-hosts.path ];
     };
 }

@@ -16,7 +16,7 @@ let
       profiles = workstation;
     };
     ops = {
-      description = "Infrastructure tooling: hcloud with its Hetzner token, the GoDaddy credentials, and the NixOS installer ISO builder.";
+      description = "Infrastructure tooling: hcloud with its Hetzner token, the GoDaddy credentials, the sops-held ssh aliases for the work servers (`ssh prod`, `ssh next`, ...), and the NixOS installer ISO builder.";
       profiles = workstation;
     };
     docker = {
