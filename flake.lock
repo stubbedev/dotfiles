@@ -657,6 +657,21 @@
         "type": "github"
       }
     },
+    "lys-ci_6": {
+      "locked": {
+        "lastModified": 1793656212,
+        "narHash": "sha256-ekbo2+8UwoenKGVhBV+UHk2z042W+x0Y6h8xEAVUpoU=",
+        "owner": "stubbedev",
+        "repo": "lys-ci",
+        "rev": "497081808da6f169ebfb05537b3f908d6c64c92c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-ci",
+        "type": "github"
+      }
+    },
     "lys-lib": {
       "inputs": {
         "flake-parts": [
@@ -763,11 +778,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793712711,
-        "narHash": "sha256-hL8ngEmHTu+L0P8/pU3HhqZiyvmIFP/PG7/sOebsBk0=",
+        "lastModified": 1793732862,
+        "narHash": "sha256-Iegiw9mg7lUgMvzR95dUb2tSoikaMwFYxGHFpjfMWwE=",
         "owner": "stubbedev",
         "repo": "lys-shell",
-        "rev": "a8e93ac8e5c3a1c52501fe0a3a44284d15ec6abf",
+        "rev": "9013612c8b7d3b17792c2e4e5ba61367226114c9",
         "type": "github"
       },
       "original": {
@@ -776,12 +791,42 @@
         "type": "github"
       }
     },
-    "lys-ui": {
+    "lys-splash": {
       "inputs": {
         "flake-parts": [
           "flake-parts"
         ],
         "lys-ci": "lys-ci_4",
+        "lys-login": [
+          "lys-login"
+        ],
+        "lys-wm": [
+          "lys-wm"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793704111,
+        "narHash": "sha256-ADTNWyp1Ns/Z7g0Ey66WzCeawDzLbyraUg+g4EPex74=",
+        "owner": "stubbedev",
+        "repo": "lys-splash",
+        "rev": "6989ce7810f52ba0e29005a4f44c78ab5e35b52e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-splash",
+        "type": "github"
+      }
+    },
+    "lys-ui": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "lys-ci": "lys-ci_5",
         "lys-lib": [
           "lys-lib"
         ],
@@ -808,7 +853,7 @@
         "flake-parts": [
           "flake-parts"
         ],
-        "lys-ci": "lys-ci_5",
+        "lys-ci": "lys-ci_6",
         "lys-shell": [
           "lys-shell"
         ],
@@ -1143,6 +1188,7 @@
         "lys-login": "lys-login",
         "lys-secrets": "lys-secrets",
         "lys-shell": "lys-shell",
+        "lys-splash": "lys-splash",
         "lys-ui": "lys-ui",
         "lys-wm": "lys-wm",
         "nix-mcp": "nix-mcp",

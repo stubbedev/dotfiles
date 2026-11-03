@@ -40,7 +40,7 @@ _: {
               "amdgpu"
             ];
 
-        # Plymouth attaches to simpledrm's framebuffer, which is freed when the real
+        # The boot splash attaches to simpledrm's framebuffer, which is freed when the real
         # GPU driver loads, and then paints into nothing. simpledrm is CONFIG=y here,
         # so blacklistedKernelModules and module_blacklist= are both no-ops.
         kernelParams = [

@@ -5,127 +5,28 @@ _: {
       powerOnBoot = true;
       settings.General.Experimental = true;
     };
-
-    services.blueman.enable = true;
   };
 
   flake.modules.homeManager.bluetooth =
+    { config, lib, ... }:
     {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
-    {
-      stubbe.setup.blueman = lib.mkIf config.features.desktop {
+      stubbe.setup.bluemanRemoved = lib.mkIf config.features.desktop {
         privileged = true;
-        title = "Installing blueman system integration";
+        title = "Removing blueman's system integration";
         body = ''
-          Symlinks blueman's D-Bus activation, bus policy and systemd unit from
-          the Nix store into /etc and /usr/share, so the system bus starts the
-          same build as the GUI on PATH, and installs the polkit action
-          definitions the Nix package doesn't ship.
-
-          The distro blueman package must stay uninstalled: it owns the same
-          paths and would shadow these with a different version.
+          The bar's bluetooth dropdown pairs and manages devices now, so this
+          removes the system files that pointed at the blueman package.
         '';
-        # Without the .policy file, polkitd rejects blueman's four actions as
-        # unregistered and the Bluetooth toggle fails — the Nix package ships
-        # neither upstream's org.blueman.policy nor Debian's grant rule, so both
-        # are vendored inline below.
-        script =
-          let
-            polkitActions = {
-              "org.blueman.network.setup" = {
-                description = "Configure Bluetooth Network";
-                message = "Configuring networking requires privileges";
-              };
-              "org.blueman.dhcp.client" = {
-                description = "Launch DHCP client";
-                message = "Launching DHCP client requires privileges";
-              };
-              "org.blueman.pppd.pppconnect" = {
-                description = "Launch PPP daemon";
-                message = "Launching PPP daemon requires privileges";
-              };
-              "org.blueman.rfkill.setstate" = {
-                description = "Set RfKill State";
-                message = "Setting RfKill State requires privileges";
-              };
-            };
-            links = [
-              {
-                source = "${pkgs.blueman}/lib/systemd/system/blueman-mechanism.service";
-                target = "/etc/systemd/system/blueman-mechanism.service";
-              }
-              {
-                source = "${pkgs.blueman}/share/dbus-1/system.d/org.blueman.Mechanism.conf";
-                target = "/etc/dbus-1/system.d/org.blueman.Mechanism.conf";
-              }
-              {
-                source = "${pkgs.blueman}/share/dbus-1/system-services/org.blueman.Mechanism.service";
-                target = "/usr/share/dbus-1/system-services/org.blueman.Mechanism.service";
-              }
-            ];
-          in
-          ''
-            ${lib.concatMapStrings pkgs.stubbe.setup.link links}
-
-            ${pkgs.stubbe.setup.text {
-              name = "org.blueman.policy";
-              target = "/usr/share/polkit-1/actions/org.blueman.policy";
-              text = ''
-                <?xml version="1.0" encoding="UTF-8"?>
-                <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
-                <policyconfig>
-                  <vendor>The Blueman Project</vendor>
-                  <vendor_url>https://github.com/blueman-project/blueman</vendor_url>
-                  <icon_name>blueman</icon_name>
-                  ${lib.concatStrings (
-                    lib.mapAttrsToList (id: action: ''
-                      <action id="${id}">
-                        <description>${action.description}</description>
-                        <message>${action.message}</message>
-                        <defaults>
-                          <allow_inactive>no</allow_inactive>
-                          <allow_active>auth_admin_keep</allow_active>
-                        </defaults>
-                      </action>
-                    '') polkitActions
-                  )}
-                </policyconfig>
-              '';
-            }}
-
-            ${pkgs.stubbe.setup.polkitRule {
-              source = pkgs.writeText "51-blueman.rules" ''
-                // blueman's privileged half (blueman-mechanism) guards rfkill, PAN setup,
-                // the DHCP client and pppd behind polkit. Upstream defaults all four to
-                // auth_admin_keep, which means a password prompt every time the Bluetooth
-                // toggle is flipped. Debian ships a rule granting them to sudo/netdev; the
-                // Nix package ships no polkit files at all, so this is the replacement for
-                // both.
-                //
-                // Same trust boundary Debian used: a local, active session belonging to
-                // someone who is already in sudo. Nothing here grants anything to a remote
-                // or inactive session.
-                polkit.addRule(function (action, subject) {
-                  var allowed = ${builtins.toJSON (lib.mapAttrs (_: _: true) polkitActions)};
-
-                  if (allowed[action.id] && subject.local && subject.active && subject.isInGroup("sudo")) {
-                    return polkit.Result.YES;
-                  }
-                });
-              '';
-              target = "/etc/polkit-1/rules.d/51-blueman.rules";
-            }}
-
-            ${pkgs.stubbe.setup.reloadUnits}
-
-            sudo systemctl reload dbus >/dev/null 2>&1 || true
-
-            sudo systemctl stop blueman-mechanism.service >/dev/null 2>&1 || true
-          '';
+        script = ''
+          sudo systemctl stop blueman-mechanism.service 2>/dev/null || :
+          sudo rm -f \
+            /etc/systemd/system/blueman-mechanism.service \
+            /etc/dbus-1/system.d/org.blueman.Mechanism.conf \
+            /usr/share/dbus-1/system-services/org.blueman.Mechanism.service \
+            /usr/share/polkit-1/actions/org.blueman.policy \
+            /etc/polkit-1/rules.d/51-blueman.rules
+          sudo systemctl daemon-reload
+        '';
       };
     };
 }

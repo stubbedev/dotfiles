@@ -38,25 +38,10 @@ _: {
       cursorSize = 24;
       gtk = "catppuccin-mocha-mauve-standard";
       kvantum = "Catppuccin-Mocha-Mauve";
-      plymouth = "catppuccin-mocha";
     };
 
     # The page every new tab and the browser home button lands on.
     newtabUrl = "https://start.local/";
 
-    # Per-workspace accent ramp, workspace 1 first; lys-shell renders it into the
-    # lys-wm-workspaces label map.
-    workspaceColors = [
-      "89b4fa"
-      "f0c6c6"
-      "ddb6f2"
-      "f5bde6"
-      "f28d8c"
-      "e8a2a1"
-      "f8bd96"
-      "fae3b0"
-      "a6d189"
-      "81c8be"
-    ];
   };
 }

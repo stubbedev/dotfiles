@@ -3,6 +3,8 @@ let
   fontPackages =
     pkgs: with pkgs; [
       nerd-fonts.jetbrains-mono
+      jetbrains-mono
+      inter
       font-awesome
       adwaita-fonts
       dejavu_fonts
@@ -17,7 +19,7 @@ in
   flake.modules.nixos.theming =
     { pkgs, ... }:
     {
-      # The HM dconf module writes dconf keys (color-scheme, blueman). On NixOS
+      # The HM dconf module writes dconf keys (color-scheme). On NixOS
       # the dconf service must be enabled system-wide for those to apply —
       # otherwise activation errors with "dconf is not enabled".
       programs.dconf.enable = true;
@@ -133,7 +135,6 @@ in
       # belongs here, or the definitions conflict.
       dconf.settings = {
         "org/gnome/desktop/interface".color-scheme = "prefer-dark";
-        "org/blueman/general".notification-daemon = true;
       };
 
       fonts.fontconfig.enable = true;

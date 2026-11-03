@@ -33,7 +33,7 @@ _: {
 
       # Client first so it shadows upstream bin/alacritty. writeShellScriptBin
       # emits only bin/, so without the join there is no .desktop entry and
-      # alacritty never shows in rofi.
+      # alacritty never shows in the launcher.
       alacritty = pkgs.symlinkJoin {
         name = "alacritty-${pkgs.alacritty.version}";
         paths = [

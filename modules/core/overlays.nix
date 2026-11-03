@@ -16,6 +16,8 @@ in
       "lys-wm"
       "lys-login"
       "shell-lsp"
+      "lys-splash"
+      "lys-secrets"
       "claude-code"
       "xilo"
       "adaptive-power-manager"
@@ -133,22 +135,6 @@ in
             });
           })
         ];
-      };
-
-      stubbe-packages = _final: prev: {
-        # nixpkgs hardcodes catppuccin-plymouth to the macchiato flavour; upstream
-        # ships all four.
-        catppuccin-mocha-plymouth = prev.catppuccin-plymouth.overrideAttrs (_: {
-          pname = "catppuccin-mocha-plymouth";
-          sourceRoot = "source/themes/catppuccin-mocha";
-          installPhase = ''
-            runHook preInstall
-            sed -i 's:\(^ImageDir=\)/usr:\1'"$out"':' catppuccin-mocha.plymouth
-            mkdir -p $out/share/plymouth/themes/catppuccin-mocha
-            cp * $out/share/plymouth/themes/catppuccin-mocha
-            runHook postInstall
-          '';
-        });
       };
     };
 }

@@ -81,15 +81,9 @@ in
           networkmanagerapplet
           networkmanager-openconnect
 
-          blueman
-
           solaar
 
           ddcutil
-
-          cliphist
-
-          libsecret
 
           util-linux
           xdg-utils
@@ -109,8 +103,8 @@ in
 
       xdg = {
         desktopEntries = {
-          # Shown as "Files" in rofi. DBusActivatable is omitted so rofi
-          # launches via Exec only — keeping it true makes rofi open two
+          # Shown as "Files" in the launcher. DBusActivatable is omitted so it
+          # launches via Exec only — keeping it true makes the launcher open two
           # windows (one via D-Bus, one via Exec).
           pcmanfm = {
             name = "Files";

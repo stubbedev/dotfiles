@@ -56,4 +56,4 @@ jobs:
             .#checks.x86_64-linux.lint-fmt \
             .#checks.x86_64-linux.lint-shell \
             .#checks.x86_64-linux.eval-hm-stubbe \
-            .#checks.x86_64-linux.rofi-theme
+            .#checks.x86_64-linux.lys-wm-config

@@ -40,7 +40,7 @@ let
       profiles = workstation;
     };
     theming = {
-      description = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, Plymouth).";
+      description = "Theme packages and settings (GTK, Qt, icons, cursor, fonts, the boot splash).";
       profiles = workstation;
     };
     media = {

@@ -2,41 +2,13 @@
 let
   greeterConfigPath = "/etc/lys-shell/config.yaml";
 
-  loginScreen =
-    { pkgs, wallpaper }:
-    let
-      c = pkgs.stubbe.withHash;
-    in
-    {
-      general = {
-        font-sans = "JetBrainsMono Nerd Font";
-        font-mono = "JetBrainsMono Nerd Font";
-      };
-
-      styling = {
-        theme-provider = "lys-shell";
-        appearance = "dark";
-        rounding = "sm";
-        palette = {
-          bg = c.base;
-          surface = c.mantle;
-          elevated = c.surface0;
-          fg = c.text;
-          fg-muted = c.subtext0;
-          primary = c.mauve;
-          inherit (c) red;
-          inherit (c) yellow;
-          inherit (c) green;
-          inherit (c) blue;
-        };
-      };
-
-      login = {
-        background-mode = "image";
-        background-image = wallpaper;
-        date-format = "%A, %d %B %Y";
-      };
+  loginScreen = wallpaper: {
+    login = {
+      background-mode = "image";
+      background-image = wallpaper;
+      date-format = "%A, %d %B %Y";
     };
+  };
 in
 {
   flake.modules.nixos.lysShell =
@@ -69,10 +41,9 @@ in
             enable = true;
             package = pkgs.lys-login;
             lock.enable = true;
-            greeter.settings = loginScreen {
-              inherit pkgs;
-              inherit (config.home-manager.users.${config.host.primaryUser}.stubbe.paths) wallpaper;
-            };
+            greeter.settings =
+              loginScreen
+                config.home-manager.users.${config.host.primaryUser}.stubbe.paths.wallpaper;
           };
 
           xdg.portal.config.common.default = [
@@ -112,10 +83,9 @@ in
 
       sessionTarget = [ config.wayland.systemd.target ];
 
-      loginScreenSettings = loginScreen {
-        inherit pkgs;
-        inherit (config.stubbe.paths) wallpaper;
-      };
+      loginScreenSettings = loginScreen config.stubbe.paths.wallpaper;
+
+      app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
     {
       imports = [
@@ -142,8 +112,6 @@ in
 
         home.packages = [
           lysShellPackage
-          (gfx.wrap pkgs.awww)
-          (gfx.wrapExe "awww-daemon" pkgs.awww)
         ];
 
         stubbe.zshCompletions._lys-shell = "${lysShellBin} completions zsh";
@@ -158,24 +126,6 @@ in
               login.lock.pam-service = "lys-shell";
 
               bar = {
-                location = "top";
-                exclusive = true;
-                inset-edge = "0px";
-                inset-ends = "0px";
-                rounding = "none";
-                button-rounding = "none";
-                button-group-rounding = "none";
-                button-variant = "basic";
-                scale = 1.0;
-                button-icon-size = "20px";
-                button-label-size = "14px";
-                button-label-padding = "4px";
-                button-gap = "4px";
-                padding = "0px";
-                padding-ends = "0px";
-                module-gap = "4px";
-                button-border-location = "none";
-
                 layout = [
                   {
                     monitor = "*";
@@ -212,23 +162,26 @@ in
 
               share-picker.default-page = "outputs";
 
-              wallpaper = {
-                inherit (config.stubbe.paths) wallpaper;
-                fit-mode = "fill";
-              };
-
-              animations = {
-                transition = "fade";
-                notifications = {
-                  enter = "bounce";
-                  exit = "fade";
+              launcher = {
+                inherit (config.stubbe.paths) terminal;
+                matching = "fuzzy";
+                sort = true;
+                sorting-method = "fzf";
+                drun = {
+                  match-fields = [
+                    "name"
+                    "generic"
+                    "keywords"
+                  ];
+                  show-actions = true;
+                };
+                run = {
+                  run-command = "${app2unit} -- {cmd}";
+                  shell-command = "${app2unit} -- {terminal} -e {cmd}";
                 };
               };
 
-              osd = {
-                enabled = true;
-                text-align = "center";
-              };
+              wallpaper = { inherit (config.stubbe.paths) wallpaper; };
 
               modules = {
                 clock.format = "%Y-%m-%d %H:%M";
@@ -240,20 +193,7 @@ in
                   "Spanish (Spain)" = "ES";
                 };
 
-                # No `icon` in the map: it is shown regardless and would replace
-                # the workspace number.
-                lys-wm-workspaces = {
-                  display-mode = "label";
-                  label-size = "14px";
-                  workspace-map = builtins.listToAttrs (
-                    lib.imap1 (i: hex: {
-                      name = toString i;
-                      value.color = "#${hex}";
-                    }) pkgs.stubbe.workspaceColors
-                  );
-                };
-
-                systray.icon-scale = "20px";
+                lys-wm-workspaces.display-mode = "label";
 
                 notifications.label-show = false;
 
@@ -279,7 +219,6 @@ in
                 };
 
                 recorder = {
-                  icon-color = "fg-muted";
                   label-show = false;
                   microphone = true;
                   microphone-device = "alsa_input.usb-Creative_Technology_Ltd_Creative_Live__Cam_Sync_4K_SN0001-02.analog-stereo";
@@ -287,9 +226,6 @@ in
                 };
 
                 mail = {
-                  icon-name = "ld-mail-symbolic";
-                  icon-color = "status-success";
-                  label-color = "status-success";
                   hide-when-zero = true;
                   notify = true;
                   notify-summary = "{{ sender }}";
@@ -316,19 +252,11 @@ in
                   latitude = 55.6;
                   longitude = 12.5;
                   label-show = false;
-                  icon-on = "ld-moon-symbolic";
-                  icon-off = "ld-sun-symbolic";
                 };
 
                 power-profiles = {
                   label-show = false;
                   left-click = ":cycle";
-                  icon-power-saver = "ld-leaf-symbolic";
-                  icon-balanced = "ld-scale-symbolic";
-                  icon-performance = "ld-rocket-symbolic";
-                  color-power-saver = "green";
-                  color-balanced = "blue";
-                  color-performance = "red";
                 };
 
                 keybind-mode = {
@@ -341,13 +269,33 @@ in
           force = true;
         };
 
+        stubbe.setup.lysShellLookReset.script =
+          let
+            runtimeConfig = "${config.xdg.configHome}/lys-shell/runtime.yaml";
+            marker = "${config.xdg.stateHome}/lys-shell/look-reset-done";
+            keepLookFree = ''
+              del(.styling, .animations, .osd, .general.font-sans, .general.font-mono)
+              | with(select(.bar != null); .bar |= with_entries(select(.key == "layout" or .key == "dropdown-autohide")))
+              | with(select(.modules != null); .modules[] |= with_entries(select(.key | test("color|opacity|border|rounding|size|scale|padding|gap") | not)))
+            '';
+          in
+          ''
+            if [ ! -e ${lib.escapeShellArg marker} ]; then
+              if [ -f ${lib.escapeShellArg runtimeConfig} ]; then
+                ${lib.getExe pkgs.yq-go} ${lib.escapeShellArg keepLookFree} ${lib.escapeShellArg runtimeConfig} > ${lib.escapeShellArg "${runtimeConfig}.tmp"}
+                mv ${lib.escapeShellArg "${runtimeConfig}.tmp"} ${lib.escapeShellArg runtimeConfig}
+              fi
+              mkdir -p ${lib.escapeShellArg (dirOf marker)}
+              touch ${lib.escapeShellArg marker}
+            fi
+          '';
+
         stubbe.setup.lysLoginGreeterConfig = {
           privileged = true;
           title = "Theming the lys-login greeter";
           body = ''
             The greeter runs as lys-greeter and reads only ${greeterConfigPath},
-            so this installs the lock screen's look there: fonts, palette,
-            wallpaper and date format.
+            so this installs the lock screen's wallpaper and date format there.
           '';
           stateInputs = [ greeterConfigPath ];
           script = pkgs.stubbe.setup.file {
@@ -400,32 +348,22 @@ in
           title = "⚠️  lys-shell lock PAM configuration missing";
           body = ''
             lys-shell's session lock needs a PAM configuration to authenticate the
-            unlock. This will create a minimal Nix-compatible PAM config that also
-            unlocks the login keyring on unlock.
+            unlock. This will create a minimal Nix-compatible PAM config.
           '';
-          script =
-            let
-              # Absolute path, never a bare module name: nix libpam resolves bare
-              # names against the store securedir, and the host distro's module
-              # cannot dlopen under nix's ld.so anyway.
-              pamGnomeKeyring = "${config.home.profileDirectory}/lib/security/pam_gnome_keyring.so";
-            in
-            pkgs.stubbe.setup.text {
-              name = "lys-shell-pam";
-              target = "/etc/pam.d/lys-shell";
-              text = ''
-                #%PAM-1.0
-                auth       required     pam_unix.so nullok
-                auth       optional     ${pamGnomeKeyring}
+          script = pkgs.stubbe.setup.text {
+            name = "lys-shell-pam";
+            target = "/etc/pam.d/lys-shell";
+            text = ''
+              #%PAM-1.0
+              auth       required     pam_unix.so nullok
 
-                account    required     pam_unix.so
+              account    required     pam_unix.so
 
-                password   required     pam_unix.so nullok
-                password   optional     ${pamGnomeKeyring} use_authtok
+              password   required     pam_unix.so nullok
 
-                session    required     pam_unix.so
-              '';
-            };
+              session    required     pam_unix.so
+            '';
+          };
         };
       };
     };

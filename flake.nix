@@ -118,6 +118,15 @@
         lys-wm.follows = "lys-wm";
       };
     };
+    lys-splash = {
+      url = "github:stubbedev/lys-splash";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        lys-login.follows = "lys-login";
+        lys-wm.follows = "lys-wm";
+      };
+    };
     zsh-vim-mode = {
       url = "github:softmoth/zsh-vim-mode";
       flake = false;

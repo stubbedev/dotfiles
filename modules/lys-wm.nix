@@ -55,8 +55,6 @@ in
     let
       inherit (config.stubbe) gfx;
 
-      scriptDir = "${config.stubbe.paths.dotfiles}/src/lys-wm/scripts";
-
       wireplumberHotplug = pkgs.stubbe.bashApp {
         name = "wireplumber-hotplug";
         runtimeInputs = with pkgs; [
@@ -190,23 +188,6 @@ in
           };
         };
 
-        palette = pkgs.stubbe.withHash;
-
-        tabs = {
-          active = {
-            background = "mauve";
-            text = "text";
-          };
-          inactive = {
-            background = "surface0";
-            text = "subtext0";
-          };
-          urgent = {
-            background = "red";
-            text = "text";
-          };
-        };
-
         gestures.pinch = [
           {
             fingers = 2;
@@ -220,16 +201,14 @@ in
           (bind "SUPER + Return" (launch "alacritty"))
           (bind "SUPER + SHIFT + E" (launch "pcmanfm"))
           (bind "SUPER + space" (exec "lys-shell launcher"))
-          (bind "SUPER + SHIFT + space" (
-            exec ''rofi -show combi -combi-modes "run" -modes combi -run-command "${scriptDir}/rofi.run.sh {cmd}" -location 0 -width 60''
-          ))
-          (bind "SUPER + CTRL + space" (exec ''rofi -show combi -combi-modes "window" -modes combi''))
+          (bind "SUPER + SHIFT + space" (exec "lys-shell launcher -show run"))
+          (bind "SUPER + CTRL + space" (exec "lys-shell launcher -show window"))
           (bind "SHIFT + Print" (exec "lys-shell screenshot output"))
           (bind "Print" (exec "lys-shell screenshot region"))
           (bind "SUPER + Print" (exec "lys-shell screenshot window"))
           (bind "SUPER + SHIFT + R" (exec "lys-shell recorder toggle"))
           (bind "SUPER + V" (
-            exec ''cliphist list | rofi -dmenu | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl && notify-send "Pasted selection"''
+            exec ''lys-shell launcher -show clipboard && wtype -M ctrl v -m ctrl && notify-send "Pasted selection"''
           ))
           (bind "SUPER + C" (exec ''wl-copy "$(wl-paste -p)" && notify-send "Copied selection"''))
           (bind "SUPER + M" (launch "mail-open"))
@@ -289,7 +268,6 @@ in
         ];
 
         autostart = [
-          "wl-paste --watch cliphist store"
           "wl-clip-persist --clipboard regular"
         ];
       };
