@@ -808,11 +808,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793704111,
-        "narHash": "sha256-ADTNWyp1Ns/Z7g0Ey66WzCeawDzLbyraUg+g4EPex74=",
+        "lastModified": 1793736093,
+        "narHash": "sha256-apF3BoNBmwCiFaFwIkEN3hviQiZeSkUf8lowTVwf8lw=",
         "owner": "stubbedev",
         "repo": "lys-splash",
-        "rev": "6989ce7810f52ba0e29005a4f44c78ab5e35b52e",
+        "rev": "9306a63123a912c909fe62ac82d9dbe52e0128ca",
         "type": "github"
       },
       "original": {
