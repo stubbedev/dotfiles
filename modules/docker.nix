@@ -204,20 +204,20 @@ in
           fi
           rm -f "$_stb_current" "$_stb_new"
 
-          _stb_running=$(sudo docker inspect registry --format '{{.Config.Image}}' 2>/dev/null || true)
+          _stb_running=$(sudo ${lib.getExe' pkgs.docker "docker"} inspect registry --format '{{.Config.Image}}' 2>/dev/null || true)
           if [ "$_stb_running" != ${lib.escapeShellArg registry.image} ]; then
             # Missing, or still the legacy v2 container: (re)create. The
             # registry-data volume carries over - v3 reads the v2 layout.
             # First-install case: wait for the fresh daemon to accept
             # connections before talking to it.
             _stb_wait=0
-            until sudo docker info >/dev/null 2>&1; do
+            until sudo ${lib.getExe' pkgs.docker "docker"} info >/dev/null 2>&1; do
               [ "$_stb_wait" -ge 20 ] && echo "docker daemon did not come up" >&2 && exit 1
               sleep 1
               _stb_wait=$((_stb_wait + 1))
             done
-            [ -n "$_stb_running" ] && sudo docker rm -f registry >/dev/null 2>&1
-            sudo docker run -d \
+            [ -n "$_stb_running" ] && sudo ${lib.getExe' pkgs.docker "docker"} rm -f registry >/dev/null 2>&1
+            sudo ${lib.getExe' pkgs.docker "docker"} run -d \
               --name registry \
               --restart=always \
               -p ${registryPublish} \
