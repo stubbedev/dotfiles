@@ -15,6 +15,6 @@ _: {
     }:
     final.runCommand "check-${name}" ({ inherit nativeBuildInputs; } // env) ''
       ${final.coreutils}/bin/timeout ${toString timeout} \
-        ${final.bash}/bin/bash -c ${lib.escapeShellArg text}
+        ${final.bash}/bin/bash -euo pipefail -c ${lib.escapeShellArg text}
     '';
 }
