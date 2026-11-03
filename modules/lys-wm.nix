@@ -207,12 +207,19 @@ in
           };
         };
 
+        gestures.pinch = [
+          {
+            fingers = 2;
+            modifiers = "SUPER";
+            direction = "both";
+            drive = "zoom";
+          }
+        ];
+
         binds = [
           (bind "SUPER + Return" (launch "alacritty"))
           (bind "SUPER + SHIFT + E" (launch "pcmanfm"))
-          (bind "SUPER + space" (
-            exec "rofi -drun-reload-desktop-cache -drun-use-desktop-cache -show drun -location 0 -width 60"
-          ))
+          (bind "SUPER + space" (exec "lys-shell launcher"))
           (bind "SUPER + SHIFT + space" (
             exec ''rofi -show combi -combi-modes "run" -modes combi -run-command "${scriptDir}/rofi.run.sh {cmd}" -location 0 -width 60''
           ))
@@ -239,10 +246,15 @@ in
           (bind "SUPER + bracketleft" "focus left")
           (bind "SUPER + SHIFT + mouse_down" "workspace e+1")
           (bind "SUPER + SHIFT + bracketright" "workspace e+1")
-          (bind "SUPER + Tab" "workspace e+1")
+          (bind "SUPER + Tab" "overview toggle")
           (bind "SUPER + SHIFT + mouse_up" "workspace e-1")
           (bind "SUPER + SHIFT + bracketleft" "workspace e-1")
           (bind "SUPER + SHIFT + Tab" "workspace e-1")
+          (bind "SUPER + equal" "zoom in")
+          (bind "SUPER + minus" "zoom out")
+          (bind "SUPER + BackSpace" "zoom reset")
+          (bind "SUPER + CTRL + mouse_up" "zoom in 1.1")
+          (bind "SUPER + CTRL + mouse_down" "zoom out 1.1")
           (bind "SUPER + R" "submap ${resizeSubmap}")
         ]
         ++ arrowBinds
