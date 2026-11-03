@@ -126,6 +126,14 @@ in
               login.lock.pam-service = "lys-shell";
 
               bar = {
+                inset-edge = "0px";
+                inset-ends = "0px";
+                rounding = "none";
+                border-location = "none";
+                padding = "0px";
+                module-gap = "4px";
+                scale = 0.85;
+
                 layout = [
                   {
                     monitor = "*";
