@@ -81,6 +81,7 @@ in
       exec = command: "exec ${command}";
       launch = command: exec "app2unit -- ${command}";
       locked = chord: action: bind chord action // { flags = [ "locked" ]; };
+      repeating = chord: action: bind chord action // { flags = [ "repeating" ]; };
 
       arrows = {
         Left = "left";
@@ -110,7 +111,7 @@ in
         lib.mapAttrsToList (key: dir: [
           (bind "SUPER + ${key}" "focus ${dir}")
           (bind "SUPER + SHIFT + ${key}" "move ${dir}")
-          (bind "SUPER + CTRL + ${key}" "resizeactive ${(resizeStep 50).${key}}")
+          (repeating "SUPER + CTRL + ${key}" "resizeactive ${(resizeStep 50).${key}}")
         ]) arrows
       );
 
@@ -241,9 +242,7 @@ in
         ++ mediaBinds;
 
         submaps.${resizeSubmap} =
-          lib.mapAttrsToList (key: step: bind key "resizeactive ${step}" // { flags = [ "repeating" ]; }) (
-            resizeStep 10
-          )
+          lib.mapAttrsToList (key: step: repeating key "resizeactive ${step}") (resizeStep 10)
           ++ [
             (bind "Return" "submap reset")
             (bind "Escape" "submap reset")
