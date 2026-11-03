@@ -3,7 +3,6 @@ _: {
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     let
@@ -58,33 +57,6 @@ _: {
         modesetting.enable = true;
         open = true;
         package = config.boot.kernelPackages.nvidiaPackages.production;
-      };
-
-      # Without this the machine hangs at the end of poweroff: the proprietary
-      # driver's .shutdown() deadlocks in device_shutdown(), and this host has
-      # no iGPU so nvidia is always still loaded when that runs.
-      systemd.services.nvidia-unload-on-shutdown = lib.mkIf hasNvidia {
-        description = "Unload NVIDIA modules before power-off (shutdown-hang workaround)";
-        wantedBy = [ "multi-user.target" ];
-        # Stop order is the reverse of start order, so this runs after the
-        # compositor has released the GPU.
-        before = [ "display-manager.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = "${pkgs.coreutils}/bin/true";
-          TimeoutStopSec = 20;
-          ExecStop = pkgs.stubbe.shellScript "nvidia-unload-on-shutdown" ''
-            for vt in /sys/class/vtconsole/vtcon*; do
-              if grep -qi 'frame buffer' "$vt/name" 2>/dev/null; then
-                echo 0 > "$vt/bind" 2>/dev/null || true
-              fi
-            done
-            for module in nvidia_drm nvidia_modeset nvidia_uvm nvidia; do
-              ${pkgs.kmod}/bin/modprobe -r "$module" 2>/dev/null || true
-            done
-          '';
-        };
       };
 
     };
