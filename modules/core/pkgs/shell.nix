@@ -1,5 +1,5 @@
 # Branch of the pkgs.stubbe helper tree (see ./default.nix).
-# Script writers. All of them syntax-check and shellcheck what they build.
+# Script writers. All of them syntax-check and lint what they build.
 let
   # -S warning, not the default style severity, which fails builds on
   # cosmetic findings.
@@ -7,7 +7,7 @@ let
     { final, lib, ... }:
     ''
       ${final.stdenv.shellDryRun} "$target"
-      ${lib.getExe final.shellcheck} -S warning "$target"
+      ${lib.getExe final.shell-lsp} check -S warning "$target"
     '';
 
   shellFile =
@@ -70,7 +70,7 @@ in
     # bashApp's checks. Separate from bashApp because writeShellApplication
     # always prepends `set -euo pipefail`, which rewrites the control flow of
     # scripts not written for it; these keep plain semantics and only add the
-    # syntax check and shellcheck.
+    # syntax check and lint.
     shellScript =
       args: name: text:
       shellFile args { inherit name text; };

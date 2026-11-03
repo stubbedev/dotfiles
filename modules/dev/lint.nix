@@ -17,7 +17,7 @@
 
       nixTool =
         name: text:
-        pkgs.writeShellApplication {
+        pkgs.stubbe.bashApp {
           inherit name text;
           runtimeInputs = [
             pkgs.shell-lsp
@@ -69,11 +69,11 @@
           '';
         };
 
-        lint-shellcheck = pkgs.stubbe.check {
-          name = "lint-shellcheck";
-          nativeBuildInputs = [ pkgs.shellcheck ];
+        lint-shell = pkgs.stubbe.check {
+          name = "lint-shell";
+          nativeBuildInputs = [ pkgs.shell-lsp ];
           text = ''
-            shellcheck -S warning ${self}/bin/*
+            shell-lsp check -S warning ${self}/bin/*
             touch "$out"
           '';
         };

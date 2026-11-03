@@ -27,9 +27,9 @@ jobs:
       # round trip. Pushes authenticated with GITHUB_TOKEN do not trigger
       # workflows, so this cannot loop back into itself.
       #
-      # Not everything is fixable: shellcheck has no reliable fixer, and the
-      # shell-lsp lints without a safe fix still fail the checks below. Fork PRs
-      # get no write token, so they skip straight to the checks.
+      # Not everything is fixable: shell-lsp lints without a safe fix still fail
+      # the checks below. Fork PRs get no write token, so they skip straight to
+      # the checks.
       - name: Autofix what the linters can fix
         if: github.event.pull_request.head.repo.fork != true
         run: |
@@ -54,6 +54,6 @@ jobs:
           nix build --no-link \
             .#checks.x86_64-linux.lint-nix \
             .#checks.x86_64-linux.lint-fmt \
-            .#checks.x86_64-linux.lint-shellcheck \
+            .#checks.x86_64-linux.lint-shell \
             .#checks.x86_64-linux.eval-hm-stubbe \
             .#checks.x86_64-linux.rofi-theme

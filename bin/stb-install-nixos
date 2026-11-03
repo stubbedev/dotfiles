@@ -121,7 +121,7 @@ fi
 # Detect early; if missing, hand the user impala so they can join WiFi
 # before we burn time on partitioning.
 echo "==> Checking network"
-if ! ip -4 route show default 2>/dev/null | grep -q .; then
+if [[ -z "$(ip -4 route show default 2>/dev/null)" ]]; then
   echo "No default route. Launching impala (WiFi picker)."
   echo "Connect to a network, quit impala, then we'll continue."
   if command -v impala >/dev/null; then
@@ -129,7 +129,7 @@ if ! ip -4 route show default 2>/dev/null | grep -q .; then
   else
     echo "stb-install-nixos: impala not installed; configure networking manually" >&2
   fi
-  if ! ip -4 route show default 2>/dev/null | grep -q .; then
+  if [[ -z "$(ip -4 route show default 2>/dev/null)" ]]; then
     echo "stb-install-nixos: still no default route, aborting" >&2
     exit 1
   fi
@@ -145,7 +145,7 @@ timedatectl set-ntp true \
 # Wait briefly for an initial sync; don't block forever — offline mirror
 # installs are still possible.
 for _ in $(seq 1 20); do
-  if timedatectl show -p NTPSynchronized --value 2>/dev/null | grep -q yes; then
+  if [[ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" == yes ]]; then
     break
   fi
   sleep 0.5
@@ -314,13 +314,13 @@ if [ "$RESUME" -eq 0 ]; then
   # Refuse if any candidate disk has live mounts or md/LUKS/LVM children —
   # wipefs would fail mid-loop and leave a partially-wiped state.
   for d in "${candidates[@]}"; do
-    if findmnt -no SOURCE 2>/dev/null | grep -qE "^/dev/${d}(p?[0-9]+)?\b"; then
+    if grep -qE "^/dev/${d}(p?[0-9]+)?\b" <<<"$(findmnt -no SOURCE 2>/dev/null)"; then
       echo "stb-install-nixos: /dev/$d (or its partitions) has an active mount, refusing" >&2
       findmnt | grep -E "^/dev/${d}" >&2 || true
       exit 1
     fi
     child_types="$(lsblk -no TYPE "/dev/$d" | tail -n +2 | sort -u)"
-    if echo "$child_types" | grep -qE '^(raid[0-9]+|crypt|lvm)$'; then
+    if grep -qE '^(raid[0-9]+|crypt|lvm)$' <<<"$child_types"; then
       echo "stb-install-nixos: /dev/$d has md/LUKS/LVM children, refusing" >&2
       lsblk "/dev/$d" >&2 || true
       exit 1

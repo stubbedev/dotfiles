@@ -34,7 +34,7 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 ```
 
 Every config file and script is inline Nix inside its aspect module. Scripts
-become PATH bins through `pkgs.stubbe.bashApp` (build-time shellcheck),
+become PATH bins through `pkgs.stubbe.bashApp` (build-time `shell-lsp check`),
 `pkgs.stubbe.zshApp` (build-time `zsh -n`), or `pkgs.stubbe.shellScript` /
 `shellScriptBin` for scripts that must keep plain (non-`set -euo pipefail`)
 semantics. `bin/stb-install` runs from the checkout — it bootstraps Nix and

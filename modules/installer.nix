@@ -258,7 +258,7 @@ in
     { pkgs, system, ... }:
     let
       iso = config.flake.nixosConfigurations.installer-iso.config.system.build.isoImage;
-      iso-vm = pkgs.writeShellApplication {
+      iso-vm = pkgs.stubbe.bashApp {
         name = "installer-iso-vm";
         runtimeInputs = [
           pkgs.qemu

@@ -73,7 +73,7 @@ _: {
         - **No comments.** Code must stand on its own through naming and structure. Only functional directives (lint disables, pragmas) are allowed. Rationale goes in the commit message or the response, never in the source.
         - Match the surrounding code's idiom, formatting and conventions. Where code you touch contradicts the principles above, fix it.
         - Run the project's formatter, linter and type checker, and keep them clean.
-        - **Shell scripts.** `set -euo pipefail`, quote every expansion, shellcheck clean.
+        - **Shell scripts.** `set -euo pipefail`, quote every expansion, `shell-lsp check` clean.
         - **No debugging leftovers.** Remove stray prints, commented-out code and temporary files before finishing.
 
         ## Verification
