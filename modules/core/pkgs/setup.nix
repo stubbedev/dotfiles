@@ -141,7 +141,7 @@ _: {
                 include <tunables/global>
                 profile ${profileName} ${programGlob} flags=(unconfined) {
                   userns,
-                  @{exec_path} mr,
+                  ${programGlob} mr,
                   include if exists <local/${profileName}>
                 }
               '';
