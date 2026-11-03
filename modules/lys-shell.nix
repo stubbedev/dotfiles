@@ -130,9 +130,9 @@ in
                 inset-ends = "0px";
                 rounding = "none";
                 border-location = "none";
-                padding = "0px";
-                module-gap = "4px";
-                scale = 0.85;
+                padding = "2px";
+                padding-ends = "4px";
+                module-gap = "2px";
 
                 layout = [
                   {
