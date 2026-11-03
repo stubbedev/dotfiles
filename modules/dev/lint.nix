@@ -2,61 +2,69 @@
 {
   perSystem =
     { pkgs, ... }:
+    let
+      nixLints = "SL8000-SL9000";
+
+      withTrackedNixFiles = ''
+        cd "$(git rev-parse --show-toplevel)"
+        mapfile -d "" -t nix_files < <(
+          git ls-files -z -- '*.nix' \
+            | while IFS= read -r -d "" f; do
+              if [ -e "$f" ]; then printf '%s\0' "$f"; fi
+            done
+        )
+      '';
+
+      nixTool =
+        name: text:
+        pkgs.writeShellApplication {
+          inherit name text;
+          runtimeInputs = [
+            pkgs.shell-lsp
+            pkgs.git
+          ];
+        };
+    in
     {
-      apps.lint-fix.program = pkgs.writeShellApplication {
-        name = "lint-fix";
-        runtimeInputs = [
-          pkgs.statix
-          pkgs.deadnix
-          pkgs.nixfmt
-          pkgs.git
-        ];
-        # Scoped to tracked files, which is exactly what ends up in the flake
-        # source the checks run against. Walking `.` instead would follow the
-        # result/ symlinks into the read-only store. Deleted-but-unstaged
-        # files are filtered out: until the deletion is committed they still
-        # show up in git ls-files, and deadnix/nixfmt die on the missing
-        # paths.
-        text = ''
-          cd "$(git rev-parse --show-toplevel)"
-          statix fix .
-          tracked_nix() {
-            git ls-files -z '*.nix' \
-              | while IFS= read -r -d "" f; do
-                if [ -e "$f" ]; then printf '%s\0' "$f"; fi
-              done
-          }
-          tracked_nix | xargs -0 -r deadnix --edit --
-          tracked_nix | xargs -0 -r nixfmt
-        '';
-      };
+      formatter = nixTool "nix-fmt" ''
+        if [ "$#" -gt 0 ]; then
+          exec shell-lsp fmt -w "$@"
+        fi
+        ${withTrackedNixFiles}
+        shell-lsp fmt -w "''${nix_files[@]}"
+      '';
+
+      apps.lint-fix.program = nixTool "lint-fix" ''
+        ${withTrackedNixFiles}
+        patch=$(mktemp)
+        trap 'rm -f "$patch"' EXIT
+        status=0
+        shell-lsp check -i ${nixLints} -f diff "''${nix_files[@]}" > "$patch" || status=$?
+        if [ "$status" -gt 1 ]; then
+          exit "$status"
+        fi
+        if [ -s "$patch" ]; then
+          git apply "$patch"
+        fi
+        shell-lsp fmt -w "''${nix_files[@]}"
+      '';
 
       checks = {
-        # -c is required: statix reads statix.toml from the config path only,
-        # and does not discover it inside the target directory.
-        lint-statix = pkgs.stubbe.check {
-          name = "lint-statix";
-          nativeBuildInputs = [ pkgs.statix ];
+        lint-nix = pkgs.stubbe.check {
+          name = "lint-nix";
+          nativeBuildInputs = [ pkgs.shell-lsp ];
           text = ''
-            statix check -c ${self} ${self}
-            touch "$out"
-          '';
-        };
-
-        lint-deadnix = pkgs.stubbe.check {
-          name = "lint-deadnix";
-          nativeBuildInputs = [ pkgs.deadnix ];
-          text = ''
-            deadnix --fail -- ${self}
+            cp -r --no-preserve=mode ${self} source
+            shell-lsp check -i ${nixLints} -f gcc source
             touch "$out"
           '';
         };
 
         lint-fmt = pkgs.stubbe.check {
           name = "lint-fmt";
-          nativeBuildInputs = [ pkgs.nixfmt ];
+          nativeBuildInputs = [ pkgs.shell-lsp ];
           text = ''
-            find ${self} -name '*.nix' -print0 | xargs -0 nixfmt --check
+            find ${self} -name '*.nix' -print0 | xargs -0 shell-lsp fmt -l
             touch "$out"
           '';
         };

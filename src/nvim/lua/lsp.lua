@@ -37,8 +37,6 @@ local function vue_typescript_plugin()
   return vim.fn.isdirectory(dir) == 1 and dir or nil
 end
 
-local nixd = require("nixd")
-
 -- A panic in phpantom leaves its symbol map unusable rather than exiting the process, so nvim
 -- keeps a client that answers definition and references with nothing for the rest of the session.
 -- Set by the stderr watchdog below, cleared by the server's `on_exit`, which is where the restart
@@ -46,29 +44,6 @@ local nixd = require("nixd")
 local phpantom_restarting = false
 
 local servers = {
-  nixd = {
-    cmd = { "nixd" },
-    filetypes = { "nix" },
-    root_markers = { "flake.nix", ".git" },
-    settings = {
-      nixd = {
-        formatting = { command = { "nixfmt" } },
-        nixpkgs = { expr = "import <nixpkgs> { }" },
-      },
-    },
-    before_init = function(params, config)
-      local folder = params.workspaceFolders and params.workspaceFolders[1]
-      local root = (folder and vim.uri_to_fname(folder.uri)) or (params.rootUri and vim.uri_to_fname(params.rootUri))
-      if not root or vim.fn.filereadable(root .. "/flake.nix") == 0 then
-        return
-      end
-      -- In place: vim.lsp.Client captures this reference at create() time.
-      config.settings = config.settings or {}
-      config.settings.nixd = vim.tbl_deep_extend("force", config.settings.nixd or {}, nixd.settings(root))
-      config.settings.nixd_root = root
-    end,
-  },
-
   phpantom_lsp = {
     cmd = { "phpantom_lsp" },
     filetypes = { "php", "blade" },
@@ -260,6 +235,7 @@ local servers = {
     cmd = { "shell-lsp" },
     filetypes = { "sh", "bash", "zsh", "ksh", "make", "just", "dockerfile", "nix" },
     root_markers = { ".git" },
+    settings = { shellLsp = { nix = { evaluate = true } } },
   },
   docker_language_server = {
     cmd = { "docker-language-server", "start", "--stdio" },
@@ -480,10 +456,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end
 
     local client = vim.lsp.get_client_by_id(args.data.client_id)
-
-    if client and client.name == "nixd" and (client.settings or {}).nixd_root then
-      nixd.warm(client.settings.nixd_root, client)
-    end
 
     if client and client:supports_method("textDocument/documentColor") then
       vim.lsp.document_color.enable(true, { bufnr = buf })

@@ -1,5 +1,16 @@
-
 local M = {}
+
+function M.format()
+  local buf = vim.api.nvim_get_current_buf()
+  local client = vim.bo[buf].filetype == "nix" and vim.lsp.get_clients({ bufnr = buf, name = "shell_lsp" })[1]
+  if client then
+    client:request_sync("workspace/executeCommand", {
+      command = "shellLsp.fixAll",
+      arguments = { vim.uri_from_bufnr(buf) },
+    }, 2000, buf)
+  end
+  require("conform").format({ async = true, lsp_format = "fallback" })
+end
 
 function M.setup()
   local conform = require("conform")
@@ -18,7 +29,6 @@ function M.setup()
       templ = { "templ" },
       python = { "ruff_organize_imports", "ruff_format" },
       sql = { "sqruff" },
-      nix = { "statix", "deadnix", "nixfmt" },
     },
 
     formatters = {
@@ -27,12 +37,6 @@ function M.setup()
       },
       caddy = { command = "caddy", args = { "fmt", "-" }, stdin = true },
       sqruff = { command = "sqruff", args = { "fix", "-" }, stdin = true },
-      statix = { command = "statix", args = { "fix", "--stdin" }, stdin = true },
-      deadnix = {
-        command = "deadnix",
-        args = { "--edit", "--quiet", "$FILENAME" },
-        stdin = false,
-      },
     },
   })
 
@@ -65,7 +69,6 @@ function M.setup()
   local lint = require("lint")
 
   lint.linters_by_ft = {
-    nix = { "statix", "deadnix" },
     markdown = { "markdownlint-cli2" },
   }
 

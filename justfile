@@ -1,4 +1,4 @@
-# Autofix what the linters can fix (statix, deadnix, nixfmt).
+# Autofix what shell-lsp can fix in Nix files (lints, formatting).
 lint-fix:
     nix run .#lint-fix
 

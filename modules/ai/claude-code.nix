@@ -12,7 +12,7 @@ _: {
       shellLspPlugin = pkgs.linkFarm "claude-shell-lsp-plugin" {
         ".claude-plugin/plugin.json" = pkgs.stubbe.gen.json "plugin.json" {
           name = "shell-lsp";
-          description = "shell-lsp diagnostics for shell scripts, Makefiles, justfiles and Dockerfiles";
+          description = "shell-lsp diagnostics for shell scripts, Makefiles, justfiles, Dockerfiles and Nix";
         };
         ".lsp.json" = pkgs.stubbe.gen.json "lsp.json" config.stubbe.lsp.clients.claude;
       };

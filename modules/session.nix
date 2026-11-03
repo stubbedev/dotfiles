@@ -57,8 +57,6 @@
         NIXPKGS_ALLOW_UNFREE = "1";
         NIXPKGS_ALLOW_INSECURE = "1";
 
-        # Without this nixd's lib lookups fail on any host that never ran
-        # `nix-channel --add nixpkgs`.
         NIX_PATH = "nixpkgs=${inputs.nixpkgs}";
 
         XDG_DATA_DIRS = lib.mkForce "${lib.concatStringsSep ":" dataDirs}:$XDG_DATA_DIRS";

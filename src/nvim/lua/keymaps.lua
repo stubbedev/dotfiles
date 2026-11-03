@@ -288,7 +288,7 @@ map("n", "<leader>qd", "<cmd>SessionDelete<cr>", { desc = "Delete session" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })
 
 map({ "n", "x" }, "<leader>cf", function()
-  require("conform").format({ async = true, lsp_format = "fallback" })
+  require("format").format()
 end, { desc = "Format buffer" })
 
 map("n", "<leader>.", function()

@@ -28,8 +28,8 @@ jobs:
       # workflows, so this cannot loop back into itself.
       #
       # Not everything is fixable: shellcheck has no reliable fixer, and the
-      # statix lints without one still fail the checks below. Fork PRs get no
-      # write token, so they skip straight to the checks.
+      # shell-lsp lints without a safe fix still fail the checks below. Fork PRs
+      # get no write token, so they skip straight to the checks.
       - name: Autofix what the linters can fix
         if: github.event.pull_request.head.repo.fork != true
         run: |
@@ -52,8 +52,7 @@ jobs:
       - name: Build lint and eval checks
         run: |
           nix build --no-link \
-            .#checks.x86_64-linux.lint-statix \
-            .#checks.x86_64-linux.lint-deadnix \
+            .#checks.x86_64-linux.lint-nix \
             .#checks.x86_64-linux.lint-fmt \
             .#checks.x86_64-linux.lint-shellcheck \
             .#checks.x86_64-linux.eval-hm-stubbe \

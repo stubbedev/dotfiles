@@ -124,9 +124,8 @@ in
         with pkgs;
         [
           xilo
-          nixd
+          shell-lsp
           nixdoc
-          nil
         ]
       );
 

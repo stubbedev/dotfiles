@@ -118,7 +118,6 @@
                   util-linux
                 ]
                 ++ lib.optionals config.features.development [
-                  nixd
                   lua-language-server
                   superhtml # html
                   biome # css, json
@@ -139,11 +138,8 @@
                   lemminx
 
                   stylua
-                  nixfmt
                   prettier
                   markdownlint-cli2
-                  statix
-                  deadnix
 
                   nodejs
                 ];

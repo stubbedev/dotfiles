@@ -13,12 +13,6 @@ _: {
       # to the LSP language id -- every consumer needs both halves, claude as
       # extensionToLanguage, harness as filetypes (extensions match by suffix).
       servers = {
-        nixd = {
-          command = lib.getExe' pkgs.nixd "nixd";
-          languages.nix = "nix";
-          settings.nixd.nixpkgs.expr = "import <nixpkgs> { }";
-        };
-
         tsc = {
           command = lib.getExe pkgs.typescript;
           args = [
@@ -68,12 +62,14 @@ _: {
             just = "just";
             dockerfile = "dockerfile";
             containerfile = "dockerfile";
+            nix = "nix";
           };
           fileNames = [
             "makefile"
             "gnumakefile"
             "justfile"
           ];
+          settings.shellLsp.nix.evaluate = true;
         };
 
         superhtml = {
@@ -134,7 +130,8 @@ _: {
           inherit (s) command;
           extensionToLanguage = lib.mapAttrs' (ext: lib.nameValuePair ".${ext}") s.languages;
         }
-        // lib.optionalAttrs (s ? args) { inherit (s) args; };
+        // lib.optionalAttrs (s ? args) { inherit (s) args; }
+        // lib.optionalAttrs (s ? settings) { inherit (s) settings; };
 
       claudeServers = [ "shell_lsp" ];
     in
