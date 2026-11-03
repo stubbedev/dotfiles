@@ -160,6 +160,8 @@ in
               bar = {
                 location = "top";
                 exclusive = true;
+                inset-edge = "0px";
+                inset-ends = "0px";
                 rounding = "none";
                 button-rounding = "none";
                 button-group-rounding = "none";
