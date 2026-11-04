@@ -51,7 +51,7 @@
           sudo rm -rf /usr/share/plymouth/themes/catppuccin-mocha
           sudo rm -f /etc/default/grub.d/50-plymouth-splash.cfg
 
-          sudo cp -a --no-preserve=ownership ${pkgs.lys-splash.compat}/. /usr/
+          sudo cp -dRf ${pkgs.lys-splash.compat}/. /usr/
           sudo systemctl enable \
             lys-splash-start.service lys-splash-quit.service \
             lys-splash-quit-wait.service lys-splash-read-write.service \
