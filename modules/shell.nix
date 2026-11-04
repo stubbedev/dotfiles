@@ -15,7 +15,10 @@
       };
 
       users.users.${config.host.primaryUser}.shell = pkgs.zsh;
-      environment.shells = [ pkgs.zsh ];
+      environment.shells = [
+        pkgs.zsh
+        "/etc/profiles/per-user/${config.host.primaryUser}/bin/zsh"
+      ];
     };
 
   flake.modules.homeManager.shell =
@@ -728,6 +731,20 @@
               unset _patina_init
             '')
           ];
+        };
+
+        stubbe.setup.zshLoginShell = {
+          privileged = true;
+          title = "Listing the nix zsh in /etc/shells";
+          body = ''
+            $SHELL points at ${zshBin}, and pkexec refuses to run for a $SHELL that
+            /etc/shells does not list.
+          '';
+          script = ''
+            if ! grep -qxF ${lib.escapeShellArg zshBin} /etc/shells; then
+              echo ${lib.escapeShellArg zshBin} | sudo tee -a /etc/shells >/dev/null
+            fi
+          '';
         };
 
         stubbe.setup.zshPatina.script = ''
