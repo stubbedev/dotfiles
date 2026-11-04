@@ -64,9 +64,11 @@
       url = "github:stubbedev/notmuch-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lys-ci.url = "github:stubbedev/lys-ci";
     lys-lib = {
       url = "github:stubbedev/lys-lib";
       inputs = {
+        lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
       };
@@ -74,6 +76,7 @@
     lys-ui = {
       url = "github:stubbedev/lys-ui";
       inputs = {
+        lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         lys-lib.follows = "lys-lib";
@@ -90,6 +93,8 @@
     lys-shell = {
       url = "github:stubbedev/lys-shell";
       inputs = {
+        lys-settings.follows = "lys-settings";
+        lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         lys-lib.follows = "lys-lib";
@@ -101,6 +106,7 @@
     lys-wm = {
       url = "github:stubbedev/lys-wm";
       inputs = {
+        lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         lys-shell.follows = "lys-shell";
@@ -111,10 +117,21 @@
     lys-login = {
       url = "github:stubbedev/lys-login";
       inputs = {
+        lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         lys-secrets.follows = "lys-secrets";
         lys-shell.follows = "lys-shell";
+        lys-wm.follows = "lys-wm";
+      };
+    };
+    lys-settings = {
+      url = "github:stubbedev/lys-settings";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        home-manager.follows = "home-manager";
+        lys-ci.follows = "lys-ci";
         lys-wm.follows = "lys-wm";
       };
     };
@@ -129,6 +146,7 @@
     lys-splash = {
       url = "github:stubbedev/lys-splash";
       inputs = {
+        lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         lys-login.follows = "lys-login";

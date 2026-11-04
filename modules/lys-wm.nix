@@ -70,10 +70,10 @@ in
       };
 
       lysLoginPackage = rec {
-        version = "0.3.7";
+        version = "0.3.8";
         deb = pkgs.fetchurl {
           url = "https://github.com/stubbedev/lys-login/releases/download/v${version}/lys-login_${version}_amd64.deb";
-          hash = "sha256-YG/b8+3wQUcMvFeCilHOpBemGMNqJWRR6aTx1tQQqUo=";
+          hash = "sha256-HE03MvOxcsLpnbEv8+BZNc6Qk2rvWadRXEzTmZJyGW0=";
         };
       };
 

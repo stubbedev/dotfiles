@@ -19,6 +19,7 @@ in
       "lys-splash"
       "lys-secrets"
       "lys-polkit"
+      "lys-settings"
       "claude-code"
       "xilo"
       "adaptive-power-manager"

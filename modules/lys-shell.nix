@@ -34,6 +34,7 @@ in
             enable = true;
             package = pkgs.lys-shell;
             systemd.enable = false;
+            settingsApp.package = pkgs.lys-settings;
             portal.enable = true;
           };
 
@@ -69,10 +70,7 @@ in
       # without it GTK cannot resolve lys-shell's bundled icon names.
       lysShellPackage = gfx.bundle {
         pkg = pkgs.lys-shell;
-        exes = [
-          "lys-shell"
-          "lys-settings"
-        ];
+        exes = [ "lys-shell" ];
       };
 
       lysShellBin = lib.getExe' lysShellPackage "lys-shell";
@@ -99,6 +97,7 @@ in
           enable = true;
           package = lysShellPackage;
           systemd.enable = false;
+          settingsApp.package = gfx.bundle { pkg = pkgs.lys-settings; };
           settings = { };
           portal.enable = true;
         };
