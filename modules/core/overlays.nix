@@ -28,7 +28,16 @@ in
       # Lazy: forced only when something consumes pkgs.nixgl, the standalone-HM
       # Intel fallback in pkgs/gl.nix; NixOS hosts and NVIDIA machines use system
       # GL and never touch it.
-      nixgl = inputs.nixgl.overlays.default;
+      nixgl =
+        final: _prev:
+        let
+          inherit (final.stdenv.hostPlatform) isx86_64;
+        in
+        {
+          nixgl = final.callPackage "${inputs.nixgl}/nixGL.nix" (
+            { enable32bits = isx86_64; } // final.lib.optionalAttrs (!isx86_64) { intel-media-driver = null; }
+          );
+        };
 
       cship =
         final: _prev:

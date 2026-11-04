@@ -361,10 +361,16 @@ in
               } (sshdLogin // sshdKeepalive);
             }}
 
-            if systemctl cat sshd.service >/dev/null 2>&1; then
-              svc=sshd.service
-            else
-              svc=ssh.service
+            svc=
+            for unit in sshd.service ssh.service; do
+              if [ "$(systemctl show -P LoadState "$unit")" = loaded ]; then
+                svc=$(systemctl show -P Id "$unit")
+                break
+              fi
+            done
+            if [ -z "$svc" ]; then
+              echo "openssh: neither sshd.service nor ssh.service is installed" >&2
+              exit 1
             fi
             sudo systemctl enable "$svc"
             sudo systemctl restart "$svc"

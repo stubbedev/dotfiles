@@ -90,16 +90,6 @@
       pkgs,
       ...
     }:
-    let
-      pamFiles = [
-        "/etc/pam.d/login"
-        "/etc/pam.d/ly"
-        "/etc/pam.d/lightdm"
-        "/etc/pam.d/gdm"
-      ];
-
-      keyringMigrate = pkgs.stubbe.keyringMigrate { };
-    in
     {
       imports = [ inputs.lys-secrets.homeManagerModules.default ];
 
@@ -108,44 +98,21 @@
         package = pkgs.lys-secrets;
       };
 
-      home.packages = lib.mkIf config.features.desktop [
-        pkgs.gnupg
-        keyringMigrate
-      ];
+      home.packages = lib.mkIf config.features.desktop [ pkgs.gnupg ];
+
+      xdg.configFile = lib.mkIf config.services.lys-secrets.enable (
+        lib.genAttrs
+          [
+            "systemd/user/gnome-keyring-daemon.service"
+            "systemd/user/gnome-keyring-daemon.socket"
+          ]
+          (_: {
+            source = config.lib.file.mkOutOfStoreSymlink "/dev/null";
+            force = true;
+          })
+      );
 
       stubbe.setup = {
-        lysSecrets = lib.mkIf config.features.desktop {
-          privileged = true;
-          title = "Moving to lys-secrets (in place of gnome-keyring)";
-          body = ''
-            Copy every secret from the gnome-keyring login keyring into lys-secrets
-            and verify each one, so Chrome, Slack and the rest keep working. This
-            asks for your login password. The old keyring file is left untouched.
-
-            Then stop gnome-keyring from claiming org.freedesktop.secrets at the
-            next login: mask its user units and remove the PAM lines this repo
-            added. It keeps running until you log out.
-          '';
-          script = ''
-            ${lib.getExe keyringMigrate}
-
-            unit_dir="${config.xdg.configHome}/systemd/user"
-            mkdir -p "$unit_dir"
-            ln -sfT /dev/null "$unit_dir/gnome-keyring-daemon.service"
-            ln -sfT /dev/null "$unit_dir/gnome-keyring-daemon.socket"
-
-            for file in ${lib.escapeShellArgs pamFiles}; do
-              if [ -f "$file" ]; then
-                sudo sed -i \
-                  -e '/^auth optional pam_gnome_keyring\.so$/d' \
-                  -e '/^session optional pam_gnome_keyring\.so auto_start$/d' \
-                  -e '/^password optional pam_gnome_keyring\.so use_authtok$/d' \
-                  "$file"
-              fi
-            done
-          '';
-        };
-
         # Nix's PAM modules expect /run/wrappers/bin/unix_chkpwd, which only
         # NixOS provides. Without it, lys-shell's session-lock unlock cannot verify
         # the password at all.
