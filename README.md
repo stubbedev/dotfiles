@@ -24,10 +24,10 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   ├── dev/               # flake checks, lint, `nix fmt`
 │   ├── scripts/           # the `hm` front-end, launchers, clip, ISO burner
 │   ├── ai/, browsers/     # aspects big enough to want a directory
-│   └── <aspect>.nix       # mail, shell, hyprland, lys-shell, power, storage, …
+│   └── <aspect>.nix       # mail, shell, lys-wm, lys-shell, power, storage, …
 ├── bin/                   # ONLY the pre-Nix bootstraps (stb-install*)
-├── src/                   # the few real files: nvim + hyprland live-edit
-│                          # trees, aerc stylesets, wallpapers
+├── src/                   # the few real files: the nvim live-edit
+│                          # tree, aerc stylesets, wallpapers
 ├── certs/                 # the srv root CA (public cert); seeded into the
 │                          # system trust store at build time
 └── secrets/               # sops-encrypted, keyed per machine in .sops.yaml
@@ -94,7 +94,7 @@ home-manager on a fresh host.
    JSON), and inline strings where none does — so the Catppuccin palette
    exists once, in `modules/core/lib/palette.nix`, and flows into every themed
    surface by interpolation. The only real files left under `src/` are the
-   ones that must be files: the nvim and hyprland live-edit trees
+   ones that must be files: the nvim live-edit tree
    (`stubbe.mutable` link), binary wallpapers, and the sops secrets.
 
 ## INSTALLATION
