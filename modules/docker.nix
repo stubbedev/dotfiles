@@ -136,6 +136,14 @@ in
         pkgs.lazydocker
       ];
 
+      stubbe.setup.runcApparmor = lib.mkIf config.features.docker (
+        pkgs.stubbe.setup.apparmor {
+          appName = "runc";
+          profileName = "nix-runc";
+          programGlob = "/nix/store/*/bin/runc";
+        }
+      );
+
       stubbe.setup.docker = lib.mkIf config.features.docker {
         privileged = true;
         title = "Installing Docker";

@@ -110,9 +110,11 @@ _: {
         fi
       '';
 
-      # Ubuntu 24.04+ limits unprivileged userns to binaries with a matching
-      # AppArmor profile, and nix-store paths match none of the stock ones, so
-      # Chromium and bubblewrap abort with "No usable sandbox!".
+      # Ubuntu 24.04+ treats binaries without a named AppArmor profile as
+      # "unprivileged unconfined": no userns (Chromium/bubblewrap abort with
+      # "No usable sandbox!") and profile changes get stacked (runc's
+      # docker-default turns into docker-default//&unconfined). Nix-store
+      # paths match none of the stock profiles.
       apparmor =
         {
           appName,
@@ -124,13 +126,14 @@ _: {
           preCheck = stubbe.setup.requireCommand "apparmor_status";
           title = "Installing AppArmor profile for Nix-installed ${appName}";
           body = ''
-            Ubuntu 24.04 restricts unprivileged user namespaces (required by
-            Chromium-based sandboxes) to binaries with a matching AppArmor
-            profile. Nix-store paths aren't covered by Ubuntu's stock profiles,
-            so ${appName} aborts on launch with "No usable sandbox!".
+            Ubuntu 24.04+ only grants unprivileged user namespaces and clean
+            AppArmor profile transitions to binaries with a named profile.
+            Nix-store paths aren't covered by Ubuntu's stock profiles, so the
+            Nix-store ${appName} runs as "unprivileged unconfined" and is
+            restricted.
 
-            This installs an AppArmor profile that whitelists the Nix-store
-            ${appName} binary (and its sandbox helper) for unprivileged userns.
+            This installs a named, otherwise unconfined AppArmor profile for
+            the Nix-store ${appName} binaries.
           '';
           script = ''
             ${stubbe.setup.text {
