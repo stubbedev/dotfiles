@@ -729,6 +729,32 @@
         "type": "github"
       }
     },
+    "lys-polkit": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "home-manager": [
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793749147,
+        "narHash": "sha256-ihWrPFDFE7qRYYQI4Oaj9tPWvjp7ivt0NuDwIlCmsRU=",
+        "owner": "stubbedev",
+        "repo": "lys-polkit",
+        "rev": "2361e21018c1bf44e5923b520832de3ca48dd247",
+        "type": "github"
+      },
+      "original": {
+        "owner": "stubbedev",
+        "repo": "lys-polkit",
+        "type": "github"
+      }
+    },
     "lys-secrets": {
       "inputs": {
         "flake-parts": [
@@ -1186,6 +1212,7 @@
         "libembroidery-src": "libembroidery-src",
         "lys-lib": "lys-lib",
         "lys-login": "lys-login",
+        "lys-polkit": "lys-polkit",
         "lys-secrets": "lys-secrets",
         "lys-shell": "lys-shell",
         "lys-splash": "lys-splash",

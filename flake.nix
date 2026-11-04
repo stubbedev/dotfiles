@@ -118,6 +118,14 @@
         lys-wm.follows = "lys-wm";
       };
     };
+    lys-polkit = {
+      url = "github:stubbedev/lys-polkit";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        home-manager.follows = "home-manager";
+      };
+    };
     lys-splash = {
       url = "github:stubbedev/lys-splash";
       inputs = {

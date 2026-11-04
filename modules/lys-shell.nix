@@ -91,6 +91,7 @@ in
       imports = [
         inputs.lys-shell.homeManagerModules.default
         inputs.lys-login.homeManagerModules.default
+        inputs.lys-polkit.homeManagerModules.default
       ];
 
       config = lib.mkIf enabled {
@@ -108,6 +109,11 @@ in
         programs.lys-login = lib.mkIf (config.host.platform != "nixos") {
           enable = true;
           package = lysLoginPackage;
+        };
+
+        services.lys-polkit = {
+          enable = true;
+          package = pkgs.lys-polkit;
         };
 
         home.packages = [

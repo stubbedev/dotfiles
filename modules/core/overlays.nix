@@ -18,6 +18,7 @@ in
       "shell-lsp"
       "lys-splash"
       "lys-secrets"
+      "lys-polkit"
       "claude-code"
       "xilo"
       "adaptive-power-manager"
