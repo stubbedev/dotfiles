@@ -70,10 +70,10 @@ in
       };
 
       lysLoginPackage = rec {
-        version = "0.2.0";
+        version = "0.3.7";
         deb = pkgs.fetchurl {
           url = "https://github.com/stubbedev/lys-login/releases/download/v${version}/lys-login_${version}_amd64.deb";
-          hash = "sha256-AoIBwrOVx9Eqd+QsoRMSWHEx6ap+B79RyKhjJOrsno4=";
+          hash = "sha256-YG/b8+3wQUcMvFeCilHOpBemGMNqJWRR6aTx1tQQqUo=";
         };
       };
 
@@ -407,13 +407,13 @@ in
                   sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confold ${lysLoginPackage.deb}
                 fi
 
-                exec_start=$(sed -n 's|^\(ExecStart=.* --compositor \)/usr/bin/lys-wm |\1${lib.getExe lysWm} |p' ${unitFile})
-                if [ -z "$exec_start" ]; then
-                  echo "${unitFile} has no ExecStart with --compositor /usr/bin/lys-wm to point at this profile's lys-wm." >&2
+                daemon_args=$(sed -n 's|^\(Environment="LYS_LOGIN_DAEMON_ARGS=.* --compositor \)/usr/bin/lys-wm |\1${lib.getExe lysWm} |p' ${unitFile})
+                if [ -z "$daemon_args" ]; then
+                  echo "${unitFile} has no LYS_LOGIN_DAEMON_ARGS with --compositor /usr/bin/lys-wm to point at this profile's lys-wm." >&2
                   exit 1
                 fi
                 sudo install -d -m 0755 /etc/systemd/system/lys-login.service.d
-                printf '[Service]\nExecStart=\n%s\n' "$exec_start" | sudo tee /etc/systemd/system/lys-login.service.d/lys-wm.conf >/dev/null
+                printf '[Service]\n%s\n' "$daemon_args" | sudo tee /etc/systemd/system/lys-login.service.d/lys-wm.conf >/dev/null
 
                 ${pkgs.stubbe.setup.text {
                   name = "lys-wm-session";
