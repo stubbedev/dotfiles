@@ -2,7 +2,9 @@
 let
   greeterConfigPath = "/etc/lys-shell/config.yaml";
 
-  loginScreen = wallpaper: {
+  loginScreen = accent: wallpaper: {
+    styling.palette.primary = accent;
+
     login = {
       background-mode = "image";
       background-image = wallpaper;
@@ -43,7 +45,7 @@ in
             package = pkgs.lys-login;
             lock.enable = true;
             greeter.settings =
-              loginScreen
+              loginScreen pkgs.stubbe.withHash.mauve
                 config.home-manager.users.${config.host.primaryUser}.stubbe.paths.wallpaper;
           };
 
@@ -81,7 +83,9 @@ in
 
       sessionTarget = [ config.wayland.systemd.target ];
 
-      loginScreenSettings = loginScreen config.stubbe.paths.wallpaper;
+      accent = pkgs.stubbe.withHash.mauve;
+
+      loginScreenSettings = loginScreen accent config.stubbe.paths.wallpaper;
 
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
