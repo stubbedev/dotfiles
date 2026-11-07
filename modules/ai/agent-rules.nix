@@ -76,6 +76,12 @@ _: {
         - **Shell scripts.** `set -euo pipefail`, quote every expansion, `shell-lsp check` clean.
         - **No debugging leftovers.** Remove stray prints, commented-out code and temporary files before finishing.
 
+        ## Running commands
+
+        - **No wildcard `rm`.** Never `rm dir/*`, `rm -f *.log` or `cd dir; rm ...`: they stop on a manual approval prompt. Empty a directory with `find /absolute/path -mindepth 1 -delete`; delete single files by their full absolute path.
+        - **No `pgrep -f` wait loops.** `until ! pgrep -f <pattern>` matches its own command line and never ends. Wait with `wait`, `tail --pid=N -f /dev/null`, a run-status query, or the tool's background-completion notification.
+        - **Reap background work.** Stop every background command, monitor and wait loop you started before you report; nothing of yours outlives the task. Stop sub-agents once their final report is in.
+
         ## Verification
 
         - Build, test and exercise the change before calling it done. Say plainly what was verified and what was not.
