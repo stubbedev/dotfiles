@@ -69,13 +69,24 @@ in
         exes = [ "lys-wm" ];
       };
 
-      lysLoginPackage = rec {
-        version = "0.3.14";
-        deb = pkgs.fetchurl {
-          url = "https://github.com/stubbedev/lys-login/releases/download/v${version}/lys-login_${version}_amd64.deb";
-          hash = "sha256-dzx1dVafn9q9cJzBn4WTUPuSosvY/9gDBBm+xu0Ba/w=";
+      lysLoginPackage =
+        let
+          pin = lib.importJSON ../src/lys-wm/lys-login-deb.json;
+          arch = pkgs.stdenv.hostPlatform.linuxArch;
+          debArch =
+            {
+              x86_64 = "amd64";
+              arm64 = "arm64";
+            }
+            .${arch} or (throw "lys-login publishes no .deb for ${arch}");
+        in
+        {
+          inherit (pin) version;
+          deb = pkgs.fetchurl {
+            url = "https://github.com/stubbedev/lys-login/releases/download/v${pin.version}/lys-login_${pin.version}_${debArch}.deb";
+            hash = pin.hash.${debArch};
+          };
         };
-      };
 
       bind = chord: action: { inherit chord action; };
       exec = command: "exec ${command}";

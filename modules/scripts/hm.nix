@@ -14,6 +14,10 @@ _: {
 
       hm = pkgs.stubbe.bashApp {
         name = "hm";
+        runtimeInputs = [
+          pkgs.curl
+          pkgs.jq
+        ];
         text = ''
           hm_flake_dir=$(realpath -e "''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}")
           hm_flake_ref="path:$hm_flake_dir"
@@ -206,11 +210,49 @@ _: {
             }
           }
 
+          lys_login_deb_pin=src/lys-wm/lys-login-deb.json
+
+          lys_login_deb_hash() {
+            local sums=$1 version=$2 arch=$3 hex
+            hex=$(awk -v f="lys-login_''${version}_''${arch}.deb" '$2 == f { print $1 }' "$sums")
+            if [ -z "$hex" ]; then
+              echo "hm: lys-login v$version's SHA256SUMS lists no $arch .deb" >&2
+              return 1
+            fi
+            nix hash convert --hash-algo sha256 --to sri "$hex"
+          }
+
+          update_lys_login_deb() {
+            local releases=https://github.com/stubbedev/lys-login/releases tag version pin sums amd64 arm64
+            tag=$(curl -fsS --max-time 30 -o /dev/null -w '%{redirect_url}' "$releases/latest")
+            tag=''${tag##*/}
+            case "$tag" in
+              v[0-9]*) version=''${tag#v} ;;
+              *)
+                echo "hm: $releases/latest did not redirect to a release tag (got '$tag')" >&2
+                return 1
+                ;;
+            esac
+            pin="$hm_flake_dir/$lys_login_deb_pin"
+            sums=$(mktemp "$pin.sums.XXXXXX")
+            if ! curl -fsSL --max-time 30 -o "$sums" "$releases/download/$tag/SHA256SUMS" \
+              || ! amd64=$(lys_login_deb_hash "$sums" "$version" amd64) \
+              || ! arm64=$(lys_login_deb_hash "$sums" "$version" arm64) \
+              || ! jq -n --arg version "$version" --arg amd64 "$amd64" --arg arm64 "$arm64" \
+                '{version: $version, hash: {amd64: $amd64, arm64: $arm64}}' > "$sums.json"; then
+              rm -f "$sums" "$sums.json"
+              echo "hm: pinning lys-login's $tag .deb failed" >&2
+              return 1
+            fi
+            mv "$sums.json" "$pin"
+            rm -f "$sums"
+          }
+
           commit_flake_lock() {
             flake_in_git || return 0
-            flake_git diff --quiet -- flake.lock && return 0
-            flake_git add -- flake.lock
-            flake_git commit -m "chore: update flake.lock" -- flake.lock >/dev/null
+            flake_git diff --quiet -- flake.lock "$lys_login_deb_pin" && return 0
+            flake_git add -- flake.lock "$lys_login_deb_pin"
+            flake_git commit -m "chore: update flake.lock" -- flake.lock "$lys_login_deb_pin" >/dev/null
             echo "Committed updated flake.lock"
             flake_has_upstream || return 0
             flake_git push --quiet 2>/dev/null && return 0
@@ -321,6 +363,7 @@ _: {
               sync_flake_repo
             fi
             nix flake update --flake "$hm_flake_ref" --quiet
+            update_lys_login_deb
             commit_flake_lock
           }
 
