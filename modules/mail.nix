@@ -18,6 +18,7 @@
       accountNames = [
         "kontainer"
         "gmail"
+        "stubbe"
       ];
       passwords = lib.genAttrs accountNames (account: "${aercDir}/passwords/${account}");
       queryMap = account: "${aercDir}/queries-${account}";
@@ -82,6 +83,10 @@
         gmail = ''
           INBOX = tag:gmail and tag:inbox
           Sent  = folder:"gmail/[Gmail]/Sent Mail"
+        '';
+        stubbe = ''
+          INBOX = tag:stubbe and tag:inbox
+          Sent  = folder:"stubbe/Sent Items"
         '';
       };
 
@@ -444,6 +449,51 @@
                 folders = "INBOX,Sent";
                 archive = "[Gmail]/All Mail";
                 check-mail-cmd = "${lib.getExe mailSync} gmail";
+                check-mail = "30s";
+              };
+            };
+          };
+          stubbe = {
+            address = "hello@stubbe.dev";
+            inherit realName;
+            userName = "hello@stubbe.dev";
+            passwordCommand = "cat ${passwords.stubbe}";
+            folders = {
+              inbox = "INBOX";
+              sent = "Sent Items";
+              drafts = "Drafts";
+              trash = "Deleted Items";
+            };
+            imap = {
+              host = "mail.stubbe.dev";
+              port = 993;
+            };
+            smtp = {
+              host = "mail.stubbe.dev";
+              port = 465;
+            };
+            mbsync = {
+              enable = true;
+              create = "both";
+              expunge = "both";
+              patterns = [
+                "INBOX"
+                "Sent Items"
+                "Drafts"
+                "Archive"
+              ];
+              extraConfig.account.AuthMechs = "LOGIN";
+            };
+            notmuch.enable = true;
+            aerc = {
+              enable = true;
+              smtpAuth = "plain";
+              extraAccounts = {
+                query-map = queryMap "stubbe";
+                exclude-tags = "deleted,spam";
+                folders = "INBOX,Sent";
+                archive = "Archive";
+                check-mail-cmd = "${lib.getExe mailSync} stubbe";
                 check-mail = "30s";
               };
             };
