@@ -134,6 +134,8 @@ in
               # NixOS, so a dedicated /etc/pam.d/lys-shell is provisioned instead.
               login.lock.pam-service = "lys-shell";
 
+              idle.enable = false;
+
               bar = {
                 inset-edge = "0px";
                 inset-ends = "0px";
