@@ -78,7 +78,6 @@ in
       home.packages =
         with pkgs;
         [
-          networkmanagerapplet
           networkmanager-openconnect
 
           solaar
