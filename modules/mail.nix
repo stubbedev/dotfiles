@@ -87,6 +87,7 @@
         stubbe = ''
           INBOX = tag:stubbe and tag:inbox
           Sent  = folder:"stubbe/Sent Items"
+          Junk  = folder:"stubbe/Junk Mail"
         '';
       };
 
@@ -481,6 +482,7 @@
                 "Sent Items"
                 "Drafts"
                 "Archive"
+                "Junk Mail"
               ];
               extraConfig.account.AuthMechs = "LOGIN";
             };
@@ -491,7 +493,7 @@
               extraAccounts = {
                 query-map = queryMap "stubbe";
                 exclude-tags = "deleted,spam";
-                folders = "INBOX,Sent";
+                folders = "INBOX,Sent,Junk";
                 archive = "Archive";
                 check-mail-cmd = "${lib.getExe mailSync} stubbe";
                 check-mail = "30s";
