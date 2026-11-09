@@ -1,7 +1,7 @@
 {
-  "version": "0.3.18",
+  "version": "0.3.19",
   "hash": {
-    "amd64": "sha256-AR8Qe71/AwZrVqwdP10Tlri2bOT/PWlMgr+4B12Xorw=",
-    "arm64": "sha256-mmQZBO9mt+VGJ0R3oQYKegW4OgK3LDMtopFz7Do6zFo="
+    "amd64": "sha256-n+cIIWunLBZWabxgc0crA5NKSeO3VkbS9VXewfjoNec=",
+    "arm64": "sha256-FboUpeZ2htUSPGw9S59SFjY7ZX6ze2XASk+t3Q3pggs="
   }
 }
