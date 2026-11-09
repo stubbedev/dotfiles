@@ -213,39 +213,40 @@ _: {
           lys_login_deb_pin=src/lys-wm/lys-login-deb.json
 
           lys_login_deb_hash() {
-            local sums=$1 version=$2 arch=$3 hex
-            hex=$(awk -v f="lys-login_''${version}_''${arch}.deb" '$2 == f { print $1 }' "$sums")
-            if [ -z "$hex" ]; then
-              echo "hm: lys-login v$version's SHA256SUMS lists no $arch .deb" >&2
+            local release=$1 version=$2 arch=$3 digest
+            if ! digest=$(jq -er --arg name "lys-login_''${version}_''${arch}.deb" \
+              '.assets[] | select(.name == $name) | .digest // empty' <<<"$release"); then
+              echo "hm: lys-login v$version's release lists no digest for its $arch .deb" >&2
               return 1
             fi
-            nix hash convert --hash-algo sha256 --to sri "$hex"
+            nix hash convert --to sri "$digest"
           }
 
           update_lys_login_deb() {
-            local releases=https://github.com/stubbedev/lys-login/releases tag version pin sums amd64 arm64
-            tag=$(curl -fsS --max-time 30 -o /dev/null -w '%{redirect_url}' "$releases/latest")
-            tag=''${tag##*/}
+            local api=https://api.github.com/repos/stubbedev/lys-login/releases/latest
+            local release tag version pin amd64 arm64
+            if ! release=$(curl -fsSL --max-time 30 "$api"); then
+              echo "hm: querying $api failed" >&2
+              return 1
+            fi
+            tag=$(jq -r .tag_name <<<"$release")
             case "$tag" in
               v[0-9]*) version=''${tag#v} ;;
               *)
-                echo "hm: $releases/latest did not redirect to a release tag (got '$tag')" >&2
+                echo "hm: $api did not name a release tag (got '$tag')" >&2
                 return 1
                 ;;
             esac
             pin="$hm_flake_dir/$lys_login_deb_pin"
-            sums=$(mktemp "$pin.sums.XXXXXX")
-            if ! curl -fsSL --max-time 30 -o "$sums" "$releases/download/$tag/SHA256SUMS" \
-              || ! amd64=$(lys_login_deb_hash "$sums" "$version" amd64) \
-              || ! arm64=$(lys_login_deb_hash "$sums" "$version" arm64) \
+            if ! amd64=$(lys_login_deb_hash "$release" "$version" amd64) \
+              || ! arm64=$(lys_login_deb_hash "$release" "$version" arm64) \
               || ! jq -n --arg version "$version" --arg amd64 "$amd64" --arg arm64 "$arm64" \
-                '{version: $version, hash: {amd64: $amd64, arm64: $arm64}}' > "$sums.json"; then
-              rm -f "$sums" "$sums.json"
+                '{version: $version, hash: {amd64: $amd64, arm64: $arm64}}' > "$pin.tmp"; then
+              rm -f "$pin.tmp"
               echo "hm: pinning lys-login's $tag .deb failed" >&2
               return 1
             fi
-            mv "$sums.json" "$pin"
-            rm -f "$sums"
+            mv "$pin.tmp" "$pin"
           }
 
           commit_flake_lock() {

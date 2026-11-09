@@ -109,7 +109,6 @@
         lys-ci.follows = "lys-ci";
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
-        lys-shell.follows = "lys-shell";
         lys-ui.follows = "lys-ui";
       };
     };
@@ -121,7 +120,6 @@
         nixpkgs.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         lys-secrets.follows = "lys-secrets";
-        lys-shell.follows = "lys-shell";
         lys-wm.follows = "lys-wm";
       };
     };
