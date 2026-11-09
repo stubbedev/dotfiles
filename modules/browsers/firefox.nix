@@ -27,6 +27,10 @@
           "widget.disable-swipe-tracker" = false;
           "browser.gesture.swipe.left" = "Browser:BackOrBackDuplicate";
           "browser.gesture.swipe.right" = "Browser:ForwardOrForwardDuplicate";
+          # Firefox has not shipped WebGPU on Linux by default yet.
+          "dom.webgpu.enabled" = true;
+          "dom.webgpu.workers.enabled" = true;
+          "gfx.webgpu.ignore-blocklist" = true;
         };
 
         catppuccinMocha = "${inputs.tridactyl-theme-src}/themes/catppuccin-mocha.css";
@@ -59,6 +63,7 @@
         # MOZ_USE_XINPUT2 is set, so both are set for the X11-fallback path.
         home.packages = [
           (config.stubbe.gfx.bundle {
+            vulkan = true;
             pkg = pkgs.firefox.override {
               extraPolicies = {
                 Homepage = {

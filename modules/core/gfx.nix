@@ -20,6 +20,12 @@ _: {
       # libs (see modules/core/pkgs/gl.nix).
       mkGLWrapper = pkgs.stubbe.gl { hasNvidia = config.host.graphicsNvidia; };
 
+      # For programs that also drive the GPU through Vulkan, as WebGPU does.
+      mkVulkanWrapper = pkgs.stubbe.gl {
+        hasNvidia = config.host.graphicsNvidia;
+        vulkan = true;
+      };
+
       linkAs =
         name: exe:
         pkgs.runCommand name { } ''
@@ -28,11 +34,14 @@ _: {
         '';
 
       wrapAs =
-        name: program:
-        if unwrapped then linkAs name (lib.getExe program) else mkGLWrapper name (lib.getExe program);
+        wrapper: name: program:
+        if unwrapped then linkAs name (lib.getExe program) else wrapper name (lib.getExe program);
 
-      wrapExe =
-        exeName: program: if unwrapped then program else mkGLWrapper exeName (lib.getExe' program exeName);
+      wrapExeWith =
+        wrapper: exeName: program:
+        if unwrapped then program else wrapper exeName (lib.getExe' program exeName);
+
+      wrapExe = wrapExeWith mkGLWrapper;
 
       wrap =
         program:
@@ -73,6 +82,7 @@ _: {
           pkg,
           exes ? null,
           gfx ? true,
+          vulkan ? false,
           flags ? [ ],
           env ? { },
           unset ? [ ],
@@ -84,7 +94,8 @@ _: {
           exeList = if exes == null then [ (baseNameOf (lib.getExe pkg)) ] else exes;
           mainExe = builtins.head exeList;
 
-          gfxOf = exe: if exe == mainExe then wrapAs exe pkg else wrapExe exe pkg;
+          wrapper = if vulkan then mkVulkanWrapper else mkGLWrapper;
+          gfxOf = exe: if exe == mainExe then wrapAs wrapper exe pkg else wrapExeWith wrapper exe pkg;
           sourceFor = exe: if gfx then "${gfxOf exe}/bin/${exe}" else "${pkg}/bin/${exe}";
 
           wrapperArgs = lib.concatStringsSep " " (

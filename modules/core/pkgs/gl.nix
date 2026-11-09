@@ -18,7 +18,10 @@ _: {
       lib,
       ...
     }:
-    { hasNvidia }:
+    {
+      hasNvidia,
+      vulkan ? false,
+    }:
     let
       # `--suffix` lets user-set values win; missing paths are skipped by the
       # loader, but if NONE of a list exists EGL/GBM init fails — hence the
@@ -82,16 +85,21 @@ _: {
             --suffix __EGL_EXTERNAL_PLATFORM_CONFIG_FILENAMES : "${eglExternalPlatforms}" \
             --suffix LD_LIBRARY_PATH : "${hostDriverLibs}" \
             --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
-            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}"
+            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" ${lib.optionalString vulkan ''
+              \
+                          --suffix VK_ADD_DRIVER_FILES : "/usr/share/vulkan/icd.d/nvidia_icd.json:/etc/vulkan/icd.d/nvidia_icd.json"''}
         ''
       else
         let
           nixGL = final.nixgl.nixGLIntel;
+          nixVulkan = final.nixgl.nixVulkanIntel;
         in
         ''
           makeWrapper ${nixGL}/bin/${nixGL.name} $out/bin/${name} \
             --suffix GBM_BACKENDS_PATH : "${gbmBackendsPath}" \
-            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" \
+            --suffix LIBGL_DRIVERS_PATH : "${libglDriversPath}" ${lib.optionalString vulkan ''
+              \
+                          --add-flag "${nixVulkan}/bin/${nixVulkan.name}"''} \
             --add-flag "${programPath}"
         ''
     );
