@@ -924,11 +924,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794256594,
-        "narHash": "sha256-YDiv2aHTegeK5drm4E1QCrumexS3lHjrmKIw15Zow6s=",
+        "lastModified": 1794295378,
+        "narHash": "sha256-qp+7yQGIfS3lZJnZckyhw8mQaO5ha5hw0vkj/F8/jhY=",
         "owner": "stubbedev",
         "repo": "lys-wm",
-        "rev": "9786fd455495379bf54435c7031179d37a3e7666",
+        "rev": "0f0376c0d9927b3ad2515fb0d1192cb68cf9b485",
         "type": "github"
       },
       "original": {
@@ -1463,11 +1463,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794276898,
-        "narHash": "sha256-qZFj4NtE55eMxSu0qU8D1BDQmC7HIrb+pc/0XRgPNkM=",
+        "lastModified": 1794296829,
+        "narHash": "sha256-OPoeVIrA2iiojzD6xXi+lbH2HbicKyJKw9pyi4jimP0=",
         "owner": "BirdeeHub",
         "repo": "nix-wrapper-modules",
-        "rev": "4b4c2a737b0717df0a9b03a83e0cde6d036c1ec9",
+        "rev": "0b6f0cfef4c09f118b476af1f091c00b31faa8f0",
         "type": "github"
       },
       "original": {
