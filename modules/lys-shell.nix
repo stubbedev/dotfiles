@@ -125,6 +125,13 @@ in
 
         stubbe.zshCompletions._lys-shell = "${lysShellBin} completions zsh";
 
+        xdg.configFile."autostart/nm-applet.desktop".text = ''
+          [Desktop Entry]
+          Type=Application
+          Name=NetworkManager Applet
+          Hidden=true
+        '';
+
         # The single file, never the directory: lys-shell writes into that directory
         # at runtime and home-manager refuses to overwrite it.
         xdg.configFile."lys-shell/config.yaml" = {
