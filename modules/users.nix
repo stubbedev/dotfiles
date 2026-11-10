@@ -37,7 +37,7 @@ _: {
       extraLocaleSettings = {
         LC_TIME = "en_GB.UTF-8";
       };
-      supportedLocales = ["all"];
+      supportedLocales = [ "all" ];
     };
 
     console.keyMap = "us";
