@@ -48,6 +48,11 @@ in
         };
       };
 
+      systemd.services.${config.virtualisation.oci-containers.containers.registry.serviceName} = {
+        bindsTo = [ "docker.service" ];
+        wantedBy = [ "docker.service" ];
+      };
+
       users.users.${config.host.primaryUser}.extraGroups = [ "docker" ];
     };
 
