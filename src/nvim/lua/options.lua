@@ -111,7 +111,10 @@ vim.filetype.add({
     ["compose.yml"] = "yaml.docker-compose",
     ["compose.yaml"] = "yaml.docker-compose",
   },
-  pattern = { [".*%.dockerignore"] = "gitignore" },
+  pattern = {
+    [".*%.dockerignore"] = "gitignore",
+    ["docker%-bake.*%.hcl"] = "hcl.dockerbake",
+  },
 })
 
 

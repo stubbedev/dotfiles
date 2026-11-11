@@ -239,13 +239,17 @@ local servers = {
   },
   docker_language_server = {
     cmd = { "docker-language-server", "start", "--stdio" },
-    filetypes = { "yaml.docker-compose" },
+    filetypes = { "yaml.docker-compose", "hcl.dockerbake" },
+    get_language_id = function(_, filetype)
+      return ({ ["yaml.docker-compose"] = "dockercompose", ["hcl.dockerbake"] = "dockerbake" })[filetype]
+    end,
     root_markers = {
       "Dockerfile",
       "docker-compose.yaml",
       "docker-compose.yml",
       "compose.yaml",
       "compose.yml",
+      "docker-bake.hcl",
       ".git",
     },
   },

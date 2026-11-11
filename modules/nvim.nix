@@ -123,6 +123,7 @@
                   biome # css, json
                   shell-lsp
                   taplo
+                  terraform-ls
                   yayamlls
                   marksman
 
