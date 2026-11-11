@@ -163,10 +163,6 @@
       url = "github:stubbedev/zsh-fzf-npm-run";
       flake = false;
     };
-    disko = {
-      url = "github:nix-community/disko";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     # Runs direnv in a background daemon so the prompt never waits on a
     # nix-direnv evaluation. Ships no binary cache.
     direnv-instant = {

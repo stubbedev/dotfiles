@@ -3,27 +3,30 @@ set -euo pipefail
 
 # stb-install-nixos — live-ISO installer for stubbe NixOS hosts.
 #
-# Detects fixed disks attached to the live system, prompts to pick which
-# disks to wipe, formats them as ONE multi-device btrfs volume labeled
-# `stubbe`, lays down the subvolume structure that
-# modules/storage.nix expects, runs `nixos-install` against
-# /etc/nixos/dotfiles#<host>, replaces the read-only
-# /etc/nixos/dotfiles store-path with a writable git checkout owned by
-# the primary user, and applies the user password captured at the start
-# of the run.
+# Asks which host to install (every nixosConfiguration with
+# host.installed), evaluates that host's disk layout (config.stubbe.storage,
+# see modules/storage.nix), wipes the disks you pick and lays them out to
+# match: an EFI partition, then one btrfs volume labeled per the layout —
+# inside LUKS2 when the host sets host.luks — with the subvolumes it mounts.
+# Then runs `nixos-install` against /etc/nixos/dotfiles#<host>, replaces the
+# read-only /etc/nixos/dotfiles store path with a writable git checkout
+# owned by the primary user, and applies the user password captured at the
+# start of the run. On an impermanent host the checkout and the password
+# hash land under the persist root, since / is rolled back on every boot.
 #
 # Run as root from a tty in the live ISO.
 #
 # Flags:
 #   --host  <attr>   nixosConfigurations attribute to install
-#                    (default: stubbe-nixos)
+#                    (default: ask)
 #   --flake <path>   Flake to install from
 #                    (default: /etc/nixos/dotfiles)
 #   --no-reboot      Skip the post-install reboot prompt
 #   --dry-run        Print the plan and exit before any destructive action
 #   --resume         Skip wipe/partition/format/mount; expect /mnt already
 #                    set up (use after a mid-install failure to retry the
-#                    nixos-install step without re-wiping)
+#                    nixos-install step without re-wiping; open the LUKS
+#                    volume and mount it yourself first)
 #   -h, --help       Show this message
 
 usage() {
@@ -32,8 +35,7 @@ usage() {
 
 REPO_URL="git@github.com:stubbedev/dotfiles.git"
 FLAKE_PATH="/etc/nixos/dotfiles"
-FLAKE_ATTR="stubbe-nixos"
-PRIMARY_USER="stubbe"
+FLAKE_ATTR=""
 SKIP_REBOOT=0
 DRY_RUN=0
 RESUME=0
@@ -89,6 +91,9 @@ require wipefs
 require blkdiscard
 require mkfs.btrfs
 require mkfs.vfat
+require cryptsetup
+require mkpasswd
+require jq
 require nixos-install
 require nixos-enter
 require findmnt
@@ -98,13 +103,24 @@ require git
 require timedatectl
 require curl
 
+nix_eval() {
+  nix --extra-experimental-features 'nix-command flakes' eval --json "$@"
+}
+
+luks_name=""
+luks_opened=0
+
 cleanup() {
-  # Best-effort unmount on failure so the live system isn't left holding
-  # locks on /mnt that block a retry — UNLESS we're in --resume mode,
-  # where /mnt was set up by a prior run and tearing it down would force
-  # the user to re-mount everything before they can re-resume.
-  if [ "$RESUME" -eq 0 ] && mountpoint -q /mnt 2>/dev/null; then
-    umount -R /mnt 2>/dev/null || true
+  # Best-effort teardown on failure so the live system isn't left holding
+  # /mnt or an open LUKS mapping that blocks a retry — UNLESS we're in
+  # --resume mode, where both were set up by hand and tearing them down
+  # would force the user to redo that before they can re-resume.
+  [ "$RESUME" -eq 0 ] || return 0
+  if mountpoint -q /mnt 2>/dev/null; then
+    umount -R /mnt || echo "stb-install-nixos: could not unmount /mnt" >&2
+  fi
+  if [ "$luks_opened" -eq 1 ]; then
+    cryptsetup close "$luks_name" || echo "stb-install-nixos: could not close LUKS mapping $luks_name" >&2
   fi
 }
 trap cleanup EXIT
@@ -171,7 +187,7 @@ fi
 if [ "$RESUME" -eq 0 ]; then
   echo ""
   echo "Install mode:"
-  echo "  [1] Quick  — install ${FLAKE_ATTR} from ${FLAKE_PATH} (default)"
+  echo "  [1] Quick  — install a host from ${FLAKE_PATH} (default)"
   echo "  [2] Custom — hand off to nixos-wizard (km-clay/nixos-wizard)"
   echo "               Wizard generates its own config; the stubbe flake is NOT used."
   read -r -p "> " mode
@@ -195,13 +211,89 @@ if [ "$RESUME" -eq 0 ]; then
   esac
 fi
 
+# --- Host and install plan -------------------------------------------
+#
+# Every value the install depends on comes from the host's evaluated
+# configuration, so the disk is laid out exactly as the system will mount
+# it.
+echo "==> Listing installable hosts in ${FLAKE_PATH}"
+# shellcheck disable=SC2016
+mapfile -t hosts < <(
+  nix_eval "${FLAKE_PATH}#nixosConfigurations" \
+    --apply 'cs: builtins.filter (n: cs.${n}.config.host.installed) (builtins.attrNames cs)' \
+    | jq -r '.[]'
+)
+if [ "${#hosts[@]}" -eq 0 ]; then
+  echo "stb-install-nixos: ${FLAKE_PATH} defines no host with host.installed = true" >&2
+  exit 1
+fi
+
+if [ -z "$FLAKE_ATTR" ]; then
+  echo ""
+  echo "Host to install:"
+  for i in "${!hosts[@]}"; do
+    printf "  [%d] %s\n" "$((i + 1))" "${hosts[$i]}"
+  done
+  read -r -p "> " pick
+  [[ "$pick" =~ ^[0-9]+$ ]] && [ "$pick" -ge 1 ] && [ "$pick" -le "${#hosts[@]}" ] || {
+    echo "stb-install-nixos: invalid host choice '$pick'" >&2
+    exit 1
+  }
+  FLAKE_ATTR="${hosts[$((pick - 1))]}"
+fi
+
+host_known=false
+for h in "${hosts[@]}"; do
+  if [ "$h" = "$FLAKE_ATTR" ]; then
+    host_known=true
+  fi
+done
+if [ "$host_known" != true ]; then
+  echo "stb-install-nixos: '${FLAKE_ATTR}' is not an installable host (have: ${hosts[*]})" >&2
+  exit 1
+fi
+
+echo "==> Evaluating the install plan for ${FLAKE_ATTR}"
+plan="$(nix_eval "${FLAKE_PATH}#nixosConfigurations.${FLAKE_ATTR}.config" --apply '
+  c: {
+    inherit (c.stubbe) storage;
+    inherit (c.host) primaryUser secureBoot;
+    persistRoot = if c.host.impermanent then builtins.head (builtins.attrNames c.environment.persistence) else "";
+    passwordFile = c.users.users.${c.host.primaryUser}.hashedPasswordFile;
+    pkiBundle = c.boot.lanzaboote.pkiBundle;
+    hostKey = (builtins.head (builtins.filter (k: k.type == "ed25519") c.services.openssh.hostKeys)).path;
+  }
+')"
+
+plan_get() {
+  jq -r "$1" <<<"$plan"
+}
+
+PRIMARY_USER="$(plan_get .primaryUser)"
+secure_boot="$(plan_get .secureBoot)"
+persist_root="$(plan_get .persistRoot)"
+password_file="$(plan_get '.passwordFile // empty')"
+pki_bundle="$(plan_get '.pkiBundle // empty')"
+host_key="$(plan_get .hostKey)"
+boot_label="$(plan_get .storage.bootLabel)"
+boot_mount_opts="$(plan_get '.storage.bootMountOptions | join(",")')"
+btrfs_label="$(plan_get .storage.btrfsLabel)"
+data_partlabel="$(plan_get .storage.dataPartLabel)"
+luks_name="$(plan_get '.storage.luksName // empty')"
+mount_opts="$(plan_get '.storage.mountOptions | join(",")')"
+root_subvol="$(plan_get .storage.rootSubvolume)"
+blank_snapshot="$(plan_get .storage.blankSnapshot)"
+mapfile -t subvol_mounts < <(plan_get '.storage.subvolumes[].mountpoint')
+mapfile -t subvol_names < <(plan_get '.storage.subvolumes[].subvolume')
+
 # --- Password capture (quick install path) ---------------------------
 #
 # Asked up front so the user can walk away during nixos-install. The
 # plaintext lives only in this shell's memory and travels into
-# nixos-enter via a pipe at the end, so it doesn't leak into the tee'd
-# transcript. Skipping this here means resume runs also re-prompt —
-# fine, since a partial install may not have applied the password yet.
+# nixos-enter or mkpasswd via a pipe at the end, so it doesn't leak into
+# the tee'd transcript. Skipping this here means resume runs also
+# re-prompt — fine, since a partial install may not have applied the
+# password yet.
 echo ""
 echo "==> Password for ${PRIMARY_USER} (applied after install)"
 while :; do
@@ -302,6 +394,11 @@ if [ "$RESUME" -eq 0 ]; then
     exit 1
   fi
 
+  if [ -n "$luks_name" ] && [ "${#candidates[@]}" -ne 1 ]; then
+    echo "stb-install-nixos: ${FLAKE_ATTR} sets host.luks, which installs onto exactly one disk (picked ${#candidates[@]})" >&2
+    exit 1
+  fi
+
   MIN_BYTES=$(( 20 * 1024 * 1024 * 1024 ))
   for d in "${candidates[@]}"; do
     sz=$(lsblk -dno SIZE --bytes "/dev/$d")
@@ -333,8 +430,13 @@ if [ "$RESUME" -eq 0 ]; then
   # the partition tree so the user sees what they're about to lose.
   lsblk -o NAME,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINT "${candidates[@]/#/\/dev\/}"
   echo ""
-  echo "Host:  ${FLAKE_ATTR}"
-  echo "Flake: ${FLAKE_PATH}"
+  echo "Host:        ${FLAKE_ATTR}"
+  echo "Flake:       ${FLAKE_PATH}"
+  echo "Encryption:  ${luks_name:+LUKS2 (mapping ${luks_name})}${luks_name:-none}"
+  echo "Root:        ${root_subvol}${persist_root:+ (rolled back to ${blank_snapshot} every boot; state kept under ${persist_root})}"
+  for i in "${!subvol_mounts[@]}"; do
+    printf "             %-10s -> %s\n" "${subvol_names[$i]}" "${subvol_mounts[$i]}"
+  done
 
   if [ "$DRY_RUN" -eq 1 ]; then
     echo ""
@@ -374,8 +476,8 @@ if [ "$RESUME" -eq 0 ]; then
 
   echo "==> Partitioning $boot_dev (1G EFI + remainder for btrfs)"
   sgdisk \
-    --new=1:0:+1G --typecode=1:ef00 --change-name=1:STBBOOT \
-    --new=2:0:0   --typecode=2:8300 --change-name=2:stubbe-data \
+    --new=1:0:+1G --typecode=1:ef00 --change-name=1:"$boot_label" \
+    --new=2:0:0   --typecode=2:8300 --change-name=2:"$data_partlabel" \
     "$boot_dev"
   partprobe "$boot_dev" \
     || echo "stb-install-nixos: partprobe warned on $boot_dev, continuing after udevadm settle" >&2
@@ -406,8 +508,18 @@ if [ "$RESUME" -eq 0 ]; then
     extra_data+=("/dev/$d")
   done
 
-  echo "==> mkfs.vfat $boot_part (label STBBOOT)"
-  mkfs.vfat -F32 -n STBBOOT "$boot_part"
+  echo "==> mkfs.vfat $boot_part (label ${boot_label})"
+  mkfs.vfat -F32 -n "$boot_label" "$boot_part"
+
+  btrfs_dev="$first_data"
+  if [ -n "$luks_name" ]; then
+    echo "==> LUKS2 on $first_data — choose the disk passphrase you will type at every boot"
+    cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase "$first_data"
+    echo "==> Opening $first_data as /dev/mapper/${luks_name}"
+    cryptsetup open --allow-discards "$first_data" "$luks_name"
+    luks_opened=1
+    btrfs_dev="/dev/mapper/${luks_name}"
+  fi
 
   # Single-disk btrfs can't host raid1 metadata, so fall back to dup. With
   # 2+ disks raid1 metadata mirrors so losing one disk doesn't trash the
@@ -418,47 +530,39 @@ if [ "$RESUME" -eq 0 ]; then
     meta_profile="raid1"
   fi
 
-  echo "==> mkfs.btrfs (label stubbe, -d single -m ${meta_profile}) over $first_data ${extra_data[*]:-}"
-  mkfs.btrfs -f -L stubbe -d single -m "$meta_profile" "$first_data" "${extra_data[@]}"
+  echo "==> mkfs.btrfs (label ${btrfs_label}, -d single -m ${meta_profile}) over $btrfs_dev ${extra_data[*]:-}"
+  mkfs.btrfs -f -L "$btrfs_label" -d single -m "$meta_profile" "$btrfs_dev" "${extra_data[@]}"
   udevadm settle
 
   echo "==> Creating subvolumes"
-  mount -o compress=zstd,noatime "$first_data" /mnt
-  btrfs subvolume create /mnt/@
-  btrfs subvolume create /mnt/@home
-  btrfs subvolume create /mnt/@nix
-  btrfs subvolume create /mnt/@var
-  btrfs subvolume create /mnt/@persist
-  # Snapshot @ while it's still empty. modules/impermanence.nix
-  # rolls @ back to this snapshot on every boot when host.impermanent is
-  # true, leaving /etc and /var blank for the activation script to refill.
-  # Taken now (always) so flipping host.impermanent on later doesn't
-  # require reinstalling.
-  btrfs subvolume snapshot -r /mnt/@ /mnt/@-blank
+  mount -o "$mount_opts" "$btrfs_dev" /mnt
+  btrfs subvolume create "/mnt/${root_subvol}"
+  for name in "${subvol_names[@]}"; do
+    btrfs subvolume create "/mnt/${name}"
+  done
+  # Snapshot the root subvolume while it's still empty. On an impermanent
+  # host modules/impermanence.nix rolls the root back to this snapshot on
+  # every boot. Taken on every host so the snapshot always exists.
+  btrfs subvolume snapshot -r "/mnt/${root_subvol}" "/mnt/${blank_snapshot}"
   umount /mnt
 
-  mount_opts="compress=zstd,noatime"
   echo "==> Mounting subvolumes under /mnt"
-  mount -o "${mount_opts},subvol=@"           "$first_data" /mnt
-  mkdir -p /mnt/{home,nix,var,persist,boot,etc}
-  mount -o "${mount_opts},subvol=@home"       "$first_data" /mnt/home
-  mount -o "${mount_opts},subvol=@nix"        "$first_data" /mnt/nix
-  mount -o "${mount_opts},subvol=@var"        "$first_data" /mnt/var
-  mount -o "${mount_opts},subvol=@persist"    "$first_data" /mnt/persist
-  # fmask/dmask matches modules/storage.nix so the install-time
-  # mount sees /boot the same way the installed system will.
-  mount -o fmask=0077,dmask=0077 "$boot_part" /mnt/boot
+  mount -o "${mount_opts},subvol=${root_subvol}" "$btrfs_dev" /mnt
+  for i in "${!subvol_mounts[@]}"; do
+    mkdir -p "/mnt${subvol_mounts[$i]}"
+    mount -o "${mount_opts},subvol=${subvol_names[$i]}" "$btrfs_dev" "/mnt${subvol_mounts[$i]}"
+  done
+  mkdir -p /mnt/boot
+  mount -o "$boot_mount_opts" "$boot_part" /mnt/boot
 
 else
-  # --resume: trust that /mnt was set up by a prior run and just verify
-  # the expected layout. We don't try to re-derive boot_part / first_data
-  # because nothing past this point needs them — nixos-install reads from
-  # /mnt directly.
+  # --resume: trust that /mnt was set up by a prior run (LUKS opened and
+  # everything mounted by hand) and just verify the expected layout.
   echo "==> Resume mode: verifying /mnt layout"
-  for mp in /mnt /mnt/home /mnt/nix /mnt/var /mnt/persist /mnt/boot; do
-    if ! mountpoint -q "$mp" 2>/dev/null; then
-      echo "stb-install-nixos: $mp is not a mountpoint; can't resume" >&2
-      echo "  expected btrfs subvols @/@home/@nix/@var/@persist under /mnt, EFI at /mnt/boot" >&2
+  for mp in "" "${subvol_mounts[@]}" /boot; do
+    if ! mountpoint -q "/mnt${mp}" 2>/dev/null; then
+      echo "stb-install-nixos: /mnt${mp} is not a mountpoint; can't resume" >&2
+      echo "  expected subvolumes ${root_subvol} ${subvol_names[*]} under /mnt and the EFI partition at /mnt/boot" >&2
       exit 1
     fi
   done
@@ -467,14 +571,22 @@ fi
 echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
 nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password
 
-# Apply the password captured up front. chpasswd reads "user:plaintext"
-# from stdin and uses the installed system's default crypt method
-# (yescrypt on current NixOS), so this matches what `passwd` would have
-# produced. The pipe means the plaintext is never written to a file and
-# never appears in the tee'd transcript.
+# Apply the password captured up front. A host with immutable users
+# (impermanence) reads a hashedPasswordFile, so the hash is written there;
+# otherwise chpasswd reads "user:plaintext" from stdin and uses the
+# installed system's default crypt method. Either way the plaintext is
+# piped, never written to a file, and never appears in the transcript.
 echo "==> Setting password for ${PRIMARY_USER}"
-printf '%s:%s\n' "${PRIMARY_USER}" "${USER_PASSWORD}" \
-  | nixos-enter --root /mnt -c "chpasswd"
+if [ -n "$password_file" ]; then
+  install -d -m 0700 "/mnt$(dirname "$password_file")"
+  (
+    umask 077
+    printf '%s' "$USER_PASSWORD" | mkpasswd --method=yescrypt --stdin > "/mnt${password_file}"
+  )
+else
+  printf '%s:%s\n' "${PRIMARY_USER}" "${USER_PASSWORD}" \
+    | nixos-enter --root /mnt -c "chpasswd"
+fi
 unset USER_PASSWORD
 
 # Resolve uid/gid from the installed system — needed for ownership
@@ -484,16 +596,19 @@ user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
 
 # Replace the read-only ${FLAKE_PATH} store path with a live git checkout so
 # `nixos-rebuild switch --flake ${FLAKE_PATH}#...` works after first boot.
-# Non-fatal: a network outage or missing SSH key shouldn't brick an
-# otherwise complete install. The user can re-clone after first boot.
+# On an impermanent host it goes under the persist root, which
+# modules/impermanence.nix binds back onto /etc/nixos. Non-fatal: a
+# network outage or missing SSH key shouldn't brick an otherwise complete
+# install. The user can re-clone after first boot.
+clone_dir="/mnt${persist_root}${FLAKE_PATH}"
 clone_ok=false
-echo "==> Cloning ${REPO_URL} into /mnt${FLAKE_PATH}"
-mkdir -p "/mnt$(dirname "${FLAKE_PATH}")"
-rm -rf "/mnt${FLAKE_PATH:?}"
+echo "==> Cloning ${REPO_URL} into ${clone_dir}"
+mkdir -p "$(dirname "$clone_dir")"
+rm -rf "${clone_dir:?}"
 if GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
-    git clone "$REPO_URL" "/mnt${FLAKE_PATH}"; then
+    git clone "$REPO_URL" "$clone_dir"; then
   clone_ok=true
-  chown -R "${user_uid}:${user_gid}" "/mnt${FLAKE_PATH}"
+  chown -R "${user_uid}:${user_gid}" "$clone_dir"
 else
   echo "" >&2
   echo "WARNING: git clone failed (no network, or SSH key not authorized)." >&2
@@ -530,14 +645,18 @@ fi
 # host.secureBoot flag says whether it is in use; auto-enrolling is risky
 # (some firmware refuses to revert) so we generate keys but leave
 # enrollment to the user on first boot. The user-facing hint moves to
-# the final summary so it doesn't get buried in earlier output.
-secure_boot="$(nix --extra-experimental-features 'nix-command flakes' eval --json \
-  "${FLAKE_PATH}#nixosConfigurations.${FLAKE_ATTR}.config.host.secureBoot")"
-if [ "$secure_boot" = true ]; then
-  if [ ! -d /mnt/var/lib/sbctl/keys ]; then
-    echo "==> Generating Secure Boot keys (sbctl create-keys)"
-    nixos-enter --root /mnt -c 'sbctl create-keys' || \
-      echo "  sbctl create-keys failed; generate manually after first boot" >&2
+# the final summary so it doesn't get buried in earlier output. On an
+# impermanent host the keys are moved under the persist root, which is
+# bound back onto the bundle path at boot.
+if [ "$secure_boot" = true ] && [ ! -d "/mnt${persist_root}${pki_bundle}/keys" ]; then
+  echo "==> Generating Secure Boot keys (sbctl create-keys)"
+  if nixos-enter --root /mnt -c 'sbctl create-keys'; then
+    if [ -n "$persist_root" ]; then
+      mkdir -p "/mnt${persist_root}$(dirname "$pki_bundle")"
+      mv "/mnt${pki_bundle}" "/mnt${persist_root}${pki_bundle}"
+    fi
+  else
+    echo "  sbctl create-keys failed; generate manually after first boot" >&2
   fi
 fi
 
@@ -552,10 +671,20 @@ echo "  Flake checkout: ${FLAKE_PATH} (clone of ${REPO_URL}, owned by ${PRIMARY_
 echo "  Transcript:     ${LOG}"
 echo ""
 echo "Log in as '${PRIMARY_USER}', then iterate via:"
-echo "  sudo nixos-rebuild switch --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
+echo "  hm switch"
+echo ""
+echo "System secrets decrypt with this host's new SSH host key, which is not"
+echo "a sops recipient yet. After first boot, trust it and re-encrypt:"
+echo "  hm trust ${FLAKE_ATTR}-host \"\$(ssh-to-age < ${host_key}.pub)\""
+if [ -n "$password_file" ]; then
+  echo ""
+  echo "Users are immutable on this host: change the password by writing a new"
+  echo "hash, not with passwd:"
+  echo "  mkpasswd --method=yescrypt | sudo tee ${password_file} >/dev/null"
+fi
 if [ "$secure_boot" = true ]; then
   echo ""
-  echo "Secure Boot: keys are in /var/lib/sbctl. On first boot, put firmware"
+  echo "Secure Boot: keys are in ${pki_bundle}. On first boot, put firmware"
   echo "in Setup Mode (clear platform keys in BIOS), then run:"
   echo "  sudo sbctl enroll-keys --microsoft"
   echo "  sudo sbctl verify"

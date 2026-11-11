@@ -1,4 +1,7 @@
-{ inputs, ... }:
+{ config, inputs, ... }:
+let
+  homeModules = config.flake.modules.homeManager;
+in
 {
   flake.modules.homeManager.home =
     {
@@ -85,13 +88,19 @@
     };
 
   flake.modules.nixos.home =
-    { ... }:
+    { config, lib, ... }:
     {
       imports = [ inputs.home-manager.nixosModules.home-manager ];
 
       home-manager = {
         useGlobalPkgs = true;
         useUserPackages = true;
+        users.${config.host.primaryUser} = lib.mkIf config.host.installed {
+          imports = builtins.attrValues homeModules;
+          host = config.host.sharedFacts // {
+            platform = "nixos";
+          };
+        };
       };
     };
 }

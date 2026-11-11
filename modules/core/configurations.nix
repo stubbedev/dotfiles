@@ -66,7 +66,7 @@ in
         inherit (host) system;
         modules = [
           host.module
-          (sharedFlakeAttrModule name)
+          (flakeAttrModule name)
         ];
       }
     ) config.configurations.nixos;

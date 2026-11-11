@@ -1,6 +1,5 @@
 {
   config,
-  inputs,
   lib,
   self,
   ...
@@ -209,8 +208,8 @@ in
           "profile.d/stb-welcome.sh".text = ''
             [ "$(id -u)" -eq 0 ] || return 0
             printf '\n\033[1;32m=== stubbe NixOS Installer ===\033[0m\n'
-            printf 'Run \033[1mstb-install-nixos\033[0m to detect, partition, and install.\n'
-            printf '       \033[2m(--host <attr> to install a different host, --help for flags)\033[0m\n\n'
+            printf 'Run \033[1mstb-install-nixos\033[0m to pick a host, partition, and install.\n'
+            printf '       \033[2m(--host <attr> to skip the host prompt, --help for flags)\033[0m\n\n'
             if [ -z "''${STB_WIFI_TUI_RAN:-}" ] \
                 && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] \
                 && ! ip -4 route show default | grep -q .; then
@@ -237,14 +236,16 @@ in
 
         environment.systemPackages = with pkgs; [
           btrfs-progs
+          cryptsetup
           curl
           git
           gptfdisk
           impala
+          jq
           memtest86plus
+          mkpasswd
           parted
           rsync
-          inputs.disko.packages.${system}.default
           (pkgs.stubbe.shellScriptBin "stb-install-nixos" (
             builtins.readFile (self + "/bin/stb-install-nixos")
           ))

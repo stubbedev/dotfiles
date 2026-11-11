@@ -1,11 +1,20 @@
 { config, ... }:
 let
-  inherit (config.stubbe.lib) userName;
+  inherit (config.stubbe.lib) userName lanHosts;
 
-  sharedOptions = lib: {
+  sharedOptions = lib: host: {
+    flakeAttr = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        The attribute this machine's configuration is defined under.
+        modules/core/configurations.nix sets it from the attribute name.
+      '';
+    };
+
     mdnsName = lib.mkOption {
-      type = lib.types.nullOr (lib.types.enum (builtins.attrNames config.stubbe.lib.lanHosts));
-      default = null;
+      type = lib.types.nullOr (lib.types.enum (builtins.attrNames lanHosts));
+      default = if lanHosts ? ${host.flakeAttr} then host.flakeAttr else null;
+      defaultText = lib.literalMD "`host.flakeAttr` when it is a key of `stubbe.lib.lanHosts`, else null";
       description = ''
         The name this host advertises over mDNS: it is reachable as
         `<mdnsName>.local`, which is the key it carries in
@@ -30,13 +39,19 @@ let
         when true, and uses nixGLIntel when false.
       '';
     };
+
+    battery = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "The machine runs on a battery, so the desktop shell shows its charge.";
+    };
   };
 in
 {
   flake.modules.homeManager.platform =
-    { lib, ... }:
+    { config, lib, ... }:
     {
-      options.host = sharedOptions lib // {
+      options.host = sharedOptions lib config.host // {
         platform = lib.mkOption {
           type = lib.types.enum [
             "linux"
@@ -69,27 +84,25 @@ in
             development set, "mobile" a terminal-only set for a phone.
           '';
         };
-
-        battery = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "The machine runs on a battery, so the desktop shell shows its charge.";
-        };
-
-        flakeAttr = lib.mkOption {
-          type = lib.types.str;
-          description = ''
-            The attribute this machine's configuration is defined under.
-            modules/core/configurations.nix sets it from the attribute name.
-          '';
-        };
       };
     };
 
   flake.modules.nixos.platform =
-    { lib, ... }:
+    { config, lib, ... }:
     {
-      options.host = sharedOptions lib // {
+      options.host = sharedOptions lib config.host // {
+        sharedFacts = lib.mkOption {
+          type = lib.types.attrs;
+          internal = true;
+          readOnly = true;
+          default = lib.getAttrs (builtins.attrNames (sharedOptions lib config.host)) config.host;
+          description = ''
+            The host facts both classes declare, as this NixOS host set them.
+            modules/core/home.nix forwards them into the primary user's
+            home-manager configuration, so the two halves cannot disagree.
+          '';
+        };
+
         primaryUser = lib.mkOption {
           type = lib.types.str;
           default = userName;
@@ -106,12 +119,39 @@ in
           type = lib.types.bool;
           default = false;
           description = ''
-            Set true on hosts that target real, post-install hardware (e.g.
-            `stubbe-nixos`). Activates the real btrfs layout in
-            modules/storage.nix and inhibits any stub fileSystems that
-            exist purely to keep a fresh checkout `nix build`-evaluable. The
-            installer ISO leaves this at the default so the live image keeps
-            using the installation media's own root mount.
+            Set true on hosts that target real, post-install hardware. Activates
+            the bootloader, the btrfs layout in modules/storage.nix and the
+            primary user's home-manager configuration. The installer ISO leaves
+            this at the default so the live image keeps using the installation
+            media's own root mount and boot loader.
+          '';
+        };
+
+        luks = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            The btrfs volume sits inside a LUKS2 container on the data
+            partition, unlocked by passphrase in the systemd initrd.
+            stb-install-nixos formats it that way when this is true, and
+            installs onto exactly one disk. Unattended TPM2 unlock is added
+            later, without reinstalling, by enrolling a token with
+            `systemd-cryptenroll --tpm2-device=auto` once Secure Boot is on.
+          '';
+        };
+
+        hibernateSwapSize = lib.mkOption {
+          type = lib.types.nullOr lib.types.ints.positive;
+          default = null;
+          example = 32;
+          description = ''
+            Size in GiB of a swapfile on its own @swap subvolume, so the
+            machine can hibernate. Size it to the RAM: on hibernate, what zram
+            holds is written out too. zram keeps the higher priority, so the
+            file only takes overflow in normal use. systemd records the resume
+            location in an EFI variable and the initrd resumes from it, so no
+            resume_offset is needed. Null means no disk swap and no
+            hibernation. Part of the disk layout, so decided at install time.
           '';
         };
 
@@ -134,16 +174,12 @@ in
           type = lib.types.bool;
           default = false;
           description = ''
-            Wipe the root subvolume on every boot, persisting only declared
-            paths under /persist. DEFAULT FALSE: enabling on a system that
-            hasn't been laid out for impermanence will lose state.
-            Recommended flow:
-              1. Install with impermanent = false; the install script creates
-                 an @-blank snapshot of the empty @ subvol so the flag is safe
-                 to flip later.
-              2. Audit the persistence list in modules/impermanence.nix; add
-                 anything host-specific.
-              3. Flip this flag to true; rebuild; reboot.
+            Roll the root subvolume back to its empty @-blank snapshot on every
+            boot, keeping only what modules/impermanence.nix persists under
+            /persist. /var then lives on the root subvolume instead of its own
+            @var, so it is wiped too. The layout differs from a persistent
+            host's, so this is decided at install time: stb-install-nixos
+            reads it and lays the disk out to match.
           '';
         };
       };

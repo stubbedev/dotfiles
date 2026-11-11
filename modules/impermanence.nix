@@ -4,56 +4,97 @@
     {
       config,
       lib,
+      options,
+      utils,
       ...
     }:
+    let
+      inherit (config.stubbe) storage;
+      persist = "/persist";
+      btrfsDeviceUnit = "${utils.escapeSystemdPath storage.btrfsDevice}.device";
+      features = config.stubbe.userFeatures;
+    in
     {
-      # Imports must be unconditional so `environment.persistence`
-      # exists as a defined option even when host.impermanent is false.
       imports = [ inputs.impermanence.nixosModules.impermanence ];
 
-      config = lib.mkIf (config.host.installed && config.host.impermanent) {
+      config = lib.mkIf config.host.impermanent {
+        assertions = [
+          {
+            assertion = config.host.installed;
+            message = "host.impermanent rolls back the installed root subvolume; set host.installed too.";
+          }
+        ];
+
+        fileSystems.${persist}.neededForBoot = true;
+
+        users = {
+          mutableUsers = false;
+          users.${config.host.primaryUser}.hashedPasswordFile =
+            "${persist}/passwords/${config.host.primaryUser}";
+        };
+
         boot.initrd.systemd.services.rollback-root = {
-          description = "Rollback / to @-blank";
+          description = "Roll / back to the empty ${storage.blankSnapshot} snapshot";
           wantedBy = [ "initrd.target" ];
+          requires = [ btrfsDeviceUnit ];
+          after = [ btrfsDeviceUnit ];
           before = [ "sysroot.mount" ];
           unitConfig.DefaultDependencies = "no";
           serviceConfig.Type = "oneshot";
           script = ''
-            mkdir -p /btrfs_tmp
-            mount -t btrfs -o subvol=/ /dev/disk/by-label/stubbe /btrfs_tmp
-            if [ -e /btrfs_tmp/@ ]; then
-              btrfs subvolume delete /btrfs_tmp/@
+            top=/run/rollback-root
+            mkdir -p "$top"
+            mount -t btrfs -o subvol=/ ${storage.btrfsDevice} "$top"
+
+            delete_subvolume() {
+              local child
+              while IFS= read -r child; do
+                delete_subvolume "$top/$child"
+              done < <(btrfs subvolume list -o "$1" | cut -d' ' -f9-)
+              btrfs subvolume delete "$1"
+            }
+
+            if [ -e "$top/${storage.rootSubvolume}" ]; then
+              delete_subvolume "$top/${storage.rootSubvolume}"
             fi
-            btrfs subvolume snapshot /btrfs_tmp/@-blank /btrfs_tmp/@
-            umount /btrfs_tmp
+            btrfs subvolume snapshot "$top/${storage.blankSnapshot}" "$top/${storage.rootSubvolume}"
+            umount "$top"
           '';
         };
 
-        environment.persistence."/persist" = {
+        services.openssh.hostKeys = map (
+          key: key // { path = persist + key.path; }
+        ) options.services.openssh.hostKeys.default;
+
+        environment.persistence.${persist} = {
           hideMounts = true;
           directories = [
-            "/var/log"
-            "/var/lib/bluetooth"
-            "/var/lib/nixos"
-            "/var/lib/systemd/coredump"
-            "/var/lib/systemd/timers"
-            "/var/lib/NetworkManager"
-            "/var/lib/sops-nix"
-            "/var/lib/sbctl"
-            "/var/lib/upower"
-            "/etc/NetworkManager/system-connections"
             "/etc/nixos"
+            "/etc/NetworkManager/system-connections"
+            "/var/log"
+            "/var/lib/nixos"
+            "/var/lib/systemd"
+            "/var/lib/NetworkManager"
+            "/var/lib/bluetooth"
+            "/var/lib/upower"
+            "/var/lib/power-profiles-daemon"
+            "/var/lib/adaptive-power-manager"
+            "/var/lib/fwupd"
+            {
+              directory = "/var/lib/private";
+              mode = "0700";
+            }
+          ]
+          ++ lib.optional config.programs.lys-login.greeter.enable "/var/lib/lys-greeter"
+          ++ lib.optional config.host.secureBoot config.boot.lanzaboote.pkiBundle
+          ++ lib.optional config.services.hardware.bolt.enable "/var/lib/boltd"
+          ++ lib.optional config.services.fprintd.enable "/var/lib/fprint"
+          ++ lib.optionals features.docker [
+            "/var/lib/docker"
+            "/var/lib/containerd"
           ];
-          files = [
-            "/etc/machine-id"
-            "/etc/ssh/ssh_host_ed25519_key"
-            "/etc/ssh/ssh_host_ed25519_key.pub"
-            "/etc/ssh/ssh_host_rsa_key"
-            "/etc/ssh/ssh_host_rsa_key.pub"
-          ];
+          files = [ "/etc/machine-id" ];
         };
-
-        programs.fuse.userAllowOther = true;
       };
     };
 }

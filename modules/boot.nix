@@ -1,11 +1,28 @@
 { inputs, ... }:
 {
   flake.modules.nixos.boot =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports = [ inputs.lys-splash.nixosModules.default ];
 
       boot = {
+        loader = lib.mkIf config.host.installed {
+          systemd-boot = {
+            enable = true;
+            # Disable the boot menu's text editor — anyone with physical access
+            # could otherwise append `init=/bin/sh` and get a root shell with
+            # no password.
+            editor = false;
+            configurationLimit = 2;
+          };
+          efi.canTouchEfiVariables = true;
+        };
+
         lys-splash = {
           enable = true;
           package = pkgs.lys-splash;

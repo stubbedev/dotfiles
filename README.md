@@ -121,9 +121,39 @@ Or directly with home-manager:
 home-manager switch --flake .#stubbe
 ```
 
-## NIXOS INSTALLER ISO
+## NIXOS HOSTS
 
-Build a bootable installer ISO that mirrors the `stubbe-nixos` host:
+`modules/hosts/` holds one file per machine, each a handful of host facts:
+
+| Host      | Hardware                     | Disk                                          |
+| --------- | ---------------------------- | --------------------------------------------- |
+| `desktop` | NVIDIA                       | btrfs, persistent root                        |
+| `laptop`  | ThinkPad X1 Carbon (battery) | LUKS2 + btrfs, root rolled back on every boot |
+
+The attribute name doubles as the machine's LAN name (`desktop.local`,
+`laptop.local`), and the facts a host sets (`host.battery`,
+`host.graphicsNvidia`, …) reach its home-manager half unchanged.
+
+The disk layout is derived from the host flags in `config.stubbe.storage`
+(`modules/storage.nix`), which both the mounts and the installer read:
+
+- **`host.luks`** puts the btrfs volume in a LUKS2 container, unlocked by
+  passphrase in the initrd. TPM2 unlock can be added later without
+  reinstalling: turn on Secure Boot, then `systemd-cryptenroll
+  --tpm2-device=auto` the data partition.
+- **`host.impermanent`** rolls the root subvolume back to an empty snapshot
+  on every boot. `/var` lives on the root then, so only what
+  `modules/impermanence.nix` persists under `/persist` survives: the flake
+  checkout, logs, network, bluetooth, fingerprints, docker, … `/home` and
+  `/nix` are their own subvolumes and unaffected. Users are immutable on such
+  a host; change the password by writing a new hash to
+  `/persist/passwords/<user>`.
+- **`host.secureBoot`** swaps systemd-boot for lanzaboote; enroll keys with
+  `sbctl` first.
+
+## INSTALLING NIXOS
+
+Build a bootable installer ISO:
 
 ```sh
 nix build .#installer-iso --impure
@@ -136,18 +166,25 @@ Boot the live USB on the target, log in as `root`, and run:
 stb-install-nixos
 ```
 
-It partitions the disks as a btrfs volume, runs `nixos-install`, and clones the
-repo to `/mnt/etc/nixos/dotfiles`.
+It asks which host to install, lays the disk out from that host's
+configuration, runs `nixos-install`, and clones the repo to
+`/etc/nixos/dotfiles`. After first boot, trust the new host key so system
+secrets decrypt: the installer prints the exact `hm trust` command.
 
-Optional hardening is available behind per-host flags in the host file
-(`modules/hosts/stubbe-nixos.nix`):
+### MOVING A MACHINE
 
-- **Secure Boot** (`host.secureBoot`) — lanzaboote signed bootloader; enroll
-  keys with `sbctl` first.
-- **Impermanence** (`host.impermanent`) — wipes `/` on every boot, keeping only
-  paths declared in `modules/impermanence.nix`.
+Your repositories move across a reinstall without re-cloning, mirrored to
+another machine over ssh (or to a local ext4/btrfs drive):
 
-Both require setup steps before flipping the flag — see the comments in the
-host file and module.
+```sh
+stb-migrate backup desktop.local:migrate    # before wiping; rerun to send only changes
+stb-migrate restore desktop.local:migrate   # after the reinstall
+```
+
+`backup` mirrors `~/git`, `~/.ssh` and `~/.gnupg`, everything included, into
+`<dest>/<hostname>/`. `restore` copies it back and never overwrites a file that
+already exists. The srv proxies and redirects are declared in
+`modules/srv.nix`, and its CA key is held in sops, so srv rebuilds itself on
+the first `hm switch`.
 
 ![Wallpaper preview](./src/wallpapers/traffic.png)
