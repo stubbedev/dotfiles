@@ -11,6 +11,7 @@
       host = {
         installed = true;
         graphicsNvidia = true;
+        wifiInterface = "wlp3s0";
       };
     };
   };

@@ -45,6 +45,19 @@ let
       default = false;
       description = "The machine runs on a battery, so the desktop shell shows its charge.";
     };
+
+    wifiInterface = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "wlp0s20f3";
+      description = ''
+        The machine's wifi interface. avahi announces `<mdnsName>.local` on it
+        and nowhere else: LAN names are for the wifi network, and announcing
+        one name on two interfaces of the same LAN (wired and wifi, or a dock)
+        makes avahi see its own records as a conflict and rename itself to
+        `<name>-2`. Required when features.avahi is on.
+      '';
+    };
   };
 in
 {

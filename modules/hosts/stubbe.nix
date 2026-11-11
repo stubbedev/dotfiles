@@ -9,6 +9,7 @@
       host = {
         mdnsName = "laptop";
         battery = true;
+        wifiInterface = "wlp0s20f3";
       };
     };
   };

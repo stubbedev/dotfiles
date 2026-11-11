@@ -11,6 +11,7 @@
       host = {
         installed = true;
         battery = true;
+        wifiInterface = "wlp0s20f3";
         luks = true;
         impermanent = true;
         hibernateSwapSize = 32;

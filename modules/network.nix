@@ -17,7 +17,17 @@ let
     ClientAliveCountMax = 3;
   };
 
-  avahiHostName = mdnsName: lib.optionalAttrs (mdnsName != null) { host-name = mdnsName; };
+  avahiServer =
+    host:
+    {
+      allow-interfaces = lib.optional (host.wifiInterface != null) host.wifiInterface;
+    }
+    // lib.optionalAttrs (host.mdnsName != null) { host-name = host.mdnsName; };
+
+  avahiAssertion = host: {
+    assertion = host.wifiInterface != null;
+    message = "features.avahi announces the host on its wifi interface only; set host.wifiInterface.";
+  };
   avahiPublish = {
     publish-addresses = true;
     publish-hinfo = true;
@@ -70,23 +80,19 @@ in
         extraServiceFiles = lib.optionalAttrs config.services.openssh.enable {
           ssh = sshServiceFile pkgs;
         };
-        # Real LAN NICs only. Without this, avahi advertises on docker0 / br-* /
-        # veth* too, which collides the hostname with itself across bridges
-        # (stubbe-nixos-2, -3, …) and leaks it into container networks.
         settings = {
-          server = {
-            allow-interfaces = [
-              "enp4s0"
-              "wlp3s0"
-            ];
-          }
-          // avahiHostName config.host.mdnsName;
+          server = avahiServer config.host;
           publish = avahiPublish // {
             disable-publishing = false;
             disable-user-service-publishing = false;
           };
         };
       };
+
+      services.resolved.settings.Resolve.MulticastDNS =
+        lib.mkIf config.stubbe.userFeatures.avahi "resolve";
+
+      assertions = lib.optional config.stubbe.userFeatures.avahi (avahiAssertion config.host);
 
       # NM-wait-online blocks boot until any connection is up; on a desktop with
       # offline-friendly services that just adds 20s to every boot. Services
@@ -211,23 +217,25 @@ in
           lib.generators.toINI
             {
               mkKeyValue = lib.generators.mkKeyValueDefault {
-                mkValueString = yesNo;
+                mkValueString = v: if lib.isList v then lib.concatStringsSep "," v else yesNo v;
               } "=";
             }
             {
-              server = {
-                allow-interfaces = "@ifaces@";
+              server = avahiServer config.host // {
                 use-ipv4 = true;
                 use-ipv6 = true;
                 ratelimit-interval-usec = 1000000;
                 ratelimit-burst = 1000;
-              }
-              // avahiHostName config.host.mdnsName;
+              };
               publish = avahiPublish;
             }
       );
     in
     {
+      assertions = lib.optional (config.features.avahi && config.host.platform == "linux") (
+        avahiAssertion config.host
+      );
+
       # HM owns the file from here on: a hand-written ~/.ssh/config would
       # otherwise make activation refuse to clobber it.
       programs.ssh = {
@@ -306,22 +314,7 @@ in
               rm -f "$_stb_tmp"
             fi
 
-            ifaces=$(ip -br link show 2>/dev/null \
-              | awk '{
-                  split($1, parts, "@");
-                  n = parts[1];
-                  if (n != "lo" && n !~ /^(docker|veth|br-|virbr|vmnet|tap|wg|vxlan|kube-|cni-|flannel|cilium|ip6tnl|tunl|sit|gre)/) print n;
-                }' \
-              | paste -sd, -)
-
-            if [ -z "$ifaces" ]; then
-              echo "No real LAN interfaces detected; skipping avahi-daemon.conf write." >&2
-            else
-              _stb_tmp=$(mktemp)
-              sed "s/@ifaces@/$ifaces/" ${avahiDaemonConf} > "$_stb_tmp"
-              sudo install -m 0644 -o root -g root "$_stb_tmp" /etc/avahi/avahi-daemon.conf
-              rm -f "$_stb_tmp"
-            fi
+            sudo install -m 0644 -o root -g root ${avahiDaemonConf} /etc/avahi/avahi-daemon.conf
 
             ${lib.optionalString config.features.openssh ''
               sudo install -d -m 0755 /etc/avahi/services
