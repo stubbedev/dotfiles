@@ -286,31 +286,40 @@ blank_snapshot="$(plan_get .storage.blankSnapshot)"
 mapfile -t subvol_mounts < <(plan_get '.storage.subvolumes[].mountpoint')
 mapfile -t subvol_names < <(plan_get '.storage.subvolumes[].subvolume')
 
-# --- Password capture (quick install path) ---------------------------
+# --- Secret capture (quick install path) -----------------------------
 #
 # Asked up front so the user can walk away during nixos-install. The
 # plaintext lives only in this shell's memory and travels into
-# nixos-enter or mkpasswd via a pipe at the end, so it doesn't leak into
-# the tee'd transcript. Skipping this here means resume runs also
-# re-prompt — fine, since a partial install may not have applied the
-# password yet.
+# cryptsetup, nixos-enter or mkpasswd via a pipe, so it doesn't leak into
+# the tee'd transcript or a process list. Skipping this here means resume
+# runs also re-prompt — fine, since a partial install may not have
+# applied the password yet.
+read_secret() {
+  local name=$1 label=$2 first second
+  while :; do
+    read -rsp "${label}: " first; echo ""
+    read -rsp "Confirm:  " second; echo ""
+    if [ -z "$first" ]; then
+      echo "${label} can't be empty."
+      continue
+    fi
+    if [ "$first" != "$second" ]; then
+      echo "They don't match, try again."
+      continue
+    fi
+    break
+  done
+  printf -v "$name" '%s' "$first"
+}
+
 echo ""
 echo "==> Password for ${PRIMARY_USER} (applied after install)"
-while :; do
-  read -rsp "Password: " pw1; echo ""
-  read -rsp "Confirm:  " pw2; echo ""
-  if [ -z "$pw1" ]; then
-    echo "Password can't be empty."
-    continue
-  fi
-  if [ "$pw1" != "$pw2" ]; then
-    echo "Passwords don't match, try again."
-    continue
-  fi
-  break
-done
-USER_PASSWORD="$pw1"
-unset pw1 pw2
+read_secret USER_PASSWORD "Password"
+if [ -n "$luks_name" ] && [ "$RESUME" -eq 0 ]; then
+  echo ""
+  echo "==> Disk passphrase (LUKS, typed at every boot)"
+  read_secret LUKS_PASSPHRASE "Passphrase"
+fi
 
 # --- Disk discovery / selection / wipe / partition / format / mount --
 #
@@ -432,7 +441,11 @@ if [ "$RESUME" -eq 0 ]; then
   echo ""
   echo "Host:        ${FLAKE_ATTR}"
   echo "Flake:       ${FLAKE_PATH}"
-  echo "Encryption:  ${luks_name:+LUKS2 (mapping ${luks_name})}${luks_name:-none}"
+  if [ -n "$luks_name" ]; then
+    echo "Encryption:  LUKS2 (mapping ${luks_name})"
+  else
+    echo "Encryption:  none"
+  fi
   echo "Root:        ${root_subvol}${persist_root:+ (rolled back to ${blank_snapshot} every boot; state kept under ${persist_root})}"
   for i in "${!subvol_mounts[@]}"; do
     printf "             %-10s -> %s\n" "${subvol_names[$i]}" "${subvol_mounts[$i]}"
@@ -513,10 +526,11 @@ if [ "$RESUME" -eq 0 ]; then
 
   btrfs_dev="$first_data"
   if [ -n "$luks_name" ]; then
-    echo "==> LUKS2 on $first_data — choose the disk passphrase you will type at every boot"
-    cryptsetup luksFormat --type luks2 --batch-mode --verify-passphrase "$first_data"
+    echo "==> LUKS2 on $first_data"
+    printf '%s' "$LUKS_PASSPHRASE" | cryptsetup luksFormat --type luks2 --batch-mode --key-file=- "$first_data"
     echo "==> Opening $first_data as /dev/mapper/${luks_name}"
-    cryptsetup open --allow-discards "$first_data" "$luks_name"
+    printf '%s' "$LUKS_PASSPHRASE" | cryptsetup open --allow-discards --key-file=- "$first_data" "$luks_name"
+    unset LUKS_PASSPHRASE
     luks_opened=1
     btrfs_dev="/dev/mapper/${luks_name}"
   fi
@@ -568,22 +582,27 @@ else
   done
 fi
 
-echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
-nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password
-
 # Apply the password captured up front. A host with immutable users
-# (impermanence) reads a hashedPasswordFile, so the hash is written there;
-# otherwise chpasswd reads "user:plaintext" from stdin and uses the
-# installed system's default crypt method. Either way the plaintext is
-# piped, never written to a file, and never appears in the transcript.
-echo "==> Setting password for ${PRIMARY_USER}"
+# (impermanence) reads a hashedPasswordFile, which the installed system's
+# activation needs to find, so the hash is written there before
+# nixos-install; otherwise chpasswd reads "user:plaintext" from stdin
+# after it and uses the installed system's default crypt method. Either
+# way the plaintext is piped, never written to a file, and never appears
+# in the transcript.
 if [ -n "$password_file" ]; then
+  echo "==> Writing the password hash for ${PRIMARY_USER} to ${password_file}"
   install -d -m 0700 "/mnt$(dirname "$password_file")"
   (
     umask 077
     printf '%s' "$USER_PASSWORD" | mkpasswd --method=yescrypt --stdin > "/mnt${password_file}"
   )
-else
+fi
+
+echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
+nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password
+
+if [ -z "$password_file" ]; then
+  echo "==> Setting password for ${PRIMARY_USER}"
   printf '%s:%s\n' "${PRIMARY_USER}" "${USER_PASSWORD}" \
     | nixos-enter --root /mnt -c "chpasswd"
 fi
