@@ -26,6 +26,21 @@ _: {
           '';
         };
 
+        hostPath = lib.mkOption {
+          type = lib.types.str;
+          default =
+            if config.host.platform == "nixos" then
+              "/run/wrappers/bin:/run/current-system/sw/bin"
+            else
+              "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+          defaultText = lib.literalMD "the NixOS system profile and setuid wrappers on NixOS, the FHS bin dirs elsewhere";
+          description = ''
+            The host's own executables, for units and activation steps whose
+            programs shell out to tools the host provides (docker, sudo,
+            certutil) and so cannot run on the stripped PATH they start with.
+          '';
+        };
+
         terminal = lib.mkOption {
           type = lib.types.str;
           default = "${config.stubbe.paths.nixBin}/alacritty";

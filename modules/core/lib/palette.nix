@@ -1,7 +1,11 @@
 # Branch of the stubbe.lib trunk (see ../lib.nix).
 # The single source of truth for colour and theme names; pkgs.stubbe.withHash
 # re-encodes these for formats that want a # prefix.
-_: {
+_:
+let
+  newtabDomain = "start.local";
+in
+{
   stubbe.lib = {
     colors = {
       rosewater = "f5e0dc";
@@ -40,8 +44,10 @@ _: {
       kvantum = "Catppuccin-Mocha-Mauve";
     };
 
-    # The page every new tab and the browser home button lands on.
-    newtabUrl = "https://start.local/";
+    # The page every new tab and the browser home button lands on, served by
+    # srv under newtabDomain.
+    inherit newtabDomain;
+    newtabUrl = "https://${newtabDomain}/";
 
   };
 }

@@ -107,7 +107,7 @@
       stubbe.setup.srvNewtab = lib.mkIf config.features.srv {
         after = [ "mutableFiles" ];
         script = ''
-          export PATH="/run/wrappers/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+          export PATH="${config.stubbe.paths.hostPath}:$PATH"
 
           if [ ! -d "$HOME/.config/srv" ]; then
             echo "srv-newtab: srv not installed (run 'srv install'); skipping."
@@ -116,7 +116,7 @@
 
           if ! ${srvBin} info start-local >/dev/null 2>&1; then
             ${srvBin} add ${lib.escapeShellArg root} \
-              --domain start.local --name start-local --local --daemon </dev/null >/dev/null \
+              --domain ${pkgs.stubbe.newtabDomain} --name start-local --local --daemon </dev/null >/dev/null \
               || echo "srv-newtab: 'srv add' failed; will retry next switch." >&2
           elif ! grep -q '^daemon_served: true' \
                    "$HOME/.config/srv/sites/start-local/metadata.yml" 2>/dev/null; then
@@ -127,7 +127,7 @@
             # here would leave "already exists" to kill the re-add below.
             ${srvBin} remove start-local --yes </dev/null >/dev/null 2>&1 || true
             ${srvBin} add ${lib.escapeShellArg root} \
-              --domain start.local --name start-local --local --daemon </dev/null >/dev/null \
+              --domain ${pkgs.stubbe.newtabDomain} --name start-local --local --daemon </dev/null >/dev/null \
               || echo "srv-newtab: daemon migration failed; will retry next switch." >&2
           fi
 
