@@ -47,7 +47,8 @@ in
             "dmask=0077"
           ];
           btrfsLabel = "stubbe";
-          btrfsDevice = "/dev/disk/by-label/${btrfsLabel}";
+          btrfsDevice =
+            if luksName != null then "/dev/mapper/${luksName}" else "/dev/disk/by-label/${btrfsLabel}";
           dataPartLabel = "stubbe-data";
           luksName = if config.host.luks then "stubbe" else null;
           mountOptions = [
