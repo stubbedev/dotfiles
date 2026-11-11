@@ -21,6 +21,12 @@ let
       max-size = "50m";
       max-file = "3";
     };
+
+    builder.gc = {
+      enabled = true;
+      defaultMaxUsedSpace = "30GB";
+      defaultMinFreeSpace = "50GB";
+    };
   };
 in
 {
@@ -135,6 +141,25 @@ in
         pkgs.docker-compose
         pkgs.lazydocker
       ];
+
+      systemd.user = lib.mkIf config.features.docker {
+        services.docker-image-prune = {
+          Unit.Description = "Remove Docker images no container uses that are over a week old";
+          Service = {
+            Type = "oneshot";
+            ExecStart = "${lib.getExe pkgs.docker} image prune --all --force --filter until=168h";
+          };
+        };
+        timers.docker-image-prune = {
+          Unit.Description = "Weekly removal of unused Docker images";
+          Timer = {
+            OnCalendar = "weekly";
+            Persistent = true;
+            RandomizedDelaySec = "1h";
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
+      };
 
       stubbe.setup.runcApparmor = lib.mkIf config.features.docker (
         pkgs.stubbe.setup.apparmor {
