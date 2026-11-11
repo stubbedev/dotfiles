@@ -1334,11 +1334,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1794236043,
-        "narHash": "sha256-1pqfRYTaZUrqK1hlx+smVpq+1Xd26tSLGeYryxlqq8E=",
+        "lastModified": 1794432510,
+        "narHash": "sha256-1XsnZrQQbPZrLBRDyF5TA0zWlxZ973pW4tMjp6j6IgQ=",
         "owner": "stubbedev",
         "repo": "srv",
-        "rev": "df00f5e57ef405b9a2398b2790c4c69742a9662f",
+        "rev": "6df6fdb37458d89fae880252d1d35d7e3419ba06",
         "type": "github"
       },
       "original": {
