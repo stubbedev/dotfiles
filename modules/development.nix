@@ -14,6 +14,11 @@
       imports = [ inputs.direnv-instant.homeModules.direnv-instant ];
 
       config = lib.mkIf config.features.development {
+        # Python is the one runtime kept global (pkgs.python3, the newest
+        # nixpkgs default) so `python3`, pip and venv work outside a repo dev
+        # shell. Every other toolchain stays in each repo's dev shell.
+        home.packages = [ pkgs.python3 ];
+
         home.sessionVariables.NODE_EXTRA_CA_CERTS = nodeCaBundle;
 
         home.file.".prettierrc.json".source = pkgs.stubbe.gen.json "prettierrc.json" {
@@ -34,8 +39,8 @@
           ];
         };
 
-        # Language toolchains and runtimes are deliberately absent: each repo's
-        # flake dev shell owns them, loaded by direnv on cd.
+        # Language toolchains and runtimes other than python are deliberately
+        # absent: each repo's flake dev shell owns them, loaded by direnv on cd.
         programs = {
           # silent drops status lines only; errors still print. The zsh hook
           # is direnv-instant's (below).

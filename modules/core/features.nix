@@ -12,7 +12,7 @@ let
       profiles = workstation;
     };
     development = {
-      description = "Editor language servers and formatters, direnv with its dev-shell integration, and the repo-agnostic dev CLI tools. Language runtimes and toolchains come from each repo's flake dev shell.";
+      description = "Editor language servers and formatters, direnv with its dev-shell integration, and the repo-agnostic dev CLI tools. Python is the only global runtime; every other toolchain comes from each repo's flake dev shell.";
       profiles = workstation;
     };
     ops = {
