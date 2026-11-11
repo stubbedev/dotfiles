@@ -1,16 +1,4 @@
-_:
-let
-  cacheMaxAge = "30d";
-in
-{
-  flake.modules.homeManager.storage =
-    { config, lib, ... }:
-    {
-      systemd.user.tmpfiles.rules = lib.mkIf (config.host.platform != "android") [
-        "e %C - - - ${cacheMaxAge}"
-      ];
-    };
-
+_: {
   flake.modules.nixos.storage =
     {
       config,
