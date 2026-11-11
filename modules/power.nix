@@ -1,5 +1,45 @@
-_:
+{ lib, ... }:
 let
+  sleepTargets = [
+    "suspend.target"
+    "hibernate.target"
+    "hybrid-sleep.target"
+    "suspend-then-hibernate.target"
+  ];
+
+  logindWatchdogSec = "15min";
+
+  nmWake = {
+    description = "Wake NetworkManager after resume";
+    after = sleepTargets ++ [ "NetworkManager.service" ];
+    busctlArgs = "call org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Sleep b false";
+  };
+
+  intelHybridModels = {
+    alder-lake = [
+      151
+      154
+    ];
+    raptor-lake = [
+      183
+      186
+      191
+    ];
+    meteor-lake = [
+      170
+      172
+    ];
+    lunar-lake = [ 189 ];
+    panther-lake = [ 204 ];
+  };
+
+  intelHybridCase = lib.concatMapStringsSep " | " toString (
+    lib.sort (a: b: a < b) (lib.concatLists (lib.attrValues intelHybridModels))
+  );
+
+  cpuModel =
+    awk: ''$(${awk} -F: '/^model[[:space:]]*:/ { gsub(/ /, "", $2); print $2; exit }' /proc/cpuinfo)'';
+
   apmDescription = "Adaptive battery charging and power profile policy";
   apmAfter = [
     "power-profiles-daemon.service"
@@ -32,11 +72,34 @@ in
 {
   flake.modules.nixos.power =
     {
+      config,
       lib,
       pkgs,
       ...
     }:
     {
+      services.intel-lpmd.enable = config.host.battery;
+
+      systemd.services.intel_lpmd.serviceConfig.ExecCondition = lib.mkIf config.host.battery (
+        pkgs.writeShellScript "intel-hybrid-cpu" ''
+          case "${cpuModel (lib.getExe pkgs.gawk)}" in
+          ${intelHybridCase}) exit 0 ;;
+          esac
+          exit 1
+        ''
+      );
+
+      systemd.services.systemd-logind.serviceConfig.WatchdogSec = logindWatchdogSec;
+
+      systemd.services.nm-wake-after-resume = {
+        inherit (nmWake) description after;
+        wantedBy = sleepTargets;
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "-${lib.getExe' config.systemd.package "busctl"} ${nmWake.busctlArgs}";
+        };
+      };
+
       services.power-profiles-daemon.enable = true;
       # The battery module and adaptive-power-manager read the battery
       # (and wireless peripherals' charge) from UPower.
@@ -81,31 +144,6 @@ in
     }:
     let
       managedBy = pkgs.stubbe.managedBy "suspend-resume-recovery";
-
-      sleepTargets = [
-        "suspend.target"
-        "hibernate.target"
-        "hybrid-sleep.target"
-        "suspend-then-hibernate.target"
-      ];
-
-      intelHybridModels = {
-        alder-lake = [
-          151
-          154
-        ];
-        raptor-lake = [
-          183
-          186
-          191
-        ];
-        meteor-lake = [
-          170
-          172
-        ];
-        lunar-lake = [ 189 ];
-        panther-lake = [ 204 ];
-      };
     in
     lib.mkIf config.features.desktop {
       home.packages = [
@@ -210,13 +248,8 @@ in
               the disk and burn a chunk of the battery mid-flight.
           '';
           script = ''
-            cpu_model=$(awk -F: '/^model[[:space:]]*:/ { gsub(/ /, "", $2); print $2; exit }' /proc/cpuinfo)
-            case "$cpu_model" in
-            ${
-              lib.concatMapStringsSep " | " toString (
-                lib.sort (a: b: a < b) (lib.concatLists (lib.attrValues intelHybridModels))
-              )
-            })
+            case "${cpuModel "awk"}" in
+            ${intelHybridCase})
               ${pkgs.stubbe.setup.hostPackage {
                 detect = "intel_lpmd";
                 apt = [ "intel-lpmd" ];
@@ -282,7 +315,7 @@ in
             ${pkgs.stubbe.setup.text {
               name = "watchdog.conf";
               target = "/etc/systemd/system/systemd-logind.service.d/watchdog.conf";
-              text = managedBy + pkgs.stubbe.gen.iniText { Service.WatchdogSec = "15min"; };
+              text = managedBy + pkgs.stubbe.gen.iniText { Service.WatchdogSec = logindWatchdogSec; };
             }}
 
             ${pkgs.stubbe.setup.text {
@@ -292,13 +325,13 @@ in
                 managedBy
                 + pkgs.stubbe.gen.unitText {
                   Unit = {
-                    Description = "Wake NetworkManager after resume";
-                    After = sleepTargets ++ [ "NetworkManager.service" ];
+                    Description = nmWake.description;
+                    After = nmWake.after;
                   };
                   Service = {
                     Type = "oneshot";
                     # "-": exits 1 with "Already awake" on every normal resume.
-                    ExecStart = "-/usr/bin/busctl call org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Sleep b false";
+                    ExecStart = "-/usr/bin/busctl ${nmWake.busctlArgs}";
                   };
                   Install.WantedBy = sleepTargets;
                 };
