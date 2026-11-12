@@ -549,11 +549,11 @@
     "libembroidery-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1794452355,
-        "narHash": "sha256-3sBKGDQmzE1CwG5VaqM5mkz1jGxbklfAfKFyVO1w/BQ=",
+        "lastModified": 1794461512,
+        "narHash": "sha256-aVoueZzXl5o74geKvW5QCi07mLkSshYFnmO68koVN7s=",
         "owner": "Embroidermodder",
         "repo": "libembroidery",
-        "rev": "fea24bb70858f4fbdf8595f7ca167a4d6b49a676",
+        "rev": "7aaaee4e7fd363b79eddcf212c9c0f53f278bbef",
         "type": "github"
       },
       "original": {
