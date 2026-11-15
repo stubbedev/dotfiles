@@ -24,10 +24,6 @@
       url = "github:stubbedev/xilo";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    adaptive-power-manager = {
-      url = "github:stubbedev/adaptive-power-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     # The Crush fork: config-driven theming, git header, thinking toggle and
     # prompt height, so nothing has to be patched into the Go source here.
     harness = {
@@ -56,7 +52,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # The whole lys desktop: compositor, shell, login, settings, polkit agent,
-    # Secret Service and boot splash, from one flake.
+    # Secret Service, boot splash and power policy, from one flake.
     lys = {
       url = "github:stubbedev/lys";
       inputs = {

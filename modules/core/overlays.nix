@@ -24,12 +24,12 @@ in
       "lys-secrets"
       "lys-polkit"
       "lys-settings"
+      "lys-power"
     ]
     // fromInputs [
       "shell-lsp"
       "claude-code"
       "xilo"
-      "adaptive-power-manager"
     ]
     // {
       cship =
