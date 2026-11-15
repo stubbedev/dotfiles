@@ -130,8 +130,7 @@ in
                     right = [
                       "keyboard-input"
                       "recorder"
-                      "volume"
-                      "microphone"
+                      "audio"
                       "brightness"
                     ]
                     ++ lib.optional config.host.battery "battery"
@@ -190,17 +189,7 @@ in
                 # would also show "Disconnected".
                 bluetooth.label-show = false;
 
-                volume = {
-                  scroll-up = "lys-shell audio output-volume +5";
-                  scroll-down = "lys-shell audio output-volume -5";
-                  middle-click = "lys-shell audio output-mute";
-                };
-
-                microphone = {
-                  scroll-up = "lys-shell audio input-volume +5";
-                  scroll-down = "lys-shell audio input-volume -5";
-                  middle-click = "lys-shell audio input-mute";
-                };
+                audio.right-click = "lys-shell audio input-mute";
 
                 weather = {
                   location = "55.6,12.5";
