@@ -113,6 +113,8 @@
           NVD_BACKEND = "direct";
         };
 
+        borders.active = "mauve";
+
         outputs = [
           {
             match = "eDP-1";
