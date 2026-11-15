@@ -17,14 +17,7 @@
     {
       imports = [ inputs.impermanence.nixosModules.impermanence ];
 
-      config = lib.mkIf config.host.impermanent {
-        assertions = [
-          {
-            assertion = config.host.installed;
-            message = "host.impermanent rolls back the installed root subvolume; set host.installed too.";
-          }
-        ];
-
+      config = lib.mkIf config.host.installed {
         fileSystems.${persist}.neededForBoot = true;
 
         users = {

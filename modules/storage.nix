@@ -14,7 +14,6 @@ _: {
         "/nix" = "@nix";
         "/persist" = "@persist";
       }
-      // lib.optionalAttrs (!config.host.impermanent) { "/var" = "@var"; }
       // lib.optionalAttrs (config.host.hibernateSwapSize != null) { "/swap" = "@swap"; };
     in
     {

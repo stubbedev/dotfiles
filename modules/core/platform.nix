@@ -172,18 +172,6 @@ in
           '';
         };
 
-        impermanent = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = ''
-            Roll the root subvolume back to its empty @-blank snapshot on every
-            boot, keeping only what modules/impermanence.nix persists under
-            /persist. /var then lives on the root subvolume instead of its own
-            @var, so it is wiped too. The layout differs from a persistent
-            host's, so this is decided at install time: stb-install-nixos
-            reads it and lays the disk out to match.
-          '';
-        };
       };
     };
 }

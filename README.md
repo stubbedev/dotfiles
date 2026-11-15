@@ -132,13 +132,14 @@ The disk layout is derived from the host flags in `config.stubbe.storage`
   passphrase in the initrd. TPM2 unlock can be added later without
   reinstalling: turn on Secure Boot, then `systemd-cryptenroll
   --tpm2-device=auto` the data partition.
-- **`host.impermanent`** rolls the root subvolume back to an empty snapshot
-  on every boot. `/var` lives on the root then, so only what
-  `modules/impermanence.nix` persists under `/persist` survives: the flake
-  checkout, logs, network, bluetooth, fingerprints, docker, … `/home` and
-  `/nix` are their own subvolumes and unaffected. Users are immutable on such
-  a host; change the password by writing a new hash to
-  `/persist/passwords/<user>`.
+
+Every installed host is impermanent: the root subvolume is rolled back to an
+empty snapshot on every boot, and `/var` lives on it, so only what
+`modules/impermanence.nix` persists under `/persist` survives: the flake
+checkout, logs, network, bluetooth, fingerprints, docker, … `/home` and `/nix`
+are their own subvolumes and unaffected. Users are immutable; change the
+password by writing a new hash to `/persist/passwords/<user>`.
+
 - **`host.secureBoot`** swaps systemd-boot for lanzaboote; enroll keys with
   `sbctl` first.
 

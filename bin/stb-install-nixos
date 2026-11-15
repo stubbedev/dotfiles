@@ -11,8 +11,8 @@ set -euo pipefail
 # Then runs `nixos-install` against /etc/nixos/dotfiles#<host>, replaces the
 # read-only /etc/nixos/dotfiles store path with a writable git checkout
 # owned by the primary user, and applies the user password captured at the
-# start of the run. On an impermanent host the checkout and the password
-# hash land under the persist root, since / is rolled back on every boot.
+# start of the run. The checkout and the password hash land under the
+# persist root, since / is rolled back on every boot.
 #
 # Run as root from a tty in the live ISO.
 #
@@ -258,7 +258,7 @@ plan="$(nix_eval "${FLAKE_PATH}#nixosConfigurations.${FLAKE_ATTR}.config" --appl
   c: {
     inherit (c.stubbe) storage;
     inherit (c.host) primaryUser secureBoot;
-    persistRoot = if c.host.impermanent then builtins.head (builtins.attrNames c.environment.persistence) else "";
+    persistRoot = builtins.head (builtins.attrNames c.environment.persistence);
     passwordFile = c.users.users.${c.host.primaryUser}.hashedPasswordFile;
     pkiBundle = c.boot.lanzaboote.pkiBundle;
     hostKey = (builtins.head (builtins.filter (k: k.type == "ed25519") c.services.openssh.hostKeys)).path;
@@ -272,7 +272,7 @@ plan_get() {
 PRIMARY_USER="$(plan_get .primaryUser)"
 secure_boot="$(plan_get .secureBoot)"
 persist_root="$(plan_get .persistRoot)"
-password_file="$(plan_get '.passwordFile // empty')"
+password_file="$(plan_get .passwordFile)"
 pki_bundle="$(plan_get '.pkiBundle // empty')"
 host_key="$(plan_get .hostKey)"
 boot_label="$(plan_get .storage.bootLabel)"
@@ -446,7 +446,7 @@ if [ "$RESUME" -eq 0 ]; then
   else
     echo "Encryption:  none"
   fi
-  echo "Root:        ${root_subvol}${persist_root:+ (rolled back to ${blank_snapshot} every boot; state kept under ${persist_root})}"
+  echo "Root:        ${root_subvol} (rolled back to ${blank_snapshot} every boot; state kept under ${persist_root})"
   for i in "${!subvol_mounts[@]}"; do
     printf "             %-10s -> %s\n" "${subvol_names[$i]}" "${subvol_mounts[$i]}"
   done
@@ -554,9 +554,8 @@ if [ "$RESUME" -eq 0 ]; then
   for name in "${subvol_names[@]}"; do
     btrfs subvolume create "/mnt/${name}"
   done
-  # Snapshot the root subvolume while it's still empty. On an impermanent
-  # host modules/impermanence.nix rolls the root back to this snapshot on
-  # every boot. Taken on every host so the snapshot always exists.
+  # Snapshot the root subvolume while it's still empty:
+  # modules/impermanence.nix rolls the root back to it on every boot.
   btrfs subvolume snapshot -r "/mnt/${root_subvol}" "/mnt/${blank_snapshot}"
   umount /mnt
 
@@ -582,31 +581,20 @@ else
   done
 fi
 
-# Apply the password captured up front. A host with immutable users
-# (impermanence) reads a hashedPasswordFile, which the installed system's
-# activation needs to find, so the hash is written there before
-# nixos-install; otherwise chpasswd reads "user:plaintext" from stdin
-# after it and uses the installed system's default crypt method. Either
-# way the plaintext is piped, never written to a file, and never appears
-# in the transcript.
-if [ -n "$password_file" ]; then
-  echo "==> Writing the password hash for ${PRIMARY_USER} to ${password_file}"
-  install -d -m 0700 "/mnt$(dirname "$password_file")"
-  (
-    umask 077
-    printf '%s' "$USER_PASSWORD" | mkpasswd --method=yescrypt --stdin > "/mnt${password_file}"
-  )
-fi
+# Apply the password captured up front. Users are immutable, so the
+# system reads a hashedPasswordFile, which activation needs to find: the
+# hash is written there before nixos-install. The plaintext is piped,
+# never written to a file, and never appears in the transcript.
+echo "==> Writing the password hash for ${PRIMARY_USER} to ${password_file}"
+install -d -m 0700 "/mnt$(dirname "$password_file")"
+(
+  umask 077
+  printf '%s' "$USER_PASSWORD" | mkpasswd --method=yescrypt --stdin > "/mnt${password_file}"
+)
+unset USER_PASSWORD
 
 echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
 nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password
-
-if [ -z "$password_file" ]; then
-  echo "==> Setting password for ${PRIMARY_USER}"
-  printf '%s:%s\n' "${PRIMARY_USER}" "${USER_PASSWORD}" \
-    | nixos-enter --root /mnt -c "chpasswd"
-fi
-unset USER_PASSWORD
 
 # Resolve uid/gid from the installed system — needed for ownership
 # regardless of whether the git clone succeeds.
@@ -615,8 +603,8 @@ user_gid="$(nixos-enter --root /mnt --command "id -g ${PRIMARY_USER}")"
 
 # Replace the read-only ${FLAKE_PATH} store path with a live git checkout so
 # `nixos-rebuild switch --flake ${FLAKE_PATH}#...` works after first boot.
-# On an impermanent host it goes under the persist root, which
-# modules/impermanence.nix binds back onto /etc/nixos. Non-fatal: a
+# It goes under the persist root, which modules/impermanence.nix binds
+# back onto /etc/nixos. Non-fatal: a
 # network outage or missing SSH key shouldn't brick an otherwise complete
 # install. The user can re-clone after first boot.
 clone_dir="/mnt${persist_root}${FLAKE_PATH}"
@@ -664,16 +652,14 @@ fi
 # host.secureBoot flag says whether it is in use; auto-enrolling is risky
 # (some firmware refuses to revert) so we generate keys but leave
 # enrollment to the user on first boot. The user-facing hint moves to
-# the final summary so it doesn't get buried in earlier output. On an
-# impermanent host the keys are moved under the persist root, which is
-# bound back onto the bundle path at boot.
+# the final summary so it doesn't get buried in earlier output. The keys
+# are moved under the persist root, which is bound back onto the bundle
+# path at boot.
 if [ "$secure_boot" = true ] && [ ! -d "/mnt${persist_root}${pki_bundle}/keys" ]; then
   echo "==> Generating Secure Boot keys (sbctl create-keys)"
   if nixos-enter --root /mnt -c 'sbctl create-keys'; then
-    if [ -n "$persist_root" ]; then
-      mkdir -p "/mnt${persist_root}$(dirname "$pki_bundle")"
-      mv "/mnt${pki_bundle}" "/mnt${persist_root}${pki_bundle}"
-    fi
+    mkdir -p "/mnt${persist_root}$(dirname "$pki_bundle")"
+    mv "/mnt${pki_bundle}" "/mnt${persist_root}${pki_bundle}"
   else
     echo "  sbctl create-keys failed; generate manually after first boot" >&2
   fi
@@ -695,12 +681,10 @@ echo ""
 echo "System secrets decrypt with this host's new SSH host key, which is not"
 echo "a sops recipient yet. After first boot, trust it and re-encrypt:"
 echo "  hm trust ${FLAKE_ATTR}-host \"\$(ssh-to-age < ${host_key}.pub)\""
-if [ -n "$password_file" ]; then
-  echo ""
-  echo "Users are immutable on this host: change the password by writing a new"
-  echo "hash, not with passwd:"
-  echo "  mkpasswd --method=yescrypt | sudo tee ${password_file} >/dev/null"
-fi
+echo ""
+echo "Users are immutable: change the password by writing a new hash, not"
+echo "with passwd:"
+echo "  mkpasswd --method=yescrypt | sudo tee ${password_file} >/dev/null"
 if [ "$secure_boot" = true ]; then
   echo ""
   echo "Secure Boot: keys are in ${pki_bundle}. On first boot, put firmware"
