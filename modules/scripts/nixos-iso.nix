@@ -113,12 +113,7 @@ _: {
               exit 1
             fi
 
-            if [[ "''${#nix_args[@]}" -gt 0 ]] || \
-               ! [[ -e "$out_link" ]]; then
-              build_iso "''${nix_args[@]}"
-            else
-              echo "Reusing existing ISO build: $(readlink -f "$out_link")"
-            fi
+            build_iso "''${nix_args[@]}"
             iso_path=$(resolve_iso_path)
 
             echo "Writing $iso_path to $device"
