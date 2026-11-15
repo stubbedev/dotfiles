@@ -119,6 +119,14 @@ _: {
             echo "Writing $iso_path to $device"
             sudo dd if="$iso_path" of="$device" bs=16M status=progress conv=fsync
             sync
+
+            echo "Verifying $device against $iso_path"
+            sudo blockdev --flushbufs "$device"
+            if ! sudo cmp -n "$(stat -c %s "$iso_path")" "$iso_path" "$device"; then
+              echo "Verification failed: $device does not read back as $iso_path; the device is unreliable" >&2
+              exit 1
+            fi
+            echo "Verified"
           }
 
           case "''${1:-}" in
