@@ -33,6 +33,7 @@ let
     publish-hinfo = true;
     publish-workstation = true;
     publish-domain = true;
+    publish-aaaa-on-ipv4 = false;
   };
 in
 {
