@@ -711,6 +711,7 @@
             Description = "Sync IMAP -> local maildir + reindex with notmuch";
             After = [ "network-online.target" ];
             Wants = [ "network-online.target" ];
+            X-SwitchMethod = "keep-old";
           };
           Service = {
             Type = "oneshot";

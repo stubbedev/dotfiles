@@ -109,7 +109,7 @@
         script = ''
           export PATH="${config.stubbe.paths.hostPath}:$PATH"
 
-          if [ ! -d "$HOME/.config/srv" ]; then
+          if [ ! -e ${lib.escapeShellArg config.stubbe.srv.installedMarker} ]; then
             echo "srv-newtab: srv not installed (run 'srv install'); skipping."
             exit 0
           fi

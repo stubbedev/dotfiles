@@ -235,106 +235,120 @@ in
         '';
       };
     in
-    lib.mkIf config.features.srv {
-      # certutil, so srv's vendored mkcert can trust the local CA in the
-      # browsers' NSS store (the system store only covers system TLS).
-      home.packages = [
-        srvPkg
-        pkgs.nss.tools
-      ];
+    {
+      options.stubbe.srv.installedMarker = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = "${config.xdg.configHome}/srv/traefik/docker-compose.yml";
+        defaultText = "\${config.xdg.configHome}/srv/traefik/docker-compose.yml";
+        description = ''
+          The file srv itself checks to decide whether `srv install` has run.
+          The srv-daemon unit creates the rest of the config directory on its
+          own, so its existence says nothing about the install.
+        '';
+      };
 
-      stubbe.zshCompletions._srv = "${srvExe} completion zsh";
+      config = lib.mkIf config.features.srv {
+        # certutil, so srv's vendored mkcert can trust the local CA in the
+        # browsers' NSS store (the system store only covers system TLS).
+        home.packages = [
+          srvPkg
+          pkgs.nss.tools
+        ];
 
-      # Declarative, not `srv daemon install`: that bakes a then-current store
-      # path into ExecStart, which the next upgrade or GC deletes, leaving the
-      # unit at status=203/EXEC.
-      systemd.user.services.srv-daemon = {
-        Unit = {
-          Description = "srv daemon - Docker container network connector";
-          Documentation = "https://github.com/stubbedev/srv";
-          # A user unit cannot order against system docker.service -- the dep is
-          # silently ignored -- so Restart=on-failure handles that race.
+        stubbe.zshCompletions._srv = "${srvExe} completion zsh";
+
+        # Declarative, not `srv daemon install`: that bakes a then-current store
+        # path into ExecStart, which the next upgrade or GC deletes, leaving the
+        # unit at status=203/EXEC.
+        systemd.user.services.srv-daemon = {
+          Unit = {
+            Description = "srv daemon - Docker container network connector";
+            Documentation = "https://github.com/stubbedev/srv";
+            # A user unit cannot order against system docker.service -- the dep is
+            # silently ignored -- so Restart=on-failure handles that race.
+          };
+          Service = {
+            Type = "simple";
+            ExecStart = "${srvExe} daemon start --foreground";
+            Restart = "on-failure";
+            RestartSec = 5;
+            Environment = [
+              "PATH=${config.stubbe.paths.hostPath}"
+              "XDG_CONFIG_HOME=${config.xdg.configHome}"
+            ];
+          };
+          Install.WantedBy = [ "default.target" ];
         };
-        Service = {
-          Type = "simple";
-          ExecStart = "${srvExe} daemon start --foreground";
-          Restart = "on-failure";
-          RestartSec = 5;
-          Environment = [
-            "PATH=${config.stubbe.paths.hostPath}"
-            "XDG_CONFIG_HOME=${config.xdg.configHome}"
-          ];
+
+        # Pin the CA cert to the committed copy, so the system store and every
+        # NSS database always see the same CA that srv signs with. force, because
+        # machines provisioned before this still hold mkcert's real file there.
+        xdg.dataFile."mkcert/rootCA.pem" = {
+          source = rootCA;
+          force = true;
         };
-        Install.WantedBy = [ "default.target" ];
-      };
 
-      # Pin the CA cert to the committed copy, so the system store and every
-      # NSS database always see the same CA that srv signs with. force, because
-      # machines provisioned before this still hold mkcert's real file there.
-      xdg.dataFile."mkcert/rootCA.pem" = {
-        source = rootCA;
-        force = true;
-      };
+        sops.secrets.mkcert-rootCA-key = pkgs.stubbe.secret {
+          name = "mkcert-rootCA-key";
+          path = "${config.xdg.dataHome}/mkcert/rootCA-key.pem";
+        };
 
-      sops.secrets.mkcert-rootCA-key = pkgs.stubbe.secret {
-        name = "mkcert-rootCA-key";
-        path = "${config.xdg.dataHome}/mkcert/rootCA-key.pem";
-      };
-
-      # srv's vendored mkcert only scans the legacy NSS locations (~/.mozilla,
-      # ~/.pki): HM's Firefox profiles live under ~/.config/mozilla and current
-      # Chrome keeps its user DB at ~/.local/share/pki. Seed those directly —
-      # user-owned databases, idempotent, no sudo. A stray `sudo` browser run
-      # can leave a profile's NSS files root-owned: unreadable to us and to the
-      # browser alike, so nothing is lost by moving them aside (the dir is
-      # ours) and starting a fresh DB. Best-effort: a failure is reported but
-      # never blocks activation.
-      stubbe.setup.nssTrust = {
-        script = ''
-          certutil=${lib.getExe' pkgs.nss.tools "certutil"}
-          for db in \
-            "$HOME"/.config/mozilla/firefox/*/cert9.db \
-            "$HOME"/.local/share/pki/nssdb/cert9.db \
-            "$HOME"/.pki/nssdb/cert9.db; do
-            [ -f "$db" ] || continue
-            dir=''${db%cert9.db}
-            if [ ! -O "$db" ] || [ ! -w "$db" ]; then
-              for f in cert9.db key4.db pkcs11.txt; do
-                if [ -e "$dir$f" ]; then mv -f "$dir$f" "$dir$f.unowned-bak"; fi
-              done
-              if ! "$certutil" -N --empty-password -d "sql:$dir"; then
-                echo "nssTrust: could not create an NSS database in $dir" >&2
-                continue
+        # srv's vendored mkcert only scans the legacy NSS locations (~/.mozilla,
+        # ~/.pki): HM's Firefox profiles live under ~/.config/mozilla and current
+        # Chrome keeps its user DB at ~/.local/share/pki. Seed those directly —
+        # user-owned databases, idempotent, no sudo. A stray `sudo` browser run
+        # can leave a profile's NSS files root-owned: unreadable to us and to the
+        # browser alike, so nothing is lost by moving them aside (the dir is
+        # ours) and starting a fresh DB. Best-effort: a failure is reported but
+        # never blocks activation.
+        stubbe.setup.nssTrust = {
+          script = ''
+            certutil=${lib.getExe' pkgs.nss.tools "certutil"}
+            for db in \
+              "$HOME"/.config/mozilla/firefox/*/cert9.db \
+              "$HOME"/.local/share/pki/nssdb/cert9.db \
+              "$HOME"/.pki/nssdb/cert9.db; do
+              [ -f "$db" ] || continue
+              dir=''${db%cert9.db}
+              if [ ! -O "$db" ] || [ ! -w "$db" ]; then
+                for f in cert9.db key4.db pkcs11.txt; do
+                  if [ -e "$dir$f" ]; then mv -f "$dir$f" "$dir$f.unowned-bak"; fi
+                done
+                if ! "$certutil" -N --empty-password -d "sql:$dir"; then
+                  echo "nssTrust: could not create an NSS database in $dir" >&2
+                  continue
+                fi
               fi
+              while IFS= read -r nickname; do
+                [ "$nickname" = ${lib.escapeShellArg caNickname} ] && continue
+                "$certutil" -D -d "sql:$dir" -n "$nickname" ||
+                  echo "nssTrust: could not remove the retired CA '$nickname' from $dir" >&2
+              done < <(
+                "$certutil" -L -d "sql:$dir" |
+                  sed -n -e 's/^\(srv CA [0-9a-f]*\) .*/\1/p' -e 's/^\(${legacyCaNickname}\) \{2,\}[^ ]* *$/\1/p'
+              )
+              "$certutil" -A -d "sql:$dir" -i ${rootCA} -n ${lib.escapeShellArg caNickname} -t "C,," ||
+                echo "nssTrust: could not add the srv CA to $dir" >&2
+            done
+          '';
+        };
+
+        # `srv daemon install` writes a *real* file at this path, which
+        # home-manager would refuse to replace ("Existing file would be
+        # clobbered"); force merges onto the unit HM's systemd module generates.
+        xdg.configFile."systemd/user/srv-daemon.service".force = true;
+
+        stubbe.setup.srvRoutes = {
+          after = [ "sops-nix" ];
+          script = ''
+            if [ ! -e ${lib.escapeShellArg config.stubbe.srv.installedMarker} ]; then
+              echo "srv-routes: srv not installed (run 'srv install'); skipping."
+            elif ! PATH="${config.stubbe.paths.hostPath}:$PATH" ${lib.getExe srvReconcile}; then
+              echo "srv-routes: reconciling the declared proxies and redirects failed; will retry next switch." >&2
             fi
-            while IFS= read -r nickname; do
-              [ "$nickname" = ${lib.escapeShellArg caNickname} ] && continue
-              "$certutil" -D -d "sql:$dir" -n "$nickname" ||
-                echo "nssTrust: could not remove the retired CA '$nickname' from $dir" >&2
-            done < <(
-              "$certutil" -L -d "sql:$dir" |
-                sed -n -e 's/^\(srv CA [0-9a-f]*\) .*/\1/p' -e 's/^\(${legacyCaNickname}\) \{2,\}[^ ]* *$/\1/p'
-            )
-            "$certutil" -A -d "sql:$dir" -i ${rootCA} -n ${lib.escapeShellArg caNickname} -t "C,," ||
-              echo "nssTrust: could not add the srv CA to $dir" >&2
-          done
-        '';
-      };
-
-      # `srv daemon install` writes a *real* file at this path, which
-      # home-manager would refuse to replace ("Existing file would be
-      # clobbered"); force merges onto the unit HM's systemd module generates.
-      xdg.configFile."systemd/user/srv-daemon.service".force = true;
-
-      stubbe.setup.srvRoutes = {
-        after = [ "sops-nix" ];
-        script = ''
-          if [ ! -d ${lib.escapeShellArg "${config.xdg.configHome}/srv"} ]; then
-            echo "srv-routes: srv not installed (run 'srv install'); skipping."
-          elif ! PATH="${config.stubbe.paths.hostPath}:$PATH" ${lib.getExe srvReconcile}; then
-            echo "srv-routes: reconciling the declared proxies and redirects failed; will retry next switch." >&2
-          fi
-        '';
+          '';
+        };
       };
     };
 }
