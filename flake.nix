@@ -55,91 +55,15 @@
       url = "github:stubbedev/notmuch-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    lys-ci.url = "github:stubbedev/lys-ci";
-    lys-lib = {
-      url = "github:stubbedev/lys-lib";
-      inputs = {
-        lys-ci.follows = "lys-ci";
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-      };
-    };
-    lys-ui = {
-      url = "github:stubbedev/lys-ui";
-      inputs = {
-        lys-ci.follows = "lys-ci";
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        lys-lib.follows = "lys-lib";
-      };
-    };
-    lys-secrets = {
-      url = "github:stubbedev/lys-secrets";
+    # The whole lys desktop: compositor, shell, login, settings, polkit agent,
+    # Secret Service and boot splash, from one flake.
+    lys = {
+      url = "github:stubbedev/lys";
       inputs = {
         nixpkgs.follows = "nixpkgs";
+        nixpkgs-mesa.follows = "nixpkgs";
         flake-parts.follows = "flake-parts";
         home-manager.follows = "home-manager";
-      };
-    };
-    lys-shell = {
-      url = "github:stubbedev/lys-shell";
-      inputs = {
-        lys-settings.follows = "lys-settings";
-        lys-ci.follows = "lys-ci";
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        lys-lib.follows = "lys-lib";
-        lys-login.follows = "lys-login";
-        lys-secrets.follows = "lys-secrets";
-        lys-wm.follows = "lys-wm";
-      };
-    };
-    lys-wm = {
-      url = "github:stubbedev/lys-wm";
-      inputs = {
-        lys-ci.follows = "lys-ci";
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        lys-ui.follows = "lys-ui";
-      };
-    };
-    # The session lock everywhere, and the display manager on NixOS.
-    lys-login = {
-      url = "github:stubbedev/lys-login";
-      inputs = {
-        lys-ci.follows = "lys-ci";
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        lys-secrets.follows = "lys-secrets";
-        lys-wm.follows = "lys-wm";
-      };
-    };
-    lys-settings = {
-      url = "github:stubbedev/lys-settings";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        home-manager.follows = "home-manager";
-        lys-ci.follows = "lys-ci";
-        lys-wm.follows = "lys-wm";
-      };
-    };
-    lys-polkit = {
-      url = "github:stubbedev/lys-polkit";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        home-manager.follows = "home-manager";
-      };
-    };
-    lys-splash = {
-      url = "github:stubbedev/lys-splash";
-      inputs = {
-        lys-ci.follows = "lys-ci";
-        nixpkgs.follows = "nixpkgs";
-        flake-parts.follows = "flake-parts";
-        lys-login.follows = "lys-login";
-        lys-wm.follows = "lys-wm";
       };
     };
     zsh-vim-mode = {

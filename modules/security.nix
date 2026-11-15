@@ -8,7 +8,7 @@
       ...
     }:
     {
-      imports = [ inputs.lys-secrets.nixosModules.default ];
+      imports = [ inputs.lys.nixosModules.lys-secrets ];
 
       security.sudo = {
         wheelNeedsPassword = true;

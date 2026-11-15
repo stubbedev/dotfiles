@@ -8,7 +8,7 @@
       ...
     }:
     {
-      imports = [ inputs.lys-wm.nixosModules.default ];
+      imports = [ inputs.lys.nixosModules.lys-wm ];
 
       config = lib.mkIf config.stubbe.userFeatures.lysWm {
         programs.lys-wm = {
@@ -238,7 +238,7 @@
       sessionTarget = [ config.wayland.systemd.target ];
     in
     {
-      imports = [ inputs.lys-wm.homeManagerModules.default ];
+      imports = [ inputs.lys.homeModules.lys-wm ];
 
       config = lib.mkIf config.features.lysWm {
         programs.lys-wm = {

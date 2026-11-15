@@ -8,7 +8,7 @@
       ...
     }:
     {
-      imports = [ inputs.lys-splash.nixosModules.default ];
+      imports = [ inputs.lys.nixosModules.lys-splash ];
 
       boot = {
         loader = lib.mkIf config.host.installed {

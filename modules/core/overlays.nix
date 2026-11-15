@@ -8,18 +8,25 @@ let
       ${name} = inputs.${name}.packages.${final.stdenv.hostPlatform.system}.default;
     }
   );
+  fromLys = lib.flip lib.genAttrs (
+    name: final: _prev: {
+      ${name} = inputs.lys.packages.${final.stdenv.hostPlatform.system}.${name};
+    }
+  );
 in
 {
   flake.overlays =
-    fromInputs [
+    fromLys [
       "lys-shell"
       "lys-wm"
       "lys-login"
-      "shell-lsp"
       "lys-splash"
       "lys-secrets"
       "lys-polkit"
       "lys-settings"
+    ]
+    // fromInputs [
+      "shell-lsp"
       "claude-code"
       "xilo"
       "adaptive-power-manager"

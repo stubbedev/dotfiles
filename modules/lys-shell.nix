@@ -21,8 +21,8 @@ in
     {
       # Nesting this in lib.mkIf makes the upstream modules and their options vanish.
       imports = [
-        inputs.lys-shell.nixosModules.default
-        inputs.lys-login.nixosModules.default
+        inputs.lys.nixosModules.lys-shell
+        inputs.lys.nixosModules.lys-login
       ];
 
       config =
@@ -76,7 +76,7 @@ in
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
     {
-      imports = [ inputs.lys-polkit.homeManagerModules.default ];
+      imports = [ inputs.lys.homeModules.lys-polkit ];
 
       config = lib.mkIf enabled {
         services.lys-polkit = {
