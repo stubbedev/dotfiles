@@ -62,8 +62,7 @@
         # Under XWayland libinput gesture events are swallowed unless
         # MOZ_USE_XINPUT2 is set, so both are set for the X11-fallback path.
         home.packages = [
-          (config.stubbe.gfx.bundle {
-            vulkan = true;
+          (pkgs.stubbe.wrapPackage {
             pkg = pkgs.firefox.override {
               extraPolicies = {
                 Homepage = {

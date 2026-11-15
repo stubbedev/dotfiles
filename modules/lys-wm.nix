@@ -1,25 +1,4 @@
 { inputs, ... }:
-let
-  sessionScript = ''
-    [ -n "''${USER:-}" ] || USER="$(id -un)"
-    [ -n "''${HOME:-}" ] || HOME="$(getent passwd "$USER" | cut -d: -f6)"
-    export USER HOME
-
-    for prof in "$HOME/.nix-profile" "/etc/profiles/per-user/$USER"; do
-      if [ -r "$prof/etc/profile.d/hm-session-vars.sh" ]; then
-        # shellcheck disable=SC1091
-        . "$prof/etc/profile.d/hm-session-vars.sh"
-      fi
-      case ":$PATH:" in
-        *":$prof/bin:"*) ;;
-        *) PATH="$prof/bin:$PATH" ;;
-      esac
-    done
-    export PATH
-
-    exec systemd-cat -t lys-wm lys-wm --systemd
-  '';
-in
 {
   flake.modules.nixos.lysWm =
     {
@@ -53,8 +32,6 @@ in
       ...
     }:
     let
-      inherit (config.stubbe) gfx;
-
       wireplumberHotplug = pkgs.stubbe.bashApp {
         name = "wireplumber-hotplug";
         runtimeInputs = with pkgs; [
@@ -63,30 +40,6 @@ in
         ];
         text = builtins.readFile ../src/lys-wm/scripts/wireplumber.hotplug.sh;
       };
-
-      lysWm = gfx.bundle {
-        pkg = pkgs.lys-wm;
-        exes = [ "lys-wm" ];
-      };
-
-      lysLoginPackage =
-        let
-          pin = lib.importJSON ../src/lys-wm/lys-login-deb.json;
-          arch = pkgs.stdenv.hostPlatform.linuxArch;
-          debArch =
-            {
-              x86_64 = "amd64";
-              arm64 = "arm64";
-            }
-            .${arch} or (throw "lys-login publishes no .deb for ${arch}");
-        in
-        {
-          inherit (pin) version;
-          deb = pkgs.fetchurl {
-            url = "https://github.com/stubbedev/lys-login/releases/download/v${pin.version}/lys-login_${pin.version}_${debArch}.deb";
-            hash = pin.hash.${debArch};
-          };
-        };
 
       bind = chord: action: { inherit chord action; };
       exec = command: "exec ${command}";
@@ -290,7 +243,7 @@ in
       config = lib.mkIf config.features.lysWm {
         programs.lys-wm = {
           enable = true;
-          package = lysWm;
+          package = pkgs.lys-wm;
         };
 
         home.packages = with pkgs; [
@@ -384,96 +337,6 @@ in
             }
           );
 
-          lysLogin =
-            let
-              unitFile = "/usr/lib/systemd/system/lys-login.service";
-              dmLink = "/etc/systemd/system/display-manager.service";
-              launcher = "/usr/local/bin/lys-wm-session";
-            in
-            {
-              privileged = true;
-              title = "Installing lys-login (the display manager, in place of greetd, GDM or SDDM)";
-              body = ''
-                Install lys-login's ${lysLoginPackage.version} package, show its greeter in
-                this profile's lys-wm, offer the lys-wm session from
-                /usr/local/share/wayland-sessions, and make lys-login the display
-                manager: every other display manager is disabled,
-                display-manager.service points at lys-login.service and
-                graphical.target is the default. Nothing is restarted, so it takes
-                effect on the next reboot and the current session survives.
-
-                If the greeter does not come up, switch to a text console
-                (Ctrl+Alt+F3), log in and read `journalctl -u lys-login -b`.
-              '';
-              # Purging another DM's package (deb-systemd-helper purge) deletes the
-              # shared display-manager.service alias it once owned, silently
-              # disabling lys-login; re-run when the alias disappears.
-              stateInputs = [ dmLink ];
-              script = ''
-                if ! command -v apt-get >/dev/null 2>&1; then
-                  echo "lys-login is installed from its .deb here; this host has no apt-get." >&2
-                  exit 1
-                fi
-                if [ "$(dpkg-query -W lys-login 2>/dev/null | cut -f2)" != ${lib.escapeShellArg lysLoginPackage.version} ]; then
-                  sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confold ${lysLoginPackage.deb}
-                fi
-
-                daemon_args=$(sed -n 's|^\(Environment="LYS_LOGIN_DAEMON_ARGS=.* --compositor \)/usr/bin/lys-wm |\1${lib.getExe lysWm} |p' ${unitFile})
-                if [ -z "$daemon_args" ]; then
-                  echo "${unitFile} has no LYS_LOGIN_DAEMON_ARGS with --compositor /usr/bin/lys-wm to point at this profile's lys-wm." >&2
-                  exit 1
-                fi
-                sudo install -d -m 0755 /etc/systemd/system/lys-login.service.d
-                printf '[Service]\n%s\n' "$daemon_args" | sudo tee /etc/systemd/system/lys-login.service.d/lys-wm.conf >/dev/null
-
-                ${pkgs.stubbe.setup.text {
-                  name = "lys-wm-session";
-                  target = launcher;
-                  mode = "0755";
-                  text = "#!/bin/sh\n" + sessionScript;
-                }}
-
-                ${pkgs.stubbe.setup.text {
-                  name = "lys-wm.desktop";
-                  target = "/usr/local/share/wayland-sessions/lys-wm.desktop";
-                  text = ''
-                    [Desktop Entry]
-                    Name=lys-wm
-                    Comment=lys-wm with this profile's environment
-                    Exec=${launcher}
-                    Type=Application
-                    DesktopNames=lys-wm
-                  '';
-                }}
-                ${pkgs.stubbe.setup.reloadUnits}
-
-                for dm in greetd gdm gdm3 sddm lightdm lxdm xdm ly; do
-                  if systemctl is-enabled --quiet "$dm.service" 2>/dev/null; then
-                    echo "Disabling the display manager $dm." >&2
-                    sudo systemctl disable "$dm.service"
-                  fi
-                done
-
-                if [ "$(readlink -f ${dmLink})" != ${unitFile} ]; then
-                  sudo rm -f ${dmLink}
-                fi
-                sudo systemctl enable lys-login.service
-                if [ "$(readlink -f ${dmLink})" != ${unitFile} ]; then
-                  echo "Enabling lys-login.service left ${dmLink} pointing at $(readlink -f ${dmLink}), not ${unitFile}." >&2
-                  exit 1
-                fi
-
-                if [ -d /etc/X11 ]; then
-                  echo /usr/bin/lys-login | sudo tee /etc/X11/default-display-manager >/dev/null
-                fi
-
-                if [ "$(systemctl get-default)" != graphical.target ]; then
-                  sudo systemctl set-default graphical.target >/dev/null
-                fi
-
-                echo "lys-login is the display manager from the next reboot; nothing was restarted." >&2
-              '';
-            };
         };
       };
     };

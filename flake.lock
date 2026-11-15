@@ -782,24 +782,6 @@
         "type": "github"
       }
     },
-    "flake-utils": {
-      "inputs": {
-        "systems": "systems_2"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    },
     "gitignore": {
       "inputs": {
         "nixpkgs": [
@@ -1427,27 +1409,6 @@
         "type": "github"
       }
     },
-    "nixgl": {
-      "inputs": {
-        "flake-utils": "flake-utils",
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1793798159,
-        "narHash": "sha256-c263mBFrDLv2/sguzQeKL99aJ4PkCdcUzcAuA5Cpzjo=",
-        "owner": "nix-community",
-        "repo": "nixgl",
-        "rev": "4306ae1d15adf3d386f1462b330d4f2648404711",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "nixgl",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1794192123,
@@ -2008,7 +1969,6 @@
         "lys-wm": "lys-wm",
         "nix-mcp": "nix-mcp",
         "nix-on-droid": "nix-on-droid",
-        "nixgl": "nixgl",
         "nixpkgs": "nixpkgs_16",
         "notmuch-mcp": "notmuch-mcp",
         "shell-lsp": "shell-lsp",
@@ -2130,21 +2090,6 @@
         "owner": "nix-systems",
         "repo": "default",
         "rev": "d36eeed142f88b5a636f2e3856a53c61654cf29b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
-    "systems_2": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
         "type": "github"
       },
       "original": {

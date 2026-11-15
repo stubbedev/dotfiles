@@ -1,4 +1,4 @@
-# hm: the wrapper around home-manager/nixos-rebuild that every host drives.
+# hm: the wrapper around nixos-rebuild / nix-on-droid that every host drives.
 _: {
   flake.modules.homeManager.script-hm =
     {
@@ -14,17 +14,9 @@ _: {
 
       hm = pkgs.stubbe.bashApp {
         name = "hm";
-        runtimeInputs = [
-          pkgs.curl
-          pkgs.jq
-        ];
         text = ''
           hm_flake_dir=$(realpath -e "''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}")
           hm_flake_ref="path:$hm_flake_dir"
-
-          is_nixos() {
-            ${lib.boolToString (config.host.platform == "nixos")}
-          }
 
           is_nix_on_droid() {
             ${lib.boolToString (config.host.platform == "android")}
@@ -58,75 +50,30 @@ _: {
               return
             fi
 
+            local ref
+            ref="$hm_flake_ref#$(nixos_attr)"
             case "$subcmd" in
-              switch|boot|test|build|repl)
-                if is_nixos; then
-                  local ref
-                  ref="$hm_flake_ref#$(nixos_attr)"
-                  case "$subcmd" in
-                    repl)
-                      nix repl "$ref" "$@"
-                      ;;
-                    switch|boot|test)
-                      sudo nixos-rebuild "$subcmd" --flake "$ref" "$@"
-                      ;;
-                    *)
-                      nixos-rebuild "$subcmd" --flake "$ref" "$@"
-                      ;;
-                  esac
-                else
-                  case "$subcmd" in
-                    boot|test)
-                      echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
-                      return 1
-                      ;;
-                    repl)
-                      nix repl "$hm_flake_ref#homeConfigurations.$USER" "$@"
-                      ;;
-                    *)
-                      home-manager "$subcmd" --flake "$hm_flake_ref" "$@"
-                      ;;
-                  esac
-                fi
-                return
+              repl)
+                nix repl "$ref" "$@"
+                ;;
+              switch|boot|test|dry-activate)
+                sudo nixos-rebuild "$subcmd" --flake "$ref" "$@"
+                ;;
+              build|dry-build|build-vm|build-vm-with-bootloader)
+                nixos-rebuild "$subcmd" --flake "$ref" "$@"
+                ;;
+              *)
+                echo "hm $subcmd: unavailable on NixOS. Supported subcommands: ${hmSpec.nixosVerbs}." >&2
+                return 1
                 ;;
             esac
-
-            if is_nixos; then
-              local prefix=()
-              case "$subcmd" in
-                dry-activate)
-                  prefix=(sudo)
-                  ;;
-                dry-build|build-vm|build-vm-with-bootloader)
-                  ;;
-                *)
-                  echo "hm $subcmd: unavailable on NixOS. Supported subcommands: ${hmSpec.nixosVerbs}." >&2
-                  return 1
-                  ;;
-              esac
-              "''${prefix[@]}" nixos-rebuild "$subcmd" --flake "$hm_flake_ref#$(nixos_attr)" "$@"
-            else
-              case "$subcmd" in
-                boot|test|dry-activate|dry-build|build-vm|build-vm-with-bootloader|repl)
-                  echo "hm $subcmd: NixOS-only (no home-manager CLI equivalent)." >&2
-                  return 1
-                  ;;
-                *)
-                  home-manager "$subcmd" --flake "$hm_flake_ref" "$@"
-                  ;;
-              esac
-            fi
           }
 
           run_rollback() {
             if is_nix_on_droid; then
               nix-on-droid rollback
-            elif is_nixos; then
-              sudo nixos-rebuild switch --rollback "$@"
             else
-              echo "hm rollback: not implemented for standalone home-manager. Use 'home-manager generations' to list, then run '<gen>/activate' from the desired generation." >&2
-              return 2
+              sudo nixos-rebuild switch --rollback "$@"
             fi
           }
 
@@ -138,10 +85,8 @@ _: {
           run_generations() {
             if is_nix_on_droid; then
               nix-on-droid generations "$@"
-            elif is_nixos; then
-              nixos-rebuild list-generations "$@"
             else
-              home-manager generations "$@"
+              nixos-rebuild list-generations "$@"
             fi
           }
 
@@ -160,14 +105,8 @@ _: {
             trap "kill $sudo_keepalive_pid 2>/dev/null || true" EXIT
           }
 
-          ensure_sudo() {
-            if [[ "''${1:-}" == "true" ]]; then
-              start_sudo_keepalive
-            fi
-          }
-
           prime_sudo_nixos() {
-            if is_nixos; then
+            if ! is_nix_on_droid; then
               start_sudo_keepalive
             fi
           }
@@ -210,50 +149,11 @@ _: {
             }
           }
 
-          lys_login_deb_pin=src/lys-wm/lys-login-deb.json
-
-          lys_login_deb_hash() {
-            local release=$1 version=$2 arch=$3 digest
-            if ! digest=$(jq -er --arg name "lys-login_''${version}_''${arch}.deb" \
-              '.assets[] | select(.name == $name) | .digest // empty' <<<"$release"); then
-              echo "hm: lys-login v$version's release lists no digest for its $arch .deb" >&2
-              return 1
-            fi
-            nix hash convert --to sri "$digest"
-          }
-
-          update_lys_login_deb() {
-            local api=https://api.github.com/repos/stubbedev/lys-login/releases/latest
-            local release tag version pin amd64 arm64
-            if ! release=$(curl -fsSL --max-time 30 "$api"); then
-              echo "hm: querying $api failed" >&2
-              return 1
-            fi
-            tag=$(jq -r .tag_name <<<"$release")
-            case "$tag" in
-              v[0-9]*) version=''${tag#v} ;;
-              *)
-                echo "hm: $api did not name a release tag (got '$tag')" >&2
-                return 1
-                ;;
-            esac
-            pin="$hm_flake_dir/$lys_login_deb_pin"
-            if ! amd64=$(lys_login_deb_hash "$release" "$version" amd64) \
-              || ! arm64=$(lys_login_deb_hash "$release" "$version" arm64) \
-              || ! jq -n --arg version "$version" --arg amd64 "$amd64" --arg arm64 "$arm64" \
-                '{version: $version, hash: {amd64: $amd64, arm64: $arm64}}' > "$pin.tmp"; then
-              rm -f "$pin.tmp"
-              echo "hm: pinning lys-login's $tag .deb failed" >&2
-              return 1
-            fi
-            mv "$pin.tmp" "$pin"
-          }
-
           commit_flake_lock() {
             flake_in_git || return 0
-            flake_git diff --quiet -- flake.lock "$lys_login_deb_pin" && return 0
-            flake_git add -- flake.lock "$lys_login_deb_pin"
-            flake_git commit -m "chore: update flake.lock" -- flake.lock "$lys_login_deb_pin" >/dev/null
+            flake_git diff --quiet -- flake.lock && return 0
+            flake_git add -- flake.lock
+            flake_git commit -m "chore: update flake.lock" -- flake.lock >/dev/null
             echo "Committed updated flake.lock"
             flake_has_upstream || return 0
             flake_git push --quiet 2>/dev/null && return 0
@@ -292,7 +192,6 @@ _: {
                     {
                       android = ''"$HOME/.nix-profile"'';
                       nixos = "/run/current-system";
-                      linux = ''"$HOME/.local/state/nix/profiles/home-manager"'';
                     }
                     .${config.host.platform}
                   })
@@ -307,64 +206,13 @@ _: {
             }
           }
 
-          update_host_packages() {
-            ${
-              if config.host.platform == "linux" then
-                ''
-                  has_cmd() {
-                    command -v "$1" >/dev/null 2>&1
-                  }
-
-                  local needs_sudo="false"
-
-                  if has_cmd pacman || has_cmd apt || has_cmd dnf || has_cmd snap; then
-                    needs_sudo="true"
-                  fi
-
-                  ensure_sudo "$needs_sudo"
-
-                  if has_cmd pacman; then
-                    echo "Updating pacman packages"
-                    sudo pacman -Syu --noconfirm
-                  fi
-
-                  if has_cmd apt; then
-                    echo "Updating apt packages"
-                    sudo apt-get -qq update
-                    sudo DEBIAN_FRONTEND=noninteractive apt-get -qq -y upgrade
-                    sudo apt-get -qq -y autoremove
-                  fi
-
-                  if has_cmd dnf; then
-                    echo "Updating dnf packages"
-                    sudo dnf upgrade -y
-                  fi
-
-                  if has_cmd snap; then
-                    echo "Updating snap packages"
-                    sudo snap refresh
-                  fi
-
-                  if has_cmd flatpak; then
-                    echo "Updating flatpak packages"
-                    flatpak update -y
-                    flatpak uninstall --unused -y
-                  fi
-                ''
-              else
-                ":"
-            }
-          }
-
           update_system() {
-            update_host_packages
             echo "Updating nix inputs"
             if flake_in_git; then
               ensure_flakelock_driver
               sync_flake_repo
             fi
             nix flake update --flake "$hm_flake_ref" --quiet
-            update_lys_login_deb
             commit_flake_lock
           }
 
@@ -378,16 +226,12 @@ _: {
           ${hmSpec.renderExpandedHelp "rebuild"}
           ${hmSpec.renderHelp "meta"}
 
-          All rebuild verbs use raw nixos-rebuild/home-manager: no nh, no nom,
-          and no --impure outside `hm iso` (the flake evaluates purely).
+          All rebuild verbs use raw nixos-rebuild: no nh, no nom, and no
+          --impure outside `hm iso` (the flake evaluates purely).
 
           On NixOS the build/activate verbs delegate to `[sudo ]nixos-rebuild
-          <cmd> --flake <flake>#<host>`. The host attr defaults to
-          `hostname -s`; override with HM_NIXOS_CONFIG=<attr>. Verbs without
-          a NixOS counterpart (news/instantiate) error on NixOS; verbs without
-          a home-manager counterpart (boot/test/dry-activate/dry-build/build-vm
-          /repl) error on non-NixOS. Unknown args fall through to home-manager
-          on non-NixOS.
+          <cmd> --flake <flake>#<host>`. The host attr is host.flakeAttr;
+          override with HM_NIXOS_CONFIG=<attr>.
 
           On Android (nix-on-droid) switch and build delegate to
           `nix-on-droid <cmd> --flake <flake>#<host>`; the host attr is
@@ -527,25 +371,6 @@ _: {
                   "$HOME/.local/share/nvim" \
                   "$HOME/.local/state/nvim" \
                   "$HOME/.cache/nvim"
-                ;;
-              locks)
-                local lock_dir="$HOME/.local/state/nix/home-manager"
-                if [ -d "$lock_dir" ]; then
-                  local count
-                  count=$(find "$lock_dir" -maxdepth 1 -name '*.lock.sum' -type f | wc -l)
-                  if [ "$count" -gt 0 ]; then
-                    echo "Wiping $count activation lock(s) at $lock_dir..."
-                    find "$lock_dir" -maxdepth 1 -name '*.lock.sum' -type f -delete
-                  else
-                    echo "No activation locks under $lock_dir; nothing to do."
-                  fi
-                else
-                  echo "$lock_dir does not exist; nothing to do."
-                fi
-                echo "Next 'hm switch' will re-run each privileged activation."
-                ;;
-              all)
-                hm_cache nvim
                 ;;
               ""|-h|--help)
                 cat <<EOF >&2
@@ -744,7 +569,7 @@ _: {
               shift
               run_hm_subcmd "$subcmd" "$@"
               ;;
-            build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl|news|instantiate)
+            build|dry-build|dry-activate|build-vm|build-vm-with-bootloader|repl)
               subcmd="$1"
               shift
               run_hm_subcmd "$subcmd" "$@"
@@ -766,15 +591,8 @@ _: {
               exit 2
               ;;
             *)
-              ${
-                if config.host.platform == "linux" then
-                  ''home-manager "$@"''
-                else
-                  ''
-                    echo "hm: '$1' is not supported here — there is no standalone home-manager CLI on ${config.host.platform}. Try 'hm help'." >&2
-                    exit 2
-                  ''
-              }
+              echo "hm: unknown command '$1'. Try 'hm help'." >&2
+              exit 2
               ;;
           esac
         '';

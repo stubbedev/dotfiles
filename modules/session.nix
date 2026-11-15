@@ -13,10 +13,9 @@
       onAndroid = config.host.platform == "android";
       androidRuntimeDir = "/tmp/runtime-${config.home.username}";
 
-      # Only a distro keeps a trust store at /etc/ssl. nix-on-droid generates
-      # /etc from the store with no certificates in it, so Android points at
-      # nixpkgs' bundle. On a distro the OS store wins deliberately: it is the
-      # only one srv's mkcert CA can be added to.
+      # nix-on-droid generates /etc from the store with no certificates in
+      # it, so Android points at nixpkgs' bundle. On NixOS the OS store wins
+      # deliberately: it is the only one srv's mkcert CA is seeded into.
       tls =
         if onAndroid then
           {
@@ -29,20 +28,10 @@
             file = "/etc/ssl/certs/ca-certificates.crt";
           };
 
-      onDistro = config.host.platform == "linux";
-      dataDirs =
-        lib.optional onDistro "${config.xdg.dataHome}/flatpak/exports/share"
-        ++ [
-          "${config.home.profileDirectory}/share"
-          "/nix/var/nix/profiles/default/share"
-        ]
-        ++ lib.optionals onDistro [
-          "/var/lib/flatpak/exports/share"
-          "/usr/share/ubuntu"
-          "/usr/local/share"
-          "/usr/share"
-          "/var/lib/snapd/desktop"
-        ];
+      dataDirs = [
+        "${config.home.profileDirectory}/share"
+        "/nix/var/nix/profiles/default/share"
+      ];
     in
     {
       home.activation.androidRuntimeDir = lib.mkIf onAndroid (

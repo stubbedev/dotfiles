@@ -49,30 +49,6 @@ in
       environment.etc.${lib.removePrefix "/etc/" policyTarget}.source = policyFile pkgs;
     };
 
-  flake.modules.homeManager.chromePolicy =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
-    lib.mkIf config.features.browsers {
-      stubbe.setup.chromePolicy = {
-        privileged = true;
-        title = "Installing Chrome new-tab policy";
-        body = ''
-          Drop a Chrome enterprise policy at ${policyTarget}. It points the
-          new tab page, new windows and the homepage at the local new-tab page
-          (${pkgs.stubbe.newtabUrl}, served by srv), and force-installs the
-          managed extensions (${lib.concatStringsSep ", " (builtins.attrValues extensions)}).
-        '';
-        script = pkgs.stubbe.setup.file {
-          source = policyFile pkgs;
-          target = policyTarget;
-        };
-      };
-    };
-
   # Playwright's `chrome` channel probes exactly one path on Linux:
   # /opt/google/chrome/chrome. Point it at the Nix Chrome. L+ tracks store
   # path drift across switches.

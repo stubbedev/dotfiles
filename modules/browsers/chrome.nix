@@ -192,8 +192,8 @@ _: {
       # The SUID sandbox cannot work from the read-only store, so pointing
       # CHROME_DEVEL_SANDBOX at /dev/null forces the userns sandbox instead.
       # @playwright/mcp finds the Nix Chrome via PLAYWRIGHT_MCP_EXECUTABLE_PATH
-      # below (standalone HM hosts have no /opt symlink).
-      chrome = config.stubbe.gfx.bundle {
+      # below.
+      chrome = pkgs.stubbe.wrapPackage {
         # Chrome keeps only the LAST --enable-features, and chrome://flags is
         # appended after the command line, so this list is authoritative only
         # while that page stays at defaults.
@@ -336,13 +336,6 @@ _: {
           settings.showModeStatus = true;      // always-on mode indicator
           settings.theme = ${builtins.toJSON surfingkeysTheme};
         '';
-
-        # Ubuntu 24.04+ gates the userns sandbox on a matching AppArmor profile.
-        stubbe.setup.chromeApparmor = pkgs.stubbe.setup.apparmor {
-          appName = "Chrome";
-          profileName = "nix-google-chrome-stable";
-          programGlob = "/nix/store/*/share/google/chrome/{chrome,chrome-sandbox}";
-        };
       };
     };
 }

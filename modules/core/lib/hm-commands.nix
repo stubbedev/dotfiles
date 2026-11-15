@@ -22,13 +22,11 @@
           assert lib.assertOneOf "stubbe.lib.hm ${name} platform" platform [
             "all"
             "nixos"
-            "standalone"
           ];
           assert lib.assertOneOf "stubbe.lib.hm ${name} group" group [
             "wrapper"
             "rebuild"
             "meta"
-            "hidden"
           ];
           {
             inherit
@@ -49,13 +47,13 @@
             name = "update";
             platform = "all";
             group = "wrapper";
-            desc = "Update system package managers and nix inputs";
+            desc = "Update the flake inputs and commit flake.lock";
           }
           {
             name = "upgrade";
             platform = "all";
             group = "wrapper";
-            desc = "Update system packages and apply switch";
+            desc = "Update the flake inputs and apply switch";
           }
           {
             name = "whoami";
@@ -108,23 +106,11 @@
             platform = "all";
             group = "wrapper";
             complete = "custom";
-            desc = "Wipe cached state (target: nvim|locks|all)";
+            desc = "Wipe cached state (target: nvim)";
             sub = [
               {
                 name = "nvim";
                 desc = "Clear ~/.local/{share,state}/nvim and ~/.cache/nvim";
-              }
-              {
-                name = "locks";
-                desc = "Wipe ~/.local/state/nix/home-manager/*.lock.sum so every";
-                extra = [ "privileged activation re-runs on next switch" ];
-                summary = "Wipe ~/.local/state/nix/home-manager/*.lock.sum (re-runs every gated activation)";
-              }
-              {
-                name = "all";
-                desc = "nvim. Does NOT touch locks — that's intentional";
-                extra = [ "(re-runs every gated activation; opt-in only)" ];
-                summary = "nvim. Does NOT touch locks — that is opt-in only";
               }
             ];
           }
@@ -256,69 +242,10 @@
             summary = "No args: nix-collect-garbage -d; with args: pass them to nix-collect-garbage";
           }
           {
-            name = "news";
-            platform = "standalone";
-            group = "rebuild";
-            desc = "Read home-manager release notes (non-NixOS)";
-          }
-          {
-            name = "instantiate";
-            platform = "standalone";
-            group = "rebuild";
-            desc = "home-manager instantiate (non-NixOS)";
-          }
-          {
             name = "help";
             platform = "all";
             group = "meta";
             desc = "Show this help message";
-          }
-
-          {
-            name = "edit";
-            platform = "standalone";
-            group = "hidden";
-            desc = "Open the home configuration in $VISUAL or $EDITOR";
-          }
-          {
-            name = "option";
-            platform = "standalone";
-            group = "hidden";
-            complete = "custom";
-            desc = "Inspect configuration option";
-          }
-          {
-            name = "init";
-            platform = "standalone";
-            group = "hidden";
-            complete = "custom";
-            desc = "Initialize a configuration in the given directory";
-          }
-          {
-            name = "remove-generations";
-            platform = "standalone";
-            group = "hidden";
-            complete = "custom";
-            desc = "Remove indicated generations";
-          }
-          {
-            name = "expire-generations";
-            platform = "standalone";
-            group = "hidden";
-            complete = "custom";
-            desc = "Remove generations older than timestamp";
-          }
-          {
-            name = "packages";
-            platform = "standalone";
-            group = "hidden";
-            desc = "List all packages installed in home-manager-path";
-          }
-          {
-            name = "uninstall";
-            platform = "standalone";
-            group = "hidden";
-            desc = "Remove Home Manager";
           }
         ];
 
@@ -375,7 +302,7 @@
         );
 
         nixosVerbs = lib.concatMapStringsSep ", " (c: c.name) (
-          lib.filter (c: c.group == "rebuild" && c.platform != "standalone") commands
+          lib.filter (c: c.group == "rebuild") commands
         );
         subNames = name: lib.concatMapStringsSep "|" (s: s.name) (byName name).sub;
       };

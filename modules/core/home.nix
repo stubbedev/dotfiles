@@ -10,12 +10,6 @@ in
       pkgs,
       ...
     }:
-    let
-      # Only a distro target (linux) owns its nix client and nix.conf. NixOS
-      # writes /etc/nix/nix.conf, and nix-on-droid generates the only nix.conf
-      # that exists inside proot, so both must leave the user-level file alone.
-      onLinux = config.host.platform == "linux";
-    in
     {
       programs.home-manager.enable = true;
 
@@ -39,52 +33,12 @@ in
         sessionPath = [
           config.stubbe.paths.nixBin
           "$HOME/.local/bin"
-        ]
-        ++ [
-          "/usr/local/bin"
-          "/usr/bin"
-          "/bin"
-          "/sbin"
         ];
       };
 
-      targets.genericLinux = lib.mkIf onLinux {
-        enable = true;
-        gpu.enable = false;
-      };
-
-      # Set on every platform, not just non-NixOS: home-manager defaults
-      # `nix.package` to null, and the homeManager nix module reads it as
-      # `config.nix.package` for nix-env/nix-collect-garbage. Only `settings`
-      # below generates ~/.config/nix/nix.conf, which must stay off NixOS where
-      # it would shadow the system /etc/nix/nix.conf.
+      # home-manager defaults `nix.package` to null, and its nix module reads
+      # it as `config.nix.package` for nix-env/nix-collect-garbage.
       nix.package = lib.mkDefault pkgs.nix;
-
-      # home-manager reads `nix.package` only to generate and validate
-      # nix.conf; it never puts that client on PATH, so on machines
-      # bootstrapped by bin/stb-install every nix call would resolve to the
-      # bootstrap client in /nix/var/nix/profiles/default/bin.
-      # ~/.nix-profile/bin comes first in sessionPath, so installing it here
-      # shadows that.
-      # Also Android's answer: nix-on-droid owns the nix client and generates
-      # the only nix.conf that exists inside proot, so nothing here may shadow
-      # either.
-      home.packages = lib.mkIf onLinux [ config.nix.package ];
-
-      nix.settings = lib.mkIf onLinux {
-        inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
-
-        # ~/.config/nix/nix.conf shadows /etc/nix/nix.conf for this user, so
-        # nix-command/flakes must be repeated here or flakes stop working.
-        experimental-features = [
-          "nix-command"
-          "flakes"
-        ];
-
-        max-jobs = "auto";
-
-        download-buffer-size = 128 * 1024 * 1024;
-      };
     };
 
   flake.modules.nixos.home =

@@ -271,21 +271,5 @@ in
             };
           };
       };
-
-      stubbe.setup.snapThemes = {
-        privileged = true;
-        title = "Installing Vimix icon/cursor themes for snaps";
-        body = ''
-          Snap apps can only see themes installed under /var/lib/snapd/desktop.
-          This will install the Vimix icon and cursor themes for snaps.
-        '';
-        preCheck = pkgs.stubbe.setup.requirePath "/var/lib/snapd/desktop";
-        script = ''
-          ICON_DIR="/var/lib/snapd/desktop/icons"
-          sudo mkdir -p "$ICON_DIR"
-          sudo cp -a "${pkgs.vimix-icon-theme}/share/icons/Vimix-dark" "$ICON_DIR/"
-          sudo cp -a "${pkgs.vimix-cursors}/share/icons/${theme.cursor}" "$ICON_DIR/"
-        '';
-      };
     };
 }

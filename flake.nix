@@ -1,17 +1,8 @@
 {
-  description = "stubbedev dotfiles: home-manager (non-NixOS) + NixOS configurations + installer ISO";
+  description = "stubbedev dotfiles: NixOS + nix-on-droid configurations + installer ISO";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    # nix-community/nixGL#221 (NVIDIA kernel-param regex for 595.71.05+) is
-    # still open upstream, but it only matters for nixgl's NVIDIA wrapper —
-    # which this config never uses: NVIDIA hosts dispatch via the host's glvnd
-    # (modules/core/pkgs/gl.nix), and only nixGLIntel is consumed, identical in
-    # both trees.
-    nixgl = {
-      url = "github:nix-community/nixgl";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
 

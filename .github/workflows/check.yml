@@ -46,14 +46,11 @@ jobs:
 
       # Scoped to lint + eval checks only: run `just check` locally for the
       # full set.
-      # Pure eval: GPU detection is host-driven (host.graphicsNvidia), nothing
-      # reads /proc any more.
       - name: Build lint and eval checks
         run: |
           nix build --no-link \
             .#checks.x86_64-linux.lint-nix \
             .#checks.x86_64-linux.lint-fmt \
             .#checks.x86_64-linux.lint-shell \
-            .#checks.x86_64-linux.eval-hm-stubbe \
             .#checks.x86_64-linux.eval-nixos \
             .#checks.x86_64-linux.lys-wm-config

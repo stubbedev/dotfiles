@@ -95,8 +95,7 @@ in
         tmp.cleanOnBoot = true;
 
         # The 65536 default is exhausted by webpack-dev-server + octane --watch
-        # over large node_modules trees → ENOSPC "file watchers reached". The
-        # non-NixOS half is the inotifyLimits setup below.
+        # over large node_modules trees → ENOSPC "file watchers reached".
         kernel.sysctl = inotifyLimits;
       };
 
@@ -132,124 +131,6 @@ in
         description = touchpadRebindDescription;
         serviceConfig.Type = "oneshot";
         script = rebindTouchpadScript;
-      };
-    };
-
-  flake.modules.homeManager.hardware =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
-    {
-      stubbe.setup = {
-        inotifyLimits = {
-          privileged = true;
-          title = "Installing inotify watch/instance limits";
-          body = ''
-            Raises fs.inotify.max_user_watches and max_user_instances. The 65536
-            default is exhausted by webpack-dev-server + octane --watch over large
-            node_modules trees, causing ENOSPC "file watchers reached" errors.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.text {
-              name = "60-inotify-limits.conf";
-              target = "/etc/sysctl.d/60-inotify-limits.conf";
-              text =
-                pkgs.stubbe.managedBy "inotify-limits"
-                + lib.generators.toKeyValue {
-                  mkKeyValue = lib.generators.mkKeyValueDefault { } " = ";
-                } inotifyLimits;
-            }}
-
-            if command -v sysctl >/dev/null 2>&1; then
-              sudo sysctl --system >/dev/null 2>&1 || true
-            fi
-          '';
-        };
-
-        usbPower = lib.mkIf config.features.desktop {
-          privileged = true;
-          title = "Installing USB power management rules";
-          body = ''
-            This pins USB input devices (HID) and USB audio devices to full
-            power, so a wireless receiver never swallows the keypress that woke
-            it and audio devices never pop on resume. Everything else — hubs,
-            camera, the xHCI root hubs — keeps the kernel's autosuspend default,
-            which is what lets the USB controllers reach their low-power states.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.text {
-              name = "90-usb-autosuspend-disable.rules";
-              target = "/etc/udev/rules.d/90-usb-autosuspend-disable.rules";
-              text = usbAutosuspendRules;
-            }}
-            ${pkgs.stubbe.setup.text {
-              name = "90-usb-audio-power.rules";
-              target = "/etc/udev/rules.d/90-usb-audio-power.rules";
-              text = usbAudioPowerRules;
-            }}
-
-            for dev in /sys/bus/usb/devices/*; do
-              [ -w "$dev/power/control" ] || continue
-              case "$(udevadm info --query=property --property=ID_USB_INTERFACES --value "$dev" 2>/dev/null)" in
-              *:03* | *:01*) printf 'on' | sudo tee "$dev/power/control" >/dev/null ;;
-              *) printf 'auto' | sudo tee "$dev/power/control" >/dev/null ;;
-              esac
-            done
-
-            ${pkgs.stubbe.setup.reloadUdev}
-          '';
-        };
-
-        touchpadRebind = lib.mkIf config.features.desktop {
-          privileged = true;
-          title = "Installing touchpad dock-unplug rebind rule";
-          body = ''
-            On a Thunderbolt dock undock the i2c-hid touchpad stops emitting
-            events until its driver is rebound. This installs udev rules that
-            rebind it automatically — on the DRM hotplug, and (for undocks with
-            no external monitor) on the dock's thunderbolt device removal — plus
-            the helper script and systemd service they trigger.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.text {
-              name = "90-touchpad-rebind.rules";
-              target = "/etc/udev/rules.d/90-touchpad-rebind.rules";
-              text = touchpadRebindRules;
-            }}
-
-            ${pkgs.stubbe.setup.text {
-              name = "91-touchpad-rebind-thunderbolt.rules";
-              target = "/etc/udev/rules.d/91-touchpad-rebind-thunderbolt.rules";
-              text = touchpadUndockRule "/usr/bin/systemctl";
-            }}
-
-            ${pkgs.stubbe.setup.text {
-              name = "rebind-touchpad.sh";
-              target = "/etc/udev/scripts/rebind-touchpad.sh";
-              mode = "0755";
-              text = "#!/usr/bin/env bash\n" + rebindTouchpadScript;
-            }}
-
-            ${pkgs.stubbe.setup.text {
-              name = "touchpad-rebind.service";
-              target = "/etc/systemd/system/touchpad-rebind.service";
-              text = pkgs.stubbe.gen.unitText {
-                Unit.Description = touchpadRebindDescription;
-                Service = {
-                  Type = "oneshot";
-                  ExecStart = "/etc/udev/scripts/rebind-touchpad.sh";
-                };
-              };
-            }}
-
-            ${pkgs.stubbe.setup.reloadUnits}
-
-            ${pkgs.stubbe.setup.reloadUdev}
-          '';
-        };
       };
     };
 }

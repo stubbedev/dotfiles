@@ -1,7 +1,5 @@
 { inputs, ... }:
 let
-  greeterConfigPath = "/etc/lys-shell/config.yaml";
-
   loginScreen = accent: wallpaper: {
     styling.palette.primary = accent;
 
@@ -65,21 +63,9 @@ in
       ...
     }:
     let
-      inherit (config.stubbe) gfx;
       enabled = config.features.lysShell && config.features.lysWm;
 
-      # Rejoined with the upstream package so $out/share reaches the profile:
-      # without it GTK cannot resolve lys-shell's bundled icon names.
-      lysShellPackage = gfx.bundle {
-        pkg = pkgs.lys-shell;
-        exes = [ "lys-shell" ];
-      };
-
-      lysShellBin = lib.getExe' lysShellPackage "lys-shell";
-
-      # The shell starts the lock as `lys-login lock` from the PATH, so the lock
-      # binary needs the same driver plumbing the shell itself gets.
-      lysLoginPackage = gfx.bundle { pkg = pkgs.lys-login; };
+      lysShellBin = lib.getExe' pkgs.lys-shell "lys-shell";
 
       sessionTarget = [ config.wayland.systemd.target ];
 
@@ -90,38 +76,15 @@ in
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
     in
     {
-      imports = [
-        inputs.lys-shell.homeManagerModules.default
-        inputs.lys-login.homeManagerModules.default
-        inputs.lys-polkit.homeManagerModules.default
-      ];
+      imports = [ inputs.lys-polkit.homeManagerModules.default ];
 
       config = lib.mkIf enabled {
-        programs.lys-shell = lib.mkIf (config.host.platform != "nixos") {
-          enable = true;
-          package = lysShellPackage;
-          systemd.enable = false;
-          settingsApp.package = gfx.bundle { pkg = pkgs.lys-settings; };
-          settings = { };
-          portal.enable = true;
-        };
-
-        # The system module provisions the lock's PAM service on NixOS; on a
-        # foreign distro the privileged setup step below does it, so only the
-        # binary is enabled here.
-        programs.lys-login = lib.mkIf (config.host.platform != "nixos") {
-          enable = true;
-          package = lysLoginPackage;
-        };
-
         services.lys-polkit = {
           enable = true;
           package = pkgs.lys-polkit;
         };
 
-        home.packages = [
-          lysShellPackage
-        ];
+        home.packages = [ pkgs.lys-shell ];
 
         stubbe.zshCompletions._lys-shell = "${lysShellBin} completions zsh";
 
@@ -316,20 +279,6 @@ in
             fi
           '';
 
-        stubbe.setup.lysLoginGreeterConfig = {
-          privileged = true;
-          title = "Theming the lys-login greeter";
-          body = ''
-            The greeter runs as lys-greeter and reads only ${greeterConfigPath},
-            so this installs the lock screen's wallpaper and date format there.
-          '';
-          stateInputs = [ greeterConfigPath ];
-          script = pkgs.stubbe.setup.file {
-            source = pkgs.stubbe.gen.yaml "lys-greeter-config.yaml" loginScreenSettings;
-            target = greeterConfigPath;
-          };
-        };
-
         xdg.dataFile."dbus-1/services/org.freedesktop.Notifications.service".source =
           (pkgs.formats.ini { }).generate "org.freedesktop.Notifications.service"
             {
@@ -367,29 +316,6 @@ in
             };
           };
 
-        };
-
-        stubbe.setup.lysShellLockPam = {
-          privileged = true;
-          title = "⚠️  lys-shell lock PAM configuration missing";
-          body = ''
-            lys-shell's session lock needs a PAM configuration to authenticate the
-            unlock. This will create a minimal Nix-compatible PAM config.
-          '';
-          script = pkgs.stubbe.setup.text {
-            name = "lys-shell-pam";
-            target = "/etc/pam.d/lys-shell";
-            text = ''
-              #%PAM-1.0
-              auth       required     pam_unix.so nullok
-
-              account    required     pam_unix.so
-
-              password   required     pam_unix.so nullok
-
-              session    required     pam_unix.so
-            '';
-          };
         };
       };
     };

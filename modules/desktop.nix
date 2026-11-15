@@ -1,6 +1,6 @@
 { lib, ... }:
 let
-  nixosBrowser = "firefox.desktop";
+  defaultBrowser = "firefox.desktop";
   videoPlayer = "mpv.desktop";
   imageViewer = "imv.desktop";
   fileManager = "pcmanfm.desktop";
@@ -64,7 +64,7 @@ in
 
     documentation.nixos.enable = false;
 
-    xdg.mime.defaultApplications = mimeDefaults nixosBrowser;
+    xdg.mime.defaultApplications = mimeDefaults defaultBrowser;
   };
 
   flake.modules.homeManager.desktop =
@@ -89,12 +89,8 @@ in
 
           pcmanfm
         ]
-        ++ lib.optionals (config.host.platform != "nixos") [
-          pkgs.gvfs
-          pkgs.udisks2
-        ]
         ++ lib.optionals config.features.slack [
-          (config.stubbe.gfx.bundle {
+          (pkgs.stubbe.wrapPackage {
             pkg = pkgs.slack;
             flags = [ "--disable-setuid-sandbox" ];
           })
@@ -176,85 +172,12 @@ in
         # Glob keys expand against shared-mime-info at eval time; exact keys
         # would keep precedence over a glob match. The NixOS half above keeps
         # the explicit list: xdg.mime has no glob support.
-        defaultApplications =
-          let
-            browser = if config.host.platform == "nixos" then nixosBrowser else "com.google.Chrome.desktop";
-          in
-          browserHandlers browser
-          // {
-            "inode/directory" = fileManager;
-            "x-scheme-handler/file" = fileManager;
-            "video/*" = videoPlayer;
-            "image/*" = imageViewer;
-          };
-      };
-
-      # appimageTools wrappers build their FHS sandbox with bubblewrap, which
-      # Ubuntu 24.04+ blocks without a matching AppArmor profile.
-      stubbe.setup.bubblewrapApparmor = pkgs.stubbe.setup.apparmor {
-        appName = "Nix bubblewrap (AppImage/FHS sandbox)";
-        profileName = "nix-bubblewrap";
-        programGlob = "/nix/store/*/bin/bwrap";
-      };
-
-      stubbe.setup.slackApparmor = lib.mkIf config.features.slack (
-        pkgs.stubbe.setup.apparmor {
-          appName = "Slack";
-          profileName = "nix-slack";
-          programGlob = "/nix/store/*/lib/slack/{slack,chrome-sandbox}";
-        }
-      );
-
-      # udisks2 is a Nix package here, but its daemon has to be reachable from
-      # the SYSTEM bus, which never looks in ~/.nix-profile.
-      stubbe.setup.udisks = lib.mkIf (config.host.platform != "nixos") {
-        privileged = true;
-        title = "Installing udisks2 system integration (removable media)";
-        body = ''
-          Symlinks udisks2's systemd unit, dbus policy + activation, polkit
-          policy, udev rules, and default config from the Nix store into
-          /etc and /usr/share so the home-manager-installed udisks2 daemon
-          can run as a system service. Then reloads systemd/udev and starts
-          udisks2.service. gvfs is user-bus and needs nothing privileged.
-        '';
-        script =
-          let
-            links = [
-              {
-                source = "${pkgs.udisks2}/etc/systemd/system/udisks2.service";
-                target = "/etc/systemd/system/udisks2.service";
-              }
-              {
-                source = "${pkgs.udisks2}/share/dbus-1/system.d/org.freedesktop.UDisks2.conf";
-                target = "/etc/dbus-1/system.d/org.freedesktop.UDisks2.conf";
-              }
-              {
-                source = "${pkgs.udisks2}/share/dbus-1/system-services/org.freedesktop.UDisks2.service";
-                target = "/usr/share/dbus-1/system-services/org.freedesktop.UDisks2.service";
-              }
-              {
-                source = "${pkgs.udisks2}/share/polkit-1/actions/org.freedesktop.UDisks2.policy";
-                target = "/usr/share/polkit-1/actions/org.freedesktop.UDisks2.policy";
-              }
-              {
-                source = "${pkgs.udisks2}/lib/udev/rules.d/80-udisks2.rules";
-                target = "/etc/udev/rules.d/80-udisks2.rules";
-              }
-              {
-                source = "${pkgs.udisks2}/etc/udisks2/udisks2.conf";
-                target = "/etc/udisks2/udisks2.conf";
-              }
-            ];
-          in
-          ''
-            ${lib.concatMapStrings pkgs.stubbe.setup.link links}
-
-            sudo install -d -m 0755 /var/lib/udisks2
-
-            ${pkgs.stubbe.setup.reloadUnits}
-            ${pkgs.stubbe.setup.reloadUdev}
-            sudo systemctl enable --now udisks2.service
-          '';
+        defaultApplications = browserHandlers defaultBrowser // {
+          "inode/directory" = fileManager;
+          "x-scheme-handler/file" = fileManager;
+          "video/*" = videoPlayer;
+          "image/*" = imageViewer;
+        };
       };
     };
 }

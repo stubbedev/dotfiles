@@ -7,7 +7,6 @@ _: {
       ...
     }:
     let
-      inherit (config.stubbe) gfx;
       c = pkgs.stubbe.withHash;
 
       themeName = "catppuccin-mocha";
@@ -17,9 +16,8 @@ _: {
       programs.btop = {
         enable = true;
         # Not a plain `pkgs.btop`: btop dlopens libnvidia-ml.so for its GPU
-        # panel, and a dlopen by soname does not go through glvnd — so it needs
-        # the driver libs on the loader path even on NixOS.
-        package = gfx.withDriverLibs pkgs.btop;
+        # panel, and a dlopen by soname does not go through glvnd.
+        package = pkgs.stubbe.withDriverLibs pkgs.btop;
 
         themes.${themeName} = lib.concatStringsSep "\n" (
           lib.mapAttrsToList (key: value: ''theme[${key}]="${value}"'') {

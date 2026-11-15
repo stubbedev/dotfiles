@@ -7,16 +7,13 @@ _: {
       ...
     }:
     let
-      inherit (config.stubbe) gfx;
       c = pkgs.stubbe.withHash;
 
       # Nix string literals have no \u escape; a JSON one does.
       esc = builtins.fromJSON ''"\u001b"'';
 
-      alacrittyGfx = gfx.wrap pkgs.alacritty;
-
       alacrittyClient = pkgs.stubbe.shellScriptBin "alacritty" ''
-        real="${alacrittyGfx}/bin/alacritty"
+        real="${lib.getExe pkgs.alacritty}"
         socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
 
         case "''${1:-}" in
@@ -301,7 +298,7 @@ _: {
         Install.WantedBy = [ config.wayland.systemd.target ];
         Service = {
           Type = "simple";
-          ExecStart = "${alacrittyGfx}/bin/alacritty --socket %t/alacritty.sock --daemon";
+          ExecStart = "${lib.getExe pkgs.alacritty} --socket %t/alacritty.sock --daemon";
           Restart = "on-failure";
           RestartSec = "2s";
           ManagedOOMPreference = "avoid";

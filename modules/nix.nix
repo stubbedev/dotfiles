@@ -29,8 +29,8 @@ in
           # `<nixpkgs>` resolves to the flake's pinned tree.
           nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
 
-          # The HM-side copy only applies to standalone HM, so without this the
-          # daemon falls back to default substituters and misses nix.stubbe.dev.
+          # Without this the daemon falls back to the default substituters
+          # and misses nix.stubbe.dev.
           inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
 
           # nix asks the substituter before building, so our self-hosted cache
@@ -116,7 +116,6 @@ in
     }:
     let
       onAndroid = config.host.platform == "android";
-      onNixOS = config.host.platform == "nixos";
       accessTokensFile = "${config.home.homeDirectory}/.config/nix/access-tokens.conf";
     in
     {
@@ -131,14 +130,12 @@ in
 
       stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
 
-      # Store cleanup stays standalone-only: on NixOS the system nix.gc above
-      # already sweeps the whole store weekly, and on Android
-      # `nix-on-droid trim` owns it.
+      # Generations only: on NixOS the system nix.gc above sweeps the store
+      # weekly, and on Android `nix-on-droid trim` owns it.
       services.home-manager.autoExpire = {
         enable = !onAndroid;
         timestamp = "-30 days";
         frequency = "weekly";
-        store.cleanup = lib.mkIf (!onNixOS && !onAndroid) true;
       };
 
       # Anonymous api.github.com allows 60 requests/hr, and `nix flake update`
@@ -153,14 +150,14 @@ in
       #
       # On NixOS the system nix.conf carries the same line (see the nixos
       # module above) and generating a user nix.conf here would shadow it.
-      sops = lib.mkIf (!onNixOS) {
+      sops = lib.mkIf onAndroid {
         templates."nix-access-tokens.conf" = {
           content = "access-tokens = github.com=${config.sops.placeholder.github-token}";
           path = accessTokensFile;
         };
       };
 
-      nix.extraOptions = lib.mkIf (!onNixOS) ''
+      nix.extraOptions = lib.mkIf onAndroid ''
         !include ${accessTokensFile}
       '';
     };

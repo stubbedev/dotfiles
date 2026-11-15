@@ -20,15 +20,15 @@ let
       profiles = workstation;
     };
     docker = {
-      description = "Docker. On NixOS this drives virtualisation.docker; elsewhere a privileged activation renders the engine's systemd units from the same locked nixpkgs docker (socket-activated, live-restore), wires the group, daemon.json and the registry:3 container.";
+      description = "Docker: virtualisation.docker with the local registry:3 container, the client tools and a weekly image prune.";
       profiles = workstation;
     };
     avahi = {
-      description = "mDNS `*.local` resolution. On NixOS via services.avahi; elsewhere avahi-daemon + libnss-mdns from the host package manager.";
+      description = "mDNS `*.local` resolution and announcement via services.avahi.";
       profiles = workstation;
     };
     openssh = {
-      description = "Accept inbound ssh. Elsewhere openssh-server from the host package manager; on NixOS services.openssh stays unconditional so the installer ISO keeps its remote-debug path.";
+      description = "Authorize the machine's own ssh key for inbound logins. services.openssh itself stays unconditional so the installer ISO keeps its remote-debug path.";
       profiles = workstation;
     };
     lysWm = {

@@ -1,5 +1,8 @@
-{ self, ... }:
+{ self, config, ... }:
 {
+  _module.args.referenceHome =
+    self.nixosConfigurations.desktop.config.home-manager.users.${config.stubbe.lib.userName};
+
   perSystem =
     { lib, pkgs, ... }:
     let
@@ -17,10 +20,6 @@
     in
     {
       checks = {
-        # `nix flake check` evaluates every nixosConfigurations toplevel
-        # natively, but never touches homeConfigurations, so the standalone
-        # host needs its own eval guard.
-        eval-hm-stubbe = evalGuard "eval-hm-stubbe" [ self.homeConfigurations.stubbe.activationPackage ];
         eval-nixos = evalGuard "eval-nixos" (
           map (host: host.config.system.build.toplevel) (lib.attrValues self.nixosConfigurations)
         );

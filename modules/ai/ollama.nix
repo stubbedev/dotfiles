@@ -1,9 +1,7 @@
 # Local LLM inference via Ollama (Vulkan acceleration), wired into Harness as an
 # OpenAI-compatible provider. Desktop-only: the NixOS service runs the daemon
 # and auto-pulls the model; the home-manager half just teaches Harness where to
-# find it. On a non-NixOS desktop the provider config is harmless (Harness will
-# fail to connect until the user starts an ollama serve themselves), and on a
-# headless host neither half activates.
+# find it. On a headless host neither half activates.
 _: {
   flake.modules.nixos.ollama =
     {

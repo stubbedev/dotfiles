@@ -91,64 +91,6 @@
       ...
     }:
     {
-      imports = [ inputs.lys-secrets.homeManagerModules.default ];
-
-      services.lys-secrets = lib.mkIf (config.features.desktop && config.host.platform == "linux") {
-        enable = true;
-        package = pkgs.lys-secrets;
-      };
-
       home.packages = lib.mkIf config.features.desktop [ pkgs.gnupg ];
-
-      xdg.configFile = lib.mkIf config.services.lys-secrets.enable (
-        lib.genAttrs
-          [
-            "systemd/user/gnome-keyring-daemon.service"
-            "systemd/user/gnome-keyring-daemon.socket"
-          ]
-          (_: {
-            source = config.lib.file.mkOutOfStoreSymlink "/dev/null";
-            force = true;
-          })
-      );
-
-      stubbe.setup = {
-        # Nix's PAM modules expect /run/wrappers/bin/unix_chkpwd, which only
-        # NixOS provides. Without it, lys-shell's session-lock unlock cannot verify
-        # the password at all.
-        pamWrappers = lib.mkIf config.features.lysWm {
-          privileged = true;
-          title = "⚠️  Nix PAM wrapper setup required for lys-shell lock authentication";
-          body = ''
-            This will install a systemd service to enable password authentication
-            for lys-shell's session lock. The service will persist across reboots.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.text {
-              name = "nix-pam-wrappers.service";
-              target = "/etc/systemd/system/nix-pam-wrappers.service";
-              text = pkgs.stubbe.gen.unitText {
-                Unit = {
-                  Description = "Setup Nix PAM wrappers for non-NixOS systems";
-                  DefaultDependencies = "no";
-                  Before = "sysinit.target";
-                  ConditionPathExists = "!/run/wrappers/bin/unix_chkpwd";
-                };
-                Service = {
-                  Type = "oneshot";
-                  RemainAfterExit = "yes";
-                  ExecStart = [
-                    "/usr/bin/mkdir -p /run/wrappers/bin"
-                    "/usr/bin/ln -sf /usr/sbin/unix_chkpwd /run/wrappers/bin/unix_chkpwd"
-                  ];
-                };
-                Install.WantedBy = "sysinit.target";
-              };
-            }}
-            ${pkgs.stubbe.setup.reloadUnits}
-            sudo systemctl enable --now nix-pam-wrappers.service
-          '';
-        };
-      };
     };
 }

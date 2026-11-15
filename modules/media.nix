@@ -8,20 +8,6 @@
       ...
     }:
     let
-      inherit (config.stubbe) gfx;
-      # SYSTEM GL, not nixGL: the GTK4 stack crashes when GL init mixes nixGL
-      # and the system NVIDIA driver.
-      pavucontrol-wrapped = gfx.bundle {
-        pkg = pkgs.pavucontrol;
-        gfx = false;
-        unset = [
-          "LD_LIBRARY_PATH"
-          "__GLX_VENDOR_LIBRARY_NAME"
-          "__EGL_VENDOR_LIBRARY_FILENAMES"
-          "LIBGL_DRIVERS_PATH"
-        ];
-      };
-
       libembroidery = pkgs.stdenv.mkDerivation {
         pname = "libembroidery";
         version = "unstable";
@@ -53,21 +39,12 @@
         ghostscript
         mupdf
 
-        (gfx.wrap ffmpeg-full)
-        (gfx.wrapExe "ffprobe" ffmpeg-full)
-        (gfx.wrapExe "ffplay" ffmpeg-full)
-
-        # gfx.bundle, not a bare wrap: bare gfx emits only bin/, dropping the
-        # .desktop entry that file managers resolve video/* through.
-        (gfx.bundle { pkg = mpv; })
-
-        (gfx.bundle { pkg = imv; })
-
-        (gfx.wrapExe "ueberzugpp" ueberzugpp)
-
-        pavucontrol-wrapped
-
-        (gfx.bundle { pkg = readest; })
+        ffmpeg-full
+        mpv
+        imv
+        ueberzugpp
+        pavucontrol
+        readest
       ];
     };
 }

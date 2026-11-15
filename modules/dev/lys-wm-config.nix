@@ -1,9 +1,9 @@
-{ self, ... }:
+{ referenceHome, ... }:
 {
   perSystem =
     { pkgs, ... }:
     let
-      configYaml = self.homeConfigurations.stubbe.config.xdg.configFile."lys-wm/config.yaml".source;
+      configYaml = referenceHome.xdg.configFile."lys-wm/config.yaml".source;
     in
     {
       checks.lys-wm-config = pkgs.stubbe.check {

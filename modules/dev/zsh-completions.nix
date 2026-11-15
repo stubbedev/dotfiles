@@ -2,14 +2,14 @@
 # missing tag fails silently: the file ships, the widget never binds. Reads the
 # zcompdump the .zshrc actually loads (it is a reference of that file, so the
 # sandbox has it) and asserts our own completers are in it.
-{ self, ... }:
+{ referenceHome, ... }:
 {
   perSystem =
     { pkgs, ... }:
     {
       checks.zsh-completions = pkgs.stubbe.check {
         name = "zsh-completions";
-        env.zshrc = self.homeConfigurations.stubbe.config.home.file."./.zshrc".source;
+        env.zshrc = referenceHome.home.file."./.zshrc".source;
         text = /* zsh */ ''
           set -euo pipefail
 

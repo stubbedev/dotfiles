@@ -20,20 +20,14 @@ _: {
           default = "${config.home.profileDirectory}/bin";
           defaultText = "\${config.home.profileDirectory}/bin";
           description = ''
-            Where Nix-installed binaries land: ~/.nix-profile/bin under
-            standalone home-manager, /etc/profiles/per-user/$USER/bin under
-            NixOS with useUserPackages.
+            Where Nix-installed binaries land: /etc/profiles/per-user/$USER/bin
+            under NixOS with useUserPackages, ~/.nix-profile/bin on Android.
           '';
         };
 
         hostPath = lib.mkOption {
           type = lib.types.str;
-          default =
-            if config.host.platform == "nixos" then
-              "/run/wrappers/bin:/run/current-system/sw/bin"
-            else
-              "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
-          defaultText = lib.literalMD "the NixOS system profile and setuid wrappers on NixOS, the FHS bin dirs elsewhere";
+          default = "/run/wrappers/bin:/run/current-system/sw/bin";
           description = ''
             The host's own executables, for units and activation steps whose
             programs shell out to tools the host provides (docker, sudo,

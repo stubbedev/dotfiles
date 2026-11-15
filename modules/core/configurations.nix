@@ -2,7 +2,6 @@
   lib,
   config,
   inputs,
-  withSystem,
   nixpkgsFor,
   ...
 }:
@@ -25,11 +24,6 @@ let
 in
 {
   options.configurations = {
-    homeManager = lib.mkOption {
-      type = lib.types.lazyAttrsOf hostOptions;
-      default = { };
-      description = "Standalone home-manager hosts — non-NixOS distros.";
-    };
     nixos = lib.mkOption {
       type = lib.types.lazyAttrsOf hostOptions;
       default = { };
@@ -46,20 +40,6 @@ in
   };
 
   config.flake = {
-    homeConfigurations = lib.mapAttrs (
-      name: host:
-      withSystem host.system (
-        { pkgs, ... }:
-        inputs.home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          modules = [
-            host.module
-            (flakeAttrModule name)
-          ];
-        }
-      )
-    ) config.configurations.homeManager;
-
     nixosConfigurations = lib.mapAttrs (
       name: host:
       inputs.nixpkgs.lib.nixosSystem {

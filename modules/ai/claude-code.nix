@@ -19,9 +19,8 @@ _: {
     in
     lib.mkIf config.features.claudeCode {
       home.packages = [
-        (config.stubbe.gfx.bundle {
+        (pkgs.stubbe.wrapPackage {
           pkg = pkgs.claude-code;
-          gfx = false;
           flags = [
             "--dangerously-skip-permissions"
           ]

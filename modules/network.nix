@@ -1,42 +1,4 @@
-{ lib, ... }:
-let
-  # avahi ships this service definition: _ssh._tcp on port 22, instance name
-  # %h (the avahi host name, i.e. host.mdnsName). Both halves of this aspect
-  # publish it, so the path lives once.
-  sshServiceFile = pkgs: "${pkgs.avahi}/etc/avahi/services/ssh.service";
-
-  yesNo = v: if lib.isBool v then lib.boolToYesNo v else toString v;
-
-  sshdLogin = {
-    PasswordAuthentication = false;
-    KbdInteractiveAuthentication = false;
-    PermitRootLogin = "no";
-  };
-  sshdKeepalive = {
-    ClientAliveInterval = 60;
-    ClientAliveCountMax = 3;
-  };
-
-  avahiServer =
-    host:
-    {
-      allow-interfaces = lib.optional (host.wifiInterface != null) host.wifiInterface;
-    }
-    // lib.optionalAttrs (host.mdnsName != null) { host-name = host.mdnsName; };
-
-  avahiAssertion = host: {
-    assertion = host.wifiInterface != null;
-    message = "features.avahi announces the host on its wifi interface only; set host.wifiInterface.";
-  };
-  avahiPublish = {
-    publish-addresses = true;
-    publish-hinfo = true;
-    publish-workstation = true;
-    publish-domain = true;
-    publish-aaaa-on-ipv4 = false;
-  };
-in
-{
+_: {
   flake.modules.nixos.network =
     {
       config,
@@ -63,7 +25,16 @@ in
         enable = true;
         # mkDefault so the live ISO can override to "prohibit-password" —
         # root login over SSH is the only way to remote-debug a stuck install.
-        settings = lib.mapAttrs (_: lib.mkDefault) sshdLogin // sshdKeepalive;
+        settings =
+          lib.mapAttrs (_: lib.mkDefault) {
+            PasswordAuthentication = false;
+            KbdInteractiveAuthentication = false;
+            PermitRootLogin = "no";
+          }
+          // {
+            ClientAliveInterval = 60;
+            ClientAliveCountMax = 3;
+          };
       };
 
       # nssmdns4 is intentionally OFF: it hooks `mdns4_minimal
@@ -75,15 +46,24 @@ in
         enable = true;
         nssmdns4 = false;
         openFirewall = true;
-        # Advertise _ssh._tcp (port 22, instance name = the host name below).
-        # It is how a machine that cannot run an mDNS resolver - the phone -
-        # finds this one by name: resolving the service needs no NSS module.
+        # Advertise _ssh._tcp (port 22, instance name %h = the host name
+        # below). It is how a machine that cannot run an mDNS resolver - the
+        # phone - finds this one by name: resolving the service needs no NSS
+        # module.
         extraServiceFiles = lib.optionalAttrs config.services.openssh.enable {
-          ssh = sshServiceFile pkgs;
+          ssh = "${pkgs.avahi}/etc/avahi/services/ssh.service";
         };
         settings = {
-          server = avahiServer config.host;
-          publish = avahiPublish // {
+          server = {
+            allow-interfaces = lib.optional (config.host.wifiInterface != null) config.host.wifiInterface;
+          }
+          // lib.optionalAttrs (config.host.mdnsName != null) { host-name = config.host.mdnsName; };
+          publish = {
+            publish-addresses = true;
+            publish-hinfo = true;
+            publish-workstation = true;
+            publish-domain = true;
+            publish-aaaa-on-ipv4 = false;
             disable-publishing = false;
             disable-user-service-publishing = false;
           };
@@ -93,7 +73,10 @@ in
       services.resolved.settings.Resolve.MulticastDNS =
         lib.mkIf config.stubbe.userFeatures.avahi "resolve";
 
-      assertions = lib.optional config.stubbe.userFeatures.avahi (avahiAssertion config.host);
+      assertions = lib.optional config.stubbe.userFeatures.avahi {
+        assertion = config.host.wifiInterface != null;
+        message = "features.avahi announces the host on its wifi interface only; set host.wifiInterface.";
+      };
 
       # NM-wait-online blocks boot until any connection is up; on a desktop with
       # offline-friendly services that just adds 20s to every boot. Services
@@ -211,32 +194,8 @@ in
 
             main()
           '';
-
-      avahiDaemonConf = pkgs.writeText "avahi-daemon.conf" (
-        pkgs.stubbe.managedBy "avahi"
-        +
-          lib.generators.toINI
-            {
-              mkKeyValue = lib.generators.mkKeyValueDefault {
-                mkValueString = v: if lib.isList v then lib.concatStringsSep "," v else yesNo v;
-              } "=";
-            }
-            {
-              server = avahiServer config.host // {
-                use-ipv4 = true;
-                use-ipv6 = true;
-                ratelimit-interval-usec = 1000000;
-                ratelimit-burst = 1000;
-              };
-              publish = avahiPublish;
-            }
-      );
     in
     {
-      assertions = lib.optional (config.features.avahi && config.host.platform == "linux") (
-        avahiAssertion config.host
-      );
-
       # HM owns the file from here on: a hand-written ~/.ssh/config would
       # otherwise make activation refuse to clobber it.
       programs.ssh = {
@@ -253,133 +212,6 @@ in
       };
 
       stubbe.setup = {
-        avahi = lib.mkIf config.features.avahi {
-          privileged = true;
-          title = "Installing Avahi (mDNS)";
-          body = ''
-            Install avahi-daemon + libnss-mdns via the host's package manager,
-            write a managed /etc/avahi/avahi-daemon.conf that whitelists real
-            LAN interfaces (excluding docker/veth/bridge), and enable the
-            service so this host can resolve and be resolved as
-            <hostname>.local on the LAN.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.hostPackage {
-              detect = "avahi-daemon";
-              apt = [
-                "avahi-daemon"
-                "libnss-mdns"
-              ];
-              dnf = [
-                "avahi"
-                "nss-mdns"
-              ];
-              pacman = [
-                "avahi"
-                "nss-mdns"
-              ];
-            }}
-
-            # mDNS goes *after* dns, never ahead of it with [NOTFOUND=return]
-            # (what libnss-mdns installs): that answers every `*.local` from
-            # multicast alone, so srv's .local sites never reach resolved. Behind
-            # dns, resolved answers srv's routed names and fails other .local
-            # names at once (its own mDNS is off), and avahi takes over from there.
-            if [ -f /etc/nsswitch.conf ]; then
-              _stb_tmp=$(mktemp)
-              awk '
-                /^hosts:/ {
-                  out = "hosts:"; n = 0; skip = 0; placed = 0; comment = ""
-                  if (match($0, /#.*/)) comment = " " substr($0, RSTART)
-                  for (i = 2; i <= NF; i++) {
-                    if ($i ~ /^#/) break
-                    if ($i ~ /^mdns/) { skip = 1; continue }
-                    if (skip && $i ~ /^\[/) continue
-                    skip = 0; tok[++n] = $i
-                  }
-                  for (i = 1; i <= n; i++) {
-                    out = out " " tok[i]
-                    if (tok[i] == "dns" && !placed) { out = out " mdns4_minimal"; placed = 1 }
-                  }
-                  if (!placed) out = out " mdns4_minimal"
-                  print out comment; next
-                }
-                { print }
-              ' /etc/nsswitch.conf > "$_stb_tmp"
-              if ! cmp -s "$_stb_tmp" /etc/nsswitch.conf; then
-                if [ ! -f /etc/nsswitch.conf.stubbedev-bak ]; then
-                  sudo cp -a /etc/nsswitch.conf /etc/nsswitch.conf.stubbedev-bak
-                fi
-                sudo install -m 0644 -o root -g root "$_stb_tmp" /etc/nsswitch.conf
-              fi
-              rm -f "$_stb_tmp"
-            fi
-
-            sudo install -m 0644 -o root -g root ${avahiDaemonConf} /etc/avahi/avahi-daemon.conf
-
-            ${lib.optionalString config.features.openssh ''
-              sudo install -d -m 0755 /etc/avahi/services
-              sudo install -m 0644 ${sshServiceFile pkgs} \
-                /etc/avahi/services/ssh.service
-            ''}
-
-            sudo systemctl enable avahi-daemon.service
-            sudo systemctl restart avahi-daemon.service
-          '';
-        };
-
-        openssh = lib.mkIf config.features.openssh {
-          privileged = true;
-          title = "Installing OpenSSH server";
-          body = ''
-            Install openssh-server via the host's package manager, drop a managed
-            /etc/ssh/sshd_config.d/10-stubbedev.conf that disables password and
-            root logins (matching the NixOS host), open the host firewall for ssh
-            (ufw/firewalld if present), and enable the sshd unit.
-          '';
-          script = ''
-            ${pkgs.stubbe.setup.hostPackage {
-              detect = "sshd";
-              apt = [ "openssh-server" ];
-              dnf = [ "openssh-server" ];
-              pacman = [ "openssh" ];
-            }}
-
-            ${pkgs.stubbe.setup.text {
-              name = "10-stubbedev.conf";
-              target = "/etc/ssh/sshd_config.d/10-stubbedev.conf";
-              text = lib.generators.toKeyValue {
-                mkKeyValue = lib.generators.mkKeyValueDefault {
-                  mkValueString = yesNo;
-                } " ";
-              } (sshdLogin // sshdKeepalive);
-            }}
-
-            svc=
-            for unit in sshd.service ssh.service; do
-              if [ "$(systemctl show -P LoadState "$unit")" = loaded ]; then
-                svc=$(systemctl show -P Id "$unit")
-                break
-              fi
-            done
-            if [ -z "$svc" ]; then
-              echo "openssh: neither sshd.service nor ssh.service is installed" >&2
-              exit 1
-            fi
-            sudo systemctl enable "$svc"
-            sudo systemctl restart "$svc"
-
-            if command -v ufw >/dev/null 2>&1; then
-              sudo ufw allow ssh >/dev/null
-            fi
-            if command -v firewall-cmd >/dev/null 2>&1 \
-               && sudo firewall-cmd --state >/dev/null 2>&1; then
-              sudo firewall-cmd --permanent --add-service=ssh >/dev/null
-              sudo firewall-cmd --reload >/dev/null
-            fi
-          '';
-        };
-
         sshSelfAuth = lib.mkIf config.features.openssh {
           script = ''
             pub="$HOME/.ssh/id_ed25519.pub"

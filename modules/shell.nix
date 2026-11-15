@@ -273,31 +273,15 @@
             local -a commands
             commands=(
               ${hmSpec.renderZsh "    " "all"}
-              ${
-                {
-                  nixos = hmSpec.renderZsh "    " "nixos";
-                  linux = hmSpec.renderZsh "    " "standalone";
-                  android = "";
-                }
-                .${config.host.platform}
-              }
+              ${lib.optionalString (config.host.platform == "nixos") (hmSpec.renderZsh "    " "nixos")}
             )
 
             local -a global_opts
             global_opts=(
-              '(-f --file)'{-f,--file}'[The home configuration file]:file:_files'
-              '(-A --attribute)'{-A,--attribute}'[Optional attribute that selects a configuration expression]:attribute:'
               '(-I --include)'{-I,--include}'[Add a path to the Nix expression search path]:path:_directories'
-              '--flake[Use Home Manager configuration at flake-uri]:flake-uri:'
-              '(-b --backup)'{-b,--backup}'[Move existing files to new path rather than fail]:extension:'
               '(-v --verbose)'{-v,--verbose}'[Verbose output]'
-              '(-n --dry-run)'{-n,--dry-run}'[Do a dry run, only prints what actions would be taken]'
               '(-h --help)'{-h,--help}'[Print help]'
-              '--version[Print the Home Manager version]'
-              '--arg[Override inputs passed to home-manager.nix]:name: :value:'
-              '--argstr[Override inputs passed to home-manager.nix (string)]:name: :value:'
               '--cores[Number of cores to use]:cores:'
-              '--debug[Enable debug mode]'
               '--impure[Allow impure evaluation]'
               '--keep-failed[Keep failed builds]'
               '--keep-going[Keep going on build failures]'
@@ -326,26 +310,6 @@
                 ;;
               args)
                 case $words[1] in
-                  option)
-                    _message 'configuration option name'
-                    ;;
-                  remove-generations)
-                    local -a generations
-                    generations=(''${(f)"$(home-manager generations 2>/dev/null | grep -o '^[0-9]\+')"})
-                    if [[ ''${#generations} -gt 0 ]]; then
-                      _describe 'generation IDs' generations
-                    else
-                      _message 'generation ID'
-                    fi
-                    ;;
-                  expire-generations)
-                    _message 'timestamp (e.g., "-30 days" or "2018-01-01")'
-                    ;;
-                  init)
-                    _arguments \
-                      '--switch[Immediately activate the generated configuration]' \
-                      '1:directory:_directories'
-                    ;;
                   iso)
                     local -a iso_cmds
                     iso_cmds=(
@@ -731,20 +695,6 @@
               unset _patina_init
             '')
           ];
-        };
-
-        stubbe.setup.zshLoginShell = {
-          privileged = true;
-          title = "Listing the nix zsh in /etc/shells";
-          body = ''
-            $SHELL points at ${zshBin}, and pkexec refuses to run for a $SHELL that
-            /etc/shells does not list.
-          '';
-          script = ''
-            if ! grep -qxF ${lib.escapeShellArg zshBin} /etc/shells; then
-              echo ${lib.escapeShellArg zshBin} | sudo tee -a /etc/shells >/dev/null
-            fi
-          '';
         };
 
         stubbe.setup.zshPatina.script = ''

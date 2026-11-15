@@ -2,7 +2,7 @@
 let
   inherit (config.stubbe.lib) userName lanHosts;
 
-  sharedOptions = lib: host: {
+  sharedOptions = lib: {
     flakeAttr = lib.mkOption {
       type = lib.types.str;
       description = ''
@@ -11,32 +11,12 @@ let
       '';
     };
 
-    mdnsName = lib.mkOption {
-      type = lib.types.nullOr (lib.types.enum (builtins.attrNames lanHosts));
-      default = if lanHosts ? ${host.flakeAttr} then host.flakeAttr else null;
-      defaultText = lib.literalMD "`host.flakeAttr` when it is a key of `stubbe.lib.lanHosts`, else null";
-      description = ''
-        The name this host advertises over mDNS: it is reachable as
-        `<mdnsName>.local`, which is the key it carries in
-        `stubbe.lib.lanHosts` (modules/core/lib/lan-hosts.nix). On NixOS it
-        feeds `services.avahi.settings.server."host-name"`. Null leaves
-        avahi on the system hostname, which then also gains avahi's
-        collision counter suffix (`-2`, `-3`, …) whenever an interface
-        publishes it twice.
-      '';
-    };
-
     graphicsNvidia = lib.mkOption {
       type = lib.types.bool;
       default = false;
       description = ''
         The machine's display GPU is NVIDIA. The one GPU decision a host
-        makes; versions, kernel modules and userspace follow from nixpkgs
-        and the distro driver package on their own. On NixOS,
-        modules/graphics.nix selects the nvidia driver stack from it. Under
-        standalone home-manager, modules/core/pkgs/gl.nix wraps programs for
-        glvnd NVIDIA vendor dispatch against the host's own driver libraries
-        when true, and uses nixGLIntel when false.
+        makes; modules/graphics.nix selects the nvidia driver stack from it.
       '';
     };
 
@@ -45,43 +25,24 @@ let
       default = false;
       description = "The machine runs on a battery, so the desktop shell shows its charge.";
     };
-
-    wifiInterface = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      example = "wlp0s20f3";
-      description = ''
-        The machine's wifi interface. avahi announces `<mdnsName>.local` on it
-        and nowhere else: LAN names are for the wifi network, and announcing
-        one name on two interfaces of the same LAN (wired and wifi, or a dock)
-        makes avahi see its own records as a conflict and rename itself to
-        `<name>-2`. Required when features.avahi is on.
-      '';
-    };
   };
 in
 {
   flake.modules.homeManager.platform =
-    { config, lib, ... }:
+    { lib, ... }:
     {
-      options.host = sharedOptions lib config.host // {
+      options.host = sharedOptions lib // {
         platform = lib.mkOption {
           type = lib.types.enum [
-            "linux"
             "nixos"
             "android"
           ];
-          default = "linux";
           description = ''
-            Host platform. "linux" means home-manager on a non-NixOS distro
-            (Fedora, Ubuntu, …), where the privileged half of each aspect —
-            /etc/pam.d, udev rules, polkit, apparmor, host packages — is
-            managed by `stubbe.setup.<name>.privileged` activations. "nixos"
-            means the matching NixOS module owns those files instead, and every
-            privileged activation is gated off. "android" means nix-on-droid
-            inside Termux: a proot'd glibc environment with no init, no
-            D-Bus, no /etc and no /usr, where neither a privileged activation
-            nor a systemd unit can run at all.
+            Host platform. "nixos" means home-manager runs inside a NixOS
+            host, whose matching NixOS module owns every system-level file.
+            "android" means nix-on-droid inside Termux: a proot'd glibc
+            environment with no init, no D-Bus, no /etc and no /usr, where no
+            systemd unit can run at all.
           '';
         };
 
@@ -103,16 +64,44 @@ in
   flake.modules.nixos.platform =
     { config, lib, ... }:
     {
-      options.host = sharedOptions lib config.host // {
+      options.host = sharedOptions lib // {
         sharedFacts = lib.mkOption {
           type = lib.types.attrs;
           internal = true;
           readOnly = true;
-          default = lib.getAttrs (builtins.attrNames (sharedOptions lib config.host)) config.host;
+          default = lib.getAttrs (builtins.attrNames (sharedOptions lib)) config.host;
           description = ''
             The host facts both classes declare, as this NixOS host set them.
             modules/core/home.nix forwards them into the primary user's
             home-manager configuration, so the two halves cannot disagree.
+          '';
+        };
+
+        mdnsName = lib.mkOption {
+          type = lib.types.nullOr (lib.types.enum (builtins.attrNames lanHosts));
+          default = if lanHosts ? ${config.host.flakeAttr} then config.host.flakeAttr else null;
+          defaultText = lib.literalMD "`host.flakeAttr` when it is a key of `stubbe.lib.lanHosts`, else null";
+          description = ''
+            The name this host advertises over mDNS: it is reachable as
+            `<mdnsName>.local`, which is the key it carries in
+            `stubbe.lib.lanHosts` (modules/core/lib/lan-hosts.nix). It feeds
+            `services.avahi.settings.server."host-name"`. Null leaves avahi on
+            the system hostname, which then also gains avahi's
+            collision counter suffix (`-2`, `-3`, …) whenever an interface
+            publishes it twice.
+          '';
+        };
+
+        wifiInterface = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "wlp0s20f3";
+          description = ''
+            The machine's wifi interface. avahi announces `<mdnsName>.local` on it
+            and nowhere else: LAN names are for the wifi network, and announcing
+            one name on two interfaces of the same LAN (wired and wifi, or a dock)
+            makes avahi see its own records as a conflict and rename itself to
+            `<name>-2`. Required when features.avahi is on.
           '';
         };
 
