@@ -79,7 +79,6 @@
             "/var/lib/upower"
             "/var/lib/power-profiles-daemon"
             "/var/lib/lys-power"
-            "/var/lib/adaptive-power-manager"
             "/var/lib/fwupd"
             {
               directory = "/var/lib/private";
