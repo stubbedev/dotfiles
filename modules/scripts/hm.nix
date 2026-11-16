@@ -57,7 +57,7 @@ _: {
                 nix repl "$ref" "$@"
                 ;;
               switch|boot|test|dry-activate)
-                sudo nixos-rebuild "$subcmd" --flake "$ref" "$@"
+                nixos-rebuild "$subcmd" --elevate sudo --flake "$ref" "$@"
                 ;;
               build|dry-build|build-vm|build-vm-with-bootloader)
                 nixos-rebuild "$subcmd" --flake "$ref" "$@"
@@ -73,7 +73,7 @@ _: {
             if is_nix_on_droid; then
               nix-on-droid rollback
             else
-              sudo nixos-rebuild switch --rollback "$@"
+              nixos-rebuild switch --rollback --elevate sudo "$@"
             fi
           }
 
@@ -229,8 +229,10 @@ _: {
           All rebuild verbs use raw nixos-rebuild: no nh, no nom, and no
           --impure outside `hm iso` (the flake evaluates purely).
 
-          On NixOS the build/activate verbs delegate to `[sudo ]nixos-rebuild
-          <cmd> --flake <flake>#<host>`. The host attr is host.flakeAttr;
+          On NixOS the build/activate verbs delegate to `nixos-rebuild
+          <cmd> --flake <flake>#<host>`; the activating verbs add
+          `--elevate sudo`, so evaluation and build run as you and only
+          activation runs as root. The host attr is host.flakeAttr;
           override with HM_NIXOS_CONFIG=<attr>.
 
           On Android (nix-on-droid) switch and build delegate to
