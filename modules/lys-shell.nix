@@ -74,6 +74,24 @@ in
       loginScreenSettings = loginScreen accent config.stubbe.paths.wallpaper;
 
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
+
+      mailProviders = {
+        kontainer = "outlook";
+        gmail = "gmail";
+      };
+
+      mailAccounts =
+        map
+          (account: {
+            name = lib.toSentenceCase account.name;
+            query = "folder:${account.name}/${account.folders.inbox} and tag:unread";
+            provider = mailProviders.${account.name} or "generic";
+          })
+          (
+            lib.sort (a: b: a.primary || (!b.primary && a.name < b.name)) (
+              lib.filter (account: account.notmuch.enable) (lib.attrValues config.accounts.email.accounts)
+            )
+          );
     in
     {
       imports = [ inputs.lys.homeModules.lys-polkit ];
@@ -210,18 +228,7 @@ in
                   notify-body = "{{ subject }}";
                   left-click = "dropdown:mail";
                   middle-click = "mail-open";
-                  accounts = [
-                    {
-                      name = "Kontainer";
-                      query = "folder:kontainer/INBOX and tag:unread";
-                      provider = "outlook";
-                    }
-                    {
-                      name = "Gmail";
-                      query = "folder:gmail/INBOX and tag:unread";
-                      provider = "gmail";
-                    }
-                  ];
+                  accounts = mailAccounts;
                 };
 
                 nightlight = {
