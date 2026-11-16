@@ -196,7 +196,7 @@ _: {
                     .${config.host.platform}
                   })
 
-                  echo "Pushing $(basename "$path") closure to the cache…"
+                  echo "Pushing ''${path##*/} closure to the cache…"
                   XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" \
                     ${lib.getExe' pkgs.xilo "xilo"} push default "$path" --quiet \
                     || echo "cache push failed (non-fatal)." >&2
@@ -346,7 +346,7 @@ _: {
             local secret count=0
             for secret in "$hm_flake_dir"/secrets/*; do
               [ -f "$secret" ] || continue
-              echo "Re-wrapping $(basename "$secret")"
+              echo "Re-wrapping ''${secret##*/}"
               if ! ${lib.getExe pkgs.sops} updatekeys --yes "$secret"; then
                 rollback
                 return 1
@@ -423,7 +423,7 @@ _: {
 
             echo
             echo "About to remove:"
-            echo "$selection" | sed 's/^/  /'
+            printf '  %s\n' "''${selection//$'\n'/$'\n'  }"
             read -rp "Proceed? [y/N] " confirm
             [[ "$confirm" =~ ^[Yy]$ ]] || { echo "hm clean: aborted"; return 0; }
 
