@@ -25,6 +25,19 @@ let
       default = false;
       description = "The machine runs on a battery, so the desktop shell shows its charge.";
     };
+
+    browser = lib.mkOption {
+      type = lib.types.enum [
+        "firefox"
+        "chrome"
+      ];
+      default = "firefox";
+      description = ''
+        The default web browser: the handler for http(s) links and HTML
+        files, set by modules/desktop.nix in both the system and user MIME
+        defaults.
+      '';
+    };
   };
 in
 {

@@ -11,6 +11,7 @@
       host = {
         installed = true;
         battery = true;
+        browser = "chrome";
         wifiInterface = "wlp0s20f3";
         luks = true;
         hibernateSwapSize = 32;

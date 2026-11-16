@@ -1,6 +1,9 @@
 { lib, ... }:
 let
-  defaultBrowser = "firefox.desktop";
+  browserDesktopIds = {
+    firefox = "firefox.desktop";
+    chrome = "com.google.Chrome.desktop";
+  };
   videoPlayer = "mpv.desktop";
   imageViewer = "imv.desktop";
   fileManager = "pcmanfm.desktop";
@@ -59,13 +62,15 @@ let
     // lib.genAttrs imageTypes (_: imageViewer);
 in
 {
-  flake.modules.nixos.desktop = _: {
-    services.dbus.implementation = "broker";
+  flake.modules.nixos.desktop =
+    { config, ... }:
+    {
+      services.dbus.implementation = "broker";
 
-    documentation.nixos.enable = false;
+      documentation.nixos.enable = false;
 
-    xdg.mime.defaultApplications = mimeDefaults defaultBrowser;
-  };
+      xdg.mime.defaultApplications = mimeDefaults browserDesktopIds.${config.host.browser};
+    };
 
   flake.modules.homeManager.desktop =
     {
@@ -172,7 +177,7 @@ in
         # Glob keys expand against shared-mime-info at eval time; exact keys
         # would keep precedence over a glob match. The NixOS half above keeps
         # the explicit list: xdg.mime has no glob support.
-        defaultApplications = browserHandlers defaultBrowser // {
+        defaultApplications = browserHandlers browserDesktopIds.${config.host.browser} // {
           "inode/directory" = fileManager;
           "x-scheme-handler/file" = fileManager;
           "video/*" = videoPlayer;
