@@ -31,11 +31,17 @@ let
 in
 {
   flake.modules.nixos.docker =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     lib.mkIf config.stubbe.userFeatures.docker {
       virtualisation.docker = {
         enable = true;
         daemon.settings = daemonSettings;
+        extraPackages = [ pkgs.openssh ];
       };
 
       virtualisation.oci-containers = {
