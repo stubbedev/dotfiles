@@ -137,7 +137,10 @@ in
         "org/gnome/desktop/interface".color-scheme = "prefer-dark";
       };
 
-      fonts.fontconfig.enable = true;
+      fonts.fontconfig = {
+        enable = true;
+        defaultFonts.monospace = [ "JetBrainsMono Nerd Font" ];
+      };
 
       home = {
         packages =
