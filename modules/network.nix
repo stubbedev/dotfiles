@@ -203,7 +203,9 @@ _: {
         # HM's legacy default block pins ControlMaster/ControlPath values that
         # nothing here uses; ssh's own defaults are what we run with.
         enableDefaultConfig = false;
-        settings = sshHosts;
+        settings = sshHosts // {
+          "*".WarnWeakCrypto = "no-pq-kex";
+        };
       };
 
       home = {
