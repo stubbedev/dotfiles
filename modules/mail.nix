@@ -723,9 +723,8 @@
         timers.mail-sync = {
           Unit.Description = "Periodic mail sync";
           Timer = {
-            OnBootSec = "30s";
+            OnStartupSec = "30s";
             OnUnitActiveSec = "30s";
-            Persistent = true;
           };
           Install.WantedBy = [ "timers.target" ];
         };
