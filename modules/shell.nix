@@ -561,13 +561,22 @@
           ''
         }/init.zsh";
 
-      # Frees Tab for fzf-tab. The `zle -N fzf-cd-widget` line has to stay or
-      # the `if` block fzf wraps these in is left empty.
+      # Frees Tab for fzf-tab and Ctrl-R for atuin. The `zle -N` widget lines
+      # have to stay or the `if` blocks fzf wraps the bindings in are left empty.
       fzfInit = mkInit "fzf" ''
         ${lib.getExe pkgs.fzf} --zsh \
           | grep -Fv "bindkey '^I'" \
-          | grep -v 'bindkey.*fzf-cd-widget' > $out/init.zsh
+          | grep -v 'bindkey.*fzf-cd-widget' \
+          | grep -v 'bindkey.*fzf-history-widget' > $out/init.zsh
       '';
+
+      atuinInit = mkInit "atuin" ''
+        HOME=$TMPDIR ${lib.getExe config.programs.atuin.package} init zsh \
+          ${lib.escapeShellArgs config.programs.atuin.flags} > $out/init.zsh
+      '';
+
+      historyFile = "${config.home.homeDirectory}/.zsh_history";
+      atuinDatabase = "${config.xdg.dataHome}/atuin/history.db";
 
       starshipInit = mkInit "starship" ''
         HOME=$TMPDIR ${lib.getExe pkgs.starship} init zsh --print-full-init > $out/init.zsh
@@ -659,7 +668,7 @@
             [[ -o interactive ]] || setopt no_aliases
           '';
           history = {
-            path = "${config.home.homeDirectory}/.zsh_history";
+            path = historyFile;
             size = 10000;
             save = 10000;
             extended = true;
@@ -679,6 +688,7 @@
               ${sourcePlugins}
               source ${zshConfig}/settings
               source ${fzfInit}
+              source ${atuinInit}
               source ${starshipInit}
               source ${zoxideInit}
               ${lib.optionalString config.programs.direnv-instant.enable "source ${direnvInstantInit}"}
@@ -695,6 +705,30 @@
               unset _patina_init
             '')
           ];
+        };
+
+        programs.atuin = {
+          enable = true;
+          enableZshIntegration = false;
+          flags = [
+            "--disable-up-arrow"
+            "--disable-ai"
+          ];
+          settings = {
+            db_path = atuinDatabase;
+            update_check = false;
+          };
+        };
+
+        stubbe.setup.atuinImport = {
+          after = [ "linkGeneration" ];
+          script = ''
+            if [[ ! -e '${atuinDatabase}' && -f '${historyFile}' ]]; then
+              ATUIN_SESSION="$(${lib.getExe config.programs.atuin.package} uuid)" \
+                HISTFILE='${historyFile}' \
+                ${lib.getExe config.programs.atuin.package} import zsh
+            fi
+          '';
         };
 
         stubbe.setup.zshPatina.script = ''

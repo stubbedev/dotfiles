@@ -102,7 +102,6 @@
           --preview '[[ -f {} ]] && bat -n --color=always {} || ls -lhA --color=always {}'
           --bind 'ctrl-/:change-preview-window(down|hidden|)'
         '';
-        FZF_CTRL_R_OPTS = "";
         FZF_ALT_C_COMMAND = "";
 
         STARSHIP_LOG = "error";
