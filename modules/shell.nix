@@ -718,6 +718,31 @@
             db_path = atuinDatabase;
             update_check = false;
             auto_sync = false;
+            style = "compact";
+            inline_height = 20;
+            show_help = false;
+            show_tabs = false;
+            show_preview = false;
+            show_numeric_shortcuts = false;
+            ui = {
+              columns = [ "command" ];
+              syntax_highlight = false;
+            };
+            theme.name = "catppuccin-fzf";
+          };
+          themes.catppuccin-fzf = {
+            theme.name = "catppuccin-fzf";
+            colors = with pkgs.stubbe.withHash; {
+              Base = text;
+              AlertError = mauve;
+              AlertWarn = red;
+              AlertInfo = green;
+              Annotation = overlay1;
+              Guidance = overlay1;
+              Important = red;
+              Title = mauve;
+              Muted = overlay0;
+            };
           };
         };
 
