@@ -11,27 +11,61 @@ _: {
       # Defined in modules/core/lib/hm-commands.nix so this wrapper and the zsh
       # completion in modules/shell.nix cannot disagree.
       hmSpec = pkgs.stubbe.hm;
+      yq = lib.getExe pkgs.yq-go;
+      sops = lib.getExe pkgs.sops;
+      sshToAge = lib.getExe pkgs.ssh-to-age;
+
+      usageText = ''
+        Usage: hm <command> [args]
+
+        Commands:
+        ${hmSpec.renderExpandedHelp "wrapper"}
+
+        ${hmSpec.renderExpandedHelp "rebuild"}
+        ${hmSpec.renderHelp "meta"}
+
+        All rebuild verbs use raw nixos-rebuild: no nh, no nom, and no
+        --impure outside `hm iso` (the flake evaluates purely).
+
+        On NixOS the build/activate verbs delegate to `nixos-rebuild
+        <cmd> --flake <flake>#<host>`; the activating verbs add
+        `--elevate sudo`, so evaluation and build run as you and only
+        activation runs as root. The host attr is host.flakeAttr;
+        override with HM_NIXOS_CONFIG=<attr>.
+
+        On Android (nix-on-droid) switch and build delegate to
+        `nix-on-droid <cmd> --flake <flake>#<host>`; the host attr is
+        host.flakeAttr, since neither the hostname nor $USER names the
+        configuration there. Every other verb errors.'';
 
       hm = pkgs.stubbe.bashApp {
         name = "hm";
         text = ''
-          hm_flake_dir=$(realpath -e "''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}")
+          resolve_dir() {
+            cd -P -- "$1" || { echo "hm: cannot resolve directory $1" >&2; return 1; }
+            resolved_dir=$PWD
+            cd - >/dev/null
+          }
+
+          resolve_dir "''${HM_FLAKE_DIR:-${config.stubbe.paths.dotfiles}}"
+          hm_flake_dir=$resolved_dir
           hm_flake_ref="path:$hm_flake_dir"
+          hm_sops_config="$hm_flake_dir/.sops.yaml"
+          hm_host_attr=${lib.escapeShellArg config.host.flakeAttr}
+          hm_short_hostname="''${HOSTNAME%%.*}"
+          hm_ssh_pubkey="$HOME/.ssh/id_ed25519.pub"
+
+          flake_sops() {
+            ${sops} --config "$hm_sops_config" "$@"
+          }
+
+          write_file_atomically() {
+            printf '%s' "$2" > "$1.new"
+            mv -- "$1.new" "$1"
+          }
 
           is_nix_on_droid() {
             ${lib.boolToString (config.host.platform == "android")}
-          }
-
-          short_hostname() {
-            hostname -s
-          }
-
-          host_attr() {
-            echo ${lib.escapeShellArg config.host.flakeAttr}
-          }
-
-          nixos_attr() {
-            echo "''${HM_NIXOS_CONFIG:-$(host_attr)}"
           }
 
           run_hm_subcmd() {
@@ -40,7 +74,7 @@ _: {
             if is_nix_on_droid; then
               case "$subcmd" in
                 switch|build)
-                  nix-on-droid "$subcmd" --flake "$hm_flake_ref#$(host_attr)" "$@"
+                  nix-on-droid "$subcmd" --flake "$hm_flake_ref#$hm_host_attr" "$@"
                   ;;
                 *)
                   echo "hm $subcmd: unavailable on Android. Supported rebuild verbs: switch, build." >&2
@@ -50,8 +84,7 @@ _: {
               return
             fi
 
-            local ref
-            ref="$hm_flake_ref#$(nixos_attr)"
+            local ref="$hm_flake_ref#''${HM_NIXOS_CONFIG:-$hm_host_attr}"
             case "$subcmd" in
               repl)
                 nix repl "$ref" "$@"
@@ -112,58 +145,33 @@ _: {
           }
 
           flake_git() {
-            git -C "$hm_flake_dir" "$@"
+            git -C "$hm_flake_dir" \
+              -c merge.flakelock.name="keep current flake.lock (regenerated)" \
+              -c merge.flakelock.driver=true \
+              "$@"
           }
 
-          flake_in_git() {
-            flake_git rev-parse --is-inside-work-tree >/dev/null 2>&1
-          }
-
-          flake_has_upstream() {
-            flake_git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1
-          }
-
-          abort_rebase() {
-            local git_dir
-            git_dir=$(flake_git rev-parse --absolute-git-dir)
-            if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+          pull_flake_repo() {
+            flake_git pull --rebase --autostash --quiet && return 0
+            local rebase_dir
+            rebase_dir=$(flake_git rev-parse --git-path rebase-merge)
+            if [ -d "$rebase_dir" ] || [ -d "''${rebase_dir%-merge}-apply" ]; then
               flake_git rebase --abort
             fi
-          }
-
-          ensure_flakelock_driver() {
-            flake_git config merge.flakelock.name "keep current flake.lock (regenerated)"
-            flake_git config merge.flakelock.driver true
-          }
-
-          sync_flake_repo() {
-            flake_in_git || return 0
-            flake_has_upstream || return 0
-            if ! flake_git fetch --quiet; then
-              echo "hm: fetching $hm_flake_dir failed; updating against the local checkout" >&2
-              return 0
-            fi
-            flake_git pull --rebase --autostash --quiet || {
-              abort_rebase
-              echo "hm: rebasing $hm_flake_dir onto upstream failed; updating against the local checkout" >&2
-            }
+            return 1
           }
 
           commit_flake_lock() {
-            flake_in_git || return 0
+            local has_upstream="$1"
             flake_git diff --quiet -- flake.lock && return 0
-            flake_git add -- flake.lock
-            flake_git commit -m "chore: update flake.lock" -- flake.lock >/dev/null
+            flake_git commit --quiet -m "chore: update flake.lock" -- flake.lock
             echo "Committed updated flake.lock"
-            flake_has_upstream || return 0
+            [ "$has_upstream" = true ] || return 0
             flake_git push --quiet 2>/dev/null && return 0
-            flake_git pull --rebase --autostash --quiet || {
-              abort_rebase
-              echo "flake.lock committed locally; push failed (resolve manually)" >&2
+            if pull_flake_repo && flake_git push --quiet; then
               return 0
-            }
-            flake_git push --quiet || \
-              echo "flake.lock committed locally; push failed (resolve manually)" >&2
+            fi
+            echo "flake.lock committed locally; push failed (resolve manually)" >&2
           }
 
           push_to_cache() {
@@ -176,25 +184,21 @@ _: {
                     return 0
                   fi
 
-                  local ageKey token
-                  ageKey=$(${lib.getExe pkgs.ssh-to-age} -private-key -i "$HOME/.ssh/id_ed25519") || {
-                    echo "cache push: could not derive the age key from ~/.ssh/id_ed25519; skipping." >&2
-                    return 0
-                  }
-                  token=$(SOPS_AGE_KEY="$ageKey" ${lib.getExe pkgs.sops} --decrypt \
+                  local token
+                  token=$(${sops} --decrypt \
                     --input-type binary --output-type binary "$tokenFile" 2>/dev/null) || {
                     echo "cache push: could not decrypt xilo-token; skipping." >&2
                     return 0
                   }
 
-                  local path
-                  path=$(realpath -e ${
+                  resolve_dir ${
                     {
                       android = ''"$HOME/.nix-profile"'';
                       nixos = "/run/current-system";
                     }
                     .${config.host.platform}
-                  })
+                  }
+                  local path=$resolved_dir
 
                   echo "Pushing ''${path##*/} closure to the cache…"
                   XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" \
@@ -208,49 +212,31 @@ _: {
 
           update_system() {
             echo "Updating nix inputs"
-            if flake_in_git; then
-              ensure_flakelock_driver
-              sync_flake_repo
+            if [ ! -e "$hm_flake_dir/.git" ]; then
+              nix flake update --flake "$hm_flake_ref" --quiet
+              return
+            fi
+            local has_upstream=false
+            if flake_git rev-parse --verify --quiet '@{u}' >/dev/null; then
+              has_upstream=true
+              pull_flake_repo ||
+                echo "hm: pulling $hm_flake_dir from upstream failed; updating against the local checkout" >&2
             fi
             nix flake update --flake "$hm_flake_ref" --quiet
-            commit_flake_lock
+            commit_flake_lock "$has_upstream"
           }
 
           usage() {
-            cat <<'EOF'
-          Usage: hm <command> [args]
-
-          Commands:
-          ${hmSpec.renderExpandedHelp "wrapper"}
-
-          ${hmSpec.renderExpandedHelp "rebuild"}
-          ${hmSpec.renderHelp "meta"}
-
-          All rebuild verbs use raw nixos-rebuild: no nh, no nom, and no
-          --impure outside `hm iso` (the flake evaluates purely).
-
-          On NixOS the build/activate verbs delegate to `nixos-rebuild
-          <cmd> --flake <flake>#<host>`; the activating verbs add
-          `--elevate sudo`, so evaluation and build run as you and only
-          activation runs as root. The host attr is host.flakeAttr;
-          override with HM_NIXOS_CONFIG=<attr>.
-
-          On Android (nix-on-droid) switch and build delegate to
-          `nix-on-droid <cmd> --flake <flake>#<host>`; the host attr is
-          host.flakeAttr, since neither the hostname nor $USER names the
-          configuration there. Every other verb errors.
-          EOF
+            printf '%s\n' ${lib.escapeShellArg usageText}
           }
 
           hm_whoami() {
-            if [ ! -f "$HOME/.ssh/id_ed25519.pub" ]; then
-              echo "hm whoami: ~/.ssh/id_ed25519.pub not found" >&2
+            local pubkey
+            pubkey=$(${sshToAge} < "$hm_ssh_pubkey") || {
+              echo "hm whoami: could not derive an age pubkey from $hm_ssh_pubkey" >&2
               return 1
-            fi
-            local pubkey host
-            pubkey=$(${lib.getExe pkgs.ssh-to-age} < "$HOME/.ssh/id_ed25519.pub")
-            host=$(short_hostname)
-            printf '%s %s\n' "$host" "$pubkey"
+            }
+            printf '%s %s\n' "$hm_short_hostname" "$pubkey"
           }
 
           hm_trust() {
@@ -274,22 +260,21 @@ _: {
                 pubkey="$1"
               fi
             else
-              cat <<EOF >&2
-          Usage:
-            hm trust <name> <pubkey>      # explicit
-            hm trust <pubkey>             # auto-name from hostname or pubkey suffix
-            <cmd> | hm trust              # e.g. ssh laptop2 hm whoami | hm trust
-          EOF
+              printf '%s\n' >&2 \
+                "Usage:" \
+                "  hm trust <name> <pubkey>      # explicit" \
+                "  hm trust <pubkey>             # auto-name from hostname or pubkey suffix" \
+                "  <cmd> | hm trust              # e.g. ssh laptop2 hm whoami | hm trust"
               return 2
             fi
 
             if [ -z "$name" ]; then
               local local_pubkey=""
-              if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
-                local_pubkey=$(${lib.getExe pkgs.ssh-to-age} < "$HOME/.ssh/id_ed25519.pub")
+              if [ -f "$hm_ssh_pubkey" ]; then
+                local_pubkey=$(${sshToAge} < "$hm_ssh_pubkey")
               fi
               if [ -n "$local_pubkey" ] && [ "$pubkey" = "$local_pubkey" ]; then
-                name=$(short_hostname)
+                name="$hm_short_hostname"
               else
                 name="''${pubkey: -8}"
               fi
@@ -305,40 +290,26 @@ _: {
               return 2
             fi
 
-            local sops_yaml="$hm_flake_dir/.sops.yaml"
-            if [ ! -f "$sops_yaml" ]; then
-              echo "hm trust: $sops_yaml not found" >&2
+            local -a original_lines
+            mapfile -t original_lines < "$hm_sops_config" || {
+              echo "hm trust: cannot read $hm_sops_config" >&2
               return 1
-            fi
-
-            if grep -qF "$pubkey" "$sops_yaml"; then
+            }
+            local original updated
+            printf -v original '%s\n' "''${original_lines[@]}"
+            updated=$(PUBKEY="$pubkey" NAME="$name" ${yq} '
+                select([.creation_rules[].key_groups[].age[]] | any_c(. == strenv(PUBKEY)) | not)
+                | (.creation_rules[].key_groups[].age) += [strenv(PUBKEY)]
+                | (.creation_rules[].key_groups[].age[] | select(. == strenv(PUBKEY))) line_comment = strenv(NAME)
+              ' "$hm_sops_config") || {
+              echo "hm trust: could not add $pubkey to the age recipients in $hm_sops_config" >&2
+              return 1
+            }
+            if [ -z "$updated" ]; then
               echo "hm trust: $pubkey already present in .sops.yaml — nothing to do."
               return 0
             fi
-
-            local backup
-            backup=$(mktemp)
-            cp "$sops_yaml" "$backup"
-
-            rollback() {
-              cp "$backup" "$sops_yaml"
-              rm -f "$backup"
-              echo "hm trust: rolled back .sops.yaml" >&2
-            }
-
-            local tmp
-            tmp=$(mktemp)
-            awk -v new="          - $pubkey  # $name" '
-              /^          - age1/ { last = NR }
-              { lines[NR] = $0 }
-              END {
-                for (i = 1; i <= NR; i++) {
-                  print lines[i]
-                  if (i == last) print new
-                }
-              }
-            ' "$sops_yaml" > "$tmp"
-            mv "$tmp" "$sops_yaml"
+            write_file_atomically "$hm_sops_config" "$updated"$'\n'
 
             echo "Added $name → $pubkey to .sops.yaml"
 
@@ -347,21 +318,20 @@ _: {
             for secret in "$hm_flake_dir"/secrets/*; do
               [ -f "$secret" ] || continue
               echo "Re-wrapping ''${secret##*/}"
-              if ! ${lib.getExe pkgs.sops} updatekeys --yes "$secret"; then
-                rollback
+              if ! flake_sops updatekeys --yes "$secret"; then
+                write_file_atomically "$hm_sops_config" "$original"
+                echo "hm trust: rolled back .sops.yaml" >&2
                 return 1
               fi
               count=$((count + 1))
             done
-            rm -f "$backup"
 
-            cat <<MSG
-
-          Trusted $name across $count secret file(s).
-          Review:  git -C "$hm_flake_dir" diff -- .sops.yaml secrets/
-          Commit:  git -C "$hm_flake_dir" add .sops.yaml secrets/ && \\
-                   git -C "$hm_flake_dir" commit -m "trust: add $name age recipient"
-          MSG
+            echo
+            printf '%s\n' \
+              "Trusted $name across $count secret file(s)." \
+              "Review:  git -C \"$hm_flake_dir\" diff -- .sops.yaml secrets/" \
+              "Commit:  git -C \"$hm_flake_dir\" add .sops.yaml secrets/ && \\" \
+              "         git -C \"$hm_flake_dir\" commit -m \"trust: add $name age recipient\""
           }
 
           hm_cache() {
@@ -375,12 +345,7 @@ _: {
                   "$HOME/.cache/nvim"
                 ;;
               ""|-h|--help)
-                cat <<EOF >&2
-          Usage: hm cache <target>
-
-          Targets:
-          ${hmSpec.renderSubHelp "cache"}
-          EOF
+                printf '%s\n' >&2 "Usage: hm cache <target>" "" "Targets:" ${lib.escapeShellArg (hmSpec.renderSubHelp "cache")}
                 [ -z "$target" ] && return 2 || return 0
                 ;;
               *)
@@ -401,12 +366,12 @@ _: {
                 \( -name node_modules -o -name target -o -name .next -o -name dist -o -name vendor -o -name .venv \) \
                 -type d -print0 -prune 2>/dev/null
             )
-            while IFS= read -r -d ''' p; do paths+=("$p"); done < <(
-              find "$HOME" -maxdepth 1 \( -name 'core.[0-9]*' -o -name 'core' \) -type f -print0 2>/dev/null
-            )
-            while IFS= read -r -d ''' p; do paths+=("$p"); done < <(
-              find "$HOME/.cache" -mindepth 1 -maxdepth 1 -print0 2>/dev/null
-            )
+            shopt -s nullglob dotglob
+            local candidate
+            for candidate in "$HOME"/core "$HOME"/core.[0-9]*; do
+              [ -f "$candidate" ] && paths+=("$candidate")
+            done
+            paths+=("$HOME"/.cache/*)
 
             local -a menu=($'(action)\tNix store garbage — old generations + unreachable paths (runs: hm gc)')
             if [ "''${#paths[@]}" -gt 0 ]; then
@@ -416,9 +381,11 @@ _: {
             fi
 
             local selection
-            selection=$(printf '%s\n' "''${menu[@]}" | fzf --multi \
+            local menu_text
+            printf -v menu_text '%s\n' "''${menu[@]}"
+            selection=$(fzf --multi \
               --header='TAB select, ENTER to review & delete. Regenerable build dirs, caches, core dumps, nix gc.' \
-              --delimiter=$'\t' --with-nth=1,2)
+              --delimiter=$'\t' --with-nth=1,2 <<< "''${menu_text%$'\n'}")
             [ -n "$selection" ] || { echo "hm clean: nothing selected"; return 0; }
 
             echo
@@ -427,15 +394,22 @@ _: {
             read -rp "Proceed? [y/N] " confirm
             [[ "$confirm" =~ ^[Yy]$ ]] || { echo "hm clean: aborted"; return 0; }
 
-            local size target
+            local size target collect_garbage=false
+            local -a targets=()
             while IFS=$'\t' read -r size target; do
               if [ "$size" = "(action)" ]; then
-                run_gc
+                collect_garbage=true
                 continue
               fi
               echo "Removing $target ($size)..."
-              rm -rf -- "$target"
+              targets+=("$target")
             done <<< "$selection"
+            if [ "''${#targets[@]}" -gt 0 ]; then
+              rm -rf -- "''${targets[@]}"
+            fi
+            if [ "$collect_garbage" = true ]; then
+              run_gc
+            fi
 
             echo "Done."
           }
@@ -445,6 +419,10 @@ _: {
             local name="''${2:-}"
             if [ -z "$action" ] || [ -z "$name" ]; then
               echo "Usage: hm secret {${hmSpec.subNames "secret"}} <name>" >&2
+              return 2
+            fi
+            if [[ ! "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+              echo "hm secret: name '$name' must match [A-Za-z0-9][A-Za-z0-9._-]* (a file directly under secrets/)" >&2
               return 2
             fi
             local path="$hm_flake_dir/secrets/$name"
@@ -464,7 +442,7 @@ _: {
             fi
             case "$action" in
               edit)
-                ${lib.getExe pkgs.sops} --input-type binary --output-type binary "$path"
+                flake_sops --input-type binary --output-type binary "$path"
                 ;;
               set)
                 local pw=""
@@ -479,15 +457,18 @@ _: {
                     return 1
                   fi
                   unset pw2
+                elif IFS= read -rd ''' pw; then
+                  echo "hm secret set: value contains a NUL byte" >&2
+                  return 1
                 else
-                  pw=$(cat)
+                  pw="''${pw%"''${pw##*[!$'\n']}"}"
                 fi
                 if [ -z "$pw" ]; then
                   echo "hm secret set: refusing to write empty value" >&2
                   return 1
                 fi
                 local tmp="$path.new"
-                if ! printf '%s' "$pw" | ${lib.getExe pkgs.sops} --encrypt \
+                if ! printf '%s' "$pw" | flake_sops --encrypt \
                     --input-type binary --output-type binary \
                     --filename-override "$path" /dev/stdin > "$tmp"; then
                   rm -f "$tmp"
@@ -504,7 +485,7 @@ _: {
                   echo "hm secret rotate: $path does not exist" >&2
                   return 1
                 fi
-                ${lib.getExe pkgs.sops} --rotate -i \
+                flake_sops --rotate -i \
                   --input-type binary --output-type binary "$path"
                 echo "Re-rolled data key for $name. Recipients unchanged."
                 ;;
