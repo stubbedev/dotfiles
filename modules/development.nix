@@ -1,5 +1,9 @@
 { inputs, ... }:
 {
+  flake.modules.nixos.development = _: {
+    programs.nix-ld.enable = true;
+  };
+
   flake.modules.homeManager.development =
     {
       config,
