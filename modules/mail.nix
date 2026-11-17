@@ -455,9 +455,13 @@
             };
           };
           stubbe = {
-            address = "hello@stubbe.dev";
+            address = "abs@stubbe.dev";
+            aliases = [
+              "hello@stubbe.dev"
+              "admin@stubbe.dev"
+            ];
             inherit realName;
-            userName = "hello@stubbe.dev";
+            userName = "admin@stubbe.dev";
             passwordCommand = "cat ${passwords.stubbe}";
             folders = {
               inbox = "INBOX";
