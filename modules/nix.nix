@@ -30,7 +30,7 @@ in
           nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
 
           # Without this the daemon falls back to the default substituters
-          # and misses nix.stubbe.dev.
+          # and misses xilos.dev.
           inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
 
           # nix asks the substituter before building, so our self-hosted cache

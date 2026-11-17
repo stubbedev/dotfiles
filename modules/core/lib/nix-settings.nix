@@ -3,17 +3,15 @@
 _: {
   stubbe.lib = {
     cache = {
-      # xilo (nix.stubbe.dev) first: self-hosted cache is preferred, then
+      # xilo (xilos.dev) first: self-hosted cache is preferred, then
       # upstream and nix-community.
       substituters = [
-        "https://nix.stubbe.dev/c/default/default"
-        "https://nix.stubbe.dev/c/default/flakes"
+        "https://xilos.dev/c/stubbedev/main"
         "https://cache.nixos.org"
         "https://nix-community.cachix.org"
       ];
       trusted-public-keys = [
-        "default:6uWvXutL9cXjV3lii+Ur5ff+ArQoG4kMBKNXWrIxhHg="
-        "flakes:0Dr9MyPOvA6va2GVzflJcbrChNoZUeIZflyrww3O+YM="
+        "xilos.dev/stubbedev/main-1:397R6S49v/FSvP+mZ3HlKrVN1KXhgzHIEIHxA/UuG6Y="
         "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       ];

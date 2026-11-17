@@ -206,7 +206,7 @@ _: {
           fi
           token=$(sops --decrypt --input-type binary --output-type binary "$token_file")
           echo "Pushing ''${generation##*/} closure to the cache…"
-          XILO_URL="https://nix.stubbe.dev" XILO_TOKEN="$token" xilo push default "$generation" --quiet
+          XILO_URL="https://xilos.dev" XILO_TOKEN="$token" xilo push stubbedev/main "$generation" --quiet
         '';
       };
     in
