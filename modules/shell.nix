@@ -717,6 +717,7 @@
           settings = {
             db_path = atuinDatabase;
             update_check = false;
+            auto_sync = false;
           };
         };
 
