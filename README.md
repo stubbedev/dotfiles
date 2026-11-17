@@ -32,7 +32,8 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   └── <aspect>.nix       # mail, shell, lys-wm, lys-shell, power, storage, …
 ├── bin/                   # ONLY the live-ISO installer (stb-install-nixos)
 ├── src/                   # the few real files: the nvim live-edit
-│                          # tree, aerc stylesets, wallpapers
+│                          # tree, aerc stylesets, wallpapers, and
+│                          # the `hm` Go CLI (src/hm)
 ├── certs/                 # the srv root CA (public cert); seeded into the
 │                          # system trust store at build time
 └── secrets/               # sops-encrypted, keyed per machine in .sops.yaml
@@ -59,8 +60,7 @@ semantics. `bin/stb-install-nixos` is baked into the installer ISO.
 
 3. **Three layers of shared code, and no fourth.**
    - `stubbe.lib.*` (`modules/core/lib/`) — pure data and pure functions:
-     `colors`, `theme`, `newtabUrl`, `cache`, the `hm` command catalogue,
-     `managedBy`. Needs nothing; mirrored as `flake.lib`.
+     `colors`, `theme`, `newtabUrl`, `cache`, `managedBy`. Needs nothing; mirrored as `flake.lib`.
    - `pkgs.stubbe.*` (`modules/core/pkgs/`) — every builder that needs `pkgs`:
      `secret`, `bashApp`, `zshApp`, `shellScript`, `gen`, `wrapPackage`,
      `withDriverLibs`, `check`, and the `setup.json*` script fragments. Re-exports all of
@@ -103,14 +103,24 @@ semantics. `bin/stb-install-nixos` is baked into the installer ISO.
 
 ## APPLYING THE CONFIG
 
-Day-to-day rebuilds run through `hm`, which wraps `nixos-rebuild` on NixOS and
-`nix-on-droid` on the phone, against the checkout linked at `~/.stubbe`:
+Day-to-day rebuilds run through `hm`, a Go CLI (`src/hm`, packaged as
+`pkgs.stubbe.hm` in `modules/scripts/hm.nix`) that works against the checkout
+linked at `~/.stubbe`. It builds the NixOS toplevel (or the nix-on-droid
+activation package on the phone) as you with `nix build`, renders the build
+progress, prints the closure diff against the running generation, and only
+then activates, as root through sudo on NixOS:
 
 ```sh
-hm switch      # build and activate
-hm upgrade     # update flake inputs, commit flake.lock, switch
+hm switch      # build, diff and activate
+hm upgrade     # update flake inputs, commit and push flake.lock, switch
 hm help        # every verb
 ```
+
+The home-manager module writes its settings to `~/.config/hm/config.json`.
+Other modules add subcommands through `stubbe.hm.commands` (`hm iso`,
+`hm clean`, `hm cache`) and post-switch hooks through `stubbe.hm.postSwitch`
+(the closure push to the xilo cache). `cd src/hm && go test ./...` runs the
+unit tests; `nix build .#checks.x86_64-linux.hm` runs them in the sandbox.
 
 ## NIXOS HOSTS
 

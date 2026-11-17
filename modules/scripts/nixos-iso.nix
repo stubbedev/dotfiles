@@ -8,8 +8,41 @@ _: {
       ...
     }:
     let
-      # Same catalogue the hm wrapper renders its help from.
-      hmSpec = pkgs.stubbe.hm;
+      commands = [
+        {
+          name = "build";
+          syntax = "build [args]";
+          description = "Build the installer ISO with --impure";
+        }
+        {
+          name = "path";
+          syntax = "path [args]";
+          description = "Build the ISO and print the output path";
+        }
+        {
+          name = "devices";
+          syntax = "devices";
+          description = "List removable/block devices";
+        }
+        {
+          name = "burn";
+          syntax = "burn <device> --yes";
+          description = "Build the ISO and write it to a USB device";
+        }
+        {
+          name = "help";
+          syntax = "help";
+          description = "Show nixos-iso help";
+        }
+      ];
+      usageColumn = 24;
+      usageRows = lib.concatMapStringsSep "\n" (
+        c:
+        let
+          head = "  ${c.syntax}";
+        in
+        head + lib.strings.replicate (lib.max 2 (usageColumn - lib.stringLength head)) " " + c.description
+      ) commands;
 
       nixosIso = pkgs.stubbe.bashApp {
         name = "nixos-iso";
@@ -23,7 +56,7 @@ _: {
           Usage: nixos-iso <command> [args]
 
           Commands:
-          ${hmSpec.renderSubHelp "iso"}
+          ${usageRows}
 
           Environment:
             NIXOS_FLAKE_DIR       Override the flake directory (default: ~/.stubbe)
@@ -156,7 +189,15 @@ _: {
         '';
       };
     in
-    {
-      home.packages = lib.optionals config.features.ops [ nixosIso ];
+    lib.mkIf config.features.ops {
+      home.packages = [ nixosIso ];
+      stubbe.hm.commands = [
+        {
+          name = "iso";
+          description = "Build the NixOS installer ISO or burn it to a USB device";
+          exec = lib.getExe nixosIso;
+          complete = map (c: { inherit (c) name description; }) commands;
+        }
+      ];
     };
 }

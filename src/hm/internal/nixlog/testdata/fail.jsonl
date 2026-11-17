@@ -1,0 +1,80 @@
+@nix {"action":"start","id":4549431223386112,"level":6,"parent":0,"text":"querying info about missing paths","type":0}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://nix.stubbe.dev/c/default/default"],"id":4549431223386113,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://nix.stubbe.dev/c/default/default'","type":109}
+@nix {"action":"start","fields":["https://nix.stubbe.dev/c/default/default/62iq852mlp0kv3hvv629rsfx72b5dycc.narinfo"],"id":4549431223386114,"level":4,"parent":4549431223386113,"text":"downloading 'https://nix.stubbe.dev/c/default/default/62iq852mlp0kv3hvv629rsfx72b5dycc.narinfo'","type":101}
+@nix {"action":"stop","id":4549431223386113}
+@nix {"action":"stop","id":4549431223386114}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://nix.stubbe.dev/c/default/flakes"],"id":4549431223386115,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://nix.stubbe.dev/c/default/flakes'","type":109}
+@nix {"action":"stop","id":4549431223386115}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://cache.nixos.org"],"id":4549431223386116,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"start","fields":["https://cache.nixos.org/62iq852mlp0kv3hvv629rsfx72b5dycc.narinfo"],"id":4549431223386117,"level":4,"parent":4549431223386116,"text":"downloading 'https://cache.nixos.org/62iq852mlp0kv3hvv629rsfx72b5dycc.narinfo'","type":101}
+@nix {"action":"stop","id":4549431223386116}
+@nix {"action":"stop","id":4549431223386117}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://cache.nixos.org"],"id":4549431223386118,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"stop","id":4549431223386118}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://nix-community.cachix.org"],"id":4549431223386119,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://nix-community.cachix.org'","type":109}
+@nix {"action":"start","fields":["https://nix-community.cachix.org/62iq852mlp0kv3hvv629rsfx72b5dycc.narinfo"],"id":4549431223386120,"level":4,"parent":4549431223386119,"text":"downloading 'https://nix-community.cachix.org/62iq852mlp0kv3hvv629rsfx72b5dycc.narinfo'","type":101}
+@nix {"action":"stop","id":4549431223386119}
+@nix {"action":"stop","id":4549431223386120}
+@nix {"action":"stop","id":4549431223386112}
+@nix {"action":"msg","level":3,"msg":"this derivation will be built:"}
+@nix {"action":"msg","level":3,"msg":"  /nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv"}
+@nix {"action":"start","id":4549431223386121,"level":0,"parent":0,"text":"","type":102}
+@nix {"action":"start","id":4549431223386122,"level":0,"parent":0,"text":"","type":104}
+@nix {"action":"start","id":4549431223386123,"level":0,"parent":0,"text":"","type":103}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[0,1,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://nix.stubbe.dev/c/default/default"],"id":4549431223386124,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://nix.stubbe.dev/c/default/default'","type":109}
+@nix {"action":"stop","id":4549431223386124}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://nix.stubbe.dev/c/default/flakes"],"id":4549431223386125,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://nix.stubbe.dev/c/default/flakes'","type":109}
+@nix {"action":"stop","id":4549431223386125}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://cache.nixos.org"],"id":4549431223386126,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"stop","id":4549431223386126}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://cache.nixos.org"],"id":4549431223386127,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"stop","id":4549431223386127}
+@nix {"action":"start","fields":["/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919","https://nix-community.cachix.org"],"id":4549431223386128,"level":4,"parent":0,"text":"querying info about '/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919' on 'https://nix-community.cachix.org'","type":109}
+@nix {"action":"stop","id":4549431223386128}
+@nix {"action":"result","fields":[0,1,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[0,1,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[0,2,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[0,3,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[0,2,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[0,1,0,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"start","fields":["/nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv","",1,1],"id":4549431223386129,"level":3,"parent":0,"text":"building '/nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv'","type":105}
+@nix {"action":"result","fields":[0,1,1,0],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":["about to fail"],"id":4549431223386129,"type":101}
+@nix {"action":"result","fields":[0,1,0,1],"id":4549431223386122,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4549431223386123,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4549431223386121,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4549431223386121,"type":106}
+@nix {"action":"stop","id":4549431223386129}
+@nix {"action":"stop","id":4549431223386123}
+@nix {"action":"stop","id":4549431223386122}
+@nix {"action":"stop","id":4549431223386121}
+@nix {"action":"msg","column":null,"file":null,"level":0,"line":null,"msg":"\u001b[31;1merror:\u001b[0m Cannot build '\u001b[35;1m/nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv\u001b[0m'.\n       Reason: \u001b[31;1mbuilder failed with exit code 3\u001b[0m.\n       Output paths:\n         \u001b[35;1m/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919\u001b[0m\n       Last 1 log lines:\n       > about to fail\n       For full logs, run:\n         \u001b[1mnix log /nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv\u001b[0m","raw_msg":"Cannot build '\u001b[35;1m/nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv\u001b[0m'.\nReason: \u001b[31;1mbuilder failed with exit code 3\u001b[0m.\nOutput paths:\n  \u001b[35;1m/nix/store/62iq852mlp0kv3hvv629rsfx72b5dycc-hm-fail-1794938919\u001b[0m\nLast 1 log lines:\n> about to fail\nFor full logs, run:\n  \u001b[1mnix log /nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv\u001b[0m"}

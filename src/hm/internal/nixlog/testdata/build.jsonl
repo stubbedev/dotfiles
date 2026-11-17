@@ -1,0 +1,86 @@
+@nix {"action":"start","id":4541773296697344,"level":6,"parent":0,"text":"querying info about missing paths","type":0}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://nix.stubbe.dev/c/default/default"],"id":4541773296697345,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://nix.stubbe.dev/c/default/default'","type":109}
+@nix {"action":"start","fields":["https://nix.stubbe.dev/c/default/default/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo"],"id":4541773296697346,"level":4,"parent":4541773296697345,"text":"downloading 'https://nix.stubbe.dev/c/default/default/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo'","type":101}
+@nix {"action":"stop","id":4541773296697345}
+@nix {"action":"stop","id":4541773296697346}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://nix.stubbe.dev/c/default/flakes"],"id":4541773296697347,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://nix.stubbe.dev/c/default/flakes'","type":109}
+@nix {"action":"stop","id":4541773296697347}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://cache.nixos.org"],"id":4541773296697348,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"start","fields":["https://cache.nixos.org/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo"],"id":4541773296697349,"level":4,"parent":4541773296697348,"text":"downloading 'https://cache.nixos.org/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo'","type":101}
+@nix {"action":"stop","id":4541773296697348}
+@nix {"action":"stop","id":4541773296697349}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://cache.nixos.org"],"id":4541773296697350,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"stop","id":4541773296697350}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://nix-community.cachix.org"],"id":4541773296697351,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://nix-community.cachix.org'","type":109}
+@nix {"action":"start","fields":["https://nix-community.cachix.org/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo"],"id":4541773296697352,"level":4,"parent":4541773296697351,"text":"downloading 'https://nix-community.cachix.org/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo'","type":101}
+@nix {"action":"stop","id":4541773296697351}
+@nix {"action":"stop","id":4541773296697352}
+@nix {"action":"stop","id":4541773296697344}
+@nix {"action":"msg","level":3,"msg":"this derivation will be built:"}
+@nix {"action":"msg","level":3,"msg":"  /nix/store/lbn72v74by31g9w4dxxmw5ac1yklq6z6-hm-fixture-1794938904.drv"}
+@nix {"action":"start","id":4541773296697353,"level":0,"parent":0,"text":"","type":102}
+@nix {"action":"start","id":4541773296697354,"level":0,"parent":0,"text":"","type":104}
+@nix {"action":"start","id":4541773296697355,"level":0,"parent":0,"text":"","type":103}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[0,1,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://nix.stubbe.dev/c/default/default"],"id":4541773296697356,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://nix.stubbe.dev/c/default/default'","type":109}
+@nix {"action":"start","fields":["https://nix.stubbe.dev/c/default/default/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo"],"id":4541773296697357,"level":4,"parent":4541773296697356,"text":"downloading 'https://nix.stubbe.dev/c/default/default/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo'","type":101}
+@nix {"action":"result","fields":[0,10,0,0],"id":4541773296697357,"type":105}
+@nix {"action":"stop","id":4541773296697356}
+@nix {"action":"stop","id":4541773296697357}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://nix.stubbe.dev/c/default/flakes"],"id":4541773296697358,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://nix.stubbe.dev/c/default/flakes'","type":109}
+@nix {"action":"start","fields":["https://nix.stubbe.dev/c/default/flakes/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo"],"id":4541773296697359,"level":4,"parent":4541773296697358,"text":"downloading 'https://nix.stubbe.dev/c/default/flakes/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh.narinfo'","type":101}
+@nix {"action":"result","fields":[0,10,0,0],"id":4541773296697359,"type":105}
+@nix {"action":"stop","id":4541773296697358}
+@nix {"action":"stop","id":4541773296697359}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://cache.nixos.org"],"id":4541773296697360,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"stop","id":4541773296697360}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://cache.nixos.org"],"id":4541773296697361,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://cache.nixos.org'","type":109}
+@nix {"action":"stop","id":4541773296697361}
+@nix {"action":"start","fields":["/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904","https://nix-community.cachix.org"],"id":4541773296697362,"level":4,"parent":0,"text":"querying info about '/nix/store/z8anfz3rfqmh1kadcb5v4pzzwq92zpsh-hm-fixture-1794938904' on 'https://nix-community.cachix.org'","type":109}
+@nix {"action":"stop","id":4541773296697362}
+@nix {"action":"result","fields":[0,1,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[0,1,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[0,2,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[0,3,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[0,2,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[0,1,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"start","fields":["/nix/store/lbn72v74by31g9w4dxxmw5ac1yklq6z6-hm-fixture-1794938904.drv","",1,1],"id":4541773296697363,"level":3,"parent":0,"text":"building '/nix/store/lbn72v74by31g9w4dxxmw5ac1yklq6z6-hm-fixture-1794938904.drv'","type":105}
+@nix {"action":"result","fields":[0,1,1,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":["hello from build"],"id":4541773296697363,"type":101}
+@nix {"action":"result","fields":["second line"],"id":4541773296697363,"type":101}
+@nix {"action":"result","fields":[1,2,0,0],"id":4541773296697354,"type":105}
+@nix {"action":"result","fields":[0,0,0,0],"id":4541773296697355,"type":105}
+@nix {"action":"result","fields":[101,0],"id":4541773296697353,"type":106}
+@nix {"action":"result","fields":[100,0],"id":4541773296697353,"type":106}
+@nix {"action":"stop","id":4541773296697363}
+@nix {"action":"stop","id":4541773296697355}
+@nix {"action":"stop","id":4541773296697354}
+@nix {"action":"stop","id":4541773296697353}

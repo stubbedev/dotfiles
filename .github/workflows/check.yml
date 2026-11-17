@@ -44,7 +44,7 @@ jobs:
           git commit -am "style: lint autofix"
           git push
 
-      # Scoped to lint + eval checks only: run `just check` locally for the
+      # Scoped to lint, eval and hm CLI checks: run `just check` locally for the
       # full set.
       - name: Build lint and eval checks
         run: |
@@ -52,5 +52,6 @@ jobs:
             .#checks.x86_64-linux.lint-nix \
             .#checks.x86_64-linux.lint-fmt \
             .#checks.x86_64-linux.lint-shell \
+            .#checks.x86_64-linux.hm \
             .#checks.x86_64-linux.eval-nixos \
             .#checks.x86_64-linux.lys-wm-config
