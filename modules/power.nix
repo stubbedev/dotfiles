@@ -40,11 +40,6 @@ let
   cpuModel =
     awk: ''$(${awk} -F: '/^model[[:space:]]*:/ { gsub(/ /, "", $2); print $2; exit }' /proc/cpuinfo)'';
 
-  lidSwitch = {
-    HandleLidSwitch = "suspend";
-    HandleLidSwitchExternalPower = "ignore";
-    HandleLidSwitchDocked = "ignore";
-  };
 in
 {
   flake.modules.nixos.power =
@@ -88,7 +83,15 @@ in
       # handle-lid-switch inhibitor and applies the same policy itself,
       # including undocking or unplugging with the lid already closed,
       # which logind alone never acts on (systemd#7690).
-      services.logind.settings.Login = lidSwitch;
+      services.logind.settings.Login = {
+        HandleLidSwitch = config.host.sleepVerb;
+        HandleLidSwitchExternalPower = "ignore";
+        HandleLidSwitchDocked = "ignore";
+      };
+
+      systemd.sleep.settings.Sleep = lib.mkIf (config.host.sleepVerb == "suspend-then-hibernate") {
+        HibernateDelaySec = "1h";
+      };
 
       services.lys-power.enable = true;
     };

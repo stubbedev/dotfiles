@@ -239,6 +239,8 @@ in
                   label-show = false;
                 };
 
+                power.suspend-command = "systemctl ${config.host.sleepVerb}";
+
                 power-profiles = {
                   label-show = false;
                   left-click = ":cycle";

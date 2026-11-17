@@ -292,7 +292,7 @@
               # machine stays up so SSH and long builds survive.
               {
                 timeout = 900;
-                on-timeout = "sh -c 'grep -qx 1 /sys/class/power_supply/AC/online || systemctl suspend'";
+                on-timeout = "sh -c 'grep -qx 1 /sys/class/power_supply/AC/online || systemctl ${config.host.sleepVerb}'";
               }
             ];
           };

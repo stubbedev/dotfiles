@@ -26,6 +26,20 @@ let
       description = "The machine runs on a battery, so the desktop shell shows its charge.";
     };
 
+    sleepVerb = lib.mkOption {
+      type = lib.types.enum [
+        "suspend"
+        "suspend-then-hibernate"
+      ];
+      default = "suspend";
+      description = ''
+        The systemctl verb every "suspend" on this machine runs: the power
+        menu, the idle timeout and logind's lid switch. A NixOS host with a
+        hibernation swapfile defaults it to suspend-then-hibernate, so a
+        machine left asleep hibernates after systemd's HibernateDelaySec.
+      '';
+    };
+
     browser = lib.mkOption {
       type = lib.types.enum [
         "firefox"
@@ -77,6 +91,10 @@ in
   flake.modules.nixos.platform =
     { config, lib, ... }:
     {
+      config.host.sleepVerb = lib.mkIf (config.host.hibernateSwapSize != null) (
+        lib.mkDefault "suspend-then-hibernate"
+      );
+
       options.host = sharedOptions lib // {
         sharedFacts = lib.mkOption {
           type = lib.types.attrs;
