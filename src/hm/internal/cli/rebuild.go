@@ -3,16 +3,17 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/spf13/cobra"
 
+	"github.com/stubbedev/dotfiles/src/hm/internal/config"
 	"github.com/stubbedev/dotfiles/src/hm/internal/elevate"
 	"github.com/stubbedev/dotfiles/src/hm/internal/flake"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
 	"github.com/stubbedev/dotfiles/src/hm/internal/rebuild"
+	"github.com/stubbedev/dotfiles/src/hm/internal/usage"
 )
-
-const installBootloaderFlag = "--install-bootloader"
 
 func verbSummary(v rebuild.Verb) string {
 	switch v {
@@ -36,45 +37,48 @@ func verbSummary(v rebuild.Verb) string {
 	return v.String()
 }
 
-func (a *App) rebuildCmd(v rebuild.Verb) *cobra.Command {
-	use := v.String() + " [nix build flags]"
-	flags := nixBuildFlags
-	if v.Activates() {
-		use = v.String() + " [" + installBootloaderFlag + "] [nix build flags]"
-		flags = append([]flagCompletion{{installBootloaderFlag, "Reinstall the bootloader"}}, nixBuildFlags...)
-	}
-	return &cobra.Command{
-		Use:                use,
-		Short:              verbSummary(v),
-		GroupID:            groupRebuild,
-		DisableFlagParsing: true,
-		ValidArgsFunction:  completeFlags(flags),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if wantsHelp(args) {
-				return cmd.Help()
-			}
-			rt, err := a.runtime()
-			if err != nil {
-				return err
-			}
-			opts := parseRebuildArgs(args)
-			return withRoot(cmd.Context(), rt, rebuild.NeedsRoot(rt.Config.Platform, v), func() error {
-				return rebuildAndHook(cmd.Context(), rt, v, opts)
-			})
-		},
-	}
+type rebuildFlags struct {
+	nix               *nixFlags
+	installBootloader bool
 }
 
-func parseRebuildArgs(args []string) rebuild.Options {
-	opts := rebuild.Options{Extra: make([]string, 0, len(args))}
-	for _, arg := range args {
-		if arg == installBootloaderFlag {
-			opts.InstallBootloader = true
-			continue
-		}
-		opts.Extra = append(opts.Extra, arg)
+func addRebuildFlags(cmd *cobra.Command, activates bool) *rebuildFlags {
+	f := &rebuildFlags{nix: addNixFlags(cmd)}
+	if activates {
+		cmd.Flags().BoolVar(&f.installBootloader, "install-bootloader", false, "reinstall the bootloader")
 	}
-	return opts
+	return f
+}
+
+func (f *rebuildFlags) options(cmd *cobra.Command, args []string) (rebuild.Options, error) {
+	extra, err := f.nix.argv(cmd, args)
+	if err != nil {
+		return rebuild.Options{}, err
+	}
+	return rebuild.Options{InstallBootloader: f.installBootloader, Extra: extra}, nil
+}
+
+func (a *App) rebuildCmd(v rebuild.Verb) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     v.String() + " [flags] [-- nix build args]",
+		Short:   verbSummary(v),
+		GroupID: groupRebuild,
+	}
+	flags := addRebuildFlags(cmd, v.Activates())
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		opts, err := flags.options(cmd, args)
+		if err != nil {
+			return err
+		}
+		rt, err := a.runtime()
+		if err != nil {
+			return err
+		}
+		return withRoot(cmd.Context(), rt, rebuild.NeedsRoot(rt.Config.Platform, v), func() error {
+			return rebuildAndHook(cmd.Context(), rt, v, opts)
+		})
+	}
+	return cmd
 }
 
 func withRoot(ctx context.Context, rt rebuild.Runtime, needed bool, fn func() error) error {
@@ -105,38 +109,47 @@ func rebuildAndHook(ctx context.Context, rt rebuild.Runtime, v rebuild.Verb, opt
 }
 
 func (a *App) replCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:                "repl [nix repl flags]",
-		Short:              "Open a nix repl on this machine's configuration",
-		GroupID:            groupRebuild,
-		DisableFlagParsing: true,
-		ValidArgsFunction:  completeFlags(nixBuildFlags),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if wantsHelp(args) {
-				return cmd.Help()
-			}
-			rt, err := a.runtime()
-			if err != nil {
-				return err
-			}
-			return rebuild.Repl(cmd.Context(), rt, args)
-		},
+	cmd := &cobra.Command{
+		Use:     "repl [flags] [-- nix repl args]",
+		Short:   "Open a nix repl on this machine's configuration",
+		GroupID: groupRebuild,
 	}
+	flags := addNixFlags(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		extra, err := flags.argv(cmd, args)
+		if err != nil {
+			return err
+		}
+		rt, err := a.runtime()
+		if err != nil {
+			return err
+		}
+		return rebuild.Repl(cmd.Context(), rt, extra)
+	}
+	return cmd
 }
 
 func (a *App) rollbackCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:               "rollback",
-		Short:             "Roll back to the previous generation and activate it",
+		Use:               "rollback [generation]",
+		Short:             "Activate the previous generation, or the given one",
 		GroupID:           groupRebuild,
-		Args:              noArgs,
-		ValidArgsFunction: cobra.NoFileCompletions,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Args:              maxArgs(1),
+		ValidArgsFunction: a.completeGenerations,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			generation := 0
+			if len(args) == 1 {
+				n, err := strconv.Atoi(args[0])
+				if err != nil || n <= 0 {
+					return usage.Errorf("rollback: %q is not a generation number", args[0])
+				}
+				generation = n
+			}
 			rt, err := a.runtime()
 			if err != nil {
 				return err
 			}
-			return rebuild.Rollback(cmd.Context(), rt)
+			return rebuild.Rollback(cmd.Context(), rt, generation)
 		},
 	}
 }
@@ -154,9 +167,15 @@ func (a *App) generationsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			gens, err := rebuild.ListGenerations(rebuild.Profile(cfg.Platform), cfg.Platform)
+			profile := a.profile(cfg.Platform)
+			gens, err := rebuild.ListGenerations(profile)
 			if err != nil {
 				return err
+			}
+			if cfg.Platform == config.NixOS {
+				if err := rebuild.AddSystemInfo(profile, gens); err != nil {
+					return err
+				}
 			}
 			if asJSON {
 				return rebuild.WriteGenerationsJSON(a.streams.Stdout, gens)
@@ -169,23 +188,37 @@ func (a *App) generationsCmd() *cobra.Command {
 }
 
 func (a *App) gcCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:                "gc [nix-collect-garbage flags]",
-		Short:              "Collect garbage: nix-collect-garbage -d, or with the given flags",
-		GroupID:            groupRebuild,
-		DisableFlagParsing: true,
-		ValidArgsFunction:  completeFlags(gcFlags),
+	var deleteOld, dryRun bool
+	var olderThan string
+	cmd := &cobra.Command{
+		Use:     "gc [flags] [-- nix-collect-garbage args]",
+		Short:   "Collect garbage: nix-collect-garbage -d unless other flags are given",
+		GroupID: groupRebuild,
+		Args:    noPositionalBeforeDash,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if wantsHelp(args) {
-				return cmd.Help()
+			var gcArgs []string
+			if deleteOld {
+				gcArgs = append(gcArgs, "--delete-old")
 			}
+			if olderThan != "" {
+				gcArgs = append(gcArgs, "--delete-older-than", olderThan)
+			}
+			if dryRun {
+				gcArgs = append(gcArgs, "--dry-run")
+			}
+			gcArgs = append(gcArgs, argsAfterDash(cmd, args)...)
 			rt, err := a.runtime()
 			if err != nil {
 				return err
 			}
-			return rebuild.GC(cmd.Context(), rt, args)
+			return rebuild.GC(cmd.Context(), rt, gcArgs)
 		},
+		ValidArgsFunction: cobra.NoFileCompletions,
 	}
+	cmd.Flags().BoolVarP(&deleteOld, "delete-old", "d", false, "delete all old generations of all profiles")
+	cmd.Flags().StringVar(&olderThan, "delete-older-than", "", "delete generations older than a period, e.g. 14d")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what would be deleted")
+	return cmd
 }
 
 func repo(rt rebuild.Runtime) flake.Repo {
@@ -210,27 +243,27 @@ func (a *App) updateCmd() *cobra.Command {
 }
 
 func (a *App) upgradeCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:                "upgrade [" + installBootloaderFlag + "] [nix build flags]",
-		Short:              "Run update, then switch",
-		GroupID:            groupMaintain,
-		DisableFlagParsing: true,
-		ValidArgsFunction:  completeFlags(nixBuildFlags),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if wantsHelp(args) {
-				return cmd.Help()
-			}
-			rt, err := a.runtime()
-			if err != nil {
+	cmd := &cobra.Command{
+		Use:     "upgrade [flags] [-- nix build args]",
+		Short:   "Run update, then switch",
+		GroupID: groupMaintain,
+	}
+	flags := addRebuildFlags(cmd, true)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		opts, err := flags.options(cmd, args)
+		if err != nil {
+			return err
+		}
+		rt, err := a.runtime()
+		if err != nil {
+			return err
+		}
+		return withRoot(cmd.Context(), rt, rebuild.NeedsRoot(rt.Config.Platform, rebuild.Switch), func() error {
+			if err := flake.Update(cmd.Context(), repo(rt)); err != nil {
 				return err
 			}
-			opts := parseRebuildArgs(args)
-			return withRoot(cmd.Context(), rt, rebuild.NeedsRoot(rt.Config.Platform, rebuild.Switch), func() error {
-				if err := flake.Update(cmd.Context(), repo(rt)); err != nil {
-					return err
-				}
-				return rebuildAndHook(cmd.Context(), rt, rebuild.Switch, opts)
-			})
-		},
+			return rebuildAndHook(cmd.Context(), rt, rebuild.Switch, opts)
+		})
 	}
+	return cmd
 }

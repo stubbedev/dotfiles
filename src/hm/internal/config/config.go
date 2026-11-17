@@ -99,6 +99,13 @@ type file struct {
 	Commands []fileCommand `json:"commands"`
 }
 
+func ValidateAttr(attr string) error {
+	if !attrPattern.MatchString(attr) {
+		return fmt.Errorf("attr %q is not a Nix attribute name", attr)
+	}
+	return nil
+}
+
 func DefaultPath(getenv func(string) string) (string, error) {
 	if p := getenv(EnvConfig); p != "" {
 		return p, nil
@@ -162,8 +169,8 @@ func Parse(data []byte, getenv func(string) string) (Config, error) {
 	if cfg.Flake == "" {
 		return Config{}, errors.New("flake is empty")
 	}
-	if !attrPattern.MatchString(cfg.Attr) {
-		return Config{}, fmt.Errorf("attr %q is not a Nix attribute name", cfg.Attr)
+	if err := ValidateAttr(cfg.Attr); err != nil {
+		return Config{}, err
 	}
 	if !filepath.IsAbs(cfg.SSHKey) {
 		return Config{}, fmt.Errorf("ssh_key %q is not an absolute path", cfg.SSHKey)

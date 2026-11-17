@@ -15,7 +15,7 @@ import (
 	"github.com/stubbedev/dotfiles/src/hm/internal/config"
 )
 
-const dateLayout = "2006-01-02 15:04:05Z"
+const DateLayout = "2006-01-02 15:04:05Z"
 
 type Generation struct {
 	ID           int       `json:"generation"`
@@ -45,7 +45,7 @@ func generationID(profileName, entry string) (int, bool) {
 	return id, true
 }
 
-func ListGenerations(profile string, platform config.Platform) ([]Generation, error) {
+func ListGenerations(profile string) ([]Generation, error) {
 	dir, name := filepath.Split(profile)
 	current, err := os.Readlink(profile)
 	if err != nil {
@@ -65,23 +65,27 @@ func ListGenerations(profile string, platform config.Platform) ([]Generation, er
 		if err != nil {
 			return nil, fmt.Errorf("reading generation %d of %s: %w", id, profile, err)
 		}
-		g := Generation{ID: id, Date: info.ModTime().UTC(), Current: e.Name() == filepath.Base(current)}
-		if platform == config.NixOS {
-			path := generationPath(profile, id)
-			if g.NixOSVersion, err = readNixOSVersion(path); err != nil {
-				return nil, err
-			}
-			if g.Kernel, err = readKernelVersion(path); err != nil {
-				return nil, err
-			}
-		}
-		gens = append(gens, g)
+		gens = append(gens, Generation{ID: id, Date: info.ModTime().UTC(), Current: e.Name() == filepath.Base(current)})
 	}
 	if len(gens) == 0 {
 		return nil, fmt.Errorf("listing generations of %s: none found", profile)
 	}
 	slices.SortFunc(gens, func(a, b Generation) int { return b.ID - a.ID })
 	return gens, nil
+}
+
+func AddSystemInfo(profile string, gens []Generation) error {
+	for i := range gens {
+		path := generationPath(profile, gens[i].ID)
+		var err error
+		if gens[i].NixOSVersion, err = readNixOSVersion(path); err != nil {
+			return err
+		}
+		if gens[i].Kernel, err = readKernelVersion(path); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func readNixOSVersion(generation string) (string, error) {
@@ -117,10 +121,10 @@ func WriteGenerations(w io.Writer, gens []Generation, platform config.Platform) 
 			current = "*"
 		}
 		if platform == config.NixOS {
-			fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n", g.ID, g.Date.Format(dateLayout), g.NixOSVersion, g.Kernel, current)
+			fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n", g.ID, g.Date.Format(DateLayout), g.NixOSVersion, g.Kernel, current)
 			continue
 		}
-		fmt.Fprintf(tw, "%d\t%s\t%s\n", g.ID, g.Date.Format(dateLayout), current)
+		fmt.Fprintf(tw, "%d\t%s\t%s\n", g.ID, g.Date.Format(DateLayout), current)
 	}
 	if err := tw.Flush(); err != nil {
 		return fmt.Errorf("writing generations: %w", err)

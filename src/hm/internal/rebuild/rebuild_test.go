@@ -129,8 +129,14 @@ func generationsFixture(t *testing.T) string {
 
 func TestListGenerations(t *testing.T) {
 	profile := generationsFixture(t)
-	gens, err := ListGenerations(profile, config.NixOS)
+	gens, err := ListGenerations(profile)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if gens[0].NixOSVersion != "" {
+		t.Fatalf("plain listing carries system info: %+v", gens[0])
+	}
+	if err := AddSystemInfo(profile, gens); err != nil {
 		t.Fatal(err)
 	}
 	if len(gens) != 2 || gens[0].ID != 2 || !gens[0].Current || gens[1].Current {
@@ -138,11 +144,6 @@ func TestListGenerations(t *testing.T) {
 	}
 	if gens[0].NixOSVersion != "26.11.2" || gens[0].Kernel != "6.18.63" {
 		t.Fatalf("system info = %+v", gens[0])
-	}
-
-	plain, err := ListGenerations(profile, config.Android)
-	if err != nil || plain[0].NixOSVersion != "" {
-		t.Fatalf("android listing = %+v, %v", plain, err)
 	}
 }
 

@@ -14,7 +14,10 @@ _: {
         "-s"
         "-w"
       ];
-      nativeBuildInputs = [ final.makeWrapper ];
+      nativeBuildInputs = [
+        final.installShellFiles
+        final.makeWrapper
+      ];
       nativeCheckInputs = [
         final.age
         final.git
@@ -31,6 +34,10 @@ _: {
         go vet ./...
       '';
       postInstall = ''
+        installShellCompletion --cmd hm \
+          --zsh <($out/bin/hm completion zsh) \
+          --bash <($out/bin/hm completion bash) \
+          --fish <($out/bin/hm completion fish)
         wrapProgram $out/bin/hm --prefix PATH : ${
           lib.makeBinPath [
             final.age
@@ -265,7 +272,6 @@ _: {
         xdg.configFile."hm/config.json".source =
           (pkgs.formats.json { }).generate "hm-config.json"
             config.stubbe.hm.settings;
-        stubbe.zshCompletions._hm = "${lib.getExe pkgs.stubbe.hm} completion zsh";
       };
     };
 }

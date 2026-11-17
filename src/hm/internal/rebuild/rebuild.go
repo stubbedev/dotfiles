@@ -2,6 +2,7 @@ package rebuild
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/stubbedev/dotfiles/src/hm/internal/config"
@@ -214,29 +216,57 @@ func findVM(path string) (string, error) {
 	return matches[0], nil
 }
 
-func Rollback(ctx context.Context, rt Runtime) error {
+func Rollback(ctx context.Context, rt Runtime, generation int) error {
+	if generation < 0 {
+		return fmt.Errorf("rollback: generation %d is not a generation number", generation)
+	}
 	if rt.Config.Platform == config.Android {
-		return rollbackAndroid(ctx, rt.Streams, DroidProfile)
+		return rollbackAndroid(ctx, rt.Streams, DroidProfile, generation)
 	}
 	argv := elevate.Command("nix-env", "--rollback", "-p", SystemProfile)
+	if generation > 0 {
+		argv = elevate.Command("nix-env", "--switch-generation", strconv.Itoa(generation), "-p", SystemProfile)
+	}
 	if err := proc.Run(ctx, proc.Cmd{Argv: argv, Stdin: rt.Streams.Stdin, Stdout: rt.Streams.Stderr, Stderr: rt.Streams.Stderr}); err != nil {
 		return err
 	}
 	return switchToConfiguration(ctx, rt.Streams, SystemProfile, Switch.String(), false)
 }
 
-func rollbackAndroid(ctx context.Context, s proc.Streams, profile string) error {
-	previous, err := previousGeneration(profile)
-	if err != nil {
-		return err
+func rollbackAndroid(ctx context.Context, s proc.Streams, profile string, generation int) error {
+	target := generationPath(profile, generation)
+	if generation == 0 {
+		previous, err := previousGeneration(profile)
+		if err != nil {
+			return err
+		}
+		target = previous
 	}
-	activate := filepath.Join(previous, "activate")
+	activate := filepath.Join(target, "activate")
 	info, err := os.Stat(activate)
 	if err != nil || info.Mode()&0o111 == 0 {
-		return fmt.Errorf("rolling back to %s: no executable activate script, the generation is broken or garbage collected", previous)
+		return fmt.Errorf("rolling back to %s: no executable activate script, the generation is broken or garbage collected", target)
 	}
 	fmt.Fprintln(s.Stderr, "Executing activation script...")
 	return proc.Run(ctx, s.Cmd(activate))
+}
+
+func HostAttrs(ctx context.Context, cfg config.Config) ([]string, error) {
+	set := "nixosConfigurations"
+	if cfg.Platform == config.Android {
+		set = "nixOnDroidConfigurations"
+	}
+	argv := append([]string{"nix"}, nixFlakeFlags...)
+	argv = append(argv, "eval", "--json", cfg.FlakeRef()+"#"+set, "--apply", "builtins.attrNames")
+	out, err := proc.Output(ctx, proc.Cmd{Argv: argv, Stdin: strings.NewReader(""), Stderr: io.Discard})
+	if err != nil {
+		return nil, fmt.Errorf("listing %s: %w", set, err)
+	}
+	var attrs []string
+	if err := json.Unmarshal(out, &attrs); err != nil {
+		return nil, fmt.Errorf("listing %s: decoding %q: %w", set, out, err)
+	}
+	return attrs, nil
 }
 
 func previousGeneration(profile string) (string, error) {

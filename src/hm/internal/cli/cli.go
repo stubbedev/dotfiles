@@ -36,6 +36,8 @@ type App struct {
 	terminal Terminal
 	cfg      config.Config
 	cfgErr   error
+	attr     string
+	profile  func(config.Platform) string
 }
 
 func Main(args []string) int {
@@ -57,7 +59,7 @@ func detectTerminal() Terminal {
 }
 
 func New(streams proc.Streams, terminal Terminal) *App {
-	a := &App{streams: streams, terminal: terminal}
+	a := &App{streams: streams, terminal: terminal, profile: rebuild.Profile}
 	path, err := config.DefaultPath(os.Getenv)
 	if err == nil {
 		a.cfg, err = config.Load(path, os.Getenv)
@@ -103,7 +105,14 @@ func (a *App) config() (config.Config, error) {
 	if a.cfgErr != nil {
 		return config.Config{}, a.cfgErr
 	}
-	return a.cfg, nil
+	cfg := a.cfg
+	if a.attr != "" {
+		if err := config.ValidateAttr(a.attr); err != nil {
+			return config.Config{}, usage.Wrap(fmt.Errorf("--attr: %w", err))
+		}
+		cfg.Attr = a.attr
+	}
+	return cfg, nil
 }
 
 func (a *App) runtime() (rebuild.Runtime, error) {
@@ -127,7 +136,8 @@ against the running generation, and only activation runs as root.
 Environment:
   HM_CONFIG        config file (default: $XDG_CONFIG_HOME/hm/config.json)
   HM_FLAKE_DIR     flake directory, overriding the config
-  HM_NIXOS_CONFIG  nixosConfigurations attribute, overriding the config`,
+  HM_NIXOS_CONFIG  nixosConfigurations attribute, overriding the config
+                   (--attr overrides both)`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Args:          a.rejectUnknown,
@@ -143,6 +153,10 @@ Environment:
 	root.SetOut(a.streams.Stdout)
 	root.SetErr(a.streams.Stderr)
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return usage.Wrap(err) })
+	root.PersistentFlags().StringVar(&a.attr, "attr", "", "configuration attribute to build, overriding the config and HM_NIXOS_CONFIG")
+	if err := root.RegisterFlagCompletionFunc("attr", a.completeHostAttrs); err != nil {
+		return nil, fmt.Errorf("registering --attr completion: %w", err)
+	}
 	root.AddGroup(
 		&cobra.Group{ID: groupRebuild, Title: "Rebuild:"},
 		&cobra.Group{ID: groupMaintain, Title: "Maintenance:"},
@@ -204,6 +218,11 @@ func exactArgs(n int) cobra.PositionalArgs {
 	}
 }
 
-func wantsHelp(args []string) bool {
-	return slices.Contains(args, "-h") || slices.Contains(args, "--help")
+func maxArgs(n int) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) > n {
+			return usage.Errorf("%s takes at most %d argument(s), got %d; usage: %s", cmd.CommandPath(), n, len(args), cmd.UseLine())
+		}
+		return nil
+	}
 }

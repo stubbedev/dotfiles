@@ -10,9 +10,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v3"
 
+	"github.com/stubbedev/dotfiles/src/hm/internal/config"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
+	"github.com/stubbedev/dotfiles/src/hm/internal/rebuild"
 )
 
 var sopsFixture = mustAbs(filepath.Join("..", "sops", "testdata", "sops.yaml"))
@@ -149,8 +152,11 @@ func TestHelp(t *testing.T) {
 			t.Errorf("help lacks %q:\n%s", want, out)
 		}
 	}
-	if out, _, code := h.run("", "switch", "--help"); code != 0 || !strings.Contains(out, "--install-bootloader") {
+	if out, _, code := h.run("", "switch", "--help"); code != 0 || !strings.Contains(out, "--install-bootloader") || !strings.Contains(out, "--show-trace") {
 		t.Errorf("switch --help exited %d:\n%s", code, out)
+	}
+	if out, _, code := h.run("", "build", "--help"); code != 0 || strings.Contains(out, "--install-bootloader") {
+		t.Errorf("build --help offers --install-bootloader:\n%s", out)
 	}
 }
 
@@ -164,6 +170,15 @@ func TestUsageErrorsExitTwo(t *testing.T) {
 		{"secret", "shred", "x"},
 		{"secret", "set"},
 		{"generations", "--bogus"},
+		{"switch", "--bogus"},
+		{"switch", "extra"},
+		{"build", "--install-bootloader"},
+		{"switch", "--option", "noequals"},
+		{"rollback", "x"},
+		{"rollback", "0"},
+		{"rollback", "1", "2"},
+		{"--attr", "a.b", "generations"},
+		{"gc", "stray"},
 	}
 	for _, args := range cases {
 		if _, errOut, code := h.run("", args...); code != 2 {
@@ -347,5 +362,62 @@ func TestWhoamiPipesIntoTrust(t *testing.T) {
 	h2.mustRun("", "trust", own)
 	if _, comments := h2.recipients(); comments[own] != own[len(own)-8:] {
 		t.Fatalf("foreign key auto-named %q", comments[own])
+	}
+}
+
+func TestNixFlagsTranslate(t *testing.T) {
+	var got rebuild.Options
+	cmd := &cobra.Command{Use: "switch"}
+	flags := addRebuildFlags(cmd, true)
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		var err error
+		got, err = flags.options(cmd, args)
+		return err
+	}
+	cmd.SetArgs([]string{"-L", "--show-trace", "-vv", "-j", "auto", "--cores", "4", "--option", "substitute=false", "--override-input", "nixpkgs=path:/x", "--install-bootloader", "--", "--repair", "x"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	want := "--show-trace --print-build-logs -v -v --max-jobs auto --cores 4 --option substitute false --override-input nixpkgs path:/x --repair x"
+	if strings.Join(got.Extra, " ") != want || !got.InstallBootloader {
+		t.Fatalf("options = %+v\nwant extra %q", got, want)
+	}
+}
+
+func TestCompletion(t *testing.T) {
+	h := newHarness(t)
+	if out := h.mustRun("", "__complete", "switch", "--sh"); !strings.Contains(out, "--show-trace") {
+		t.Fatalf("flag completion:\n%s", out)
+	}
+	if out := h.mustRun("", "__complete", "gc", "--d"); !strings.Contains(out, "--delete-older-than") {
+		t.Fatalf("gc flag completion:\n%s", out)
+	}
+	for _, shell := range []string{"zsh", "bash", "fish"} {
+		if out := h.mustRun("", "completion", shell); !strings.Contains(out, "__complete") {
+			t.Errorf("%s completion script does not call back into hm", shell)
+		}
+	}
+
+	profiles := filepath.Join(t.TempDir(), "profiles")
+	if err := os.MkdirAll(profiles, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"1", "2", "3"} {
+		if err := os.Symlink(h.dir, filepath.Join(profiles, "system-"+id+"-link")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink("system-3-link", filepath.Join(profiles, "system")); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	app := New(proc.Streams{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &errOut}, Terminal{})
+	app.profile = func(config.Platform) string { return filepath.Join(profiles, "system") }
+	if code := app.Run(context.Background(), []string{"__complete", "rollback", ""}); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	lines := strings.Split(out.String(), "\n")
+	if !strings.HasPrefix(lines[0], "2\t") || !strings.HasPrefix(lines[1], "1\t") || strings.Contains(out.String(), "3\t") {
+		t.Fatalf("rollback completion:\n%s", out.String())
 	}
 }
