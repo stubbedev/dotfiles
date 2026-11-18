@@ -288,7 +288,7 @@ _: {
           Description = "Alacritty daemon (shared single-instance process)";
           After = [ config.wayland.systemd.target ];
           PartOf = [ config.wayland.systemd.target ];
-          # Never restart on `hm switch`. KillMode=control-group plus
+          # Never restart on `hix switch`. KillMode=control-group plus
           # single-instance means a restart takes every terminal window with it.
           # Any alacritty store-path bump changes the unit file, so
           # sd-switch would otherwise restart it on a routine flake update. A new

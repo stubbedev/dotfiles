@@ -34,6 +34,13 @@
       url = "github:stubbedev/shell-lsp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    hix = {
+      url = "github:stubbedev/hix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
+    };
     html-to-md = {
       url = "github:stubbedev/html-to-md";
       inputs.nixpkgs.follows = "nixpkgs";
