@@ -1202,11 +1202,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794956088,
-        "narHash": "sha256-yGfy4mkBQkNZFNdId8NxCXQOe3XE0iFsdjwga2Sdy0k=",
+        "lastModified": 1794986784,
+        "narHash": "sha256-mNTKq6tYYlz3TDkZ9B5RmjZ/jDZGe7HWtG/nbxgCTYs=",
         "owner": "stubbedev",
         "repo": "shell-lsp",
-        "rev": "fde790f5262939945be47883e1bc2e359c60ace0",
+        "rev": "9a95d5615d1709de938f5499f51a2496702e8c3d",
         "type": "github"
       },
       "original": {
