@@ -21,6 +21,10 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: DeterminateSystems/nix-installer-action@v22
+        with:
+          extra-conf: |
+            extra-substituters = https://xilos.dev/c/stubbedev/main
+            extra-trusted-public-keys = xilos.dev/stubbedev/main-1:397R6S49v/FSvP+mZ3HlKrVN1KXhgzHIEIHxA/UuG6Y=
 
       # Apply every fix the linters can apply themselves and push the result,
       # so formatting and dead-code drift never costs a red build and a manual
