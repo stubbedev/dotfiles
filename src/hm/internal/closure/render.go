@@ -22,17 +22,17 @@ type RenderOptions struct {
 
 func Render(w io.Writer, st ui.Style, r Report, opts RenderOptions) error {
 	bw := bufio.NewWriter(w)
-	bw.WriteByte('\n')
-	shown := r.renderPackages(bw, st, opts.Full)
-	if shown > 0 {
+	var summary []string
+	if r.renderPackages(bw, st, opts.Full) > 0 {
 		bw.WriteByte('\n')
+	} else {
+		summary = append(summary, "No package changes")
 	}
-	renderPathStats(bw, st, r)
-	renderSize(bw, st, r.SizeOld, r.SizeNew)
+	summary = append(summary, pathStats(st, r), sizeStats(st, r.SizeOld, r.SizeNew))
 	if hidden := r.Hidden(opts.Full); hidden > 0 {
-		fmt.Fprintf(bw, "\n%s: %s hidden %s\n", st.Paint("NOTE", ui.Bold), st.Paint(strconv.Itoa(hidden), ui.Yellow),
-			st.Paint("(size-only changes under "+ui.Bytes(minHiddenSizeDelta)+", "+opts.FullFlag+" to show)", ui.Faint))
+		summary = append(summary, st.Paint(fmt.Sprintf("%d hidden (%s)", hidden, opts.FullFlag), ui.Faint))
 	}
+	bw.WriteString(strings.Join(summary, st.Paint(" · ", ui.Gray)) + "\n")
 	if err := bw.Flush(); err != nil {
 		return fmt.Errorf("writing the closure diff: %w", err)
 	}
@@ -380,23 +380,19 @@ func charDiff(a, b []rune) []diffOp {
 	return ops
 }
 
-func renderPathStats(w *bufio.Writer, st ui.Style, r Report) {
-	fmt.Fprintf(w, "%s: %s -> %s (%s, %s)\n", st.Paint("PATHS", ui.Bold),
-		st.Paint(strconv.Itoa(r.PathsOld), ui.Red), st.Paint(strconv.Itoa(r.PathsNew), ui.Green),
+func pathStats(st ui.Style, r Report) string {
+	return fmt.Sprintf("%d paths (%s %s)", r.PathsNew,
 		st.Paint("+"+strconv.Itoa(r.PathsAdded), ui.Green), st.Paint("-"+strconv.Itoa(r.PathsRemoved), ui.Red))
 }
 
-func renderSize(w *bufio.Writer, st ui.Style, oldSize, newSize int64) {
+func sizeStats(st ui.Style, oldSize, newSize int64) string {
 	delta := newSize - oldSize
-	var deltaText string
+	deltaText := ui.Bytes(0)
 	switch {
 	case delta > 0:
-		deltaText = "+" + st.Paint(ui.Bytes(delta), ui.Green)
+		deltaText = st.Paint("+"+ui.Bytes(delta), ui.Green)
 	case delta < 0:
 		deltaText = st.Paint(ui.Bytes(delta), ui.Red)
-	default:
-		deltaText = ui.Bytes(0)
 	}
-	fmt.Fprintf(w, "%s: %s -> %s (%s)\n", st.Paint("SIZE", ui.Bold),
-		st.Paint(ui.Bytes(oldSize), ui.Red), st.Paint(ui.Bytes(newSize), ui.Green), deltaText)
+	return fmt.Sprintf("%s (%s)", ui.Bytes(newSize), deltaText)
 }

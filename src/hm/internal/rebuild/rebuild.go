@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -73,6 +74,7 @@ type Options struct {
 	Extra             []string
 	Diff              DiffOptions
 	Confirm           func(question string) (bool, error)
+	Verbose           bool
 }
 
 func Profile(p config.Platform) string {
@@ -98,7 +100,7 @@ func Run(ctx context.Context, rt Runtime, v Verb, opts Options) (string, error) 
 
 func runNixOS(ctx context.Context, rt Runtime, v Verb, opts Options) (string, error) {
 	installable := fmt.Sprintf("%s#nixosConfigurations.%s.%s", rt.Config.FlakeRef(), rt.Config.Attr, v.nixosAttr())
-	rt.Console.Log().Step("Building NixOS configuration %s", rt.Console.ErrStyle.Paint(rt.Config.Attr, ui.Bold))
+	rt.Console.Log().StepWith(rt.Console.ErrStyle.Icons().Build, "Building NixOS configuration %s", rt.Console.ErrStyle.Paint(rt.Config.Attr, ui.Bold))
 	path, err := nixBuild(ctx, rt, buildSpec{
 		installable: installable,
 		linkResult:  v.linksResult(),
@@ -127,18 +129,19 @@ func runNixOS(ctx context.Context, rt Runtime, v Verb, opts Options) (string, er
 		}
 	}
 	if v.setsProfile() {
-		if err := setProfile(ctx, rt.Console.Streams, path); err != nil {
+		if err := setProfile(ctx, rt.Console, path); err != nil {
 			return "", err
 		}
 	}
-	if v.Activates() {
-		rt.Console.Log().Step("%s", v.activationStep())
-		if err := switchToConfiguration(ctx, rt.Console.Streams, path, v.String(), opts.InstallBootloader); err != nil {
-			return "", err
-		}
+	if !v.Activates() {
+		printResult(rt.Console, "The new configuration is", path)
+		return path, nil
 	}
-	printResult(rt.Console, "The new configuration is", path)
-	return path, nil
+	rt.Console.Log().StepWith(rt.Console.ErrStyle.Icons().Activate, "%s", v.activationStep())
+	if err := switchToConfiguration(ctx, rt.Console, path, v.String(), opts.InstallBootloader, opts.Verbose); err != nil {
+		return "", err
+	}
+	return path, printActivated(rt.Console, v, SystemProfile)
 }
 
 func runAndroid(ctx context.Context, rt Runtime, v Verb, opts Options) (string, error) {
@@ -146,7 +149,7 @@ func runAndroid(ctx context.Context, rt Runtime, v Verb, opts Options) (string, 
 		return "", fmt.Errorf("%s: unavailable on Android; supported rebuild verbs: %s, %s", v, Switch, Build)
 	}
 	installable := fmt.Sprintf("%s#nixOnDroidConfigurations.%s.activationPackage", rt.Config.FlakeRef(), rt.Config.Attr)
-	rt.Console.Log().Step("Building nix-on-droid configuration %s", rt.Console.ErrStyle.Paint(rt.Config.Attr, ui.Bold))
+	rt.Console.Log().StepWith(rt.Console.ErrStyle.Icons().Build, "Building nix-on-droid configuration %s", rt.Console.ErrStyle.Paint(rt.Config.Attr, ui.Bold))
 	path, err := nixBuild(ctx, rt, buildSpec{
 		installable: installable,
 		linkResult:  v == Build,
@@ -163,13 +166,28 @@ func runAndroid(ctx context.Context, rt Runtime, v Verb, opts Options) (string, 
 		if err := confirm(opts, "Activate this configuration?"); err != nil {
 			return "", err
 		}
-		rt.Console.Log().Step("Activating configuration")
-		if err := proc.Run(ctx, rt.Console.Cmd(filepath.Join(path, "activate"))); err != nil {
+		rt.Console.Log().StepWith(rt.Console.ErrStyle.Icons().Activate, "Activating configuration")
+		activate := proc.Cmd{Argv: []string{filepath.Join(path, "activate")}, Stdin: rt.Console.Stdin}
+		if err := rt.Console.RunIndented(ctx, activate, ui.Verbosity(ui.Notable, opts.Verbose)); err != nil {
 			return "", err
 		}
+		return path, printActivated(rt.Console, Switch, DroidProfile)
 	}
 	printResult(rt.Console, "The new configuration is", path)
 	return path, nil
+}
+
+func printActivated(c ui.Console, v Verb, profile string) error {
+	if !v.setsProfile() {
+		c.Log().Done("%s", v.doneMessage(0))
+		return nil
+	}
+	id, err := currentGeneration(profile)
+	if err != nil {
+		return err
+	}
+	c.Log().Done("%s", v.doneMessage(id))
+	return nil
 }
 
 func confirm(opts Options, question string) error {
@@ -240,6 +258,10 @@ func nixBuild(ctx context.Context, rt Runtime, spec buildSpec) (string, error) {
 	logWriter.Close()
 	renderErr := <-rendered
 	saveEstimates(rt.Console.Log(), cache, known, renderer.Measured())
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return "", fmt.Errorf("nix build failed: %w", exitErr)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -292,7 +314,7 @@ func diffClosures(ctx context.Context, c ui.Console, current, next string, opts 
 	} else if err != nil {
 		return fmt.Errorf("checking the current generation %s: %w", current, err)
 	}
-	c.Log().Step("Comparing changes")
+	c.Log().StepWith(c.ErrStyle.Icons().Diff, "Comparing changes")
 	err := closure.Compare(ctx, c.Stderr, c.ErrStyle, current, next, closure.RenderOptions{Full: opts.Full, FullFlag: diffFullFlag})
 	if err != nil && opts.Mode == DiffAuto {
 		c.Log().Warn("skipping the closure diff (--diff always makes this fatal): %v", err)
@@ -301,12 +323,12 @@ func diffClosures(ctx context.Context, c ui.Console, current, next string, opts 
 	return err
 }
 
-func setProfile(ctx context.Context, s proc.Streams, toplevel string) error {
+func setProfile(ctx context.Context, c ui.Console, toplevel string) error {
 	if _, err := os.Stat(filepath.Join(toplevel, "nixos-version")); err != nil {
 		return fmt.Errorf("refusing to activate %s, it does not look like a NixOS system: %w", toplevel, err)
 	}
 	argv := elevate.Command("nix-env", "-p", SystemProfile, "--set", toplevel)
-	return proc.Run(ctx, proc.Cmd{Argv: argv, Stdin: s.Stdin, Stdout: s.Stderr, Stderr: s.Stderr})
+	return c.RunIndented(ctx, proc.Cmd{Argv: argv, Stdin: c.Stdin}, ui.Notable)
 }
 
 func findVM(path string) (string, error) {
@@ -332,11 +354,14 @@ func Rollback(ctx context.Context, rt Runtime, generation int) error {
 		argv = elevate.Command("nix-env", "--switch-generation", strconv.Itoa(generation), "-p", SystemProfile)
 	}
 	rt.Console.Log().Step("Rolling back the system profile")
-	if err := proc.Run(ctx, proc.Cmd{Argv: argv, Stdin: rt.Console.Stdin, Stdout: rt.Console.Stderr, Stderr: rt.Console.Stderr}); err != nil {
+	if err := rt.Console.RunIndented(ctx, proc.Cmd{Argv: argv, Stdin: rt.Console.Stdin}, ui.Notable); err != nil {
 		return err
 	}
-	rt.Console.Log().Step("%s", Switch.activationStep())
-	return switchToConfiguration(ctx, rt.Console.Streams, SystemProfile, Switch.String(), false)
+	rt.Console.Log().StepWith(rt.Console.ErrStyle.Icons().Activate, "%s", Switch.activationStep())
+	if err := switchToConfiguration(ctx, rt.Console, SystemProfile, Switch.String(), false, false); err != nil {
+		return err
+	}
+	return printActivated(rt.Console, Switch, SystemProfile)
 }
 
 func rollbackAndroid(ctx context.Context, c ui.Console, profile string, generation int) error {
@@ -353,8 +378,8 @@ func rollbackAndroid(ctx context.Context, c ui.Console, profile string, generati
 	if err != nil || info.Mode()&0o111 == 0 {
 		return fmt.Errorf("rolling back to %s: no executable activate script, the generation is broken or garbage collected", target)
 	}
-	c.Log().Step("Activating %s", target)
-	return proc.Run(ctx, c.Cmd(activate))
+	c.Log().StepWith(c.ErrStyle.Icons().Activate, "Activating %s", target)
+	return c.RunIndented(ctx, proc.Cmd{Argv: []string{activate}, Stdin: c.Stdin}, ui.Notable)
 }
 
 func HostAttrs(ctx context.Context, cfg config.Config) ([]string, error) {

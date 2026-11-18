@@ -195,11 +195,37 @@ func TestLiveFrameDrawsWhileStreaming(t *testing.T) {
 func TestLiveFailure(t *testing.T) {
 	out := render(t, "fail.jsonl", Config{Width: 80, Height: 20})
 	ic := ui.Unicode
-	if !strings.Contains(out, ic.With(ic.Failed, "1 failed build(s) after 0s")) {
-		t.Fatalf("failed build not summarised:\n%q", out)
+	want := ic.With(ic.Failed, "1 failed build(s) after 0s") + "\n" +
+		"╰─ " + ic.With(ic.Failed, "hm-fail-1794938919") + ": builder failed with exit code 3\n" +
+		"   │ about to fail\n" +
+		"   full log: nix log /nix/store/difkgyrh68ns4bwylg87b52621cjvg5j-hm-fail-1794938919.drv\n"
+	if !strings.Contains(out, want) {
+		t.Fatalf("failure not grouped:\n%s\nwant:\n%s", out, want)
 	}
-	if !strings.Contains(out, "builder failed with exit code 3") {
-		t.Fatalf("nix error not passed through:\n%q", out)
+	if strings.Contains(out, "Cannot build") {
+		t.Fatalf("raw nix failure printed besides the grouped report:\n%s", out)
+	}
+}
+
+func TestCancelledBuildsAreCountedNotReported(t *testing.T) {
+	r := &replay{t: t, now: epoch, state: NewState(Options{Live: true}, epoch)}
+	r.apply(
+		`@nix {"action":"msg","level":3,"msg":"these 2 derivations will be built:"}`,
+		`@nix {"action":"msg","level":3,"msg":"  `+drvPath("leaf")+`"}`,
+		`@nix {"action":"msg","level":3,"msg":"  `+drvPath("top")+`"}`,
+		`@nix {"action":"msg","level":0,"msg":"error: Cannot build '`+drvPath("leaf")+`'.\n       Reason: builder failed with exit code 1.\n       Last 2 log lines:\n       > one\n       > two"}`,
+		`@nix {"action":"msg","level":0,"msg":"error: Cannot build '`+drvPath("top")+`'.\n       Reason: 1 dependency failed."}`,
+	)
+	ic := ui.Unicode
+	want := []string{
+		ic.With(ic.Failed, "1 failed build(s), 1 cancelled after 0s"),
+		"╰─ " + ic.With(ic.Failed, "leaf") + ": builder failed with exit code 1",
+		"   │ one",
+		"   │ two",
+		"   full log: nix log " + drvPath("leaf"),
+	}
+	if got := r.state.Summary(ui.Style{}, epoch); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("summary:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
 
@@ -358,8 +384,8 @@ func TestFrameBeforeAnyEvent(t *testing.T) {
 	if want := "╺━ " + ui.Unicode.With(ui.Unicode.Clock, "3s"); len(got) != 1 || got[0] != want {
 		t.Fatalf("frame while evaluating = %q, want %q", got, want)
 	}
-	if _, ok := s.Summary(ui.Style{}, epoch); ok {
-		t.Fatal("summary printed for a build that did nothing")
+	if lines := s.Summary(ui.Style{}, epoch); lines != nil {
+		t.Fatalf("summary printed for a build that did nothing: %q", lines)
 	}
 }
 

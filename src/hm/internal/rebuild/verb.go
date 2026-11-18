@@ -68,6 +68,18 @@ func (v Verb) ComparesClosures() bool {
 	return v != DryBuild && !v.buildsVM()
 }
 
+func (v Verb) doneMessage(generation int) string {
+	switch v {
+	case Boot:
+		return fmt.Sprintf("Generation %d boots next", generation)
+	case Test:
+		return "Activated until the next reboot"
+	case DryActivate:
+		return "Dry activation finished, nothing was changed"
+	}
+	return fmt.Sprintf("Switched to generation %d", generation)
+}
+
 func (v Verb) confirmQuestion() string {
 	switch v {
 	case Boot:

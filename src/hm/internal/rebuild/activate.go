@@ -8,14 +8,17 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/stubbedev/dotfiles/src/hm/internal/elevate"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 )
 
 const (
 	systemdRuntimeDir     = "/run/systemd/system"
 	systemdOutputCatSince = 261
+	switchUnit            = "nixos-rebuild-switch-to-configuration"
 )
 
 var (
@@ -28,25 +31,78 @@ var (
 		"--no-ask-password",
 		"--quiet",
 		"--service-type=exec",
-		"--unit=nixos-rebuild-switch-to-configuration",
+		"--unit=" + switchUnit,
 	}
+	unitChange            = regexp.MustCompile(`^(stopping|restarting|starting|reloading) the following (user )?units: (.+)$`)
+	newUnits              = regexp.MustCompile(`^the following new units were started: (.+)$`)
+	singleUnitChange      = regexp.MustCompile(`^(stopping|restarting|starting|reloading) (\S+\.(?:service|target|socket|timer|mount|path|slice))$`)
+	bootloaderKept        = regexp.MustCompile(`^Skipping ".*", same boot loader version in place already\.$`)
 	systemdVersionPattern = regexp.MustCompile(`(?m)^systemd (\d+)`)
 )
 
-func switchToConfiguration(ctx context.Context, s proc.Streams, toplevel, action string, installBootloader bool) error {
+type unitAction struct {
+	icon  func(*ui.Icons) string
+	label string
+	color ui.Attr
+}
+
+var unitActions = map[string]unitAction{
+	"stopping":   {func(i *ui.Icons) string { return i.Stop }, "stop", ui.Red},
+	"restarting": {func(i *ui.Icons) string { return i.Restart }, "restart", ui.Yellow},
+	"reloading":  {func(i *ui.Icons) string { return i.Reload }, "reload", ui.Cyan},
+	"starting":   {func(i *ui.Icons) string { return i.Start }, "start", ui.Green},
+}
+
+const unitLabelWidth = 7
+
+func activationFormat() ui.LineFormat {
+	bootloaderReported := false
+	return func(st ui.Style, line string) (string, bool) {
+		if m := unitChange.FindStringSubmatch(line); m != nil {
+			return unitLine(st, unitActions[m[1]], m[2] != "", strings.Split(m[3], ", ")), true
+		}
+		if m := newUnits.FindStringSubmatch(line); m != nil {
+			return unitLine(st, unitActions["starting"], false, strings.Split(m[1], ", ")), true
+		}
+		if m := singleUnitChange.FindStringSubmatch(line); m != nil {
+			return unitLine(st, unitActions[m[1]], false, []string{m[2]}), true
+		}
+		if bootloaderKept.MatchString(line) && !bootloaderReported {
+			bootloaderReported = true
+			ic := st.Icons()
+			return st.Paint(ic.Done, ui.Green) + " " + st.Paint("bootloader up to date", ui.Faint), true
+		}
+		return ui.Notable(st, line)
+	}
+}
+
+func unitLine(st ui.Style, action unitAction, user bool, units []string) string {
+	names := make([]string, len(units))
+	for i, u := range units {
+		names[i] = strings.TrimSuffix(u, ".service")
+	}
+	label := action.icon(st.Icons()) + " " + fmt.Sprintf("%-*s", unitLabelWidth, action.label)
+	line := st.Paint(label, action.color) + " " + strings.Join(names, ", ")
+	if user {
+		line += st.Paint(" (user)", ui.Faint)
+	}
+	return line
+}
+
+func switchToConfiguration(ctx context.Context, c ui.Console, toplevel, action string, installBootloader, verbose bool) error {
 	argv := []string{"env", "PATH=" + os.Getenv("PATH"), "NIXOS_INSTALL_BOOTLOADER=" + boolFlag(installBootloader)}
 	for _, key := range []string{"LOCALE_ARCHIVE", "NIXOS_NO_CHECK"} {
 		if v, ok := os.LookupEnv(key); ok {
 			argv = append(argv, key+"="+v)
 		}
 	}
-	prefix, err := systemdRun(ctx, s)
+	prefix, err := systemdRun(ctx, c.Streams)
 	if err != nil {
 		return err
 	}
 	argv = append(argv, prefix...)
 	argv = append(argv, toplevel+"/bin/switch-to-configuration", action)
-	return proc.Run(ctx, proc.Cmd{Argv: elevate.Command(argv...), Stdin: s.Stdin, Stdout: s.Stderr, Stderr: s.Stderr})
+	return c.RunIndented(ctx, proc.Cmd{Argv: elevate.Command(argv...), Stdin: c.Stdin}, ui.Verbosity(activationFormat(), verbose))
 }
 
 func systemdRun(ctx context.Context, s proc.Streams) ([]string, error) {

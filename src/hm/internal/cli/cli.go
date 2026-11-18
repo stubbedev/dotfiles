@@ -152,7 +152,7 @@ Rebuilds evaluate and build as you with nix build, show the closure diff
 against the running generation, and only activation runs as root.
 
 Environment:
-  HM_CONFIG        config file (default: $XDG_CONFIG_HOME/hm/config.json)
+  HM_CONFIG        config file (default: $XDG_CONFIG_HOME/hm/config.yaml)
   HM_FLAKE_DIR     flake directory, overriding the config
   HM_NIXOS_CONFIG  nixosConfigurations attribute, overriding the config
                    (--attr overrides both)

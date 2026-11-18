@@ -104,6 +104,18 @@ func ListGenerations(profile, runningLink string) ([]Generation, error) {
 	return gens, nil
 }
 
+func currentGeneration(profile string) (int, error) {
+	target, err := os.Readlink(profile)
+	if err != nil {
+		return 0, fmt.Errorf("reading the current generation of %s: %w", profile, err)
+	}
+	id, ok := generationID(filepath.Base(profile), filepath.Base(target))
+	if !ok {
+		return 0, fmt.Errorf("profile link %s points at %s, not a generation", profile, target)
+	}
+	return id, nil
+}
+
 func previousGeneration(profile string) (string, error) {
 	gens, err := ListGenerations(profile, "")
 	if err != nil {

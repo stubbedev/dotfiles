@@ -35,14 +35,19 @@ func (s *State) Frame(v View, now time.Time) []string {
 	return lines
 }
 
-func (s *State) Summary(st ui.Style, now time.Time) (string, bool) {
-	if s.Builds.Expected == 0 && s.Copies.Expected == 0 {
-		return "", false
+func (s *State) Summary(st ui.Style, now time.Time) []string {
+	failed := s.withStatus(Failed)
+	if s.Builds.Expected == 0 && s.Copies.Expected == 0 && len(failed) == 0 {
+		return nil
 	}
 	ic := st.Icons()
 	elapsed := formatDuration(now.Sub(s.started))
-	if failed := s.failedBuilds(); failed > 0 {
-		return st.Paint(ic.With(ic.Failed, fmt.Sprintf("%d failed build(s) after %s", failed, elapsed)), ui.Bold, ui.Red), true
+	if n := s.failedBuilds(); n > 0 {
+		head := fmt.Sprintf("%d failed build(s)", n)
+		if cancelled := len(s.withStatus(Cancelled)); cancelled > 0 {
+			head += fmt.Sprintf(", %d cancelled", cancelled)
+		}
+		return append([]string{st.Paint(ic.With(ic.Failed, head+" after "+elapsed), ui.Bold, ui.Red)}, failureReport(st, failed)...)
 	}
 	var parts []string
 	if s.Builds.Done > 0 {
@@ -55,17 +60,43 @@ func (s *State) Summary(st ui.Style, now time.Time) (string, bool) {
 	if len(parts) > 0 {
 		text += ": " + strings.Join(parts, ", ")
 	}
-	return st.Paint(ic.With(ic.Done, text), ui.Green), true
+	return []string{st.Paint(ic.With(ic.Done, text), ui.Green)}
+}
+
+func failureReport(st ui.Style, failed []*Derivation) []string {
+	ic := st.Icons()
+	var lines []string
+	for i, d := range failed {
+		corner, indent := "├─ ", "│  "
+		if i == len(failed)-1 {
+			corner, indent = "╰─ ", "   "
+		}
+		head := st.Paint(ic.With(ic.Failed, d.Name), ui.Bold, ui.Red)
+		if d.Failure.Reason != "" {
+			head += st.Paint(": "+d.Failure.Reason, ui.Red)
+		}
+		lines = append(lines, st.Paint(corner, ui.Gray)+head)
+		for _, log := range d.Failure.Log {
+			lines = append(lines, st.Paint(indent+"│ ", ui.Gray)+st.Paint(log, ui.Faint))
+		}
+		lines = append(lines, st.Paint(indent, ui.Gray)+st.Paint("full log: ", ui.Faint)+st.Paint("nix log "+d.Path, ui.Cyan))
+	}
+	return lines
+}
+
+func (s *State) withStatus(status Status) []*Derivation {
+	var out []*Derivation
+	for _, d := range s.drvs {
+		if d.Status == status {
+			out = append(out, d)
+		}
+	}
+	slices.SortFunc(out, compareDerivations)
+	return out
 }
 
 func (s *State) failedBuilds() int64 {
-	var n int64
-	for _, d := range s.drvs {
-		if d.Status == Failed {
-			n++
-		}
-	}
-	return max(n, s.Builds.Failed)
+	return max(int64(len(s.withStatus(Failed))), s.Builds.Failed)
 }
 
 type branch struct {

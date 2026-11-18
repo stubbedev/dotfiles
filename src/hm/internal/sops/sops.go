@@ -92,6 +92,32 @@ func (s Store) SecretNames() ([]string, error) {
 	return names, nil
 }
 
+type MissingSecretError struct {
+	Name string
+}
+
+func (e *MissingSecretError) Error() string { return "secrets/" + e.Name + " is missing" }
+
+func (s Store) Decrypt(ctx context.Context, name string) ([]byte, error) {
+	path, err := s.ResolveSecret(name)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
+		return nil, &MissingSecretError{Name: name}
+	} else if err != nil {
+		return nil, fmt.Errorf("decrypting secrets/%s: %w", name, err)
+	}
+	var stderr bytes.Buffer
+	cmd := s.sops(append([]string{"--decrypt"}, append(slices.Clone(binaryMode), path)...)...)
+	cmd.Stderr = &stderr
+	out, err := proc.Output(ctx, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("decrypting secrets/%s: %w: %s", name, err, strings.TrimSpace(stderr.String()))
+	}
+	return bytes.TrimRight(out, "\n"), nil
+}
+
 func (s Store) Edit(ctx context.Context, path string) error {
 	return proc.Run(ctx, s.sops(append(slices.Clone(binaryMode), path)...))
 }

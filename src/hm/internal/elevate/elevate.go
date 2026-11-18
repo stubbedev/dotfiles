@@ -23,7 +23,6 @@ type Session struct {
 }
 
 func Start(ctx context.Context, c ui.Console) (*Session, error) {
-	c.Log().Step("Requesting sudo")
 	validate := proc.Cmd{Argv: Command("-v"), Stdin: c.Stdin, Stdout: c.Stderr, Stderr: c.Stderr}
 	if err := proc.Run(ctx, validate); err != nil {
 		return nil, fmt.Errorf("validating sudo credentials: %w", err)

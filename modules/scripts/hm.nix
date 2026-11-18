@@ -68,6 +68,38 @@ _: {
         };
       };
 
+      hookType = lib.types.submodule {
+        options = {
+          description = lib.mkOption {
+            type = lib.types.str;
+            description = "What the hook does, shown as its step in `hm switch`.";
+          };
+          exec = lib.mkOption {
+            type = lib.types.str;
+            description = "Absolute path of the program to run.";
+          };
+          args = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Arguments before the activated generation, which hm always appends last.";
+          };
+          env = lib.mkOption {
+            type = lib.types.attrsOf lib.types.str;
+            default = { };
+            description = "Environment variables set for the hook.";
+          };
+          secretEnv = lib.mkOption {
+            type = lib.types.attrsOf lib.types.str;
+            default = { };
+            description = ''
+              Environment variables decrypted from sops secrets under the
+              flake's secrets/ directory, by secret name. hm skips the hook
+              with a warning while one of them does not exist.
+            '';
+          };
+        };
+      };
+
       commandType = lib.types.submodule {
         options = choiceOptions // {
           exec = lib.mkOption {
@@ -190,25 +222,6 @@ _: {
           echo "Done."
         '';
       };
-
-      cachePush = pkgs.stubbe.bashApp {
-        name = "hm-cache-push";
-        runtimeInputs = [
-          pkgs.sops
-          pkgs.xilo
-        ];
-        text = ''
-          generation="$1"
-          token_file="$HM_FLAKE/secrets/xilo-token"
-          if [ ! -f "$token_file" ]; then
-            echo "cache push: secrets/xilo-token missing, run 'hm secret set xilo-token'. Skipping." >&2
-            exit 0
-          fi
-          token=$(sops --decrypt --input-type binary --output-type binary "$token_file")
-          echo "Pushing ''${generation##*/} closure to the cache…"
-          XILO_URL="https://xilos.dev" XILO_TOKEN="$token" xilo push stubbedev/main "$generation" --quiet
-        '';
-      };
     in
     {
       options.stubbe.hm = {
@@ -222,12 +235,12 @@ _: {
         };
 
         postSwitch = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
+          type = lib.types.listOf hookType;
           default = [ ];
           description = ''
-            Programs `hm switch` and `hm upgrade` run after a successful
-            activation, with the activated generation as the argument and
-            HM_FLAKE set to the flake directory.
+            Hooks `hm switch` and `hm upgrade` run after a successful
+            activation, with the activated generation as the last argument
+            and HM_FLAKE set to the flake directory.
           '';
         };
 
@@ -257,20 +270,27 @@ _: {
               }) cacheTargets;
             }
           ];
-          postSwitch = lib.optional config.features.development (lib.getExe cachePush);
           settings = {
             flake = config.stubbe.paths.dotfiles;
             inherit (config.host) platform;
             attr = config.host.flakeAttr;
             ssh_key = "${config.home.homeDirectory}/.ssh/id_ed25519";
-            hooks.post_switch = config.stubbe.hm.postSwitch;
+            hooks.post_switch = map (hook: {
+              inherit (hook)
+                description
+                exec
+                args
+                env
+                ;
+              secret_env = hook.secretEnv;
+            }) config.stubbe.hm.postSwitch;
             inherit (config.stubbe.hm) commands;
           };
         };
 
         home.packages = [ pkgs.stubbe.hm ];
-        xdg.configFile."hm/config.json".source =
-          (pkgs.formats.json { }).generate "hm-config.json"
+        xdg.configFile."hm/config.yaml".source =
+          (pkgs.formats.yaml { }).generate "hm-config.yaml"
             config.stubbe.hm.settings;
       };
     };

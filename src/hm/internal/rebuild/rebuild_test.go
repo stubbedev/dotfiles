@@ -353,3 +353,58 @@ func TestDiffModes(t *testing.T) {
 		t.Fatalf("no current generation: %v", err)
 	}
 }
+
+func TestActivationFormat(t *testing.T) {
+	format := activationFormat()
+	lines := []string{
+		"Starting [systemd-run] /nix/store/x/bin/switch-to-configuration switch...",
+		"warning: /root/.nix-defexpr/channels exists, but channels have been disabled.",
+		"warning: /root/.nix-defexpr/channels exists, but channels have been disabled.",
+		"Due to https://github.com/NixOS/nix/issues/9574, Nix may still use these channels when NIX_PATH is unset.",
+		"Checking switch inhibitors... done",
+		`Skipping "/boot/EFI/systemd/systemd-bootx64.efi", same boot loader version in place already.`,
+		`Skipping "/boot/EFI/BOOT/BOOTX64.EFI", same boot loader version in place already.`,
+		"setting up /etc...",
+		"reloading user units for stubbe...",
+		"restarting the following user units: nixos-activation.service",
+		"restarting sysinit-reactivation.target",
+		"restarting the following units: home-manager-stubbe.service, sshd.service",
+		"stopping the following units: old.service",
+		"the following new units were started: NetworkManager-dispatcher.service",
+		"nixos-rebuild-switch-to-configuration.service: Deactivated successfully.",
+		"nixos-rebuild-switch-to-configuration.service: Failed with result 'exit-code'.",
+	}
+	var out bytes.Buffer
+	g := ui.Printer{W: &out}.Gutter(format)
+	for _, line := range lines {
+		if _, err := g.Write([]byte(line + "\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := "│ ! /root/.nix-defexpr/channels exists, but channels have been disabled.\n" +
+		"│ ✔ bootloader up to date\n" +
+		"│ ↻ restart nixos-activation (user)\n" +
+		"│ ↻ restart sysinit-reactivation.target\n" +
+		"│ ↻ restart home-manager-stubbe, sshd\n" +
+		"│ ■ stop    old\n" +
+		"│ ▸ start   NetworkManager-dispatcher\n" +
+		"│ nixos-rebuild-switch-to-configuration.service: Failed with result 'exit-code'.\n"
+	if out.String() != want {
+		t.Fatalf("activation output:\n%s\nwant:\n%s", out.String(), want)
+	}
+}
+
+func TestDoneMessages(t *testing.T) {
+	profile := generationsFixture(t)
+	var out bytes.Buffer
+	c := ui.Console{Streams: proc.Streams{Stderr: &out}}
+	for _, v := range []Verb{Switch, Boot, Test, DryActivate} {
+		if err := printActivated(c, v, profile); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := "✔ Switched to generation 2\n✔ Generation 2 boots next\n✔ Activated until the next reboot\n✔ Dry activation finished, nothing was changed\n"
+	if out.String() != want {
+		t.Fatalf("done messages:\n%s\nwant:\n%s", out.String(), want)
+	}
+}

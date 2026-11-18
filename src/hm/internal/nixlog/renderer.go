@@ -131,8 +131,8 @@ func (r *Renderer) consumeLive(in io.Reader) error {
 		r.flush()
 	}
 	r.clearFrame()
-	if summary, ok := r.state.Summary(r.cfg.Style, r.cfg.Now()); ok {
-		r.buf.WriteString(summary + "\n")
+	for _, line := range r.state.Summary(r.cfg.Style, r.cfg.Now()) {
+		r.buf.WriteString(line + "\n")
 	}
 	r.buf.WriteString(showCursor)
 	r.flush()

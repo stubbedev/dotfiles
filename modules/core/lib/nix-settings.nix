@@ -2,11 +2,15 @@
 # Substituters and the nixpkgs config every class instantiates pkgs with.
 _: {
   stubbe.lib = {
-    cache = {
+    cache = rec {
+      xilo = {
+        url = "https://xilos.dev";
+        cache = "stubbedev/main";
+      };
       # xilo (xilos.dev) first: self-hosted cache is preferred, then
       # upstream and nix-community.
       substituters = [
-        "https://xilos.dev/c/stubbedev/main"
+        "${xilo.url}/c/${xilo.cache}"
         "https://cache.nixos.org"
         "https://nix-community.cachix.org"
       ];

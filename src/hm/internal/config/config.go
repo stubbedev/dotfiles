@@ -2,15 +2,20 @@ package config
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+
+	"go.yaml.in/yaml/v3"
 )
 
 const (
+	configFile     = "config.yaml"
 	EnvConfig      = "HM_CONFIG"
 	EnvFlakeDir    = "HM_FLAKE_DIR"
 	EnvNixOSConfig = "HM_NIXOS_CONFIG"
@@ -54,12 +59,25 @@ type Command struct {
 	Complete    []Choice
 }
 
+type EnvVar struct {
+	Name  string
+	Value string
+}
+
+type Hook struct {
+	Description string
+	Exec        string
+	Args        []string
+	Env         []EnvVar
+	SecretEnv   []EnvVar
+}
+
 type Config struct {
 	Flake      string
 	Platform   Platform
 	Attr       string
 	SSHKey     string
-	PostSwitch []string
+	PostSwitch []Hook
 	Commands   []Command
 }
 
@@ -74,29 +92,38 @@ func (c Config) SSHPublicKey() string { return c.SSHKey + ".pub" }
 var (
 	attrPattern    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_'-]*$`)
 	commandPattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 )
 
 type fileChoice struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
 }
 
 type fileCommand struct {
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Exec        string       `json:"exec"`
-	Complete    []fileChoice `json:"complete"`
+	Name        string       `yaml:"name"`
+	Description string       `yaml:"description"`
+	Exec        string       `yaml:"exec"`
+	Complete    []fileChoice `yaml:"complete"`
+}
+
+type fileHook struct {
+	Description string            `yaml:"description"`
+	Exec        string            `yaml:"exec"`
+	Args        []string          `yaml:"args"`
+	Env         map[string]string `yaml:"env"`
+	SecretEnv   map[string]string `yaml:"secret_env"`
 }
 
 type file struct {
-	Flake    string `json:"flake"`
-	Platform string `json:"platform"`
-	Attr     string `json:"attr"`
-	SSHKey   string `json:"ssh_key"`
+	Flake    string `yaml:"flake"`
+	Platform string `yaml:"platform"`
+	Attr     string `yaml:"attr"`
+	SSHKey   string `yaml:"ssh_key"`
 	Hooks    struct {
-		PostSwitch []string `json:"post_switch"`
-	} `json:"hooks"`
-	Commands []fileCommand `json:"commands"`
+		PostSwitch []fileHook `yaml:"post_switch"`
+	} `yaml:"hooks"`
+	Commands []fileCommand `yaml:"commands"`
 }
 
 func ValidateAttr(attr string) error {
@@ -111,13 +138,13 @@ func DefaultPath(getenv func(string) string) (string, error) {
 		return p, nil
 	}
 	if x := getenv("XDG_CONFIG_HOME"); x != "" {
-		return filepath.Join(x, "hm", "config.json"), nil
+		return filepath.Join(x, "hm", configFile), nil
 	}
 	home := getenv("HOME")
 	if home == "" {
 		return "", errors.New("locating the hm config: none of HM_CONFIG, XDG_CONFIG_HOME or HOME is set")
 	}
-	return filepath.Join(home, ".config", "hm", "config.json"), nil
+	return filepath.Join(home, ".config", "hm", configFile), nil
 }
 
 func Load(path string, getenv func(string) string) (Config, error) {
@@ -138,14 +165,15 @@ func Load(path string, getenv func(string) string) (Config, error) {
 }
 
 func Parse(data []byte, getenv func(string) string) (Config, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
 	var f file
 	if err := dec.Decode(&f); err != nil {
 		return Config{}, err
 	}
-	if dec.More() {
-		return Config{}, errors.New("trailing data after the config object")
+	var extra any
+	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
+		return Config{}, errors.New("more than one YAML document")
 	}
 
 	platform, err := ParsePlatform(f.Platform)
@@ -153,11 +181,10 @@ func Parse(data []byte, getenv func(string) string) (Config, error) {
 		return Config{}, err
 	}
 	cfg := Config{
-		Flake:      f.Flake,
-		Platform:   platform,
-		Attr:       f.Attr,
-		SSHKey:     f.SSHKey,
-		PostSwitch: f.Hooks.PostSwitch,
+		Flake:    f.Flake,
+		Platform: platform,
+		Attr:     f.Attr,
+		SSHKey:   f.SSHKey,
 	}
 	if dir := getenv(EnvFlakeDir); dir != "" {
 		cfg.Flake = dir
@@ -175,10 +202,8 @@ func Parse(data []byte, getenv func(string) string) (Config, error) {
 	if !filepath.IsAbs(cfg.SSHKey) {
 		return Config{}, fmt.Errorf("ssh_key %q is not an absolute path", cfg.SSHKey)
 	}
-	for _, hook := range cfg.PostSwitch {
-		if !filepath.IsAbs(hook) {
-			return Config{}, fmt.Errorf("post_switch hook %q is not an absolute path", hook)
-		}
+	if cfg.PostSwitch, err = parseHooks(f.Hooks.PostSwitch); err != nil {
+		return Config{}, err
 	}
 	commands, err := parseCommands(f.Commands)
 	if err != nil {
@@ -210,6 +235,44 @@ func parseCommands(in []fileCommand) ([]Command, error) {
 			choices[i] = Choice(ch)
 		}
 		out = append(out, Command{Name: c.Name, Description: c.Description, Exec: c.Exec, Complete: choices})
+	}
+	return out, nil
+}
+
+func parseHooks(in []fileHook) ([]Hook, error) {
+	out := make([]Hook, len(in))
+	for i, h := range in {
+		if h.Description == "" {
+			return nil, fmt.Errorf("post_switch hook %d has no description", i)
+		}
+		if !filepath.IsAbs(h.Exec) {
+			return nil, fmt.Errorf("post_switch hook %q: exec %q is not an absolute path", h.Description, h.Exec)
+		}
+		env, err := envVars(h.Description, "env", h.Env)
+		if err != nil {
+			return nil, err
+		}
+		secretEnv, err := envVars(h.Description, "secret_env", h.SecretEnv)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range secretEnv {
+			if v.Value == "" {
+				return nil, fmt.Errorf("post_switch hook %q: secret_env %s names no secret", h.Description, v.Name)
+			}
+		}
+		out[i] = Hook{Description: h.Description, Exec: h.Exec, Args: h.Args, Env: env, SecretEnv: secretEnv}
+	}
+	return out, nil
+}
+
+func envVars(hook, field string, in map[string]string) ([]EnvVar, error) {
+	out := make([]EnvVar, 0, len(in))
+	for _, name := range slices.Sorted(maps.Keys(in)) {
+		if !envNamePattern.MatchString(name) {
+			return nil, fmt.Errorf("post_switch hook %q: %s name %q is not an environment variable name", hook, field, name)
+		}
+		out = append(out, EnvVar{Name: name, Value: in[name]})
 	}
 	return out, nil
 }

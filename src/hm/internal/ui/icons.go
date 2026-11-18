@@ -3,6 +3,16 @@ package ui
 import "strings"
 
 type Icons struct {
+	Step     string
+	Build    string
+	Diff     string
+	Activate string
+	Hook     string
+	Warn     string
+	Stop     string
+	Restart  string
+	Reload   string
+	Start    string
 	Running  string
 	Done     string
 	Planned  string
@@ -15,6 +25,16 @@ type Icons struct {
 }
 
 var Unicode = Icons{
+	Step:     ">",
+	Build:    ">",
+	Diff:     ">",
+	Activate: ">",
+	Hook:     ">",
+	Warn:     "!",
+	Stop:     "■",
+	Restart:  "↻",
+	Reload:   "⟳",
+	Start:    "▸",
 	Running:  "⏵",
 	Done:     "✔",
 	Planned:  "⏸",

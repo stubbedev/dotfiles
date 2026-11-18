@@ -27,6 +27,7 @@ const (
 	Running
 	Done
 	Failed
+	Cancelled
 )
 
 type Derivation struct {
@@ -36,7 +37,13 @@ type Derivation struct {
 	Phase    string
 	Start    time.Time
 	Estimate time.Duration
+	Failure  Failure
 	inputs   []string
+}
+
+type Failure struct {
+	Reason string
+	Log    []string
 }
 
 type Transfer struct {
@@ -77,6 +84,9 @@ var (
 	buildPlanHeader = regexp.MustCompile(`^(?:these \d+ derivations|this derivation) will be built:$`)
 	fetchPlanHeader = regexp.MustCompile(`^(?:these \d+ paths|this path) will be fetched`)
 	failedBuild     = regexp.MustCompile(`(?:Cannot build|builder for) '(/nix/store/[^']+\.drv)'`)
+	failureReason   = regexp.MustCompile(`(?m)^\s*Reason: (.*?)\.?$`)
+	dependencyCause = regexp.MustCompile(`^\d+ dependenc(?:y|ies) failed$`)
+	failureLogLine  = regexp.MustCompile(`(?m)^\s*> ?(.*)$`)
 )
 
 type Options struct {
@@ -129,7 +139,10 @@ func (s *State) msg(e Event) ([]Line, error) {
 	text := ui.Strip(e.Msg)
 	if m := failedBuild.FindStringSubmatch(text); m != nil {
 		if d, ok := s.drvs[m[1]]; ok {
-			d.Status = Failed
+			s.recordFailure(d, text)
+			if s.opts.Live {
+				return nil, nil
+			}
 		}
 	}
 	if e.Level > LevelInfo {
@@ -154,6 +167,22 @@ func (s *State) msg(e Event) ([]Line, error) {
 		return nil, nil
 	}
 	return []Line{{Text: e.Msg}}, nil
+}
+
+func (s *State) recordFailure(d *Derivation, text string) {
+	reason := ""
+	if m := failureReason.FindStringSubmatch(text); m != nil {
+		reason = m[1]
+	}
+	if dependencyCause.MatchString(reason) {
+		d.Status = Cancelled
+		return
+	}
+	d.Status = Failed
+	d.Failure = Failure{Reason: reason}
+	for _, m := range failureLogLine.FindAllStringSubmatch(text, -1) {
+		d.Failure.Log = append(d.Failure.Log, m[1])
+	}
 }
 
 func (s *State) derivation(drvPath string) (*Derivation, error) {

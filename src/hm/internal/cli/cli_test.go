@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -49,6 +48,11 @@ func requireTools(t *testing.T, names ...string) {
 
 func newHarness(t *testing.T, commands ...map[string]any) *harness {
 	t.Helper()
+	return newHarnessWith(t, nil, commands...)
+}
+
+func newHarnessWith(t *testing.T, postSwitch []map[string]any, commands ...map[string]any) *harness {
+	t.Helper()
 	dir := t.TempDir()
 	h := &harness{t: t, dir: dir, flake: filepath.Join(dir, "flake"), home: filepath.Join(dir, "home")}
 	for _, d := range []string{filepath.Join(h.flake, "secrets"), filepath.Join(h.home, ".ssh"), filepath.Join(dir, "elsewhere")} {
@@ -70,17 +74,18 @@ func newHarness(t *testing.T, commands ...map[string]any) *harness {
 	if commands == nil {
 		commands = []map[string]any{}
 	}
-	cfg, err := json.Marshal(map[string]any{
+	cfg, err := yaml.Marshal(map[string]any{
 		"flake":    "/nonexistent",
 		"platform": "nixos",
 		"attr":     "desktop",
 		"ssh_key":  filepath.Join(h.home, ".ssh", "id_ed25519"),
+		"hooks":    map[string]any{"post_switch": postSwitch},
 		"commands": commands,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfgPath := filepath.Join(dir, "config.json")
+	cfgPath := filepath.Join(dir, "config.yaml")
 	if err := os.WriteFile(cfgPath, cfg, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -532,5 +537,52 @@ func TestCompletion(t *testing.T) {
 	}
 	if code := app.Run(context.Background(), []string{"diff", "1", "2", "3"}); code != 2 {
 		t.Fatalf("diff with three arguments exited %d", code)
+	}
+}
+
+func TestPostSwitchHook(t *testing.T) {
+	dir := t.TempDir()
+	record := filepath.Join(dir, "record")
+	script := filepath.Join(dir, "hook")
+	body := "#!/bin/sh\nprintf '%s\\n' \"$*\" \"$HM_FLAKE\" \"$PUSH_URL\" > " + record + "\necho pushing quietly\n"
+	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h := newHarnessWith(t, []map[string]any{
+		{"description": "Pushing the closure", "exec": script, "args": []string{"push", "--quiet", "team/main"}, "env": map[string]string{"PUSH_URL": "https://cache.example"}},
+		{"description": "Needs a token", "exec": script, "secret_env": map[string]string{"PUSH_TOKEN": "push-token"}},
+	})
+	var out, errOut bytes.Buffer
+	app := New(proc.Streams{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &errOut}, Terminal{})
+	rt, err := app.runtime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := app.runHook(t.Context(), rt, rt.Config.PostSwitch[0], "/nix/store/gen", false); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "push --quiet team/main /nix/store/gen\n" + h.flake + "\nhttps://cache.example\n"; string(got) != want {
+		t.Fatalf("hook saw:\n%s\nwant:\n%s", got, want)
+	}
+	if errOut.String() != "> Pushing the closure\n" {
+		t.Fatalf("routine hook output not condensed: %q", errOut.String())
+	}
+
+	errOut.Reset()
+	if err := os.Remove(record); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.runHook(t.Context(), rt, rt.Config.PostSwitch[1], "/nix/store/gen", false); err != nil {
+		t.Fatal(err)
+	}
+	if want := "> Needs a token\n! skipped: secrets/push-token is missing, run hm secret set push-token\n"; errOut.String() != want {
+		t.Fatalf("missing secret: %q, want %q", errOut.String(), want)
+	}
+	if _, err := os.Stat(record); err == nil {
+		t.Fatal("hook ran without its secret")
 	}
 }

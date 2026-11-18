@@ -70,6 +70,19 @@ func TestCompareVersions(t *testing.T) {
 	}
 }
 
+func TestRenderWithoutPackageChanges(t *testing.T) {
+	oldC := mustParse(t, "nixos-system-x@1", map[string]int64{"tiny@1": 10})
+	newC := mustParse(t, "nixos-system-x@2", map[string]int64{"tiny@2": 20})
+	var out bytes.Buffer
+	if err := Render(&out, ui.Style{}, Diff(oldC, newC), RenderOptions{FullFlag: "--diff-full"}); err != nil {
+		t.Fatal(err)
+	}
+	want := "No package changes · 3 paths (+2 -2) · 40 B (+10 B) · 1 hidden (--diff-full)\n"
+	if out.String() != want {
+		t.Fatalf("render:\n%s\nwant:\n%s", out.String(), want)
+	}
+}
+
 func TestParseRejectsForeignPaths(t *testing.T) {
 	if _, err := Parse(storePath("x"), []byte(`{"/tmp/x":{"narSize":1}}`)); err == nil {
 		t.Fatal("Parse accepted a closure without its root")
@@ -116,8 +129,7 @@ func TestDiffAndRender(t *testing.T) {
 	if err := Render(&out, ui.Style{}, report, RenderOptions{FullFlag: "--full"}); err != nil {
 		t.Fatal(err)
 	}
-	want := `
-CHANGED (4)
+	want := `CHANGED (4)
 [D.] bash    5.2p37 -> 5.2p36
 [U*] firefox 140.0 -> 141.0, +1.00 MiB
 [C.] python3 <unchanged> -> 3.13.0, <unchanged>, +1.00 MiB
@@ -129,10 +141,7 @@ ADDED (1)
 REMOVED (1)
 [R-] gone    1.0
 
-PATHS: 12 -> 13 (+7, -6)
-SIZE: 108.00 MiB -> 112.00 MiB (+4.00 MiB)
-
-NOTE: 1 hidden (size-only changes under 1.00 MiB, --full to show)
+13 paths (+7 -6) · 112.00 MiB (+4.00 MiB) · 1 hidden (--full)
 `
 	if out.String() != want {
 		t.Fatalf("render:\n%s\nwant:\n%s", out.String(), want)
@@ -152,7 +161,7 @@ NOTE: 1 hidden (size-only changes under 1.00 MiB, --full to show)
 	if !strings.Contains(out.String(), "[C.] tiny\n") {
 		t.Fatalf("--full does not show size-only changes:\n%s", out.String())
 	}
-	if strings.Contains(out.String(), "NOTE") {
+	if strings.Contains(out.String(), "hidden") {
 		t.Fatalf("--full still notes hidden packages:\n%s", out.String())
 	}
 	out.Reset()

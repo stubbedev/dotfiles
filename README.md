@@ -123,12 +123,20 @@ hm help          # every verb
 Running builds show their elapsed time against the last recorded duration,
 kept in `~/.cache/hm/build-times.json`. `--diff never|always` skips the
 closure diff or makes a failing one fatal (by default it only warns).
+Activation and post-switch hook output is condensed to warnings, errors,
+unit changes and the bootloader status; the rest is printed only if the
+step fails, or always with `-v`.
 
-The home-manager module writes its settings to `~/.config/hm/config.json`.
+The home-manager module writes its settings to `~/.config/hm/config.yaml`.
 Other modules add subcommands through `stubbe.hm.commands` (`hm iso`,
-`hm clean`, `hm cache`) and post-switch hooks through `stubbe.hm.postSwitch`
-(the closure push to the xilo cache). `cd src/hm && go test ./...` runs the
-unit tests; `nix build .#checks.x86_64-linux.hm` runs them in the sandbox.
+`hm clean`, `hm cache`) and post-switch hooks through `stubbe.hm.postSwitch`.
+A hook is a program with `args`, `env` and `secretEnv` (environment variables
+decrypted from sops secrets under `secrets/`); hm appends the activated
+generation and skips the hook with a warning while a secret is missing. The
+closure push to the xilo cache is one such hook, declared in
+`modules/nix.nix` next to the substituter it feeds. `cd src/hm && go test
+./...` runs the unit tests; `nix build .#checks.x86_64-linux.hm` runs them in
+the sandbox.
 
 ## NIXOS HOSTS
 

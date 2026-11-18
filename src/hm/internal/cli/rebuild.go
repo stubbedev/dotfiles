@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/stubbedev/dotfiles/src/hm/internal/flake"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
 	"github.com/stubbedev/dotfiles/src/hm/internal/rebuild"
+	"github.com/stubbedev/dotfiles/src/hm/internal/sops"
 	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 	"github.com/stubbedev/dotfiles/src/hm/internal/usage"
 )
@@ -89,7 +89,7 @@ func (a *App) rebuildOptions(f *rebuildFlags, cmd *cobra.Command, args []string)
 	if err != nil {
 		return rebuild.Options{}, err
 	}
-	opts := rebuild.Options{InstallBootloader: f.installBootloader, Extra: extra, Diff: f.diff}
+	opts := rebuild.Options{InstallBootloader: f.installBootloader, Extra: extra, Diff: f.diff, Verbose: f.nix.verbose > 0}
 	if f.ask {
 		if !a.terminal.StdinTTY {
 			return rebuild.Options{}, usage.Errorf("%s --ask: stdin is not a terminal to answer on", cmd.CommandPath())
@@ -132,7 +132,7 @@ func (a *App) rebuildCmd(v rebuild.Verb) (*cobra.Command, error) {
 			return err
 		}
 		return withRoot(cmd.Context(), rt, rebuild.NeedsRoot(rt.Config.Platform, v), func() error {
-			return rebuildAndHook(cmd.Context(), rt, v, opts)
+			return a.rebuildAndHook(cmd.Context(), rt, v, opts)
 		})
 	}
 	return cmd, nil
@@ -150,20 +150,41 @@ func withRoot(ctx context.Context, rt rebuild.Runtime, needed bool, fn func() er
 	return fn()
 }
 
-func rebuildAndHook(ctx context.Context, rt rebuild.Runtime, v rebuild.Verb, opts rebuild.Options) error {
+func (a *App) rebuildAndHook(ctx context.Context, rt rebuild.Runtime, v rebuild.Verb, opts rebuild.Options) error {
 	path, err := rebuild.Run(ctx, rt, v, opts)
 	if err != nil || v != rebuild.Switch {
 		return err
 	}
 	for _, hook := range rt.Config.PostSwitch {
-		rt.Console.Log().Step("Running post-switch hook %s", filepath.Base(hook))
-		cmd := rt.Console.Cmd(hook, path)
-		cmd.Env = []string{"HM_FLAKE=" + rt.Config.Flake}
-		if err := proc.Run(ctx, cmd); err != nil {
-			return fmt.Errorf("post-switch hook: %w", err)
+		if err := a.runHook(ctx, rt, hook, path, opts.Verbose); err != nil {
+			return fmt.Errorf("post-switch hook %q: %w", hook.Description, err)
 		}
 	}
 	return nil
+}
+
+func (a *App) runHook(ctx context.Context, rt rebuild.Runtime, hook config.Hook, generation string, verbose bool) error {
+	log := rt.Console.Log()
+	log.StepWith(log.Style.Icons().Hook, "%s", hook.Description)
+	env := []string{"HM_FLAKE=" + rt.Config.Flake}
+	for _, v := range hook.Env {
+		env = append(env, v.Name+"="+v.Value)
+	}
+	store := a.store(rt.Config)
+	for _, v := range hook.SecretEnv {
+		value, err := store.Decrypt(ctx, v.Value)
+		var missing *sops.MissingSecretError
+		if errors.As(err, &missing) {
+			log.Warn("skipped: %v, run %s", missing, log.Style.Paint("hm secret set "+missing.Name, ui.Cyan))
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		env = append(env, v.Name+"="+string(value))
+	}
+	argv := append(append([]string{hook.Exec}, hook.Args...), generation)
+	return rt.Console.RunIndented(ctx, proc.Cmd{Argv: argv, Env: env, Stdin: rt.Console.Stdin}, ui.Verbosity(ui.Notable, verbose))
 }
 
 func (a *App) replCmd() *cobra.Command {
@@ -274,6 +295,7 @@ taken as a store path or a link to one, such as ./result.`,
 				return err
 			}
 			opts := closure.RenderOptions{Full: full, FullFlag: "--full"}
+			closure.WriteHeader(a.console.Stdout, a.console.OutStyle, oldPath, newPath)
 			return closure.Compare(cmd.Context(), a.console.Stdout, a.console.OutStyle, oldPath, newPath, opts)
 		},
 	}
@@ -374,7 +396,7 @@ func (a *App) upgradeCmd() (*cobra.Command, error) {
 			if err := flake.Update(cmd.Context(), repo(rt)); err != nil {
 				return err
 			}
-			return rebuildAndHook(cmd.Context(), rt, rebuild.Switch, opts)
+			return a.rebuildAndHook(cmd.Context(), rt, rebuild.Switch, opts)
 		})
 	}
 	return cmd, nil

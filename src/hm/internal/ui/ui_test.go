@@ -2,9 +2,12 @@ package ui
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"testing"
+
+	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
 )
 
 func TestPaint(t *testing.T) {
@@ -93,5 +96,56 @@ func TestPrinterAndTable(t *testing.T) {
 	}
 	if err := (Table{Header: []string{"A"}, Rows: [][]string{{"1", "2"}}}).Render(&out, st); err == nil {
 		t.Fatal("ragged table rendered")
+	}
+}
+
+func TestGutter(t *testing.T) {
+	var out bytes.Buffer
+	g := Printer{W: &out}.Gutter(Notable)
+	for _, chunk := range []string{"routine li", "ne\r\nwarning: x\n", "warning: x\n", "error: boom\n", "unit y failed\n", "tail"} {
+		if _, err := g.Write([]byte(chunk)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := g.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if want := "│ ! x\n│ ✗ boom\n│ unit y failed\n"; out.String() != want {
+		t.Fatalf("gutter = %q, want %q", out.String(), want)
+	}
+	out.Reset()
+	if err := g.ShowHidden(); err != nil {
+		t.Fatal(err)
+	}
+	if want := "│ output:\n│ routine line\n│ tail\n"; out.String() != want {
+		t.Fatalf("hidden lines = %q, want %q", out.String(), want)
+	}
+
+	out.Reset()
+	st := NewStyle(true, nil)
+	g = Printer{W: &out, Style: st}.Gutter(Verbosity(Notable, true))
+	if _, err := g.Write([]byte("plain\nwarning: careful\n")); err != nil {
+		t.Fatal(err)
+	}
+	bar := st.Paint("│", Gray) + " "
+	want := bar + st.Paint("plain", Faint) + "\n" + bar + st.Paint("!", Bold, Yellow) + " careful\n"
+	if out.String() != want {
+		t.Fatalf("verbose gutter = %q, want %q", out.String(), want)
+	}
+}
+
+func TestRunIndentedShowsHiddenOutputOnFailure(t *testing.T) {
+	var out bytes.Buffer
+	c := Console{Streams: proc.Streams{Stderr: &out}}
+	err := c.RunIndented(context.Background(), proc.Cmd{Argv: []string{"sh", "-c", "echo routine; echo warning: w; exit 3"}}, Notable)
+	if code, ok := proc.ExitCode(err); !ok || code != 3 {
+		t.Fatalf("err = %v", err)
+	}
+	if want := "│ ! w\n│ output:\n│ routine\n"; out.String() != want {
+		t.Fatalf("output = %q, want %q", out.String(), want)
+	}
+	out.Reset()
+	if err := c.RunIndented(context.Background(), proc.Cmd{Argv: []string{"sh", "-c", "echo routine"}}, Notable); err != nil || out.String() != "" {
+		t.Fatalf("successful run printed %q, err %v", out.String(), err)
 	}
 }

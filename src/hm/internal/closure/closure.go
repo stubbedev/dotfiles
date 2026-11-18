@@ -74,8 +74,11 @@ func ClosureSizes(ctx context.Context, paths []string) (map[string]int64, error)
 	return sizes, nil
 }
 
+func WriteHeader(w io.Writer, st ui.Style, oldPath, newPath string) {
+	fmt.Fprintf(w, "%s %s\n%s %s\n\n", st.Paint("<<<", ui.Bold, ui.Red), oldPath, st.Paint(">>>", ui.Bold, ui.Green), newPath)
+}
+
 func Compare(ctx context.Context, w io.Writer, st ui.Style, oldPath, newPath string, opts RenderOptions) error {
-	fmt.Fprintf(w, "%s %s\n%s %s\n", st.Paint("<<<", ui.Bold, ui.Red), oldPath, st.Paint(">>>", ui.Bold, ui.Green), newPath)
 	paths := []string{oldPath, newPath}
 	closures := make([]Closure, len(paths))
 	errs := make([]error, len(paths))

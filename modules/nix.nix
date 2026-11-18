@@ -130,6 +130,20 @@ in
 
       stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
 
+      stubbe.hm.postSwitch = lib.mkIf config.features.development [
+        {
+          description = "Pushing the closure to ${pkgs.stubbe.cache.xilo.url}";
+          exec = lib.getExe' pkgs.xilo "xilo";
+          args = [
+            "push"
+            "--quiet"
+            pkgs.stubbe.cache.xilo.cache
+          ];
+          env.XILO_URL = pkgs.stubbe.cache.xilo.url;
+          secretEnv.XILO_TOKEN = "xilo-token";
+        }
+      ];
+
       # Generations only: on NixOS the system nix.gc above sweeps the store
       # weekly, and on Android `nix-on-droid trim` owns it.
       services.home-manager.autoExpire = {

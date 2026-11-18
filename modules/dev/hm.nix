@@ -7,7 +7,7 @@
         name = "hm";
         timeout = 60;
         nativeBuildInputs = [ pkgs.stubbe.hm ];
-        env.hmConfig = pkgs.writeText "hm-config.json" (
+        env.hmConfig = pkgs.writeText "hm-config.yaml" (
           builtins.unsafeDiscardStringContext (builtins.toJSON referenceHome.stubbe.hm.settings)
         );
         text = ''

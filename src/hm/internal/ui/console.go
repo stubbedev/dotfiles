@@ -40,9 +40,9 @@ const (
 func (p Printer) Mark(m Mark) string {
 	switch m {
 	case MarkStep:
-		return p.Style.Paint(">", Bold, Green)
+		return p.Style.Paint(p.Style.Icons().Step, Bold, Green)
 	case MarkWarn:
-		return p.Style.Paint("!", Bold, Yellow)
+		return p.Style.Paint(p.Style.Icons().Warn, Bold, Yellow)
 	case MarkDone:
 		return p.Style.Paint(p.Style.Icons().Done, Bold, Green)
 	case MarkAsk:
@@ -52,6 +52,10 @@ func (p Printer) Mark(m Mark) string {
 }
 
 func (p Printer) Step(format string, args ...any) { p.line(MarkStep, format, args...) }
+
+func (p Printer) StepWith(icon, format string, args ...any) {
+	fmt.Fprintln(p.W, p.Style.Paint(icon, Bold, Green)+" "+fmt.Sprintf(format, args...))
+}
 
 func (p Printer) Warn(format string, args ...any) { p.line(MarkWarn, format, args...) }
 
