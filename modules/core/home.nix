@@ -18,7 +18,7 @@ in
       # JSON; home-manager's docs only rewrite declaration paths under its own
       # tree, so nixpkgs' lib/modules/generic/meta-maintainers.nix leaks
       # through as a bare store path and every eval warns about a derivation
-      # with no proper context. nix-mcp covers option lookup, so drop it.
+      # with no proper context. `phix mcp` covers option lookup, so drop it.
       manual.manpages.enable = false;
 
       home = {

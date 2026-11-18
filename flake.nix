@@ -14,8 +14,6 @@
     # built against their own locked nixpkgs, and rebasing every derivation onto
     # ours means no store-path hash matches and everything builds from source.
     srv.url = "github:stubbedev/srv";
-    # This repo's own MCP server (.mcp.json), put on PATH by the dev shell.
-    nix-mcp.url = "github:stubbedev/nix-mcp";
     treeman = {
       url = "github:stubbedev/treeman";
       inputs.nixpkgs.follows = "nixpkgs";
