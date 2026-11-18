@@ -215,11 +215,11 @@
         "nixpkgs": "nixpkgs_11"
       },
       "locked": {
-        "lastModified": 1794830532,
-        "narHash": "sha256-OlBY+vFIB6pZdECdTM02nxyMI15jO3p7VqjGsPsw56w=",
+        "lastModified": 1794957578,
+        "narHash": "sha256-CeoX/kb30rmQsb+H5iEwhpnjXfT7RjhlVP4u0KVXd5Y=",
         "owner": "stubbedev",
         "repo": "flakes.nix",
-        "rev": "940aa429232216281a956d04b88e4a86f69b65af",
+        "rev": "e03d3e79a94df2cabe00f55c2ab0c6647867d589",
         "type": "github"
       },
       "original": {
@@ -697,11 +697,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794957667,
-        "narHash": "sha256-KEhTwnE7FdEkoHXtpeCDYX6hMHT2Eav7lqHZDDHceSo=",
+        "lastModified": 1795018132,
+        "narHash": "sha256-Y6ilxsSFHdVI21qzIzgcwolq8LWfz62PbcPMjfgH7zU=",
         "owner": "stubbedev",
         "repo": "lys",
-        "rev": "3796e97e2f8e749e931ddbb09a1d8f8221f9b6ac",
+        "rev": "a3ba1e59993428afead5e907a282ed18a533d7f1",
         "type": "github"
       },
       "original": {
@@ -960,11 +960,11 @@
     },
     "nixpkgs_5": {
       "locked": {
-        "lastModified": 1794750194,
-        "narHash": "sha256-c6ZxSsG1c2luSrbESFfp9Jq2pSVhGst2to4aIzt2Nes=",
+        "lastModified": 1794890597,
+        "narHash": "sha256-lME2lHoDHAaSHP3/okgiVoJ0icVEvsQH8LeU3We7tcc=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "1a08097fc1ed85575db39763b2c4a5d8970a37ba",
+        "rev": "04906337b6d53e8bb0eaf0470ae9f070a4d4eb55",
         "type": "github"
       },
       "original": {
@@ -1358,11 +1358,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794956781,
-        "narHash": "sha256-PkJUXht8HKyEMoJKoYpBgXxCA2mB3w8b6rmWqm9f5DQ=",
+        "lastModified": 1795017964,
+        "narHash": "sha256-YhhUwCW9pLpDr5ldctjEYMfdXdejubiQGgyoUZOgNa0=",
         "owner": "stubbedev",
         "repo": "xilo",
-        "rev": "e68f02ab0d03bd27116706d0412f86e6c55e1fd0",
+        "rev": "49648b51c7767bf7c06c7161001db77addc2dc4e",
         "type": "github"
       },
       "original": {
