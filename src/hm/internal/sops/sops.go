@@ -14,7 +14,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/stubbedev/dotfiles/src/hm/internal/atomicfile"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 	"github.com/stubbedev/dotfiles/src/hm/internal/usage"
 )
 
@@ -31,7 +33,7 @@ var (
 
 type Store struct {
 	Flake   string
-	Streams proc.Streams
+	Console ui.Console
 }
 
 func (s Store) configPath() string { return filepath.Join(s.Flake, ".sops.yaml") }
@@ -39,7 +41,7 @@ func (s Store) configPath() string { return filepath.Join(s.Flake, ".sops.yaml")
 func (s Store) secretsDir() string { return filepath.Join(s.Flake, "secrets") }
 
 func (s Store) sops(args ...string) proc.Cmd {
-	return s.Streams.Cmd(append([]string{"sops", "--config", s.configPath()}, args...)...)
+	return s.Console.Cmd(append([]string{"sops", "--config", s.configPath()}, args...)...)
 }
 
 func ValidateSecretName(name string) error {
@@ -97,7 +99,7 @@ func (s Store) Edit(ctx context.Context, path string) error {
 func (s Store) Set(ctx context.Context, path string, value []byte) error {
 	cmd := s.sops(append([]string{"--encrypt"}, append(slices.Clone(binaryMode), "--filename-override", path, "/dev/stdin")...)...)
 	cmd.Stdin = bytes.NewReader(value)
-	return replaceFile(path, secretPerm, func(w io.Writer) error {
+	return atomicfile.Replace(path, secretPerm, func(w io.Writer) error {
 		cmd.Stdout = w
 		if err := proc.Run(ctx, cmd); err != nil {
 			return fmt.Errorf("encrypting %s: %w", path, err)
@@ -219,27 +221,29 @@ func (s Store) Trust(ctx context.Context, req TrustRequest) error {
 		return fmt.Errorf("trust: adding %s to %s: %w", req.Pubkey, s.configPath(), err)
 	}
 	if !added {
-		fmt.Fprintf(s.Streams.Stdout, "%s already present in .sops.yaml — nothing to do.\n", req.Pubkey)
+		s.Console.Out().Done("%s already present in .sops.yaml, nothing to do", req.Pubkey)
 		return nil
 	}
-	if err := writeFileAtomically(s.configPath(), updated); err != nil {
+	if err := atomicfile.WriteKeepingMode(s.configPath(), updated); err != nil {
 		return fmt.Errorf("trust: %w", err)
 	}
-	fmt.Fprintf(s.Streams.Stdout, "Added %s → %s to .sops.yaml\n", req.Name, req.Pubkey)
+	out := s.Console.Out()
+	out.Done("Added %s → %s to .sops.yaml", out.Style.Paint(req.Name, ui.Bold), req.Pubkey)
 
 	count, err := s.rewrapAll(ctx)
 	if err != nil {
-		if restoreErr := writeFileAtomically(s.configPath(), original); restoreErr != nil {
+		if restoreErr := atomicfile.WriteKeepingMode(s.configPath(), original); restoreErr != nil {
 			return fmt.Errorf("trust: %w; restoring .sops.yaml also failed: %w", err, restoreErr)
 		}
-		fmt.Fprintln(s.Streams.Stderr, "hm: trust: rolled back .sops.yaml")
+		s.Console.Log().Warn("trust: rolled back .sops.yaml")
 		return fmt.Errorf("trust: %w", err)
 	}
 
-	fmt.Fprintf(s.Streams.Stdout, "\nTrusted %s across %d secret file(s).\n", req.Name, count)
-	fmt.Fprintf(s.Streams.Stdout, "Review:  git -C %q diff -- .sops.yaml secrets/\n", s.Flake)
-	fmt.Fprintf(s.Streams.Stdout, "Commit:  git -C %q add .sops.yaml secrets/ && \\\n", s.Flake)
-	fmt.Fprintf(s.Streams.Stdout, "         git -C %q commit -m \"trust: add %s age recipient\"\n", s.Flake, req.Name)
+	out.Done("Trusted %s across %d secret file(s)", out.Style.Paint(req.Name, ui.Bold), count)
+	command := func(format string, args ...any) string { return out.Style.Paint(fmt.Sprintf(format, args...), ui.Cyan) }
+	fmt.Fprintf(out.W, "  %s  %s\n", out.Style.Paint("Review:", ui.Bold), command("git -C %q diff -- .sops.yaml secrets/", s.Flake))
+	fmt.Fprintf(out.W, "  %s  %s\n", out.Style.Paint("Commit:", ui.Bold), command("git -C %q add .sops.yaml secrets/ && \\", s.Flake))
+	fmt.Fprintf(out.W, "           %s\n", command("git -C %q commit -m \"trust: add %s age recipient\"", s.Flake, req.Name))
 	return nil
 }
 
@@ -252,50 +256,10 @@ func (s Store) rewrapAll(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	for _, name := range names {
-		fmt.Fprintf(s.Streams.Stdout, "Re-wrapping %s\n", name)
+		s.Console.Out().Step("Re-wrapping %s", name)
 		if err := proc.Run(ctx, s.sops("updatekeys", "--yes", filepath.Join(s.secretsDir(), name))); err != nil {
 			return 0, fmt.Errorf("re-wrapping %s: %w", name, err)
 		}
 	}
 	return len(names), nil
-}
-
-func writeFileAtomically(path string, data []byte) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("writing %s: %w", path, err)
-	}
-	return replaceFile(path, info.Mode().Perm(), func(w io.Writer) error {
-		_, err := w.Write(data)
-		return err
-	})
-}
-
-func replaceFile(path string, perm fs.FileMode, fill func(io.Writer) error) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".new-*")
-	if err != nil {
-		return fmt.Errorf("writing %s: %w", path, err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			os.Remove(tmp.Name())
-		}
-	}()
-	fillErr := fill(tmp)
-	if fillErr == nil {
-		fillErr = tmp.Chmod(perm)
-	}
-	closeErr := tmp.Close()
-	if fillErr != nil {
-		return fmt.Errorf("writing %s: %w", path, fillErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("writing %s: %w", path, closeErr)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		return fmt.Errorf("replacing %s: %w", path, err)
-	}
-	committed = true
-	return nil
 }

@@ -1,17 +1,24 @@
 package cli
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/stubbedev/dotfiles/src/hm/internal/closure"
 	"github.com/stubbedev/dotfiles/src/hm/internal/config"
 	"github.com/stubbedev/dotfiles/src/hm/internal/elevate"
 	"github.com/stubbedev/dotfiles/src/hm/internal/flake"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
 	"github.com/stubbedev/dotfiles/src/hm/internal/rebuild"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 	"github.com/stubbedev/dotfiles/src/hm/internal/usage"
 )
 
@@ -40,33 +47,83 @@ func verbSummary(v rebuild.Verb) string {
 type rebuildFlags struct {
 	nix               *nixFlags
 	installBootloader bool
+	ask               bool
+	diff              rebuild.DiffOptions
 }
 
-func addRebuildFlags(cmd *cobra.Command, activates bool) *rebuildFlags {
-	f := &rebuildFlags{nix: addNixFlags(cmd)}
-	if activates {
-		cmd.Flags().BoolVar(&f.installBootloader, "install-bootloader", false, "reinstall the bootloader")
+type diffModeValue struct{ mode *rebuild.DiffMode }
+
+func (v diffModeValue) String() string { return v.mode.String() }
+
+func (v diffModeValue) Type() string { return "mode" }
+
+func (v diffModeValue) Set(s string) error {
+	m, err := rebuild.ParseDiffMode(s)
+	if err != nil {
+		return err
 	}
-	return f
+	*v.mode = m
+	return nil
 }
 
-func (f *rebuildFlags) options(cmd *cobra.Command, args []string) (rebuild.Options, error) {
+func addRebuildFlags(cmd *cobra.Command, v rebuild.Verb) (*rebuildFlags, error) {
+	f := &rebuildFlags{nix: addNixFlags(cmd)}
+	fs := cmd.Flags()
+	if v.Activates() {
+		fs.BoolVar(&f.installBootloader, "install-bootloader", false, "reinstall the bootloader")
+		fs.BoolVar(&f.ask, "ask", false, "ask for confirmation after the closure diff, before activating")
+	}
+	if !v.ComparesClosures() {
+		return f, nil
+	}
+	fs.Var(diffModeValue{&f.diff.Mode}, "diff", "closure diff: auto (warn if it fails), always (fail the rebuild if it fails) or never")
+	fs.BoolVar(&f.diff.Full, "diff-full", false, "also show packages whose size changed by under 1 MiB")
+	if err := cmd.RegisterFlagCompletionFunc("diff", cobra.FixedCompletions(rebuild.DiffModeNames(), cobra.ShellCompDirectiveNoFileComp)); err != nil {
+		return nil, fmt.Errorf("registering --diff completion: %w", err)
+	}
+	return f, nil
+}
+
+func (a *App) rebuildOptions(f *rebuildFlags, cmd *cobra.Command, args []string) (rebuild.Options, error) {
 	extra, err := f.nix.argv(cmd, args)
 	if err != nil {
 		return rebuild.Options{}, err
 	}
-	return rebuild.Options{InstallBootloader: f.installBootloader, Extra: extra}, nil
+	opts := rebuild.Options{InstallBootloader: f.installBootloader, Extra: extra, Diff: f.diff}
+	if f.ask {
+		if !a.terminal.StdinTTY {
+			return rebuild.Options{}, usage.Errorf("%s --ask: stdin is not a terminal to answer on", cmd.CommandPath())
+		}
+		opts.Confirm = a.confirm
+	}
+	return opts, nil
 }
 
-func (a *App) rebuildCmd(v rebuild.Verb) *cobra.Command {
+func (a *App) confirm(question string) (bool, error) {
+	fmt.Fprint(a.console.Stderr, a.console.Log().Mark(ui.MarkAsk)+" "+question+" [y/N] ")
+	line, err := bufio.NewReader(a.console.Stdin).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, fmt.Errorf("reading the confirmation: %w", err)
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		return true, nil
+	}
+	return false, nil
+}
+
+func (a *App) rebuildCmd(v rebuild.Verb) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:     v.String() + " [flags] [-- nix build args]",
 		Short:   verbSummary(v),
 		GroupID: groupRebuild,
 	}
-	flags := addRebuildFlags(cmd, v.Activates())
+	flags, err := addRebuildFlags(cmd, v)
+	if err != nil {
+		return nil, err
+	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		opts, err := flags.options(cmd, args)
+		opts, err := a.rebuildOptions(flags, cmd, args)
 		if err != nil {
 			return err
 		}
@@ -78,14 +135,14 @@ func (a *App) rebuildCmd(v rebuild.Verb) *cobra.Command {
 			return rebuildAndHook(cmd.Context(), rt, v, opts)
 		})
 	}
-	return cmd
+	return cmd, nil
 }
 
 func withRoot(ctx context.Context, rt rebuild.Runtime, needed bool, fn func() error) error {
 	if !needed {
 		return fn()
 	}
-	session, err := elevate.Start(ctx, rt.Streams)
+	session, err := elevate.Start(ctx, rt.Console)
 	if err != nil {
 		return err
 	}
@@ -99,7 +156,8 @@ func rebuildAndHook(ctx context.Context, rt rebuild.Runtime, v rebuild.Verb, opt
 		return err
 	}
 	for _, hook := range rt.Config.PostSwitch {
-		cmd := rt.Streams.Cmd(hook, path)
+		rt.Console.Log().Step("Running post-switch hook %s", filepath.Base(hook))
+		cmd := rt.Console.Cmd(hook, path)
 		cmd.Env = []string{"HM_FLAKE=" + rt.Config.Flake}
 		if err := proc.Run(ctx, cmd); err != nil {
 			return fmt.Errorf("post-switch hook: %w", err)
@@ -135,7 +193,7 @@ func (a *App) rollbackCmd() *cobra.Command {
 		Short:             "Activate the previous generation, or the given one",
 		GroupID:           groupRebuild,
 		Args:              maxArgs(1),
-		ValidArgsFunction: a.completeGenerations,
+		ValidArgsFunction: a.generationCompletions(1, func(g rebuild.Generation) bool { return g.Boot }),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			generation := 0
 			if len(args) == 1 {
@@ -168,7 +226,7 @@ func (a *App) generationsCmd() *cobra.Command {
 				return err
 			}
 			profile := a.profile(cfg.Platform)
-			gens, err := rebuild.ListGenerations(profile)
+			gens, err := rebuild.ListGenerations(profile, rebuild.RunningLink(cfg.Platform))
 			if err != nil {
 				return err
 			}
@@ -177,14 +235,65 @@ func (a *App) generationsCmd() *cobra.Command {
 					return err
 				}
 			}
-			if asJSON {
-				return rebuild.WriteGenerationsJSON(a.streams.Stdout, gens)
+			if err := rebuild.AddClosureSizes(cmd.Context(), gens); err != nil {
+				return err
 			}
-			return rebuild.WriteGenerations(a.streams.Stdout, gens, cfg.Platform)
+			if asJSON {
+				return rebuild.WriteGenerationsJSON(a.console.Stdout, gens)
+			}
+			return rebuild.WriteGenerations(a.console.Stdout, a.console.OutStyle, gens, cfg.Platform)
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "print the generations as JSON")
 	return cmd
+}
+
+func (a *App) diffCmd() *cobra.Command {
+	var full bool
+	cmd := &cobra.Command{
+		Use:   "diff [old] [new]",
+		Short: "Show the package changes between two generations or store paths",
+		Long: `Show the package changes between two generations or store paths.
+
+  hm diff               the previous generation against the current one
+  hm diff <old>         <old> against the current generation
+  hm diff <old> <new>   <old> against <new>
+
+A number names a generation of this machine's profile; anything else is
+taken as a store path or a link to one, such as ./result.`,
+		GroupID:           groupRebuild,
+		Args:              maxArgs(2),
+		ValidArgsFunction: a.generationCompletions(2, func(rebuild.Generation) bool { return false }),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := a.config()
+			if err != nil {
+				return err
+			}
+			oldPath, newPath, err := diffPair(a.profile(cfg.Platform), args)
+			if err != nil {
+				return err
+			}
+			opts := closure.RenderOptions{Full: full, FullFlag: "--full"}
+			return closure.Compare(cmd.Context(), a.console.Stdout, a.console.OutStyle, oldPath, newPath, opts)
+		},
+	}
+	cmd.Flags().BoolVar(&full, "full", false, "also show packages whose size changed by under 1 MiB")
+	return cmd
+}
+
+func diffPair(profile string, args []string) (string, string, error) {
+	if len(args) == 0 {
+		return rebuild.DefaultDiffPair(profile)
+	}
+	oldPath, err := rebuild.ResolveGeneration(profile, args[0])
+	if err != nil {
+		return "", "", err
+	}
+	if len(args) == 1 {
+		return oldPath, profile, nil
+	}
+	newPath, err := rebuild.ResolveGeneration(profile, args[1])
+	return oldPath, newPath, err
 }
 
 func (a *App) gcCmd() *cobra.Command {
@@ -222,7 +331,7 @@ func (a *App) gcCmd() *cobra.Command {
 }
 
 func repo(rt rebuild.Runtime) flake.Repo {
-	return flake.Repo{Dir: rt.Config.Flake, Ref: rt.Config.FlakeRef(), Streams: rt.Streams}
+	return flake.Repo{Dir: rt.Config.Flake, Ref: rt.Config.FlakeRef(), Console: rt.Console}
 }
 
 func (a *App) updateCmd() *cobra.Command {
@@ -242,15 +351,18 @@ func (a *App) updateCmd() *cobra.Command {
 	}
 }
 
-func (a *App) upgradeCmd() *cobra.Command {
+func (a *App) upgradeCmd() (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:     "upgrade [flags] [-- nix build args]",
 		Short:   "Run update, then switch",
 		GroupID: groupMaintain,
 	}
-	flags := addRebuildFlags(cmd, true)
+	flags, err := addRebuildFlags(cmd, rebuild.Switch)
+	if err != nil {
+		return nil, err
+	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		opts, err := flags.options(cmd, args)
+		opts, err := a.rebuildOptions(flags, cmd, args)
 		if err != nil {
 			return err
 		}
@@ -265,5 +377,5 @@ func (a *App) upgradeCmd() *cobra.Command {
 			return rebuildAndHook(cmd.Context(), rt, rebuild.Switch, opts)
 		})
 	}
-	return cmd
+	return cmd, nil
 }

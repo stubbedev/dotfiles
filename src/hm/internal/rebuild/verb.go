@@ -54,6 +54,32 @@ func (v Verb) Activates() bool {
 	return false
 }
 
+func (v Verb) activationStep() string {
+	switch v {
+	case Boot:
+		return "Adding configuration to the bootloader"
+	case DryActivate:
+		return "Showing what activation would change"
+	}
+	return "Activating configuration"
+}
+
+func (v Verb) ComparesClosures() bool {
+	return v != DryBuild && !v.buildsVM()
+}
+
+func (v Verb) confirmQuestion() string {
+	switch v {
+	case Boot:
+		return "Make this configuration the boot default?"
+	case Test:
+		return "Activate this configuration until the next reboot?"
+	case DryActivate:
+		return "Show what activating this configuration would change?"
+	}
+	return "Activate this configuration and make it the boot default?"
+}
+
 func (v Verb) setsProfile() bool {
 	return v == Switch || v == Boot
 }

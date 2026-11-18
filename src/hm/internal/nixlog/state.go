@@ -1,13 +1,13 @@
 package nixlog
 
 import (
-	"fmt"
-	"path"
-	"slices"
+	"regexp"
 	"strings"
-)
+	"time"
 
-const storeHashLen = 32
+	"github.com/stubbedev/dotfiles/src/hm/internal/storepath"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
+)
 
 type Progress struct {
 	Done     int64
@@ -16,67 +16,210 @@ type Progress struct {
 	Failed   int64
 }
 
-type activity struct {
-	typ   ActivityType
-	name  string
-	phase string
+func (p Progress) Waiting() int64 {
+	return max(p.Expected-p.Done-p.Running-p.Failed, 0)
 }
 
+type Status int
+
+const (
+	Planned Status = iota + 1
+	Running
+	Done
+	Failed
+)
+
+type Derivation struct {
+	Path     string
+	Name     string
+	Status   Status
+	Phase    string
+	Start    time.Time
+	Estimate time.Duration
+	inputs   []string
+}
+
+type Transfer struct {
+	Name     string
+	Done     int64
+	Expected int64
+	Start    time.Time
+}
+
+type Line struct {
+	Prefix string
+	Text   string
+}
+
+func (l Line) String() string {
+	if l.Prefix == "" {
+		return l.Text
+	}
+	return l.Prefix + "> " + l.Text
+}
+
+type activity struct {
+	typ    ActivityType
+	parent uint64
+	name   string
+	drv    string
+}
+
+type planKind int
+
+const (
+	planNone planKind = iota
+	planBuild
+	planFetch
+)
+
+var (
+	buildPlanHeader = regexp.MustCompile(`^(?:these \d+ derivations|this derivation) will be built:$`)
+	fetchPlanHeader = regexp.MustCompile(`^(?:these \d+ paths|this path) will be fetched`)
+	failedBuild     = regexp.MustCompile(`(?:Cannot build|builder for) '(/nix/store/[^']+\.drv)'`)
+)
+
 type Options struct {
-	BuildLogs       bool
-	OnlyBuildStarts bool
+	BuildLogs bool
+	Live      bool
+	Inputs    func(drvPath string) ([]string, error)
+	Estimates map[string]time.Duration
 }
 
 type State struct {
 	opts       Options
+	started    time.Time
 	activities map[uint64]*activity
-	running    []uint64
+	drvs       map[string]*Derivation
+	consumers  map[string][]string
+	transfers  map[uint64]*Transfer
+	measured   map[string]time.Duration
+	plan       planKind
 	Builds     Progress
 	Copies     Progress
 }
 
-func NewState(opts Options) *State {
-	return &State{opts: opts, activities: make(map[uint64]*activity)}
+func NewState(opts Options, started time.Time) *State {
+	return &State{
+		opts:       opts,
+		started:    started,
+		activities: make(map[uint64]*activity),
+		drvs:       make(map[string]*Derivation),
+		consumers:  make(map[string][]string),
+		transfers:  make(map[uint64]*Transfer),
+		measured:   make(map[string]time.Duration),
+	}
 }
 
-func (s *State) Apply(e Event) []string {
+func (s *State) Apply(e Event, now time.Time) ([]Line, error) {
 	switch e.Action {
 	case ActionStart:
-		return s.start(e)
+		return s.start(e, now)
 	case ActionStop:
-		s.stop(e.ID)
+		s.stop(e.ID, now)
 	case ActionResult:
-		return s.result(e)
+		return s.result(e), nil
 	case ActionMsg:
-		return []string{e.Msg}
+		return s.msg(e)
 	}
-	return nil
+	return nil, nil
 }
 
-func (s *State) start(e Event) []string {
+func (s *State) msg(e Event) ([]Line, error) {
+	text := ui.Strip(e.Msg)
+	if m := failedBuild.FindStringSubmatch(text); m != nil {
+		if d, ok := s.drvs[m[1]]; ok {
+			d.Status = Failed
+		}
+	}
+	if e.Level > LevelInfo {
+		return []Line{{Text: e.Msg}}, nil
+	}
+	switch {
+	case buildPlanHeader.MatchString(text):
+		s.plan = planBuild
+	case fetchPlanHeader.MatchString(text):
+		s.plan = planFetch
+	case s.plan != planNone && strings.HasPrefix(text, "  /nix/store/"):
+		if s.plan == planBuild {
+			if _, err := s.derivation(strings.TrimSpace(text)); err != nil {
+				return nil, err
+			}
+		}
+	default:
+		s.plan = planNone
+		return []Line{{Text: e.Msg}}, nil
+	}
+	if s.opts.Live {
+		return nil, nil
+	}
+	return []Line{{Text: e.Msg}}, nil
+}
+
+func (s *State) derivation(drvPath string) (*Derivation, error) {
+	if d, ok := s.drvs[drvPath]; ok {
+		return d, nil
+	}
+	var inputs []string
+	if s.opts.Inputs != nil {
+		var err error
+		if inputs, err = s.opts.Inputs(drvPath); err != nil {
+			return nil, err
+		}
+	}
+	d := &Derivation{
+		Path:     drvPath,
+		Name:     storepath.Name(drvPath),
+		Status:   Planned,
+		Estimate: s.opts.Estimates[storepath.Package(drvPath)],
+		inputs:   inputs,
+	}
+	s.drvs[drvPath] = d
+	for _, in := range inputs {
+		s.consumers[in] = append(s.consumers[in], drvPath)
+	}
+	return d, nil
+}
+
+func (s *State) start(e Event, now time.Time) ([]Line, error) {
 	typ := ActivityType(e.Type)
-	a := &activity{typ: typ, name: activityName(e)}
+	a := &activity{typ: typ, parent: e.Parent, name: activityName(e)}
 	s.activities[e.ID] = a
-	if typ == ActivityBuild {
-		s.running = append(s.running, e.ID)
+	switch typ {
+	case ActivityBuild:
+		drvPath, _ := e.StringField(0)
+		d, err := s.derivation(drvPath)
+		if err != nil {
+			return nil, err
+		}
+		a.drv = drvPath
+		d.Status, d.Start, d.Phase = Running, now, ""
+	case ActivityCopyPath:
+		s.transfers[e.ID] = &Transfer{Name: a.name, Start: now}
 	}
-	if e.Text == "" || e.Level > LevelInfo {
-		return nil
+	if s.opts.Live || e.Text == "" || e.Level > LevelInfo {
+		return nil, nil
 	}
-	if s.opts.OnlyBuildStarts && typ != ActivityBuild {
-		return nil
-	}
-	return []string{e.Text}
+	return []Line{{Text: e.Text}}, nil
 }
 
-func (s *State) stop(id uint64) {
+func (s *State) stop(id uint64, now time.Time) {
+	a, ok := s.activities[id]
+	if !ok {
+		return
+	}
 	delete(s.activities, id)
-	if i := slices.Index(s.running, id); i >= 0 {
-		s.running = slices.Delete(s.running, i, i+1)
+	delete(s.transfers, id)
+	if a.drv == "" {
+		return
+	}
+	if d := s.drvs[a.drv]; d.Status == Running {
+		d.Status = Done
+		s.measured[storepath.Package(d.Path)] = now.Sub(d.Start)
 	}
 }
 
-func (s *State) result(e Event) []string {
+func (s *State) result(e Event) []Line {
 	a, ok := s.activities[e.ID]
 	if !ok {
 		return nil
@@ -93,56 +236,45 @@ func (s *State) result(e Event) []string {
 			s.Builds = p
 		case ActivityCopyPaths:
 			s.Copies = p
+		case ActivityFileTransfer:
+			if t := s.transferOf(a); t != nil {
+				t.Done, t.Expected = p.Done, p.Expected
+			}
 		}
 	case ResultSetPhase:
-		if phase, ok := e.StringField(0); ok {
-			a.phase = phase
+		if phase, ok := e.StringField(0); ok && a.drv != "" {
+			s.drvs[a.drv].Phase = phase
 		}
 	case ResultBuildLogLine, ResultPostBuildLogLine:
 		line, ok := e.StringField(0)
 		if !ok || !s.opts.BuildLogs {
 			return nil
 		}
-		return []string{a.name + "> " + line}
+		return []Line{{Prefix: a.name, Text: line}}
 	}
 	return nil
 }
 
-func (s *State) Status() string {
-	var parts []string
-	if s.Builds.Expected > 0 {
-		parts = append(parts, fmt.Sprintf("[built %d/%d]", s.Builds.Done, s.Builds.Expected))
-	}
-	if s.Copies.Expected > 0 {
-		parts = append(parts, fmt.Sprintf("[fetched %d/%d]", s.Copies.Done, s.Copies.Expected))
-	}
-	if len(s.running) > 0 {
-		names := make([]string, 0, len(s.running))
-		for _, id := range s.running {
-			a := s.activities[id]
-			if a.phase != "" {
-				names = append(names, fmt.Sprintf("%s (%s)", a.name, a.phase))
-				continue
-			}
-			names = append(names, a.name)
+func (s *State) transferOf(a *activity) *Transfer {
+	for id := a.parent; id != 0; {
+		if t, ok := s.transfers[id]; ok {
+			return t
 		}
-		parts = append(parts, "building "+strings.Join(names, ", "))
+		parent, ok := s.activities[id]
+		if !ok {
+			return nil
+		}
+		id = parent.parent
 	}
-	return strings.Join(parts, " ")
+	return nil
 }
+
+func (s *State) Measured() map[string]time.Duration { return s.measured }
 
 func activityName(e Event) string {
 	p, ok := e.StringField(0)
 	if !ok {
 		return ""
 	}
-	return StoreName(p)
-}
-
-func StoreName(storePath string) string {
-	base := strings.TrimSuffix(path.Base(storePath), ".drv")
-	if len(base) > storeHashLen && base[storeHashLen] == '-' {
-		return base[storeHashLen+1:]
-	}
-	return base
+	return storepath.Name(p)
 }

@@ -185,25 +185,3 @@ func TestResolveSecret(t *testing.T) {
 		t.Errorf("SecretNames = %v, %v", names, err)
 	}
 }
-
-func TestWriteFileAtomicallyKeepsMode(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "f")
-	if err := os.WriteFile(path, []byte("old"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeFileAtomically(path, []byte("new")); err != nil {
-		t.Fatal(err)
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, _ := os.ReadFile(path)
-	if string(data) != "new" || info.Mode().Perm() != 0o600 {
-		t.Fatalf("content %q mode %v", data, info.Mode())
-	}
-	entries, _ := os.ReadDir(filepath.Dir(path))
-	if len(entries) != 1 {
-		t.Fatalf("temporary files left behind: %v", entries)
-	}
-}

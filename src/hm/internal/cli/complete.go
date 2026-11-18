@@ -23,23 +23,25 @@ func (a *App) completeSecretNames(_ *cobra.Command, args []string, _ string) ([]
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (a *App) completeGenerations(_ *cobra.Command, args []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
-	cfg, err := a.config()
-	if len(args) > 0 || err != nil {
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-	gens, err := rebuild.ListGenerations(a.profile(cfg.Platform))
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-	out := make([]cobra.Completion, 0, len(gens))
-	for _, g := range gens {
-		if g.Current {
-			continue
+func (a *App) generationCompletions(maxArgs int, skip func(rebuild.Generation) bool) cobra.CompletionFunc {
+	return func(_ *cobra.Command, args []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		cfg, err := a.config()
+		if len(args) >= maxArgs || err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
-		out = append(out, cobra.CompletionWithDesc(fmt.Sprint(g.ID), g.Date.Format(rebuild.DateLayout)))
+		gens, err := rebuild.ListGenerations(a.profile(cfg.Platform), "")
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		out := make([]cobra.Completion, 0, len(gens))
+		for _, g := range gens {
+			if skip(g) {
+				continue
+			}
+			out = append(out, cobra.CompletionWithDesc(fmt.Sprint(g.ID), g.Date.Format(rebuild.DateLayout)))
+		}
+		return out, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveKeepOrder
 	}
-	return out, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveKeepOrder
 }
 
 func (a *App) completeHostAttrs(cmd *cobra.Command, _ []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
@@ -71,7 +73,7 @@ func (a *App) externalCmd(c config.Command) *cobra.Command {
 			return out, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := proc.Run(cmd.Context(), a.streams.Cmd(append([]string{c.Exec}, args...)...))
+			err := proc.Run(cmd.Context(), a.console.Cmd(append([]string{c.Exec}, args...)...))
 			if code, ok := proc.ExitCode(err); ok && code > 0 {
 				return &silentExit{code: code}
 			}

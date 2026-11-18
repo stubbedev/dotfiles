@@ -15,11 +15,12 @@ import (
 
 	"github.com/stubbedev/dotfiles/src/hm/internal/config"
 	"github.com/stubbedev/dotfiles/src/hm/internal/sops"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 	"github.com/stubbedev/dotfiles/src/hm/internal/usage"
 )
 
 func (a *App) store(cfg config.Config) sops.Store {
-	return sops.Store{Flake: cfg.Flake, Streams: a.streams}
+	return sops.Store{Flake: cfg.Flake, Console: a.console}
 }
 
 func shortHostname() (string, error) {
@@ -47,11 +48,11 @@ func (a *App) whoamiCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			pubkey, err := sops.AgePubkey(cmd.Context(), a.streams, cfg.SSHPublicKey())
+			pubkey, err := sops.AgePubkey(cmd.Context(), a.console.Streams, cfg.SSHPublicKey())
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(a.streams.Stdout, "%s %s\n", host, pubkey)
+			fmt.Fprintf(a.console.Stdout, "%s %s\n", host, pubkey)
 			return nil
 		},
 	}
@@ -73,7 +74,7 @@ func (a *App) trustCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req, err := sops.ParseTrustArgs(args, a.streams.Stdin, a.terminal.StdinTTY)
+			req, err := sops.ParseTrustArgs(args, a.console.Stdin, a.terminal.StdinTTY)
 			if err != nil {
 				return err
 			}
@@ -94,7 +95,7 @@ func (a *App) autoName(cmd *cobra.Command, cfg config.Config, pubkey string) (st
 	}
 	local := ""
 	if _, err := os.Stat(cfg.SSHPublicKey()); err == nil {
-		if local, err = sops.AgePubkey(cmd.Context(), a.streams, cfg.SSHPublicKey()); err != nil {
+		if local, err = sops.AgePubkey(cmd.Context(), a.console.Streams, cfg.SSHPublicKey()); err != nil {
 			return "", err
 		}
 	} else if !errors.Is(err, fs.ErrNotExist) {
@@ -128,14 +129,14 @@ func (a *App) secretCmd() *cobra.Command {
 			if err := s.Set(cmd.Context(), path, value); err != nil {
 				return err
 			}
-			fmt.Fprintf(a.streams.Stdout, "Updated secrets/%s. Run 'hm switch' to deploy, then commit.\n", filepath.Base(path))
+			a.console.Out().Done("Updated secrets/%s. Run %s to deploy, then commit.", filepath.Base(path), a.console.OutStyle.Paint("hm switch", ui.Cyan))
 			return nil
 		}),
 		a.secretAction("rotate", "Re-roll the data key of secrets/<name>, recipients unchanged", func(cmd *cobra.Command, s sops.Store, path string) error {
 			if err := s.Rotate(cmd.Context(), path); err != nil {
 				return err
 			}
-			fmt.Fprintf(a.streams.Stdout, "Re-rolled data key for %s. Recipients unchanged.\n", filepath.Base(path))
+			a.console.Out().Done("Re-rolled data key for %s. Recipients unchanged.", filepath.Base(path))
 			return nil
 		}),
 	)
@@ -165,13 +166,13 @@ func (a *App) secretAction(name, short string, run func(*cobra.Command, sops.Sto
 
 func (a *App) readSecretValue(name string) ([]byte, error) {
 	if !a.terminal.StdinTTY {
-		data, err := io.ReadAll(a.streams.Stdin)
+		data, err := io.ReadAll(a.console.Stdin)
 		if err != nil {
 			return nil, fmt.Errorf("reading the value of %s from stdin: %w", name, err)
 		}
 		return sops.ParsePipedValue(data)
 	}
-	tty, ok := a.streams.Stdin.(*os.File)
+	tty, ok := a.console.Stdin.(*os.File)
 	if !ok {
 		return nil, errors.New("reading a secret: stdin is a terminal but not a file")
 	}
@@ -193,9 +194,9 @@ func (a *App) readSecretValue(name string) ([]byte, error) {
 }
 
 func (a *App) prompt(tty *os.File, label string) ([]byte, error) {
-	fmt.Fprint(a.streams.Stderr, label)
+	fmt.Fprint(a.console.Stderr, label)
 	value, err := term.ReadPassword(int(tty.Fd()))
-	fmt.Fprintln(a.streams.Stderr)
+	fmt.Fprintln(a.console.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("reading a secret from the terminal: %w", err)
 	}

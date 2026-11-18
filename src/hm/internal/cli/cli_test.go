@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 	"github.com/stubbedev/dotfiles/src/hm/internal/config"
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
 	"github.com/stubbedev/dotfiles/src/hm/internal/rebuild"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
+	"github.com/stubbedev/dotfiles/src/hm/internal/usage"
 )
 
 var sopsFixture = mustAbs(filepath.Join("..", "sops", "testdata", "sops.yaml"))
@@ -158,6 +161,42 @@ func TestHelp(t *testing.T) {
 	if out, _, code := h.run("", "build", "--help"); code != 0 || strings.Contains(out, "--install-bootloader") {
 		t.Errorf("build --help offers --install-bootloader:\n%s", out)
 	}
+	if strings.Contains(out, "\x1b[") {
+		t.Errorf("help is colored without a color terminal:\n%q", out)
+	}
+}
+
+func TestColoredOutput(t *testing.T) {
+	h := newHarness(t)
+	colored := Terminal{Stdout: ui.NewStyle(true, nil), Stderr: ui.NewStyle(true, nil)}
+	run := func(args ...string) (string, string, int) {
+		var out, errOut bytes.Buffer
+		code := New(proc.Streams{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &errOut}, colored).Run(context.Background(), args)
+		return out.String(), errOut.String(), code
+	}
+
+	plain := h.mustRun("", "switch", "--help")
+	out, _, code := run("switch", "--help")
+	if code != 0 || ui.Strip(out) != plain {
+		t.Fatalf("colored help differs from plain once stripped (exit %d):\n%s", code, ui.Strip(out))
+	}
+	for _, want := range []string{
+		"\x1b[1;33mUsage:\x1b[0m",
+		"\x1b[1;33mGlobal Flags:\x1b[0m",
+		"\x1b[1;31m-L, --print-build-logs\x1b[0m",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("colored switch --help lacks %q:\n%q", want, out)
+		}
+	}
+	if out, _, _ := run("help"); !strings.Contains(out, "\x1b[1;32mswitch ") || !strings.Contains(out, "\x1b[1;33mEnvironment:\x1b[0m") {
+		t.Errorf("colored help does not highlight commands and headings:\n%q", out)
+	}
+
+	_, errOut, code := run()
+	if code != 2 || !strings.Contains(errOut, "\x1b[1;33mUsage:\x1b[0m") || !strings.Contains(errOut, "\x1b[1;31merror:\x1b[0m no command given") {
+		t.Fatalf("bare hm exited %d with stderr:\n%q", code, errOut)
+	}
 }
 
 func TestUsageErrorsExitTwo(t *testing.T) {
@@ -269,7 +308,7 @@ func TestTrustAndSecrets(t *testing.T) {
 	if !strings.Contains(out, `git -C "`+h.flake+`" diff`) {
 		t.Fatalf("HM_FLAKE_DIR not resolved to %s:\n%s", h.flake, out)
 	}
-	if !strings.Contains(out, "\n\nTrusted first across 0 secret file(s).\nReview:") {
+	if !strings.Contains(out, "\n✔ Trusted first across 0 secret file(s)\n  Review:") {
 		t.Fatalf("trust summary misformatted:\n%s", out)
 	}
 
@@ -284,7 +323,7 @@ func TestTrustAndSecrets(t *testing.T) {
 	h.mustRun("hunter2\n\n", "secret", "set", "token")
 	t.Setenv("SOPS_AGE_KEY_FILE", firstKey)
 	out = h.mustRun("", "trust", "second", second)
-	if !strings.Contains(out, "Re-wrapping token") || !strings.Contains(out, "Trusted second across 1 secret file(s).") {
+	if !strings.Contains(out, "Re-wrapping token") || !strings.Contains(out, "Trusted second across 1 secret file(s)") {
 		t.Fatalf("trust did not re-wrap token:\n%s", out)
 	}
 	keys, _ = h.recipients()
@@ -365,22 +404,71 @@ func TestWhoamiPipesIntoTrust(t *testing.T) {
 	}
 }
 
-func TestNixFlagsTranslate(t *testing.T) {
+func parseRebuildFlags(t *testing.T, terminal Terminal, v rebuild.Verb, args ...string) (rebuild.Options, error) {
+	t.Helper()
+	app := New(proc.Streams{Stdin: strings.NewReader("y\n"), Stdout: io.Discard, Stderr: io.Discard}, terminal)
 	var got rebuild.Options
-	cmd := &cobra.Command{Use: "switch"}
-	flags := addRebuildFlags(cmd, true)
+	cmd := &cobra.Command{Use: v.String(), SilenceErrors: true, SilenceUsage: true}
+	flags, err := addRebuildFlags(cmd, v)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		var err error
-		got, err = flags.options(cmd, args)
+		got, err = app.rebuildOptions(flags, cmd, args)
 		return err
 	}
-	cmd.SetArgs([]string{"-L", "--show-trace", "-vv", "-j", "auto", "--cores", "4", "--option", "substitute=false", "--override-input", "nixpkgs=path:/x", "--install-bootloader", "--", "--repair", "x"})
-	if err := cmd.Execute(); err != nil {
+	cmd.SetArgs(args)
+	return got, cmd.Execute()
+}
+
+func TestNixFlagsTranslate(t *testing.T) {
+	got, err := parseRebuildFlags(t, Terminal{}, rebuild.Switch, "-L", "--show-trace", "-vv", "-j", "auto", "--cores", "4", "--option", "substitute=false", "--override-input", "nixpkgs=path:/x", "--install-bootloader", "--diff", "never", "--diff-full", "--", "--repair", "x")
+	if err != nil {
 		t.Fatal(err)
 	}
 	want := "--show-trace --print-build-logs -v -v --max-jobs auto --cores 4 --option substitute false --override-input nixpkgs path:/x --repair x"
-	if strings.Join(got.Extra, " ") != want || !got.InstallBootloader {
+	if strings.Join(got.Extra, " ") != want || !got.InstallBootloader || got.Confirm != nil {
 		t.Fatalf("options = %+v\nwant extra %q", got, want)
+	}
+	if got.Diff != (rebuild.DiffOptions{Mode: rebuild.DiffNever, Full: true}) {
+		t.Fatalf("diff options = %+v", got.Diff)
+	}
+	if got, err := parseRebuildFlags(t, Terminal{}, rebuild.Build); err != nil || got.Diff.Mode != rebuild.DiffAuto {
+		t.Fatalf("default diff mode = %v, %v", got.Diff.Mode, err)
+	}
+	if _, err := parseRebuildFlags(t, Terminal{}, rebuild.Switch, "--diff", "sometimes"); err == nil {
+		t.Fatal("--diff sometimes accepted")
+	}
+	if _, err := parseRebuildFlags(t, Terminal{}, rebuild.DryBuild, "--diff", "never"); err == nil {
+		t.Fatal("dry-build offers --diff although it never diffs")
+	}
+	if _, err := parseRebuildFlags(t, Terminal{}, rebuild.Build, "--ask"); err == nil {
+		t.Fatal("build offers --ask although it never activates")
+	}
+	if _, err := parseRebuildFlags(t, Terminal{}, rebuild.Switch, "--ask"); !usage.Is(err) {
+		t.Fatalf("--ask without a terminal = %v, want a usage error", err)
+	}
+	asked, err := parseRebuildFlags(t, Terminal{StdinTTY: true}, rebuild.Switch, "--ask")
+	if err != nil || asked.Confirm == nil {
+		t.Fatalf("--ask on a terminal = %+v, %v", asked, err)
+	}
+	if ok, err := asked.Confirm("Activate?"); err != nil || !ok {
+		t.Fatalf("confirm read y as %v, %v", ok, err)
+	}
+}
+
+func TestConfirmAnswers(t *testing.T) {
+	for answer, want := range map[string]bool{"y\n": true, "YES\n": true, "\n": false, "n\n": false, "": false, "yep\n": false} {
+		var errOut bytes.Buffer
+		app := New(proc.Streams{Stdin: strings.NewReader(answer), Stdout: io.Discard, Stderr: &errOut}, Terminal{StdinTTY: true})
+		got, err := app.confirm("Activate?")
+		if err != nil || got != want {
+			t.Errorf("answer %q = %v, %v; want %v", answer, got, err, want)
+		}
+		if errOut.String() != "? Activate? [y/N] " {
+			t.Errorf("prompt = %q", errOut.String())
+		}
 	}
 }
 
@@ -419,5 +507,30 @@ func TestCompletion(t *testing.T) {
 	lines := strings.Split(out.String(), "\n")
 	if !strings.HasPrefix(lines[0], "2\t") || !strings.HasPrefix(lines[1], "1\t") || strings.Contains(out.String(), "3\t") {
 		t.Fatalf("rollback completion:\n%s", out.String())
+	}
+
+	out.Reset()
+	if code := app.Run(context.Background(), []string{"__complete", "diff", "1", ""}); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	if lines := strings.Split(out.String(), "\n"); !strings.HasPrefix(lines[0], "3\t") || !strings.HasPrefix(lines[2], "1\t") {
+		t.Fatalf("diff completion:\n%s", out.String())
+	}
+	out.Reset()
+	if code := app.Run(context.Background(), []string{"__complete", "diff", "1", "2", ""}); code != 0 || strings.Contains(out.String(), "\t") {
+		t.Fatalf("diff completes a third argument:\n%s", out.String())
+	}
+	out.Reset()
+	if code := app.Run(context.Background(), []string{"__complete", "switch", "--diff", ""}); code != 0 || !strings.HasPrefix(out.String(), "auto\nalways\nnever\n") {
+		t.Fatalf("--diff completion:\n%s", out.String())
+	}
+
+	out.Reset()
+	errOut.Reset()
+	if code := app.Run(context.Background(), []string{"diff", "9"}); code != 1 || !strings.Contains(errOut.String(), "generation 9") {
+		t.Fatalf("diff of a missing generation exited %d: %s", code, errOut.String())
+	}
+	if code := app.Run(context.Background(), []string{"diff", "1", "2", "3"}); code != 2 {
+		t.Fatalf("diff with three arguments exited %d", code)
 	}
 }

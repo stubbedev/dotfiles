@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 )
 
 func git(t *testing.T, dir string, args ...string) string {
@@ -49,7 +50,7 @@ func setupRepos(t *testing.T) (string, string) {
 
 func repoFor(dir string) (Repo, *bytes.Buffer) {
 	var out bytes.Buffer
-	return Repo{Dir: dir, Ref: "path:" + dir, Streams: proc.Streams{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &out}}, &out
+	return Repo{Dir: dir, Ref: "path:" + dir, Console: ui.Console{Streams: proc.Streams{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &out}}}, &out
 }
 
 func TestCommitLockPushes(t *testing.T) {

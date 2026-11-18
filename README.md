@@ -107,14 +107,22 @@ Day-to-day rebuilds run through `hm`, a Go CLI (`src/hm`, packaged as
 `pkgs.stubbe.hm` in `modules/scripts/hm.nix`) that works against the checkout
 linked at `~/.stubbe`. It builds the NixOS toplevel (or the nix-on-droid
 activation package on the phone) as you with `nix build`, renders the build
-progress, prints the closure diff against the running generation, and only
-then activates, as root through sudo on NixOS:
+progress as a live dependency tree (in the style of nh's rom), prints a
+package-level closure diff against the running generation (in the style of
+dix), and only then activates, as root through sudo on NixOS:
 
 ```sh
-hm switch      # build, diff and activate
-hm upgrade     # update flake inputs, commit and push flake.lock, switch
-hm help        # every verb
+hm switch        # build, diff and activate
+hm switch --ask  # ... and confirm after the diff, before activating
+hm upgrade       # update flake inputs, commit and push flake.lock, switch
+hm diff [a] [b]  # package diff between generations (default: previous vs current)
+hm generations   # running and boot generations, versions, closure sizes
+hm help          # every verb
 ```
+
+Running builds show their elapsed time against the last recorded duration,
+kept in `~/.cache/hm/build-times.json`. `--diff never|always` skips the
+closure diff or makes a failing one fatal (by default it only warns).
 
 The home-manager module writes its settings to `~/.config/hm/config.json`.
 Other modules add subcommands through `stubbe.hm.commands` (`hm iso`,

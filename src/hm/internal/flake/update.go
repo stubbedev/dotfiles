@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stubbedev/dotfiles/src/hm/internal/proc"
+	"github.com/stubbedev/dotfiles/src/hm/internal/ui"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 type Repo struct {
 	Dir     string
 	Ref     string
-	Streams proc.Streams
+	Console ui.Console
 }
 
 func (r Repo) git(args ...string) proc.Cmd {
@@ -31,7 +32,7 @@ func (r Repo) git(args ...string) proc.Cmd {
 		"-c", "merge.flakelock.name=keep current flake.lock (regenerated)",
 		"-c", "merge.flakelock.driver=true",
 	}, args...)
-	return proc.Cmd{Argv: argv, Stdin: r.Streams.Stdin, Stdout: r.Streams.Stdout, Stderr: r.Streams.Stderr}
+	return r.Console.Cmd(argv...)
 }
 
 func (r Repo) runGit(ctx context.Context, timeout time.Duration, args ...string) error {
@@ -43,12 +44,8 @@ func (r Repo) runGit(ctx context.Context, timeout time.Duration, args ...string)
 	return proc.Run(ctx, r.git(args...))
 }
 
-func (r Repo) warn(format string, args ...any) {
-	fmt.Fprintf(r.Streams.Stderr, "hm: "+format+"\n", args...)
-}
-
 func Update(ctx context.Context, r Repo) error {
-	fmt.Fprintln(r.Streams.Stdout, "Updating nix inputs")
+	r.Console.Log().Step("Updating flake inputs")
 	if _, err := os.Stat(filepath.Join(r.Dir, ".git")); errors.Is(err, fs.ErrNotExist) {
 		return r.updateLock(ctx)
 	} else if err != nil {
@@ -61,7 +58,7 @@ func Update(ctx context.Context, r Repo) error {
 	}
 	if upstream {
 		if err := r.pull(ctx); err != nil {
-			r.warn("pulling %s from upstream failed, updating against the local checkout: %v", r.Dir, err)
+			r.Console.Log().Warn("pulling %s from upstream failed, updating against the local checkout: %v", r.Dir, err)
 		}
 	}
 	if err := r.updateLock(ctx); err != nil {
@@ -72,7 +69,7 @@ func Update(ctx context.Context, r Repo) error {
 
 func (r Repo) updateLock(ctx context.Context) error {
 	argv := []string{"nix", "--extra-experimental-features", "nix-command flakes", "flake", "update", "--flake", r.Ref, "--quiet"}
-	return proc.Run(ctx, r.Streams.Cmd(argv...))
+	return proc.Run(ctx, r.Console.Cmd(argv...))
 }
 
 func (r Repo) hasUpstream(ctx context.Context) (bool, error) {
@@ -135,7 +132,7 @@ func (r Repo) commitLock(ctx context.Context, upstream bool) error {
 	if err := r.runGit(ctx, 0, "commit", "--quiet", "-m", "chore: update flake.lock", "--", lockFile); err != nil {
 		return fmt.Errorf("committing %s: %w", lockFile, err)
 	}
-	fmt.Fprintln(r.Streams.Stdout, "Committed updated flake.lock")
+	r.Console.Log().Done("Committed the updated %s", lockFile)
 	if !upstream {
 		return nil
 	}
@@ -147,11 +144,11 @@ func (r Repo) commitLock(ctx context.Context, upstream bool) error {
 		return nil
 	}
 	if err := r.pull(ctx); err != nil {
-		r.warn("%s committed locally; pulling before the push retry failed, resolve manually: %v", lockFile, err)
+		r.Console.Log().Warn("%s committed locally; pulling before the push retry failed, resolve manually: %v", lockFile, err)
 		return nil
 	}
 	if err := r.runGit(ctx, networkTimeout, "push", "--quiet"); err != nil {
-		r.warn("%s committed locally; push failed, resolve manually: %v", lockFile, err)
+		r.Console.Log().Warn("%s committed locally; push failed, resolve manually: %v", lockFile, err)
 	}
 	return nil
 }
