@@ -10,7 +10,7 @@ in
   configurations.nixOnDroid.phone = {
     system = "aarch64-linux";
     module =
-      { pkgs, ... }:
+      { config, pkgs, ... }:
       {
         # nix-on-droid's own state version, whose enum stops at its last
         # release. It is unrelated to the nixpkgs pin and to
@@ -18,6 +18,8 @@ in
         system.stateVersion = "24.05";
 
         environment.motd = null;
+
+        nix.package = pkgs.nixVersions.nix_2_34;
 
         terminal.font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFontMono-Regular.ttf";
 
@@ -36,6 +38,8 @@ in
           useUserPackages = true;
           config = {
             imports = builtins.attrValues homeModules;
+
+            nix.package = config.nix.package;
 
             host = {
               platform = "android";
