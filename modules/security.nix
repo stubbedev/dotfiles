@@ -16,7 +16,7 @@
         execWheelOnly = true;
 
         extraConfig = ''
-          Defaults pwfeedback
+          Defaults pwfeedback,lecture=never
         '';
       };
 
