@@ -22,8 +22,8 @@
       harness = inputs.harness.packages.${system}.harness;
     in
     {
-      # Merge point so other aspects (modules/ai/ollama.nix) can contribute
-      # providers without touching this file.
+      # Merge point so other aspects can contribute providers without touching
+      # this file.
       options.stubbe.harness.providers = lib.mkOption {
         type = lib.types.attrsOf lib.types.raw;
         internal = true;
