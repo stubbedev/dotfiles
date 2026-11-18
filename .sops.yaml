@@ -1,7 +1,7 @@
 # Per-machine age recipients. Each entry is the age pubkey derived from
 # the machine's SSH ed25519 pubkey. To add a new machine:
-#   1. On the new machine:        hix whoami           (or: ssh-to-age < ~/.ssh/id_ed25519.pub)
-#   2. On any existing machine:   hix trust <name> <pubkey>
+#   1. On the new machine:        phix whoami          (or: ssh-to-age < ~/.ssh/id_ed25519.pub)
+#   2. On any existing machine:   phix trust <name> <pubkey>
 #   3. Commit and push so the new machine can pull and decrypt.
 creation_rules:
   # Every file under secrets/ is one opaque blob, encrypted in binary mode.

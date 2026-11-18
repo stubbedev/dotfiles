@@ -130,7 +130,7 @@ in
 
       stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
 
-      programs.hix.postSwitch = lib.mkIf config.features.development [
+      programs.phix.postSwitch = lib.mkIf config.features.development [
         {
           description = "Pushing the closure to ${pkgs.stubbe.cache.xilo.url}";
           exec = lib.getExe' pkgs.xilo "xilo";

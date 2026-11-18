@@ -1,6 +1,6 @@
 { inputs, ... }:
 {
-  flake.modules.homeManager.script-hix =
+  flake.modules.homeManager.script-phix =
     {
       config,
       lib,
@@ -20,11 +20,11 @@
       };
       cacheTargetNames = lib.concatStringsSep ", " (lib.attrNames cacheTargets);
 
-      hixCache = pkgs.stubbe.bashApp {
-        name = "hix-cache";
+      phixCache = pkgs.stubbe.bashApp {
+        name = "phix-cache";
         text = ''
           usage() {
-            echo "Usage: hix cache <target>, target one of: ${cacheTargetNames}"
+            echo "Usage: phix cache <target>, target one of: ${cacheTargetNames}"
           }
 
           case "''${1:-}" in
@@ -44,15 +44,15 @@
               exit 2
               ;;
             *)
-              echo "hix cache: unknown target '$1' (want ${cacheTargetNames})" >&2
+              echo "phix cache: unknown target '$1' (want ${cacheTargetNames})" >&2
               exit 2
               ;;
           esac
         '';
       };
 
-      hixClean = pkgs.stubbe.bashApp {
-        name = "hix-clean";
+      phixClean = pkgs.stubbe.bashApp {
+        name = "phix-clean";
         runtimeInputs = [ pkgs.fzf ];
         text = ''
           root="''${1:-$HOME}"
@@ -71,7 +71,7 @@
           done
           paths+=("$HOME"/.cache/*)
 
-          menu=($'(action)\tNix store garbage: old generations + unreachable paths (runs: hix gc)')
+          menu=($'(action)\tNix store garbage: old generations + unreachable paths (runs: phix gc)')
           if [ "''${#paths[@]}" -gt 0 ]; then
             while IFS= read -r line; do menu+=("$line"); done < <(
               du -sh -- "''${paths[@]}" 2>/dev/null | sort -rh
@@ -83,7 +83,7 @@
             --header='TAB select, ENTER to review & delete. Regenerable build dirs, caches, core dumps, nix gc.' \
             --delimiter=$'\t' --with-nth=1,2 <<< "''${menu_text%$'\n'}")
           if [ -z "$selection" ]; then
-            echo "hix clean: nothing selected"
+            echo "phix clean: nothing selected"
             exit 0
           fi
 
@@ -92,7 +92,7 @@
           printf '  %s\n' "''${selection//$'\n'/$'\n'  }"
           read -rp "Proceed? [y/N] " confirm
           if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-            echo "hix clean: aborted"
+            echo "phix clean: aborted"
             exit 0
           fi
 
@@ -110,7 +110,7 @@
             rm -rf -- "''${targets[@]}"
           fi
           if [ "$collect_garbage" = true ]; then
-            ${lib.getExe config.programs.hix.package} gc
+            ${lib.getExe config.programs.phix.package} gc
           fi
 
           echo "Done."
@@ -118,9 +118,9 @@
       };
     in
     {
-      imports = [ inputs.hix.homeManagerModules.default ];
+      imports = [ inputs.phix.homeManagerModules.default ];
 
-      programs.hix = {
+      programs.phix = {
         enable = true;
         flake = config.stubbe.paths.dotfiles;
         inherit (config.host) platform;
@@ -129,12 +129,12 @@
           {
             name = "clean";
             description = "Interactive fzf TUI to reclaim disk space (build dirs, caches, core dumps, nix gc) under [dir], default $HOME";
-            exec = lib.getExe hixClean;
+            exec = lib.getExe phixClean;
           }
           {
             name = "cache";
             description = "Wipe cached state (target: ${cacheTargetNames})";
-            exec = lib.getExe hixCache;
+            exec = lib.getExe phixCache;
             complete = lib.mapAttrsToList (name: target: {
               inherit name;
               inherit (target) description;

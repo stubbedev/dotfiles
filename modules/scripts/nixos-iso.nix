@@ -191,7 +191,7 @@ _: {
     in
     lib.mkIf config.features.ops {
       home.packages = [ nixosIso ];
-      programs.hix.commands = [
+      programs.phix.commands = [
         {
           name = "iso";
           description = "Build the NixOS installer ISO or burn it to a USB device";

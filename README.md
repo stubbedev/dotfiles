@@ -27,7 +27,7 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   ├── core/              # the foundation (see CONVENTIONS below)
 │   ├── hosts/             # host definitions, one file each
 │   ├── dev/               # flake checks, lint, `nix fmt`
-│   ├── scripts/           # hix config, launchers, clip, ISO burner
+│   ├── scripts/           # phix config, launchers, clip, ISO burner
 │   ├── ai/, browsers/     # aspects big enough to want a directory
 │   └── <aspect>.nix       # mail, shell, lys-wm, lys-shell, power, storage, …
 ├── bin/                   # ONLY the live-ISO installer (stb-install-nixos)
@@ -102,9 +102,9 @@ semantics. `bin/stb-install-nixos` is baked into the installer ISO.
 
 ## APPLYING THE CONFIG
 
-Day-to-day rebuilds run through [hix](https://github.com/stubbedev/hix), a
-Go CLI from its own flake (input `hix`), configured in
-`modules/scripts/hix.nix` through its home-manager module against the
+Day-to-day rebuilds run through [phix](https://github.com/stubbedev/phix), a
+Go CLI from its own flake (input `phix`), configured in
+`modules/scripts/phix.nix` through its home-manager module against the
 checkout linked at `~/.stubbe`. It builds the NixOS toplevel (or the
 nix-on-droid activation package on the phone) as you with `nix build`, renders
 the build progress as a live dependency tree, prints a package-level closure
@@ -112,20 +112,20 @@ diff against the running generation, and only then activates, as root through
 sudo on NixOS:
 
 ```sh
-hix switch        # build, diff and activate
-hix switch --ask  # ... and confirm after the diff, before activating
-hix upgrade       # update flake inputs, commit and push flake.lock, switch
-hix diff [a] [b]  # package diff between generations (default: previous vs current)
-hix generations   # running and boot generations, versions, closure sizes
-hix help          # every verb
+phix switch        # build, diff and activate
+phix switch --ask  # ... and confirm after the diff, before activating
+phix upgrade       # update flake inputs, commit and push flake.lock, switch
+phix diff [a] [b]  # package diff between generations (default: previous vs current)
+phix generations   # running and boot generations, versions, closure sizes
+phix help          # every verb
 ```
 
-Modules add subcommands through `programs.hix.commands` (`hix iso`,
-`hix clean`, `hix cache`) and post-switch hooks through
-`programs.hix.postSwitch`. The closure push to the xilo cache is one such
+Modules add subcommands through `programs.phix.commands` (`phix iso`,
+`phix clean`, `phix cache`) and post-switch hooks through
+`programs.phix.postSwitch`. The closure push to the xilo cache is one such
 hook, declared in `modules/nix.nix` next to the substituter it feeds, with its
-token decrypted from `secrets/`. `nix build .#checks.x86_64-linux.hix` checks
-that the reference home's commands reach `hix help`.
+token decrypted from `secrets/`. `nix build .#checks.x86_64-linux.phix` checks
+that the reference home's commands reach `phix help`.
 
 ## NIXOS HOSTS
 
@@ -166,7 +166,7 @@ proot'd Nix on Android. Its home-manager half imports the same module set as
 the NixOS hosts with `host.platform = "android"` and `host.profile =
 "mobile"`, so every `features.*` flag defaults to the terminal set: zsh, tmux,
 nvim, git and ssh, nothing that needs a display, D-Bus or systemd. On the
-phone, `hix switch` runs `nix-on-droid switch --flake ~/.stubbe#phone`.
+phone, `phix switch` runs `nix-on-droid switch --flake ~/.stubbe#phone`.
 
 ## INSTALLING NIXOS
 
@@ -186,7 +186,7 @@ stb-install-nixos
 It asks which host to install, lays the disk out from that host's
 configuration, runs `nixos-install`, and clones the repo to
 `/etc/nixos/dotfiles`. After first boot, trust the new host key so system
-secrets decrypt: the installer prints the exact `hix trust` command.
+secrets decrypt: the installer prints the exact `phix trust` command.
 
 ### MOVING A MACHINE
 
@@ -202,6 +202,6 @@ stb-migrate restore desktop.local:migrate   # after the reinstall
 `<dest>/<hostname>/`. `restore` copies it back and never overwrites a file that
 already exists. The srv proxies and redirects are declared in
 `modules/srv.nix`, and its CA key is held in sops, so srv rebuilds itself on
-the first `hix switch`.
+the first `phix switch`.
 
 ![Wallpaper preview](./src/wallpapers/traffic.png)
