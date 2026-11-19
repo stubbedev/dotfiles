@@ -1,4 +1,3 @@
-
 local function augroup(name)
   return vim.api.nvim_create_augroup("stubbe_" .. name, { clear = true })
 end
@@ -34,7 +33,6 @@ vim.api.nvim_create_autocmd("BufReadPre", {
   end,
 })
 
-
 vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
   group = augroup("env"),
   pattern = { ".env", ".env.*", "*.env" },
@@ -42,7 +40,6 @@ vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
     vim.diagnostic.enable(false, { bufnr = args.buf })
   end,
 })
-
 
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = augroup("yank"),
@@ -93,7 +90,12 @@ vim.api.nvim_create_autocmd("VimResized", {
 vim.api.nvim_create_autocmd("VimEnter", {
   group = augroup("oil_start"),
   callback = function()
-    if vim.fn.argc() == 0 and vim.api.nvim_buf_get_name(0) == "" and vim.fn.line2byte(vim.fn.line("$")) == -1 then
+    if
+      vim.fn.argc() == 0
+      and vim.bo.buftype == ""
+      and vim.api.nvim_buf_get_name(0) == ""
+      and vim.fn.line2byte(vim.fn.line("$")) == -1
+    then
       vim.schedule(function()
         require("plugins").open_oil()
       end)
