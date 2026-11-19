@@ -117,21 +117,15 @@ end, { nargs = "?", complete = "dir" })
 local function load_email()
   vim.pack.add({
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
-    { src = "https://github.com/stubbedev/image.nvim" },
+    { src = "https://github.com/folke/snacks.nvim" },
     { src = "https://github.com/stubbedev/email.nvim" },
   }, { confirm = false })
-  require("image").setup({
-    backend = "sixel",
-    processor = "magick_cli",
-    integrations = {
-      markdown = { enabled = false },
-      asciidoc = { enabled = false },
-      typst = { enabled = false },
-      neorg = { enabled = false },
-      syslang = { enabled = false },
+  require("snacks").setup({
+    image = {
+      enabled = true,
+      formats = {},
+      doc = { enabled = false },
     },
-    hijack_file_patterns = {},
-    tmux_show_only_in_active_window = true,
   })
   local config_home = vim.env.XDG_CONFIG_HOME or vim.fs.joinpath(vim.env.HOME, ".config")
   local accounts_path = vim.fs.joinpath(config_home, "email.nvim", "accounts.json")

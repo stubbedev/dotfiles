@@ -30,7 +30,7 @@
       "src": "https://github.com/monaqa/dial.nvim"
     },
     "email.nvim": {
-      "rev": "dc449a8b39af0f53164e537d362034b243abd23f",
+      "rev": "8f2940ea607b7fa0cb61e65ac7ad5df2e3dfef7c",
       "src": "https://github.com/stubbedev/email.nvim"
     },
     "flash.nvim": {
@@ -52,10 +52,6 @@
     "grug-far.nvim": {
       "rev": "11595bf747edc270bce2069d1020502ad4ae56cf",
       "src": "https://github.com/MagicDuck/grug-far.nvim"
-    },
-    "image.nvim": {
-      "rev": "31fb75bd1b8584397dc33f6901df363218915b7f",
-      "src": "https://github.com/stubbedev/image.nvim"
     },
     "lazydev.nvim": {
       "rev": "ff2cbcba459b637ec3fd165a2be59b7bbaeedf0d",
@@ -133,6 +129,10 @@
     "rustaceanvim": {
       "rev": "791ef71968d542e3764174fac5264da1eac0ccf7",
       "src": "https://github.com/mrcjkb/rustaceanvim"
+    },
+    "snacks.nvim": {
+      "rev": "882c996cf28183f4d63640de0b4c02ec886d01f2",
+      "src": "https://github.com/folke/snacks.nvim"
     },
     "todo-comments.nvim": {
       "rev": "31e3c38ce9b29781e4422fc0322eb0a21f4e8668",
