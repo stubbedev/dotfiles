@@ -1,4 +1,5 @@
-_: {
+{ inputs, ... }:
+{
   flake.modules.homeManager.terminal =
     {
       config,
@@ -12,8 +13,16 @@ _: {
       # Nix string literals have no \u escape; a JSON one does.
       esc = builtins.fromJSON ''"\u001b"'';
 
+      alacrittyGraphics = pkgs.alacritty.overrideAttrs {
+        pname = "alacritty-graphics";
+        src = inputs.alacritty-graphics;
+        cargoDeps = pkgs.rustPlatform.importCargoLock {
+          lockFile = "${inputs.alacritty-graphics}/Cargo.lock";
+        };
+      };
+
       alacrittyClient = pkgs.stubbe.shellScriptBin "alacritty" ''
-        real="${lib.getExe pkgs.alacritty}"
+        real="${lib.getExe alacrittyGraphics}"
         socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
 
         case "''${1:-}" in
@@ -32,12 +41,12 @@ _: {
       # emits only bin/, so without the join there is no .desktop entry and
       # alacritty never shows in the launcher.
       alacritty = pkgs.symlinkJoin {
-        name = "alacritty-${pkgs.alacritty.version}";
+        name = "alacritty-graphics-${alacrittyGraphics.version}";
         paths = [
           alacrittyClient
-          pkgs.alacritty
+          alacrittyGraphics
         ];
-        meta = pkgs.alacritty.meta // {
+        meta = alacrittyGraphics.meta // {
           mainProgram = "alacritty";
           # symlinkJoin yields a single `out` (terminfo merged in); inheriting
           # alacritty's multi-output outputsToInstall would make buildEnv fail
@@ -298,7 +307,7 @@ _: {
         Install.WantedBy = [ config.wayland.systemd.target ];
         Service = {
           Type = "simple";
-          ExecStart = "${lib.getExe pkgs.alacritty} --socket %t/alacritty.sock --daemon";
+          ExecStart = "${lib.getExe alacrittyGraphics} --socket %t/alacritty.sock --daemon";
           Restart = "on-failure";
           RestartSec = "2s";
           ManagedOOMPreference = "avoid";

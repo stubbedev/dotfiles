@@ -47,6 +47,10 @@
       url = "github:stephenleo/cship";
       flake = false;
     };
+    alacritty-graphics = {
+      url = "github:ayosec/alacritty/v0.17.0-graphics";
+      flake = false;
+    };
     claude-code = {
       # Tracks npm latest within ~1h of release; nixpkgs' claude-code lags.
       url = "github:sadjow/claude-code-nix";
