@@ -226,6 +226,7 @@ in
                   notify = true;
                   notify-summary = "{{ sender }}";
                   notify-body = "{{ subject }}";
+                  notify-click = "mail-open thread:{{ thread }}";
                   left-click = "dropdown:mail";
                   middle-click = "mail-open";
                   accounts = mailAccounts;

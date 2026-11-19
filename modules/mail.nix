@@ -156,8 +156,12 @@
           APP_ID="dev.stubbe.mail"
 
           spawn_term() {
-            exec ${config.stubbe.paths.terminal} --class="$APP_ID" -e nvim -c Email
+            exec ${config.stubbe.paths.terminal} --class="$APP_ID" -e nvim -c "$1"
           }
+
+          if [ "$#" -gt 0 ]; then
+            spawn_term "EmailOpen $*"
+          fi
 
           if [[ "$XDG_CURRENT_DESKTOP" == "lys-wm" ]] && command -v lys-wmctl &> /dev/null; then
             id=$(lys-wmctl windows | jq -r --arg c "$APP_ID" '.[] | select(.app_id == $c) | .id' | head -n1)
@@ -167,10 +171,10 @@
               lys-wmctl dispatch movetoworkspace "$ws"
               lys-wmctl dispatch focuswindow "$id"
             else
-              spawn_term
+              spawn_term Email
             fi
           else
-            spawn_term
+            spawn_term Email
           fi
         '';
       };
