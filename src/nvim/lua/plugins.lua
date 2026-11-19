@@ -117,7 +117,7 @@ end, { nargs = "?", complete = "dir" })
 local function load_email()
   vim.pack.add({
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
-    { src = "https://github.com/3rd/image.nvim" },
+    { src = "https://github.com/stubbedev/image.nvim" },
     { src = "https://github.com/stubbedev/email.nvim" },
   }, { confirm = false })
   require("image").setup({
