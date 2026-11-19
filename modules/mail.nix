@@ -161,91 +161,6 @@
         '';
       };
 
-      mailUnsubscribe = pkgs.stubbe.bashApp {
-        name = "mail-unsubscribe";
-        runtimeInputs = with pkgs; [
-          curl
-          gawk
-          gnugrep
-          gnused
-          config.programs.msmtp.package
-        ];
-        text = ''
-          email=$(cat)
-          headers=$(printf '%s\n' "$email" | tr -d '\r' | sed '/^$/q' | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n[ \t]\+/ /g')
-
-          header() {
-            printf '%s\n' "$headers" | awk -v name="$1" '
-              !found && tolower(substr($0, 1, length(name) + 1)) == tolower(name) ":" {
-                sub(/^[^:]*:[[:space:]]*/, "")
-                print
-                found = 1
-              }
-            '
-          }
-
-          decode() {
-            local value=''${1//+/ }
-            printf '%b' "''${value//%/\\x}"
-          }
-
-          unsubscribe=$(header List-Unsubscribe)
-          if [ -z "$unsubscribe" ]; then
-            echo "mail-unsubscribe: the message has no List-Unsubscribe header" >&2
-            exit 1
-          fi
-
-          url=$(printf '%s' "$unsubscribe" | grep -oP 'https?://[^>,\s]+' | sed -n 1p || true)
-          if [ -n "$url" ]; then
-            if [ -n "$(header List-Unsubscribe-Post)" ]; then
-              code=$(curl -sS --max-time 20 -X POST -d List-Unsubscribe=One-Click -o /dev/null -w '%{http_code}' "$url")
-            else
-              code=$(curl -sS --max-time 20 -L -o /dev/null -w '%{http_code}' "$url")
-            fi
-            case "$code" in
-              2??)
-                echo "Unsubscribed through $url"
-                exit 0
-                ;;
-            esac
-            echo "mail-unsubscribe: $url answered HTTP $code" >&2
-            exit 1
-          fi
-
-          mailto=$(printf '%s' "$unsubscribe" | grep -oP 'mailto:[^>,\s]+' | sed -n 1p || true)
-          if [ -z "$mailto" ]; then
-            echo "mail-unsubscribe: List-Unsubscribe names neither an http(s) URL nor a mailto" >&2
-            exit 1
-          fi
-
-          target=''${mailto#mailto:}
-          to=$(decode "''${target%%\?*}")
-          subject=unsubscribe
-          body=unsubscribe
-          if [[ "$target" == *\?* ]]; then
-            IFS='&' read -ra params <<<"''${target#*\?}"
-            for param in "''${params[@]}"; do
-              case "''${param%%=*}" in
-                subject) subject=$(decode "''${param#*=}") ;;
-                body) body=$(decode "''${param#*=}") ;;
-              esac
-            done
-          fi
-
-          from=$(header Delivered-To)
-          if [ -z "$from" ]; then
-            from=$(header To | grep -oP '[^<\s,]+@[^>\s,]+' | sed -n 1p || true)
-          fi
-          if [ -z "$from" ]; then
-            echo "mail-unsubscribe: cannot tell which of your addresses the list mails" >&2
-            exit 1
-          fi
-
-          printf 'From: %s\nTo: %s\nSubject: %s\n\n%s\n' "$from" "$to" "$subject" "$body" \
-            | msmtp --read-envelope-from --read-recipients
-          echo "Sent the unsubscribe mail to $to from $from"
-        '';
-      };
     in
     lib.mkIf config.features.desktop {
       sops.secrets = lib.listToAttrs (
@@ -418,7 +333,6 @@
         inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
         notmuchMcp
         mailOpen
-        mailUnsubscribe
       ];
 
       xdg.configFile."email.nvim/accounts.json".text = builtins.toJSON emailNvimAccounts;
