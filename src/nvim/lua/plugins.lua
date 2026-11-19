@@ -115,7 +115,10 @@ vim.api.nvim_create_user_command("Oil", function(opts)
 end, { nargs = "?", complete = "dir" })
 
 local function load_email()
-  vim.pack.add({ "https://github.com/stubbedev/email.nvim" }, { confirm = false })
+  vim.pack.add({
+    { src = "https://github.com/nvim-tree/nvim-web-devicons" },
+    { src = "https://github.com/stubbedev/email.nvim" },
+  }, { confirm = false })
   local config_home = vim.env.XDG_CONFIG_HOME or vim.fs.joinpath(vim.env.HOME, ".config")
   local accounts_path = vim.fs.joinpath(config_home, "email.nvim", "accounts.json")
   local fd = assert(io.open(accounts_path, "r"))
@@ -129,7 +132,11 @@ local function load_email()
       ["text/calendar"] = { "html-to-md", "--calendar" },
     },
     sync_cmd = { "mail-sync" },
+    devicons = true,
   })
+  local blink = require("blink.cmp")
+  blink.add_source_provider("email", { name = "Email", module = "email.blink" })
+  blink.add_filetype_source("mail", "email")
 end
 
 for _, command in ipairs({ "Email", "EmailCompose", "EmailSearch" }) do
