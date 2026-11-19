@@ -584,11 +584,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794956040,
-        "narHash": "sha256-/h7fuLn5NiAAThfTzHvjPDGLFsyBkYbaCv4NbQYThUw=",
+        "lastModified": 1795077819,
+        "narHash": "sha256-HcSdLqHnY2xEjr5zZTnnI/t9JtOEfZHoWDKTP5b6/sg=",
         "owner": "stubbedev",
         "repo": "html-to-md",
-        "rev": "0eb22d2369adf8138ddaec5c8067f2569265d3d9",
+        "rev": "a7f8951cf0d3a12dd05d122ec2acbc7138263352",
         "type": "github"
       },
       "original": {
@@ -1045,11 +1045,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794956069,
-        "narHash": "sha256-1VXCLjdzbBF+czg19V7Pc08e59up+NJHw82Ntv3BDAM=",
+        "lastModified": 1795077942,
+        "narHash": "sha256-gM4SwsLmm4x/SgKG9v5GkSq7m8ZgcoNdwREjJs5ViEM=",
         "owner": "stubbedev",
         "repo": "notmuch-mcp",
-        "rev": "06c415c6b57829e32605f77d25e2240155cc8f81",
+        "rev": "47b72181ce1553ca0329c3aa356a20754c852d50",
         "type": "github"
       },
       "original": {
