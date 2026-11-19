@@ -69,6 +69,7 @@ _: {
           window-padding-balance = true;
           window-decoration = "server";
           resize-overlay = "never";
+          app-notifications = false;
           confirm-close-surface = false;
           quit-after-last-window-closed = false;
 
