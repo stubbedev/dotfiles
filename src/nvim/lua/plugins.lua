@@ -141,7 +141,7 @@ local function load_email()
     },
     sync_cmd = { "mail-sync" },
     devicons = true,
-    images = { enabled = true, remote = true },
+    images = { enabled = true },
   })
   local blink = require("blink.cmp")
   blink.add_source_provider("email", { name = "Email", module = "email.blink" })
