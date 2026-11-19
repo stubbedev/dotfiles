@@ -155,6 +155,8 @@ for _, command in ipairs({ "Email", "EmailCompose", "EmailSearch" }) do
   end, { nargs = "*" })
 end
 
+vim.keymap.set("n", "<leader>m", "<cmd>Email<cr>", { desc = "Mail" })
+
 -- The lockfile guarantees installation at the session's first vim.pack.add, so
 -- this only ever `:packadd`s on first use.
 function M.undotree()
@@ -419,7 +421,6 @@ vim.api.nvim_create_autocmd("UIEnter", {
             { "<leader>f", group = "file/find" },
             { "<leader>g", group = "git" },
             { "<leader>l", group = "plugins" },
-            { "<leader>m", group = "mail" },
             { "<leader>gh", group = "hunks" },
             { "<leader>q", group = "quit/session" },
             { "<leader>r", group = "replace" },
