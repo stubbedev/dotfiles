@@ -75,21 +75,105 @@
         '';
       };
 
-      queries = {
-        kontainer = ''
-          INBOX = tag:kontainer and tag:inbox
-          Sent  = folder:/^kontainer\/Sent$/
-        '';
-        gmail = ''
-          INBOX = tag:gmail and tag:inbox
-          Sent  = folder:"gmail/[Gmail]/Sent Mail"
-        '';
-        stubbe = ''
-          INBOX = tag:stubbe and tag:inbox
-          Sent  = folder:"stubbe/Sent Items"
-          Junk  = folder:"stubbe/Junk Mail"
-        '';
+      mailboxes = {
+        kontainer = {
+          archive = "Archive";
+          folders = [
+            {
+              name = "INBOX";
+              query = "tag:kontainer and tag:inbox";
+            }
+            {
+              name = "Sent";
+              query = "folder:/^kontainer\\/Sent$/";
+            }
+          ];
+        };
+        gmail = {
+          archive = "[Gmail]/All Mail";
+          folders = [
+            {
+              name = "INBOX";
+              query = "tag:gmail and tag:inbox";
+            }
+            {
+              name = "Sent";
+              query = ''folder:"gmail/[Gmail]/Sent Mail"'';
+            }
+          ];
+        };
+        stubbe = {
+          archive = "Archive";
+          folders = [
+            {
+              name = "INBOX";
+              query = "tag:stubbe and tag:inbox";
+            }
+            {
+              name = "Sent";
+              query = ''folder:"stubbe/Sent Items"'';
+            }
+            {
+              name = "Junk";
+              query = ''folder:"stubbe/Junk Mail"'';
+            }
+          ];
+        };
       };
+
+      aercAccount = account: {
+        query-map = queryMap account;
+        folders = lib.concatMapStringsSep "," (folder: folder.name) mailboxes.${account}.folders;
+        inherit (mailboxes.${account}) archive;
+        check-mail-cmd = "${lib.getExe mailSync} ${account}";
+        check-mail = "30s";
+      };
+
+      msmtpAuth = {
+        kontainer = "login";
+      };
+
+      msmtpAccount =
+        name:
+        let
+          account = config.accounts.email.accounts.${name};
+          onOff = enabled: if enabled then "on" else "off";
+        in
+        lib.concatStringsSep "\n" (
+          [
+            "account ${name}"
+            "host ${account.smtp.host}"
+            "port ${toString account.smtp.port}"
+            "from ${account.address}"
+            "user ${account.userName}"
+            "auth ${msmtpAuth.${name} or "on"}"
+            "tls ${onOff account.smtp.tls.enable}"
+            "tls_starttls ${onOff account.smtp.tls.useStartTls}"
+            "tls_trust_file ${account.smtp.tls.certificatesFile}"
+            "passwordeval ${toString account.passwordCommand}"
+          ]
+          ++ lib.optional account.primary "account default : ${name}"
+          ++ lib.concatMap (alias: [
+            "account ${alias} : ${name}"
+            "from ${alias}"
+          ]) account.aliases
+        )
+        + "\n";
+
+      emailNvimAccounts = map (
+        name:
+        let
+          account = config.accounts.email.accounts.${name};
+        in
+        {
+          name = lib.toSentenceCase name;
+          maildir = account.maildir.path;
+          from = "${account.realName} <${account.address}>";
+          addresses = [ account.address ] ++ account.aliases;
+          inherit (account.folders) inbox sent drafts;
+          inherit (mailboxes.${name}) archive folders;
+        }
+      ) accountNames;
 
       mailOpen = pkgs.stubbe.bashApp {
         name = "mail-open";
@@ -393,13 +477,8 @@
               smtpAuth = "login";
               # Without the generated maildir-account-path aerc enumerates the
               # shared maildir root and every tab shows both accounts' folders.
-              extraAccounts = {
-                query-map = queryMap "kontainer";
+              extraAccounts = aercAccount "kontainer" // {
                 exclude-tags = "deleted,spam";
-                folders = "INBOX,Sent";
-                archive = "Archive";
-                check-mail-cmd = "${lib.getExe mailSync} kontainer";
-                check-mail = "30s";
               };
             };
           };
@@ -444,13 +523,8 @@
             aerc = {
               enable = true;
               smtpAuth = "plain";
-              extraAccounts = {
-                query-map = queryMap "gmail";
+              extraAccounts = aercAccount "gmail" // {
                 exclude-tags = "deleted,spam,trash";
-                folders = "INBOX,Sent";
-                archive = "[Gmail]/All Mail";
-                check-mail-cmd = "${lib.getExe mailSync} gmail";
-                check-mail = "30s";
               };
             };
           };
@@ -494,13 +568,8 @@
             aerc = {
               enable = true;
               smtpAuth = "plain";
-              extraAccounts = {
-                query-map = queryMap "stubbe";
+              extraAccounts = aercAccount "stubbe" // {
                 exclude-tags = "deleted,spam";
-                folders = "INBOX,Sent,Junk";
-                archive = "Archive";
-                check-mail-cmd = "${lib.getExe mailSync} stubbe";
-                check-mail = "30s";
               };
             };
           };
@@ -508,6 +577,10 @@
       };
 
       programs.mbsync.enable = true;
+      programs.msmtp = {
+        enable = true;
+        configContent = lib.concatMapStringsSep "\n" msmtpAccount accountNames;
+      };
 
       stubbe.mcpServers.notmuch-mcp = {
         type = "stdio";
@@ -692,8 +765,14 @@
         '';
       }
       // lib.mapAttrs' (
-        account: text: lib.nameValuePair "aerc/queries-${account}" { inherit text; }
-      ) queries;
+        account: mailbox:
+        lib.nameValuePair "aerc/queries-${account}" {
+          text = lib.concatMapStrings (folder: "${folder.name} = ${folder.query}\n") mailbox.folders;
+        }
+      ) mailboxes
+      // {
+        "email.nvim/accounts.json".text = builtins.toJSON emailNvimAccounts;
+      };
 
       stubbe.mutable = {
         ".config/aerc/stylesets".src = "mail/stylesets";
