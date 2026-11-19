@@ -37,8 +37,8 @@ _: {
 
         terminal = lib.mkOption {
           type = lib.types.str;
-          default = "${config.stubbe.paths.nixBin}/alacritty";
-          defaultText = "\${config.stubbe.paths.nixBin}/alacritty";
+          default = "${config.stubbe.paths.nixBin}/ghostty";
+          defaultText = "\${config.stubbe.paths.nixBin}/ghostty";
           description = "Absolute path to the terminal emulator, for callers that cannot rely on PATH.";
         };
 

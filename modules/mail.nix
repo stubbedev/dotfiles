@@ -182,11 +182,11 @@
           jq
         ];
         text = ''
-          APP_ID="aerc-mail"
+          APP_ID="dev.stubbe.aerc_mail"
 
           spawn_term() {
             pkill -TERM -f '/bin/aerc$' || true
-            ${config.stubbe.paths.terminal} --class "$APP_ID" -e aerc
+            ${config.stubbe.paths.terminal} --class="$APP_ID" -e aerc
           }
 
           if [[ "$XDG_CURRENT_DESKTOP" == "lys-wm" ]] && command -v lys-wmctl &> /dev/null; then
@@ -316,7 +316,7 @@
           unticked = "[ ] ";
         };
         # glamour prints the href next to the label and wraps both in the same
-        # OSC 8 hyperlink. The label alone is clickable in alacritty, so blank
+        # OSC 8 hyperlink. The label alone is clickable in the terminal, so blank
         # the href token out with an empty template and keep just the label.
         link = {
           color = "#8aadf4";

@@ -1,22 +1,5 @@
 {
   "nodes": {
-    "alacritty-graphics": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1775433600,
-        "narHash": "sha256-DdiioNKMVg9u4E4h7AysvaGJ6ys36ykTyJgjHWjIjjY=",
-        "owner": "ayosec",
-        "repo": "alacritty",
-        "rev": "12d0fada4482eafde0a45fa4489e03b4d96b7190",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ayosec",
-        "ref": "v0.17.0-graphics",
-        "repo": "alacritty",
-        "type": "github"
-      }
-    },
     "claude-code": {
       "inputs": {
         "nixpkgs": [
@@ -1111,7 +1094,6 @@
     },
     "root": {
       "inputs": {
-        "alacritty-graphics": "alacritty-graphics",
         "claude-code": "claude-code",
         "cship": "cship",
         "direnv-instant": "direnv-instant",

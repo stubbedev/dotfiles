@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+_: {
   flake.modules.homeManager.terminal =
     {
       config,
@@ -10,308 +9,106 @@
     let
       c = pkgs.stubbe.withHash;
 
-      # Nix string literals have no \u escape; a JSON one does.
-      esc = builtins.fromJSON ''"\u001b"'';
+      unit = "app-com.mitchellh.ghostty.service";
 
-      alacrittyGraphics = pkgs.alacritty.overrideAttrs {
-        pname = "alacritty-graphics";
-        src = inputs.alacritty-graphics;
-        cargoDeps = pkgs.rustPlatform.importCargoLock {
-          lockFile = "${inputs.alacritty-graphics}/Cargo.lock";
-        };
-      };
-
-      alacrittyClient = pkgs.stubbe.shellScriptBin "alacritty" ''
-        real="${lib.getExe alacrittyGraphics}"
-        socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/alacritty.sock"
+      ghosttyClient = pkgs.stubbe.shellScriptBin "ghostty" ''
+        real="${lib.getExe pkgs.ghostty}"
 
         case "''${1:-}" in
-          --daemon|msg|--help|-h|--version|-V)
+          +* | --class=* | --help | -h | --version | -V)
             exec "$real" "$@"
             ;;
         esac
 
-        if "$real" msg --socket "$socket" create-window "$@" >/dev/null 2>&1; then
-          exit 0
-        fi
-        exec "$real" "$@"
+        exec "$real" +new-window "$@"
       '';
 
-      # Client first so it shadows upstream bin/alacritty. writeShellScriptBin
-      # emits only bin/, so without the join there is no .desktop entry and
-      # alacritty never shows in the launcher.
-      alacritty = pkgs.symlinkJoin {
-        name = "alacritty-graphics-${alacrittyGraphics.version}";
+      ghostty = pkgs.symlinkJoin {
+        name = "ghostty-${pkgs.ghostty.version}";
         paths = [
-          alacrittyClient
-          alacrittyGraphics
+          ghosttyClient
+          pkgs.ghostty
         ];
-        meta = alacrittyGraphics.meta // {
-          mainProgram = "alacritty";
-          # symlinkJoin yields a single `out` (terminfo merged in); inheriting
-          # alacritty's multi-output outputsToInstall would make buildEnv fail
-          # on the missing output.
+        meta = pkgs.ghostty.meta // {
+          mainProgram = "ghostty";
           outputsToInstall = [ "out" ];
         };
       };
+
+      palette = [
+        c.surface1
+        c.red
+        c.green
+        c.yellow
+        c.blue
+        c.pink
+        c.teal
+        c.subtext1
+        c.surface2
+        c.red
+        c.green
+        c.yellow
+        c.blue
+        c.pink
+        c.teal
+        c.subtext0
+        c.peach
+        c.rosewater
+      ];
     in
     lib.mkIf config.features.desktop {
-      programs.alacritty = {
+      programs.ghostty = {
         enable = true;
-        package = alacritty;
+        package = ghostty;
         settings = {
-          general.live_config_reload = true;
+          font-family = "JetBrainsMono Nerd Font";
+          font-size = 12;
 
-          window = {
-            dynamic_title = true;
-            dynamic_padding = true;
-            dimensions = {
-              columns = 0;
-              lines = 0;
-            };
-            padding = {
-              x = 0;
-              y = 0;
-            };
-          };
+          window-padding-x = 0;
+          window-padding-y = 0;
+          window-padding-balance = true;
+          window-decoration = "server";
+          resize-overlay = "never";
+          confirm-close-surface = false;
+          quit-after-last-window-closed = false;
 
-          scrolling.history = 0;
+          scrollback-limit-bytes = 0;
+          mouse-hide-while-typing = true;
+          cursor-style = "block";
+          cursor-style-blink = false;
+          shell-integration-features = "no-cursor";
 
-          font = {
-            size = 12;
-            normal = {
-              family = "JetBrainsMono Nerd Font";
-              style = "Regular";
-            };
-            bold = {
-              family = "JetBrainsMono Nerd Font";
-              style = "Bold";
-            };
-            italic = {
-              family = "JetBrainsMono Nerd Font";
-              style = "Italic";
-            };
-            offset = {
-              x = 0;
-              y = 0;
-            };
-            glyph_offset = {
-              x = 0;
-              y = 0;
-            };
-          };
+          background = c.base;
+          foreground = c.text;
+          cursor-color = c.rosewater;
+          cursor-text = c.base;
+          selection-background = c.rosewater;
+          selection-foreground = c.base;
+          search-background = c.subtext0;
+          search-foreground = c.base;
+          search-selected-background = c.green;
+          search-selected-foreground = c.base;
+          palette = lib.imap0 (index: color: "${toString index}=${color}") palette;
 
-          bell = {
-            animation = "EaseOutExpo";
-            duration = 0;
-          };
-
-          mouse = {
-            hide_when_typing = true;
-            bindings = [
-              {
-                mouse = "Middle";
-                action = "PasteSelection";
-              }
-            ];
-          };
-
-          cursor = {
-            style = "Block";
-            unfocused_hollow = true;
-          };
-
-          selection.save_to_clipboard = false;
-
-          # ReceiveChar hands the key straight to the application instead of
-          # letting alacritty act on it, so tmux/neovim see the real sequence.
-          # The two Control+Space entries emit CSI-u so tmux can tell
-          # Ctrl+Space from Ctrl+Shift+Space.
-          keyboard.bindings =
-            let
-              receiveChar = spec: spec // { action = "ReceiveChar"; };
-            in
-            [
-              (receiveChar {
-                key = "PageUp";
-                mods = "Shift";
-                mode = "~Alt";
-              })
-              (receiveChar {
-                key = "PageDown";
-                mods = "Shift";
-                mode = "~Alt";
-              })
-              (receiveChar {
-                key = "Home";
-                mods = "Shift";
-                mode = "~Alt";
-              })
-              (receiveChar {
-                key = "End";
-                mods = "Shift";
-                mode = "~Alt";
-              })
-              (receiveChar {
-                key = "K";
-                mods = "Command";
-                mode = "~Vi|~Search";
-              })
-              (receiveChar {
-                key = "F";
-                mods = "Control|Shift";
-                mode = "~Search";
-              })
-              (receiveChar {
-                key = "F";
-                mods = "Command";
-                mode = "~Search";
-              })
-              (receiveChar {
-                key = "B";
-                mods = "Control|Shift";
-                mode = "~Search";
-              })
-              (receiveChar {
-                key = "B";
-                mods = "Command";
-                mode = "~Search";
-              })
-              {
-                key = "Space";
-                mods = "Control";
-                mode = "~Search";
-                chars = "${esc}[32;5u";
-              }
-              {
-                key = "Space";
-                mods = "Control|Shift";
-                mode = "~Search";
-                chars = "${esc}[32;6u";
-              }
-              (receiveChar { key = "Paste"; })
-              (receiveChar { key = "Copy"; })
-              (receiveChar {
-                key = "V";
-                mods = "Command";
-              })
-              (receiveChar {
-                key = "C";
-                mods = "Command";
-              })
-              (receiveChar {
-                key = "C";
-                mods = "Command";
-                mode = "Vi|~Search";
-              })
-              (receiveChar {
-                key = "Insert";
-                mods = "Shift";
-              })
-              {
-                key = "Return";
-                mods = "Shift";
-                chars = "${esc}[13;2u";
-              }
-            ];
-
-          colors = {
-            primary = {
-              background = c.base;
-              foreground = c.text;
-              dim_foreground = c.overlay1;
-              bright_foreground = c.text;
-            };
-            cursor = {
-              text = c.base;
-              cursor = c.rosewater;
-            };
-            vi_mode_cursor = {
-              text = c.base;
-              cursor = c.lavender;
-            };
-            search = {
-              matches = {
-                foreground = c.base;
-                background = c.subtext0;
-              };
-              focused_match = {
-                foreground = c.base;
-                background = c.green;
-              };
-            };
-            footer_bar = {
-              foreground = c.base;
-              background = c.subtext0;
-            };
-            hints = {
-              start = {
-                foreground = c.base;
-                background = c.yellow;
-              };
-              end = {
-                foreground = c.base;
-                background = c.subtext0;
-              };
-            };
-            selection = {
-              text = c.base;
-              background = c.rosewater;
-            };
-            normal = {
-              black = c.surface1;
-              inherit (c) red;
-              inherit (c) green;
-              inherit (c) yellow;
-              inherit (c) blue;
-              magenta = c.pink;
-              cyan = c.teal;
-              white = c.subtext1;
-            };
-            bright = {
-              black = c.surface2;
-              inherit (c) red;
-              inherit (c) green;
-              inherit (c) yellow;
-              inherit (c) blue;
-              magenta = c.pink;
-              cyan = c.teal;
-              white = c.subtext0;
-            };
-            indexed_colors = [
-              {
-                index = 16;
-                color = c.peach;
-              }
-              {
-                index = 17;
-                color = c.rosewater;
-              }
-            ];
-          };
+          keybind = [
+            "clear"
+            "ctrl+shift+c=copy_to_clipboard"
+            "ctrl+shift+v=paste_from_clipboard"
+            "ctrl+equal=increase_font_size:1"
+            "ctrl+plus=increase_font_size:1"
+            "ctrl+minus=decrease_font_size:1"
+            "ctrl+zero=reset_font_size"
+            "ctrl+space=csi:32;5u"
+            "ctrl+shift+space=csi:32;6u"
+            "shift+enter=csi:13;2u"
+          ];
         };
       };
 
-      systemd.user.services.alacritty-daemon = lib.mkIf config.features.lysWm {
-        Unit = {
-          Description = "Alacritty daemon (shared single-instance process)";
-          After = [ config.wayland.systemd.target ];
-          PartOf = [ config.wayland.systemd.target ];
-          # Never restart on `phix switch`. KillMode=control-group plus
-          # single-instance means a restart takes every terminal window with it.
-          # Any alacritty store-path bump changes the unit file, so
-          # sd-switch would otherwise restart it on a routine flake update. A new
-          # binary lands on next login, or on an explicit restart.
-          X-SwitchMethod = "keep-old";
-        };
-        Install.WantedBy = [ config.wayland.systemd.target ];
-        Service = {
-          Type = "simple";
-          ExecStart = "${lib.getExe alacrittyGraphics} --socket %t/alacritty.sock --daemon";
-          Restart = "on-failure";
-          RestartSec = "2s";
-          ManagedOOMPreference = "avoid";
-        };
-      };
+      xdg.configFile."systemd/user/${config.wayland.systemd.target}.wants/${unit}" =
+        lib.mkIf config.features.lysWm
+          {
+            source = config.xdg.configFile."systemd/user/${unit}".source;
+          };
     };
 }

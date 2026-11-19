@@ -102,7 +102,7 @@
           COLOR_SCHEME = "prefer-dark";
           ELECTRON_OZONE_PLATFORM_HINT = "auto";
           MOZ_ENABLE_WAYLAND = "1";
-          TERMINAL = "alacritty";
+          TERMINAL = "ghostty";
           XCURSOR_THEME = pkgs.stubbe.theme.cursor;
           XCURSOR_SIZE = toString pkgs.stubbe.theme.cursorSize;
         }
@@ -165,7 +165,7 @@
         ];
 
         binds = [
-          (bind "SUPER + Return" (launch "alacritty"))
+          (bind "SUPER + Return" (launch "ghostty"))
           (bind "SUPER + SHIFT + E" (launch "pcmanfm"))
           (bind "SUPER + space" (exec "lys-shell launcher"))
           (bind "SUPER + SHIFT + space" (exec "lys-shell launcher -show run"))
