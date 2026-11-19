@@ -32,81 +32,68 @@ _: {
         exec ${lib.getExe config.programs.tmux.package} -D
       '';
 
-      directions = [
-        {
-          key = "Left";
-          flag = "L";
-          word = "left";
-          edge = "pane_at_left";
-          token = "left";
-          joinFlags = "-b -h";
-          fullDim = "height";
-        }
-        {
-          key = "Right";
-          flag = "R";
-          word = "right";
-          edge = "pane_at_right";
-          token = "right";
-          joinFlags = "-h";
-          fullDim = "height";
-        }
-        {
-          key = "Up";
-          flag = "U";
-          word = "up";
-          edge = "pane_at_top";
-          token = "top";
-          joinFlags = "-b";
-          fullDim = "width";
-        }
-        {
-          key = "Down";
-          flag = "D";
-          word = "down";
-          edge = "pane_at_bottom";
-          token = "bottom";
-          joinFlags = "";
-          fullDim = "width";
-        }
-      ];
+      directions =
+        map
+          (
+            d:
+            d
+            // {
+              word = lib.toLower d.key;
+              edge = "pane_at_${d.token}";
+            }
+          )
+          [
+            {
+              key = "Left";
+              flag = "L";
+              token = "left";
+              joinFlags = "-b -h";
+              fullDim = "height";
+            }
+            {
+              key = "Right";
+              flag = "R";
+              token = "right";
+              joinFlags = "-h";
+              fullDim = "height";
+            }
+            {
+              key = "Up";
+              flag = "U";
+              token = "top";
+              joinFlags = "-b";
+              fullDim = "width";
+            }
+            {
+              key = "Down";
+              flag = "D";
+              token = "bottom";
+              joinFlags = "";
+              fullDim = "width";
+            }
+          ];
 
       # Windows 1-10: Alt+<digit> selects, Alt+Shift+<digit> moves the current
       # pane there. The shifted row is the US-layout shift of each digit, which
-      # tmux names literally, so it is a lookup rather than something derivable
-      # from the number (`#` and `$` are escaped for tmux's config parser).
-      shiftedDigit = {
-        "1" = "!";
-        "2" = "@";
-        "3" = "\\#";
-        "4" = "\\$";
-        "5" = "%";
-        "6" = "^";
-        "7" = "&";
-        "8" = "*";
-        "9" = "(";
-        "10" = ")";
-      };
-      # Sorted numerically: attrset keys are strings, so "10" would otherwise
-      # sort before "2" and the generated binds would come out in that order.
-      windowKeys = lib.sort (a: b: a.n < b.n) (
-        lib.mapAttrsToList (n: shift: {
-          inherit shift;
-          n = lib.toInt n;
-          digit = if n == "10" then "0" else n;
-        }) shiftedDigit
-      );
-
-      padTo =
-        n: str: str + lib.concatStrings (lib.genList (_: " ") (lib.max 1 (n - lib.stringLength str)));
-      bindRow =
-        {
-          prefix ? "bind -n ",
-          keyField,
-          commentCol,
-        }:
-        key: body: comment:
-        padTo commentCol (prefix + padTo keyField key + body) + "# " + comment;
+      # tmux names literally (`#` and `$` are escaped for tmux's config parser).
+      windowKeys =
+        lib.imap1
+          (n: shift: {
+            inherit n shift;
+            digit = toString (lib.mod n 10);
+          })
+          [
+            "!"
+            "@"
+            "\\#"
+            "\\$"
+            "%"
+            "^"
+            "&"
+            "*"
+            "("
+            ")"
+          ];
     in
     {
       # The command palette every bind and hook in tmux.conf dispatches to.
@@ -207,11 +194,6 @@ _: {
           toggle_window "lazygit" ${lib.getExe launchers.tmux-lazy-git}
         }
 
-        ${lib.concatMapStrings (w: ''
-          toggle_${w.window}_window() {
-            toggle_window ${w.window} ${lib.getExe launchers.${w.launcher}}
-          }
-        '') toolWindows}
         pane_is_pinned() {
           [ "$(tmux show-options -t "$1" -pqv @pinned)" = "1" ]
         }
@@ -225,6 +207,11 @@ _: {
             tmux set -p -t "$pane_id" @pinned 1
           fi
           save_pins
+        }
+
+        client_changed() {
+          set_ssh_flag "$1"
+          restore_pins
         }
 
         save_pins() {
@@ -247,52 +234,27 @@ _: {
         }
 
         kill_pane() {
-          local pending pane_id window_id
-
+          local pane_id window_id
           pane_id=$(tmux display-message -p "#{pane_id}")
-          if ! pane_is_pinned "$pane_id"; then
+          if ! pane_is_pinned "$pane_id" || [ "$(tmux display-message -p "#{@kill_pane_pending}")" = "1" ]; then
             tmux kill-pane
             return
           fi
-
-          pending=$(tmux display-message -p "#{@kill_pane_pending}")
-          if [ "$pending" = "1" ]; then
-            tmux kill-pane
-            return
-          fi
-
           window_id=$(tmux display-message -p "#{window_id}")
           tmux set -p -t "$pane_id" @kill_pane_pending 1
           pending_animation "$pane_id" "$window_id" pane
         }
 
         kill_window() {
-          local pending pane_id window_id any_pinned pid
-
+          local window_id
           window_id=$(tmux display-message -p "#{window_id}")
-
-          any_pinned=0
-          while IFS= read -r pid; do
-            if pane_is_pinned "$pid"; then
-              any_pinned=1
-              break
-            fi
-          done < <(tmux list-panes -t "$window_id" -F "#{pane_id}")
-
-          if [ "$any_pinned" != "1" ]; then
+          if ! grep -qx 1 <<<"$(tmux list-panes -t "$window_id" -F "#{@pinned}")" ||
+            [ "$(tmux display-message -p "#{@kill_window_pending}")" = "1" ]; then
             tmux kill-window
             return
           fi
-
-          pending=$(tmux display-message -p "#{@kill_window_pending}")
-          if [ "$pending" = "1" ]; then
-            tmux kill-window
-            return
-          fi
-
-          pane_id=$(tmux display-message -p "#{pane_id}")
           tmux set -w -t "$window_id" @kill_window_pending 1
-          pending_animation "$pane_id" "$window_id" window
+          pending_animation "$(tmux display-message -p "#{pane_id}")" "$window_id" window
         }
 
         kill_server_confirm() {
@@ -308,8 +270,17 @@ _: {
           tmux set -g @kill_server_pending 0 2>/dev/null
         }
 
+        join_direction() {
+          local pane_width pane_height
+          pane_width=$(tmux display-message -p "#{pane_width}")
+          pane_height=$(tmux display-message -p "#{pane_height}")
+          if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
+            echo -h
+          fi
+        }
+
         toggle_mark_join() {
-          local pane_marked pane_marked_set pane_width pane_height
+          local pane_marked pane_marked_set
 
           pane_marked=$(tmux display-message -p "#{pane_marked}")
           if [ "$pane_marked" = "1" ]; then
@@ -323,13 +294,8 @@ _: {
             return
           fi
 
-          pane_width=$(tmux display-message -p "#{pane_width}")
-          pane_height=$(tmux display-message -p "#{pane_height}")
-          if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
-            tmux join-pane -h
-          else
-            tmux join-pane
-          fi
+          # shellcheck disable=SC2046
+          tmux join-pane $(join_direction)
         }
 
         pending_animation() {
@@ -493,7 +459,7 @@ _: {
 
         move_pane_to_window() {
           local target_n="$1"
-          local current_window pane_width pane_height max_window
+          local current_window max_window
 
           current_window=$(tmux display-message -p "#{window_index}")
           if [ "''${current_window}" = "''${target_n}" ]; then
@@ -501,13 +467,8 @@ _: {
           fi
 
           if tmux list-windows -F "#{window_index}" | grep -q "^''${target_n}$"; then
-            pane_width=$(tmux display-message -p "#{pane_width}")
-            pane_height=$(tmux display-message -p "#{pane_height}")
-            if [ "$pane_width" -gt "$((pane_height * 2))" ]; then
-              tmux join-pane -h -t ":''${target_n}"
-            else
-              tmux join-pane -t ":''${target_n}"
-            fi
+            # shellcheck disable=SC2046
+            tmux join-pane $(join_direction) -t ":''${target_n}"
           else
             max_window=$(tmux list-windows -F "#{window_index}" | sort -n | tail -1)
             if [ "''${target_n}" -gt "''${max_window}" ]; then
@@ -518,27 +479,11 @@ _: {
           fi
         }
 
-        case "$1" in
-        "toggle_pin")               toggle_pin ;;
-        "save_pins")                save_pins ;;
-        "restore_pins")             restore_pins ;;
-        "kill_pane")                kill_pane ;;
-        "kill_window")              kill_window ;;
-        "kill_server_confirm")      kill_server_confirm ;;
-        "toggle_mark_join")         toggle_mark_join ;;
-        "toggle_lazygit_window")    toggle_lazygit_window ;;
-        ${
-          lib.concatMapStrings (w: ''
-            "toggle_${w.window}_window") toggle_${w.window}_window ;;
-          '') toolWindows
-        }          "move_pane")                move_pane "$2" ;;
-        "move_pane_to_window")      move_pane_to_window "$2" ;;
-        "session_init")             session_init ;;
-        "set_ssh_flag")             set_ssh_flag "$2" ;;
-        "branch_ticket")            branch_ticket "$2" ;;
-        "reload")                   reload ;;
-        "pending_animation")        pending_animation "$2" "$3" "$4" ;;
-        esac
+        if ! declare -F "$1" >/dev/null; then
+          printf 'tmux commands: unknown command %s\n' "$1" >&2
+          exit 1
+        fi
+        "$@"
       '';
 
       home.sessionVariables.TMUX_TMPDIR = tmuxTmpdir;
@@ -588,116 +533,77 @@ _: {
 
           set -g @stubbe_commands "$HOME/.config/tmux/scripts/commands.sh"
 
-          bind -n M-r run-shell -b "#{@stubbe_commands} reload"
-          bind -n M-R run-shell -b "#{@stubbe_commands} reload"
+          bind -N "Reload config" -n M-r run-shell -b "#{@stubbe_commands} reload"
+          bind -N "Reload config" -n M-R run-shell -b "#{@stubbe_commands} reload"
 
           set -g  default-terminal    "tmux-256color"
-          set -ga terminal-overrides  ",*256col*:Tc"
           set -ga terminal-overrides  '*:Ss=\E[%p1%d q:Se=\E[ q'
-          set -as terminal-features   ",*:RGB"
-          set -as terminal-features   ",*:hyperlinks"
+          set -as terminal-features   ",*:RGB:hyperlinks"
           set -as terminal-overrides  ",xterm-ghostty:Eneks@:Dseks@"
           set -g  set-clipboard       on
           set -g  allow-passthrough   on
           set-environment -g COLORTERM "truecolor"
 
-          ${lib.concatMapStringsSep "\n" (
-            d:
-            bindRow {
-              keyField = 8;
-              commentCol = 41;
-            } "M-${d.key}" "select-pane -${d.flag}" "Focus pane ${d.word}"
-          ) directions}
-          bind -n M-W     select-pane -t :.+       # Focus next pane
-          bind -n M-w     select-pane -t :.-       # Focus previous pane
+          ${lib.concatMapStrings (d: ''
+            bind -N "Focus pane ${d.word}" -n M-${d.key} select-pane -${d.flag}
+            bind -N "Resize pane ${d.word}" -n -r M-C-${d.key} resize-pane -${d.flag}
+            bind -N "Move pane ${d.word}" -n M-S-${d.key} run-shell -b "#{@stubbe_commands} move_pane ${d.flag}"
+          '') directions}
+          bind -N "Focus next pane" -n M-W select-pane -t :.+
+          bind -N "Focus previous pane" -n M-w select-pane -t :.-
+          bind -N "Toggle pane zoom" -n M-z resize-pane -Z
+          bind -N "Split horizontal (50%)" -n M-| split-pane -h -c "#{pane_current_path}"
+          bind -N "Split horizontal (30%)" -n M-\\ split-pane -h -l '30%' -c "#{pane_current_path}"
+          bind -N "Split vertical (50%)" -n M-- split-pane -v -c "#{pane_current_path}"
+          bind -N "Split vertical (30%)" -n M-_ split-pane -v -l '30%' -c "#{pane_current_path}"
+          bind -N "Kill pane (double-tap if pinned)" -n M-q run-shell -b "#{@stubbe_commands} kill_pane"
+          bind -N "Toggle mark / join pane" Space run-shell -b "#{@stubbe_commands} toggle_mark_join"
 
-          ${lib.concatMapStringsSep "\n" (
-            d:
-            bindRow {
-              prefix = "bind -n -r ";
-              keyField = 10;
-              commentCol = 41;
-            } "M-C-${d.key}" "resize-pane -${d.flag}" "Resize pane ${d.word}"
-          ) directions}
+          ${lib.concatMapStrings (w: ''
+            bind -N "Go to window ${toString w.n}" -n M-${w.digit} select-window -t ${toString w.n}
+            bind -N "Move pane to window ${toString w.n}" -n M-${w.shift} run-shell "#{@stubbe_commands} move_pane_to_window ${toString w.n}"
+          '') windowKeys}
+          bind -N "Next window" -n M-n if -F "#{>:#{session_windows},1}" next-window
+          bind -N "Previous window" -n M-b if -F "#{>:#{session_windows},1}" previous-window
+          bind -N "New window in current path" -n M-e new-window -c "#{pane_current_path}"
+          bind -N "Window picker" -n M-s choose-window
+          bind -N "Rename window" -n M-c command-prompt -I "#W" "rename-window -- \"%%\""
+          bind -N "Kill window (double-tap if pinned)" -n M-Q run-shell -b "#{@stubbe_commands} kill_window"
 
-          bind -n M-z       resize-pane -Z                                         # Toggle pane zoom
-          ${lib.concatMapStringsSep "\n" (
-            d:
-            bindRow {
-              keyField = 10;
-              commentCol = 73;
-            } "M-S-${d.key}" ''run-shell -b "#{@stubbe_commands} move_pane ${d.flag}"'' "Move pane ${d.word}"
-          ) directions}
-          bind -n M-|       split-pane -h          -c "#{pane_current_path}"       # Split horizontal (50%)
-          bind -n M-\\      split-pane -h -l '30%' -c "#{pane_current_path}"       # Split horizontal (30%)
-          bind -n M--       split-pane -v          -c "#{pane_current_path}"       # Split vertical (50%)
-          bind -n M-_       split-pane -v -l '30%' -c "#{pane_current_path}"       # Split vertical (30%)
-          bind -n M-q       run-shell -b "#{@stubbe_commands} kill_pane"           # Kill pane (double-tap if pinned)
-          bind    Space     run-shell -b "#{@stubbe_commands} toggle_mark_join"    # Toggle mark / join pane
+          bind -N "Detach from session" -n M-d detach-client
+          bind -N "Session picker" -n M-S choose-session
+          bind -N "Next session" -n M-N if -F "#{>:#{server_sessions},1}" "switch-client -n"
+          bind -N "Previous session" -n M-B if -F "#{>:#{server_sessions},1}" "switch-client -p"
+          bind -N "Kill session" -n M-x kill-session
+          bind -N "Session popup" -n M-i display-popup -B -w 70% -h 75% -E "tmux-pick-session"
 
-          ${lib.concatMapStringsSep "\n" (
-            w:
-            bindRow
-              {
-                keyField = 5;
-                commentCol = 73;
-              }
-              "M-${w.shift}"
-              ''run-shell "#{@stubbe_commands} move_pane_to_window ${toString w.n}"''
-              "Move pane to window ${toString w.n}"
-          ) windowKeys}
+          bind -N "Next layout" -n M-t next-layout
+          bind -N "Previous layout" -n M-T previous-layout
 
-          ${lib.concatMapStringsSep "\n" (
-            w:
-            bindRow {
-              keyField = 4;
-              commentCol = 73;
-            } "M-${w.digit}" "select-window -t ${toString w.n}" "Go to window ${toString w.n}"
-          ) windowKeys}
-          bind -n M-n if-shell '[ "$(tmux list-windows | wc -l)" -gt 1 ]' next-window     # Next window
-          bind -n M-b if-shell '[ "$(tmux list-windows | wc -l)" -gt 1 ]' previous-window # Previous window
-          bind -n M-e new-window -c "#{pane_current_path}"                         # New window in current path
-          bind -n M-s choose-window                                                # Window picker
-          bind -n M-c command-prompt -I "#W" "rename-window -- \"%%\""             # Rename window
-          bind -n M-Q run-shell -b "#{@stubbe_commands} kill_window"               # Kill window (double-tap if pinned)
+          bind -N "Enter copy mode" -n M-v copy-mode
+          bind -N "Paste buffer" -n M-p paste-buffer
+          bind -N "Begin selection" -T copy-mode-vi v send-keys -X begin-selection
 
-          bind -n M-d detach-client                                                                                 # Detach from session
-          bind -n M-S choose-session                                                                                # Session picker
-          bind -n M-N if-shell '[ "$(tmux list-sessions -F "#{session_name}" | wc -l)" -gt 1 ]' 'switch-client -n'  # Next session
-          bind -n M-B if-shell '[ "$(tmux list-sessions -F "#{session_name}" | wc -l)" -gt 1 ]' 'switch-client -p'  # Previous session
-          bind -n M-x kill-session                                                   # Kill session
+          bind -N "Project picker" -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"
+          bind -N "Directory picker" -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"
 
-          bind -n M-t next-layout                                                  # Next layout
-          bind -n M-T previous-layout                                              # Previous layout
-
-          bind -n M-v copy-mode                                                    # Enter copy mode
-          bind -n M-p paste-buffer                                                 # Paste buffer
-          bind -T copy-mode-vi v send-keys -X begin-selection                      # Begin selection
-
-          bind -n M-f new-window -c "#{pane_current_path}" "tmux-pick-project"       # FZF project picker
-          bind -n M-D new-window -c "#{pane_current_path}" "tmux-pick-directory"     # FZF directory picker
+          bind -N "Toggle lazygit" -n M-g run-shell -b "#{@stubbe_commands} toggle_lazygit_window"
+          ${lib.concatMapStrings (w: ''
+            bind -N "Toggle ${w.window}" -n ${w.key} run-shell -b "#{@stubbe_commands} toggle_window ${w.window} ${
+              lib.getExe launchers.${w.launcher}
+            }"
+          '') toolWindows}
+          bind -N "Toggle pin" p run-shell -b "#{@stubbe_commands} toggle_pin"
+          bind -N "Toggle pin" -n M-P run-shell -b "#{@stubbe_commands} toggle_pin"
+          bind -N "Kill server (double-tap)" X run-shell -b "#{@stubbe_commands} kill_server_confirm"
 
           set-hook -g session-created[50] "run-shell -b \"#{@stubbe_commands} session_init\""
-          set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{q:hook_session_name}\""
-          set-hook -g client-session-changed "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{q:hook_session_name}\""
+          set-hook -g client-attached "run-shell -b \"#{@stubbe_commands} client_changed #{q:hook_session_name}\""
+          set-hook -g client-session-changed "run-shell -b \"#{@stubbe_commands} client_changed #{q:hook_session_name}\""
           set-hook -g client-detached "run-shell -b \"#{@stubbe_commands} set_ssh_flag #{q:hook_session_name}\""
           set-hook -g window-unlinked[55] "run-shell -b \"#{@stubbe_commands} save_pins\""
-          set-hook -g client-attached[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
-          set-hook -g client-session-changed[55] "run-shell -b \"#{@stubbe_commands} restore_pins\""
           run-shell -b "#{@stubbe_commands} session_init"
           run-shell -b "#{@stubbe_commands} set_ssh_flag"
-          bind -n M-g run-shell -b "#{@stubbe_commands} toggle_lazygit_window"     # Toggle lazygit
-          ${lib.concatMapStringsSep "\n" (
-            w:
-            bindRow {
-              keyField = 4;
-              commentCol = 73;
-            } w.key ''run-shell -b "#{@stubbe_commands} toggle_${w.window}_window"'' "Toggle ${w.window}"
-          ) toolWindows}
-
-          bind    p   run-shell -b "#{@stubbe_commands} toggle_pin"                # Toggle pin (prefix)
-          bind -n M-P run-shell -b "#{@stubbe_commands} toggle_pin"                # Toggle pin
-          bind    X   run-shell -b "#{@stubbe_commands} kill_server_confirm"       # Kill server (double-tap)
 
           set -g status-position top
           set -g status-style bg=default,fg=default
@@ -718,20 +624,19 @@ _: {
           set -g copy-mode-mark-style          bg=${p.base},fg=${p.lavender}
           set -g copy-mode-current-match-style bg=${p.red},fg=${p.base}
 
-          set -g  base-index        1          # Start window numbering at 1
-          setw -g pane-base-index   1          # Start pane numbering at 1
-          set -g  renumber-windows  on         # Renumber windows when one is closed
-          set -g  focus-events      on         # Enable focus events for Neovim
-          set -g  extended-keys     on         # Pass kitty keyboard protocol sequences through
-          set -g  detach-on-destroy on         # Detach when session is destroyed
+          set -g  base-index        1
+          setw -g pane-base-index   1
+          set -g  renumber-windows  on
+          set -g  focus-events      on
+          set -g  extended-keys     on
+          set -g  detach-on-destroy on
           set -g  update-environment "SSH_AUTH_SOCK SSH_CONNECTION SSH_CLIENT SSH_TTY DISPLAY"
-          set -sg escape-time       50         # Reduce escape delay
-          set -g  history-limit     1000000    # Scrollback buffer size
-          set -g  mouse             off        # Disable mouse
-          setw -g mode-keys         vi         # Vi mode for copy mode
-          set -g  visual-activity   off        # Don't show activity message
-          set -g  monitor-activity  on         # Monitor background window activity
-          bind -n M-i display-popup -B -w 70% -h 75% -E "tmux-pick-session"
+          set -sg escape-time       50
+          set -g  history-limit     1000000
+          set -g  mouse             off
+          setw -g mode-keys         vi
+          set -g  visual-activity   off
+          set -g  monitor-activity  on
         '';
       };
     };
