@@ -39,9 +39,12 @@
         flake-parts.follows = "flake-parts";
       };
     };
-    html-to-md = {
-      url = "github:stubbedev/html-to-md";
-      inputs.nixpkgs.follows = "nixpkgs";
+    email-nvim = {
+      url = "github:stubbedev/email.nvim";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
     };
     cship = {
       url = "github:stephenleo/cship";
@@ -50,10 +53,6 @@
     claude-code = {
       # Tracks npm latest within ~1h of release; nixpkgs' claude-code lags.
       url = "github:sadjow/claude-code-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    notmuch-mcp = {
-      url = "github:stubbedev/notmuch-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # The whole lys desktop: compositor, shell, login, settings, polkit agent,

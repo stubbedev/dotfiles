@@ -8,7 +8,7 @@
       ...
     }:
     let
-      notmuchMcp = inputs.notmuch-mcp.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      emailEngine = inputs.email-nvim.packages.${pkgs.stdenv.hostPlatform.system}.email-engine;
 
       maildirBase = ".local/share/mail";
       maildir = "${config.home.homeDirectory}/${maildirBase}";
@@ -20,7 +20,8 @@
         "stubbe"
       ];
       secretName = account: "mail-${account}";
-      passwordCommand = account: "cat ${config.sops.secrets.${secretName account}.path}";
+      passwordFile = account: config.sops.secrets.${secretName account}.path;
+      passwordCommand = account: "cat ${passwordFile account}";
 
       # Not a notmuch post-new hook: that hook dir lives inside .notmuch/, which
       # notmuch creates itself and home-manager will not symlink into, so the
@@ -76,6 +77,7 @@
 
       mailboxes = {
         kontainer = {
+          smtpAuth = "login";
           archive = "Archive";
           folders = [
             {
@@ -145,6 +147,22 @@
             trash
             ;
           inherit (mailboxes.${name}) archive folders;
+          smtp = {
+            inherit (account.smtp) host port;
+            security =
+              if !account.smtp.tls.enable then
+                "none"
+              else if account.smtp.tls.useStartTls then
+                "starttls"
+              else
+                "tls";
+            user = account.userName;
+            password_cmd = [
+              "cat"
+              (passwordFile name)
+            ];
+          }
+          // lib.optionalAttrs (mailboxes.${name} ? smtpAuth) { auth = mailboxes.${name}.smtpAuth; };
         }
         // lib.optionalAttrs (account.signature.text != "") { signature = account.signature.text; }
       ) accountNames;
@@ -187,8 +205,8 @@
         ) accountNames
       );
 
-      # One accounts.email tree feeding home-manager's mbsync, notmuch and msmtp
-      # modules. Account names are the mbsync channel names the wrapper script
+      # One accounts.email tree feeding home-manager's mbsync and notmuch
+      # modules and email.nvim's accounts.json. Account names are the mbsync channel names the wrapper script
       # relies on. Side effects outside mail: home-manager's git module renders
       # a sendemail section per smtp account.
       accounts.email = {
@@ -241,10 +259,6 @@
               };
             };
             notmuch.enable = true;
-            msmtp = {
-              enable = true;
-              extraConfig.auth = "login";
-            };
           };
           gmail = {
             address = "alexander.bugge.stage@gmail.com";
@@ -292,7 +306,6 @@
               };
             };
             notmuch.enable = true;
-            msmtp.enable = true;
           };
           stubbe = {
             address = "abs@stubbe.dev";
@@ -337,19 +350,17 @@
               extraConfig.account.AuthMechs = "LOGIN";
             };
             notmuch.enable = true;
-            msmtp.enable = true;
           };
         };
       };
 
       programs.mbsync.enable = true;
       services.imapnotify.enable = true;
-      programs.msmtp.enable = true;
 
-      stubbe.mcpServers.notmuch-mcp = {
+      stubbe.mcpServers.email = {
         type = "stdio";
-        command = lib.getExe notmuchMcp;
-        args = [ ];
+        command = lib.getExe emailEngine;
+        args = [ "mcp" ];
       };
 
       # Identity and database.path come from accounts.email; search exclude
@@ -373,8 +384,6 @@
 
       home.packages = [
         mailSync
-        inputs.html-to-md.packages.${pkgs.stdenv.hostPlatform.system}.default
-        notmuchMcp
         mailOpen
       ];
 

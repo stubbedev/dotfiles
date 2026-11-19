@@ -118,8 +118,8 @@ local function load_email()
   vim.pack.add({
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
     { src = "https://github.com/folke/snacks.nvim" },
-    { src = "https://github.com/stubbedev/email.nvim" },
   }, { confirm = false })
+  vim.cmd.packadd("email-nvim")
   require("snacks").setup({
     image = {
       enabled = true,
@@ -134,11 +134,6 @@ local function load_email()
   fd:close()
   require("email").setup({
     accounts = accounts,
-    renderers = {
-      ["text/html"] = { "html-to-md", "--html", "--images" },
-      ["text/plain"] = { "html-to-md", "--plain" },
-      ["text/calendar"] = { "html-to-md", "--calendar" },
-    },
     sync_cmd = { "mail-sync" },
     searches = {
       { name = "Unread", query = "tag:unread and tag:inbox" },
@@ -146,16 +141,6 @@ local function load_email()
       { name = "Invites", query = "mimetype:text/calendar and date:30d.." },
     },
     send_delay = 5,
-    html_cmd = {
-      "cmark-gfm",
-      "--hardbreaks",
-      "--extension",
-      "table",
-      "--extension",
-      "autolink",
-      "--extension",
-      "strikethrough",
-    },
     attach_picker = function(add)
       local fzf = require("fzf-lua")
       fzf.files({

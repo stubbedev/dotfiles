@@ -101,7 +101,14 @@
                 ];
               };
 
-              specs.treesitter = treesitter-runtime;
+              specs = {
+                treesitter = treesitter-runtime;
+                email-nvim = {
+                  data = inputs.email-nvim.packages.${pkgs.stdenv.hostPlatform.system}.vim-plugin;
+                  pname = "email-nvim";
+                  lazy = true;
+                };
+              };
 
               runtimePkgs =
                 with pkgs;
@@ -113,7 +120,6 @@
                   ast-grep
                   nix
                   imagemagick
-                  cmark-gfm
 
                   # For the PR_SET_PDEATHSIG wrapper in src/nvim/lua/lsp.lua: some
                   # servers ignore the LSP processId and outlive an unclean exit.
