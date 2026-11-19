@@ -30,7 +30,7 @@
       "src": "https://github.com/monaqa/dial.nvim"
     },
     "email.nvim": {
-      "rev": "3d1eb87aea1768127e3a5f58a20dbc227ee7413b",
+      "rev": "eab3af5b008bff7e70291832468d9ff856e17a11",
       "src": "https://github.com/stubbedev/email.nvim"
     },
     "flash.nvim": {
