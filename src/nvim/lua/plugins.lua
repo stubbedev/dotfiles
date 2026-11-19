@@ -140,6 +140,7 @@ local function load_email()
       ["text/calendar"] = { "html-to-md", "--calendar" },
     },
     sync_cmd = { "mail-sync" },
+    layout = "full",
     devicons = true,
     images = { enabled = true },
   })
