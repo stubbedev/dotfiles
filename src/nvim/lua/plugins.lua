@@ -140,7 +140,6 @@ local function load_email()
       ["text/calendar"] = { "html-to-md", "--calendar" },
     },
     sync_cmd = { "mail-sync" },
-    pipes = { { key = "<leader>mu", cmd = { "mail-unsubscribe" }, desc = "Unsubscribe" } },
     layout = "full",
     devicons = true,
     images = { enabled = true },
