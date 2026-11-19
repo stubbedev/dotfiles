@@ -596,6 +596,7 @@ _: {
           set -ga terminal-overrides  '*:Ss=\E[%p1%d q:Se=\E[ q'
           set -as terminal-features   ",*:RGB"
           set -as terminal-features   ",*:hyperlinks"
+          set -as terminal-overrides  ",xterm-ghostty:Eneks@:Dseks@"
           set -g  set-clipboard       on
           set -g  allow-passthrough   on
           set-environment -g COLORTERM "truecolor"
