@@ -86,6 +86,10 @@
               name = "Sent";
               query = "folder:/^kontainer\\/Sent$/";
             }
+            {
+              name = "Junk";
+              query = ''folder:"kontainer/Junk Email"'';
+            }
           ];
         };
         gmail = {
@@ -98,6 +102,10 @@
             {
               name = "Sent";
               query = ''folder:"gmail/[Gmail]/Sent Mail"'';
+            }
+            {
+              name = "Junk";
+              query = ''folder:"gmail/[Gmail]/Spam"'';
             }
           ];
         };
@@ -130,9 +138,15 @@
           maildir = account.maildir.path;
           from = "${account.realName} <${account.address}>";
           addresses = [ account.address ] ++ account.aliases;
-          inherit (account.folders) inbox sent drafts;
+          inherit (account.folders)
+            inbox
+            sent
+            drafts
+            trash
+            ;
           inherit (mailboxes.${name}) archive folders;
         }
+        // lib.optionalAttrs (account.signature.text != "") { signature = account.signature.text; }
       ) accountNames;
 
       mailOpen = pkgs.stubbe.bashApp {
@@ -183,7 +197,15 @@
             inherit realName;
             userName = "abs@kontainer.com";
             passwordCommand = passwordCommand "kontainer";
-            folders.inbox = "INBOX";
+            imapnotify = {
+              enable = true;
+              boxes = [ "INBOX" ];
+              onNotify = "${lib.getExe mailSync} kontainer";
+            };
+            folders = {
+              inbox = "INBOX";
+              trash = "Deleted Items";
+            };
             imap = {
               host = "ex.konformit.com";
               port = 993;
@@ -202,6 +224,8 @@
                 "Sent"
                 "Drafts"
                 "Archive"
+                "Junk Email"
+                "Deleted Items"
               ];
               extraConfig.account = {
                 AuthMechs = "LOGIN";
@@ -223,10 +247,16 @@
             inherit realName;
             userName = "alexander.bugge.stage@gmail.com";
             passwordCommand = passwordCommand "gmail";
+            imapnotify = {
+              enable = true;
+              boxes = [ "INBOX" ];
+              onNotify = "${lib.getExe mailSync} gmail";
+            };
             folders = {
               inbox = "INBOX";
               sent = "[Gmail]/Sent Mail";
               drafts = "[Gmail]/Drafts";
+              trash = "[Gmail]/Bin";
             };
             imap = {
               host = "imap.gmail.com";
@@ -246,6 +276,8 @@
                 "[Gmail]/Sent Mail"
                 "[Gmail]/Drafts"
                 "[Gmail]/All Mail"
+                "[Gmail]/Spam"
+                "[Gmail]/Bin"
               ];
               extraConfig = {
                 account.AuthMechs = "LOGIN";
@@ -267,6 +299,11 @@
             inherit realName;
             userName = "admin@stubbe.dev";
             passwordCommand = passwordCommand "stubbe";
+            imapnotify = {
+              enable = true;
+              boxes = [ "INBOX" ];
+              onNotify = "${lib.getExe mailSync} stubbe";
+            };
             folders = {
               inbox = "INBOX";
               sent = "Sent Items";
@@ -291,6 +328,7 @@
                 "Drafts"
                 "Archive"
                 "Junk Mail"
+                "Deleted Items"
               ];
               extraConfig.account.AuthMechs = "LOGIN";
             };
@@ -301,6 +339,7 @@
       };
 
       programs.mbsync.enable = true;
+      services.imapnotify.enable = true;
       programs.msmtp.enable = true;
 
       stubbe.mcpServers.notmuch-mcp = {
@@ -363,10 +402,10 @@
           };
         };
         timers.mail-sync = {
-          Unit.Description = "Periodic mail sync";
+          Unit.Description = "Periodic mail sync, behind the IMAP IDLE watchers";
           Timer = {
             OnStartupSec = "30s";
-            OnUnitActiveSec = "30s";
+            OnUnitActiveSec = "5min";
           };
           Install.WantedBy = [ "timers.target" ];
         };
