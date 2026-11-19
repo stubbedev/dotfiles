@@ -114,6 +114,31 @@ vim.api.nvim_create_user_command("Oil", function(opts)
   M.open_oil(opts.args ~= "" and opts.args or nil)
 end, { nargs = "?", complete = "dir" })
 
+local function load_email()
+  vim.pack.add({ "https://github.com/stubbedev/email.nvim" }, { confirm = false })
+  local config_home = vim.env.XDG_CONFIG_HOME or vim.fs.joinpath(vim.env.HOME, ".config")
+  local accounts_path = vim.fs.joinpath(config_home, "email.nvim", "accounts.json")
+  local fd = assert(io.open(accounts_path, "r"))
+  local accounts = vim.json.decode(fd:read("*a"))
+  fd:close()
+  require("email").setup({
+    accounts = accounts,
+    renderers = {
+      ["text/html"] = { "html-to-md", "--html" },
+      ["text/plain"] = { "html-to-md", "--plain" },
+      ["text/calendar"] = { "html-to-md", "--calendar" },
+    },
+    sync_cmd = { "mail-sync" },
+  })
+end
+
+for _, command in ipairs({ "Email", "EmailCompose", "EmailSearch" }) do
+  vim.api.nvim_create_user_command(command, function(opts)
+    load_email()
+    vim.cmd(command .. " " .. opts.args)
+  end, { nargs = "*" })
+end
+
 -- The lockfile guarantees installation at the session's first vim.pack.add, so
 -- this only ever `:packadd`s on first use.
 function M.undotree()
