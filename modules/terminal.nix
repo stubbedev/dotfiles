@@ -106,10 +106,13 @@ _: {
         };
       };
 
-      xdg.configFile."systemd/user/${config.wayland.systemd.target}.wants/${unit}" =
-        lib.mkIf config.features.lysWm
-          {
-            source = config.xdg.configFile."systemd/user/${unit}".source;
-          };
+      xdg.configFile = lib.mkIf config.features.lysWm {
+        "systemd/user/${config.wayland.systemd.target}.wants/${unit}".source =
+          config.xdg.configFile."systemd/user/${unit}".source;
+        "systemd/user/${unit}.d/session.conf".text = ''
+          [Unit]
+          After=${config.wayland.systemd.target}
+        '';
+      };
     };
 }
