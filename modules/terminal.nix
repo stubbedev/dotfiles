@@ -63,7 +63,6 @@ _: {
         settings = {
           font-family = "JetBrainsMono Nerd Font";
           font-size = 12;
-          adjust-icon-height = "25%";
 
           window-padding-x = 0;
           window-padding-y = 0;
