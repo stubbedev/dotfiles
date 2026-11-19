@@ -32,7 +32,7 @@ bag and no `activation/` bag to keep in sync: to change how mail works you edit
 │   └── <aspect>.nix       # mail, shell, lys-wm, lys-shell, power, storage, …
 ├── bin/                   # ONLY the live-ISO installer (stb-install-nixos)
 ├── src/                   # the few real files: the nvim live-edit
-│                          # tree, aerc stylesets, wallpapers
+│                          # tree, wallpapers
 ├── certs/                 # the srv root CA (public cert); seeded into the
 │                          # system trust store at build time
 └── secrets/               # sops-encrypted, keyed per machine in .sops.yaml
