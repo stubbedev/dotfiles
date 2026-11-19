@@ -140,6 +140,36 @@ local function load_email()
       ["text/calendar"] = { "html-to-md", "--calendar" },
     },
     sync_cmd = { "mail-sync" },
+    searches = {
+      { name = "Unread", query = "tag:unread and tag:inbox" },
+      { name = "Flagged", query = "tag:flagged" },
+      { name = "Invites", query = "mimetype:text/calendar and date:30d.." },
+    },
+    send_delay = 5,
+    html_cmd = {
+      "cmark-gfm",
+      "--hardbreaks",
+      "--extension",
+      "table",
+      "--extension",
+      "autolink",
+      "--extension",
+      "strikethrough",
+    },
+    attach_picker = function(add)
+      local fzf = require("fzf-lua")
+      fzf.files({
+        cwd = vim.env.HOME,
+        prompt = "Attach> ",
+        actions = {
+          ["enter"] = function(selected, opts)
+            add(vim.tbl_map(function(entry)
+              return fzf.path.entry_to_file(entry, opts).path
+            end, selected))
+          end,
+        },
+      })
+    end,
     layout = "full",
     devicons = true,
     images = { enabled = true },
