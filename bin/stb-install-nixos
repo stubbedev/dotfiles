@@ -594,7 +594,7 @@ install -d -m 0700 "/mnt$(dirname "$password_file")"
 unset USER_PASSWORD
 
 echo "==> Running nixos-install --flake ${FLAKE_PATH}#${FLAKE_ATTR}"
-nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password
+nixos-install --root /mnt --flake "${FLAKE_PATH}#${FLAKE_ATTR}" --no-root-password --no-channel-copy
 
 # Resolve uid/gid from the installed system — needed for ownership
 # regardless of whether the git clone succeeds.
