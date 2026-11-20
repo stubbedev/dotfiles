@@ -25,33 +25,32 @@ in
       boot.binfmt.emulatedSystems = config.host.emulatedSystems;
 
       nix = {
-        settings =
-          {
-            experimental-features = [
-              "nix-command"
-              "flakes"
-            ];
+        settings = {
+          experimental-features = [
+            "nix-command"
+            "flakes"
+          ];
 
-            # `<nixpkgs>` resolves to the flake's pinned tree.
-            nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
+          # `<nixpkgs>` resolves to the flake's pinned tree.
+          nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
 
-            # nix asks the substituter before building, so our self-hosted cache
-            # 404s until the push seconds later. The default 3600s negative TTL
-            # would then hide the pushed path for an hour.
-            narinfo-cache-negative-ttl = 0;
+          # nix asks the substituter before building, so our self-hosted cache
+          # 404s until the push seconds later. The default 3600s negative TTL
+          # would then hide the pushed path for an hour.
+          narinfo-cache-negative-ttl = 0;
 
-            auto-optimise-store = true;
+          auto-optimise-store = true;
 
-            # The default `@users` lets any local user trigger store writes.
-            allowed-users = [ "@wheel" ];
-            trusted-users = [
-              "root"
-              "@wheel"
-            ];
-          }
-          # The substituters, their keys and the download tuning are shared with
-          # the phone (modules/core/lib/nix-settings.nix).
-          // pkgs.stubbe.cache.settings;
+          # The default `@users` lets any local user trigger store writes.
+          allowed-users = [ "@wheel" ];
+          trusted-users = [
+            "root"
+            "@wheel"
+          ];
+        }
+        # The substituters, their keys and the download tuning are shared with
+        # the phone (modules/core/lib/nix-settings.nix).
+        // pkgs.stubbe.cache.settings;
 
         # Optional form, so an early-boot eval before the secret exists is fine.
         extraOptions = ''
@@ -127,9 +126,9 @@ in
       emulatedAndroidAttrs =
         let
           hosts = flakeConfig.configurations.nixOnDroid;
-          emulated = builtins.filter (
-            name: builtins.elem hosts.${name}.system config.host.emulatedSystems
-          ) (builtins.attrNames hosts);
+          emulated = builtins.filter (name: builtins.elem hosts.${name}.system config.host.emulatedSystems) (
+            builtins.attrNames hosts
+          );
         in
         map (name: "nixOnDroidConfigurations.${name}.activationPackage") emulated;
 
@@ -152,27 +151,26 @@ in
       # The machine's own closure, then every closure it builds for a host that
       # cannot build its own: `phix switch` and `phix upgrade` run both, so the
       # phone substitutes its closure instead of compiling it.
-      cacheHooks =
-        [
-          {
-            description = "Pushing the closure to ${xilo.url}";
-            exec = lib.getExe' pkgs.xilo "xilo";
-            args = [
-              "push"
-              "--quiet"
-              xilo.cache
-            ];
-            env.XILO_URL = xilo.url;
-            secretEnv.XILO_TOKEN = "xilo-token";
-          }
-        ]
-        ++ map (attr: {
-          description = "Pushing ${attr} to ${xilo.url}";
-          exec = lib.getExe xiloPushClosure;
-          args = [ attr ];
+      cacheHooks = [
+        {
+          description = "Pushing the closure to ${xilo.url}";
+          exec = lib.getExe' pkgs.xilo "xilo";
+          args = [
+            "push"
+            "--quiet"
+            xilo.cache
+          ];
           env.XILO_URL = xilo.url;
           secretEnv.XILO_TOKEN = "xilo-token";
-        }) emulatedAndroidAttrs;
+        }
+      ]
+      ++ map (attr: {
+        description = "Pushing ${attr} to ${xilo.url}";
+        exec = lib.getExe xiloPushClosure;
+        args = [ attr ];
+        env.XILO_URL = xilo.url;
+        secretEnv.XILO_TOKEN = "xilo-token";
+      }) emulatedAndroidAttrs;
     in
     {
       home.packages = lib.mkIf config.features.development (

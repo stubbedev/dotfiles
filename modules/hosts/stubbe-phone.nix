@@ -41,7 +41,9 @@ in
           # back over ssh from here, and an unreachable builder just falls back
           # to a local build.
           extraOptions = ''
-            builders = ssh-ng://${pkgs.stubbe.lanHosts.${buildHost}}@${buildHost}.local aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
+            builders = ssh-ng://${
+              pkgs.stubbe.lanHosts.${buildHost}
+            }@${buildHost}.local aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
             builders-use-substitutes = true
           '';
         };
