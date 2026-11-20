@@ -101,17 +101,16 @@
                 ];
               };
 
-              specs =
-                {
-                  treesitter = treesitter-runtime;
-                }
-                // lib.optionalAttrs config.features.desktop {
-                  email-nvim = {
-                    data = inputs.email-nvim.packages.${pkgs.stdenv.hostPlatform.system}.vim-plugin;
-                    pname = "email-nvim";
-                    lazy = true;
-                  };
+              specs = {
+                treesitter = treesitter-runtime;
+              }
+              // lib.optionalAttrs config.features.desktop {
+                email-nvim = {
+                  data = inputs.email-nvim.packages.${pkgs.stdenv.hostPlatform.system}.vim-plugin;
+                  pname = "email-nvim";
+                  lazy = true;
                 };
+              };
 
               runtimePkgs =
                 with pkgs;

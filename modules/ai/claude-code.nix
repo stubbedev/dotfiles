@@ -82,31 +82,30 @@ _: {
         ${pkgs.stubbe.setup.jsonWrite {
           name = "claude-settings";
           target = "${config.home.homeDirectory}/.claude/settings.json";
-          value =
-            {
-              # Retention sweep for ~/.claude/{projects,tasks,shell-snapshots,
-              # backups}. Default is 30 days; 14 keeps ~/.claude/projects (500 MB
-              # over 400+ transcripts) in check. Deliberately unconditional — an
-              # older session is not worth keeping even if it was /rename'd.
-              cleanupPeriodDays = 14;
-              tui = "fullscreen";
-              editorMode = "vi";
-              theme = "auto";
-              attribution = false;
-              inherit model;
-              modelSettings.${model}.effortLevel = "medium";
-              switchModelsOnFlag = false;
-              agentPushNotifEnabled = true;
-              permissions.defaultMode = "bypassPermissions";
-              skipDangerousModePermissionPrompt = true;
-            }
-            // lib.optionalAttrs (!onAndroid) {
-              statusLine = {
-                type = "command";
-                command = "cship";
-                refreshInterval = 5;
-              };
+          value = {
+            # Retention sweep for ~/.claude/{projects,tasks,shell-snapshots,
+            # backups}. Default is 30 days; 14 keeps ~/.claude/projects (500 MB
+            # over 400+ transcripts) in check. Deliberately unconditional — an
+            # older session is not worth keeping even if it was /rename'd.
+            cleanupPeriodDays = 14;
+            tui = "fullscreen";
+            editorMode = "vi";
+            theme = "auto";
+            attribution = false;
+            inherit model;
+            modelSettings.${model}.effortLevel = "medium";
+            switchModelsOnFlag = false;
+            agentPushNotifEnabled = true;
+            permissions.defaultMode = "bypassPermissions";
+            skipDangerousModePermissionPrompt = true;
+          }
+          // lib.optionalAttrs (!onAndroid) {
+            statusLine = {
+              type = "command";
+              command = "cship";
+              refreshInterval = 5;
             };
+          };
         }}
 
         ${pkgs.stubbe.setup.jsonSet {
