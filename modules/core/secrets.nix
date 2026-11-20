@@ -25,15 +25,12 @@
         )
       );
 
-      stubbe.setup.sopsAgeKey.script = ''
-        ageKeyFile="$HOME/.config/sops/age/keys.txt"
-        sshKey="$HOME/.ssh/id_ed25519"
-        if [ -f "$sshKey" ] && { [ ! -f "$ageKeyFile" ] || [ "$sshKey" -nt "$ageKeyFile" ]; }; then
-          mkdir -p "$(dirname "$ageKeyFile")"
-          ${lib.getExe pkgs.ssh-to-age} -private-key -i "$sshKey" -o "$ageKeyFile"
-          chmod 600 "$ageKeyFile"
-        fi
-      '';
+      home.sessionVariables.SOPS_AGE_KEY_CMD = lib.escapeShellArgs [
+        (lib.getExe pkgs.ssh-to-age)
+        "-private-key"
+        "-i"
+        (lib.head config.sops.age.sshKeyPaths)
+      ];
 
       home.packages = with pkgs; [
         sops
