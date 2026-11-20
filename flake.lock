@@ -952,11 +952,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795195569,
-        "narHash": "sha256-VfOxb1Zq8SkORDl8seuE3ECZsOlVKJE1mWVjf8y8lo8=",
+        "lastModified": 1795195817,
+        "narHash": "sha256-L8ryGfxmjBIHeCnw9Xo4ybdqm5HAiI8+j1K/9Ig4BxM=",
         "owner": "stubbedev",
         "repo": "phix",
-        "rev": "baf49414e8ed10ad26920eac60b4725b0ce8f107",
+        "rev": "ac3482e8b5a14eaab990a818d79990cf36a2ac21",
         "type": "github"
       },
       "original": {
