@@ -119,7 +119,7 @@ in
       onAndroid = config.host.platform == "android";
       accessTokensFile = "${config.home.homeDirectory}/.config/nix/access-tokens.conf";
 
-      inherit (pkgs.stubbe.cache) xilo;
+      xiloCache = pkgs.stubbe.cache.xilo;
 
       # Hosts this machine builds for: the android configurations whose system
       # it emulates. Derived, so a second phone needs nothing but its system in
@@ -145,7 +145,7 @@ in
         text = ''
           attr="$1"
           storePath=$(nix build "$PHIX_FLAKE#$attr" --no-link --print-out-paths --no-write-lock-file)
-          xilo push --quiet ${xilo.cache} "$storePath"
+          xilo push --quiet ${xiloCache.cache} "$storePath"
         '';
       };
 
@@ -155,34 +155,31 @@ in
       cacheHooks =
         [
           {
-            description = "Pushing the closure to ${xilo.url}";
+            description = "Pushing the closure to ${xiloCache.url}";
             exec = lib.getExe' pkgs.xilo "xilo";
             args = [
               "push"
               "--quiet"
-              xilo.cache
+              xiloCache.cache
             ];
-            env.XILO_URL = xilo.url;
+            env.XILO_URL = xiloCache.url;
             secretEnv.XILO_TOKEN = "xilo-token";
           }
         ]
         ++ map (attr: {
-          description = "Pushing ${attr} to ${xilo.url}";
+          description = "Pushing ${attr} to ${xiloCache.url}";
           exec = lib.getExe xiloPushClosure;
           args = [ attr ];
-          env.XILO_URL = xilo.url;
+          env.XILO_URL = xiloCache.url;
           secretEnv.XILO_TOKEN = "xilo-token";
         }) emulatedAndroidAttrs;
     in
     {
-      home.packages = lib.mkIf config.features.development (
-        with pkgs;
-        [
-          xilo
-          shell-lsp
-          nixdoc
-        ]
-      );
+      home.packages = lib.mkIf config.features.development [
+        pkgs.xilo
+        pkgs.shell-lsp
+        pkgs.nixdoc
+      ];
 
       stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
 
