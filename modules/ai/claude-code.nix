@@ -9,6 +9,8 @@ _: {
     let
       model = "claude-opus-5-5";
 
+      onAndroid = config.host.platform == "android";
+
       shellLspPlugin = pkgs.linkFarm "claude-shell-lsp-plugin" {
         ".claude-plugin/plugin.json" = pkgs.stubbe.gen.json "plugin.json" {
           name = "shell-lsp";
@@ -33,16 +35,21 @@ _: {
             CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT = "1";
           };
         })
-        pkgs.cship
-      ];
+      ]
+      # cship is a rustPlatform.buildRustPackage over its own source, so on the
+      # phone it drags rustc and cargo into the activation graph and compiles
+      # the status line on the device. The TUI there has no room for one.
+      ++ lib.optional (!onAndroid) pkgs.cship;
 
-      xdg.configFile."cship.toml".source = pkgs.stubbe.gen.toml "cship.toml" {
-        cship = {
-          lines = [ "$directory$git_branch$git_status $cship.usage_limits $cship.model.id" ];
-          usage_limits = {
-            seven_day_format = "";
-            separator = "";
-            five_hour_format = "{remaining}%";
+      xdg.configFile."cship.toml" = lib.mkIf (!onAndroid) {
+        source = pkgs.stubbe.gen.toml "cship.toml" {
+          cship = {
+            lines = [ "$directory$git_branch$git_status $cship.usage_limits $cship.model.id" ];
+            usage_limits = {
+              seven_day_format = "";
+              separator = "";
+              five_hour_format = "{remaining}%";
+            };
           };
         };
       };
@@ -75,28 +82,31 @@ _: {
         ${pkgs.stubbe.setup.jsonWrite {
           name = "claude-settings";
           target = "${config.home.homeDirectory}/.claude/settings.json";
-          value = {
-            statusLine = {
-              type = "command";
-              command = "cship";
-              refreshInterval = 5;
+          value =
+            {
+              # Retention sweep for ~/.claude/{projects,tasks,shell-snapshots,
+              # backups}. Default is 30 days; 14 keeps ~/.claude/projects (500 MB
+              # over 400+ transcripts) in check. Deliberately unconditional — an
+              # older session is not worth keeping even if it was /rename'd.
+              cleanupPeriodDays = 14;
+              tui = "fullscreen";
+              editorMode = "vi";
+              theme = "auto";
+              attribution = false;
+              inherit model;
+              modelSettings.${model}.effortLevel = "medium";
+              switchModelsOnFlag = false;
+              agentPushNotifEnabled = true;
+              permissions.defaultMode = "bypassPermissions";
+              skipDangerousModePermissionPrompt = true;
+            }
+            // lib.optionalAttrs (!onAndroid) {
+              statusLine = {
+                type = "command";
+                command = "cship";
+                refreshInterval = 5;
+              };
             };
-            attribution = false;
-            # Retention sweep for ~/.claude/{projects,tasks,shell-snapshots,
-            # backups}. Default is 30 days; 14 keeps ~/.claude/projects (500 MB
-            # over 400+ transcripts) in check. Deliberately unconditional — an
-            # older session is not worth keeping even if it was /rename'd.
-            cleanupPeriodDays = 14;
-            tui = "fullscreen";
-            editorMode = "vi";
-            theme = "auto";
-            inherit model;
-            modelSettings.${model}.effortLevel = "medium";
-            switchModelsOnFlag = false;
-            agentPushNotifEnabled = true;
-            permissions.defaultMode = "bypassPermissions";
-            skipDangerousModePermissionPrompt = true;
-          };
         }}
 
         ${pkgs.stubbe.setup.jsonSet {

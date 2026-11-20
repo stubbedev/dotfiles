@@ -19,38 +19,39 @@ in
         overlays = builtins.attrValues flakeConfig.flake.overlays;
       };
 
+      # binfmt also adds these to nix.settings.extra-platforms, which is what
+      # makes the daemon build for them locally instead of failing to find a
+      # builder.
+      boot.binfmt.emulatedSystems = config.host.emulatedSystems;
+
       nix = {
-        settings = {
-          experimental-features = [
-            "nix-command"
-            "flakes"
-          ];
+        settings =
+          {
+            experimental-features = [
+              "nix-command"
+              "flakes"
+            ];
 
-          # `<nixpkgs>` resolves to the flake's pinned tree.
-          nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
+            # `<nixpkgs>` resolves to the flake's pinned tree.
+            nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
 
-          # Without this the daemon falls back to the default substituters
-          # and misses xilos.dev.
-          inherit (pkgs.stubbe.cache) substituters trusted-public-keys;
+            # nix asks the substituter before building, so our self-hosted cache
+            # 404s until the push seconds later. The default 3600s negative TTL
+            # would then hide the pushed path for an hour.
+            narinfo-cache-negative-ttl = 0;
 
-          # nix asks the substituter before building, so our self-hosted cache
-          # 404s until the push seconds later. The default 3600s negative TTL
-          # would then hide the pushed path for an hour.
-          narinfo-cache-negative-ttl = 0;
+            auto-optimise-store = true;
 
-          # At the 1 MiB default the NAR decompressor blocks as soon as the
-          # buffer fills and downloads run in lockstep with the writer.
-          download-buffer-size = 128 * 1024 * 1024;
-
-          auto-optimise-store = true;
-
-          # The default `@users` lets any local user trigger store writes.
-          allowed-users = [ "@wheel" ];
-          trusted-users = [
-            "root"
-            "@wheel"
-          ];
-        };
+            # The default `@users` lets any local user trigger store writes.
+            allowed-users = [ "@wheel" ];
+            trusted-users = [
+              "root"
+              "@wheel"
+            ];
+          }
+          # The substituters, their keys and the download tuning are shared with
+          # the phone (modules/core/lib/nix-settings.nix).
+          // pkgs.stubbe.cache.settings;
 
         # Optional form, so an early-boot eval before the secret exists is fine.
         extraOptions = ''
@@ -117,6 +118,61 @@ in
     let
       onAndroid = config.host.platform == "android";
       accessTokensFile = "${config.home.homeDirectory}/.config/nix/access-tokens.conf";
+
+      inherit (pkgs.stubbe.cache) xilo;
+
+      # Hosts this machine builds for: the android configurations whose system
+      # it emulates. Derived, so a second phone needs nothing but its system in
+      # `host.emulatedSystems`.
+      emulatedAndroidAttrs =
+        let
+          hosts = flakeConfig.configurations.nixOnDroid;
+          emulated = builtins.filter (
+            name: builtins.elem hosts.${name}.system config.host.emulatedSystems
+          ) (builtins.attrNames hosts);
+        in
+        map (name: "nixOnDroidConfigurations.${name}.activationPackage") emulated;
+
+      # phix appends the generation it just built to every post-switch hook's
+      # arguments, so the attribute is the first argument and the rest is
+      # ignored.
+      xiloPushClosure = pkgs.stubbe.bashApp {
+        name = "xilo-push-closure";
+        runtimeInputs = [
+          pkgs.nix
+          pkgs.xilo
+        ];
+        text = ''
+          attr="$1"
+          storePath=$(nix build "$PHIX_FLAKE#$attr" --no-link --print-out-paths --no-write-lock-file)
+          xilo push --quiet ${xilo.cache} "$storePath"
+        '';
+      };
+
+      # The machine's own closure, then every closure it builds for a host that
+      # cannot build its own: `phix switch` and `phix upgrade` run both, so the
+      # phone substitutes its closure instead of compiling it.
+      cacheHooks =
+        [
+          {
+            description = "Pushing the closure to ${xilo.url}";
+            exec = lib.getExe' pkgs.xilo "xilo";
+            args = [
+              "push"
+              "--quiet"
+              xilo.cache
+            ];
+            env.XILO_URL = xilo.url;
+            secretEnv.XILO_TOKEN = "xilo-token";
+          }
+        ]
+        ++ map (attr: {
+          description = "Pushing ${attr} to ${xilo.url}";
+          exec = lib.getExe xiloPushClosure;
+          args = [ attr ];
+          env.XILO_URL = xilo.url;
+          secretEnv.XILO_TOKEN = "xilo-token";
+        }) emulatedAndroidAttrs;
     in
     {
       home.packages = lib.mkIf config.features.development (
@@ -130,19 +186,7 @@ in
 
       stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
 
-      programs.phix.postSwitch = lib.mkIf config.features.development [
-        {
-          description = "Pushing the closure to ${pkgs.stubbe.cache.xilo.url}";
-          exec = lib.getExe' pkgs.xilo "xilo";
-          args = [
-            "push"
-            "--quiet"
-            pkgs.stubbe.cache.xilo.cache
-          ];
-          env.XILO_URL = pkgs.stubbe.cache.xilo.url;
-          secretEnv.XILO_TOKEN = "xilo-token";
-        }
-      ];
+      programs.phix.postSwitch = lib.mkIf config.features.development cacheHooks;
 
       # Generations only: on NixOS the system nix.gc above sweeps the store
       # weekly, and on Android `nix-on-droid trim` owns it.
@@ -170,6 +214,12 @@ in
           path = accessTokensFile;
         };
       };
+
+      # The phone has no daemon and no system nix.conf of ours: nix-on-droid
+      # writes the stock cache.nixos.org/nix-on-droid.cachix.org pair, so
+      # everything this repo builds itself is compiled on the device. The user
+      # nix.conf is the only place aarch64 can be pointed at xilos.dev.
+      nix.settings = lib.mkIf onAndroid pkgs.stubbe.cache.settings;
 
       nix.extraOptions = lib.mkIf onAndroid ''
         !include ${accessTokensFile}

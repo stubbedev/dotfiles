@@ -101,14 +101,17 @@
                 ];
               };
 
-              specs = {
-                treesitter = treesitter-runtime;
-                email-nvim = {
-                  data = inputs.email-nvim.packages.${pkgs.stdenv.hostPlatform.system}.vim-plugin;
-                  pname = "email-nvim";
-                  lazy = true;
+              specs =
+                {
+                  treesitter = treesitter-runtime;
+                }
+                // lib.optionalAttrs config.features.desktop {
+                  email-nvim = {
+                    data = inputs.email-nvim.packages.${pkgs.stdenv.hostPlatform.system}.vim-plugin;
+                    pname = "email-nvim";
+                    lazy = true;
+                  };
                 };
-              };
 
               runtimePkgs =
                 with pkgs;
@@ -117,15 +120,14 @@
                   fd
                   fzf
                   git
-                  ast-grep
-                  nix
-                  imagemagick
 
                   # For the PR_SET_PDEATHSIG wrapper in src/nvim/lua/lsp.lua: some
                   # servers ignore the LSP processId and outlive an unclean exit.
                   util-linux
                 ]
                 ++ lib.optionals config.features.development [
+                  ast-grep
+                  nix
                   lua-language-server
                   superhtml # html
                   biome # css, json
@@ -151,7 +153,10 @@
                   markdownlint-cli2
 
                   nodejs
-                ];
+                ]
+                # Image previews only; ImageMagick is the heaviest single binary
+                # in the wrapper and nothing below a desktop session reads it.
+                ++ lib.optionals config.features.media [ imagemagick ];
             };
           }
         )

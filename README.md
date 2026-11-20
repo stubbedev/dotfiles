@@ -168,6 +168,38 @@ the NixOS hosts with `host.platform = "android"` and `host.profile =
 nvim, git and ssh, nothing that needs a display, D-Bus or systemd. On the
 phone, `phix switch` runs `nix-on-droid switch --flake ~/.stubbe#phone`.
 
+Every switch installs the whole user environment into the proot'd profile
+(`environment.packages` = `home.packages`, because `useUserPackages` is on), so
+both the closure size and the number of packages decide how long it takes.
+Anything that only exists to feed a desktop surface therefore stays behind its
+`features.*` flag on the phone: nvim's ImageMagick, its `email-nvim` plugin and
+its client toolchain, the `cship` status line (a `buildRustPackage`, so keeping
+it means compiling rustc and cargo on the device) and the GUI halves. The
+phone's `nix.conf` also carries our substituters (`pkgs.stubbe.cache.settings`
+in both the generated `/etc/nix/nix.conf` and the user-level one home-manager
+writes), so an aarch64 path another host pushed to xilos.dev is downloaded
+rather than built.
+
+Nothing is compiled on the phone. Its `/etc/nix/nix.conf` names the desktop as
+a remote builder (`builders = ssh-ng://stubbe@desktop.local aarch64-linux …`),
+and the desktop emulates aarch64 for exactly this (`host.emulatedSystems` in
+`modules/hosts/desktop.nix`, which `modules/nix.nix` turns into
+`boot.binfmt.emulatedSystems`; the nixpkgs module also adds those systems to
+`nix.settings.extra-platforms`). The build happens there under qemu, the
+output is copied back, and `builders-use-substitutes` keeps the inputs on the
+desktop's side instead of shipping them over ssh from the phone. Two things
+this relies on: the desktop must be reachable as `desktop.local` (the phone's
+`~/.ssh/config` ProxyCommand handles the mDNS lookup, modules/network.nix) with
+the phone's `id_ed25519.pub` in its `authorized_keys`, and if it is asleep the
+build falls back to the device, which is slow but correct.
+
+The same fact fills the cache: every host whose system appears in the desktop's
+`host.emulatedSystems` gets a second post-switch hook, which builds that
+host's `activationPackage` and pushes its closure to xilos.dev. `phix switch`
+and `phix upgrade` both run post-switch hooks, so the phone substitutes instead
+of compiling after every desktop switch, and a reinstall or `nix-on-droid trim`
+on the phone finds its whole closure already cached.
+
 ## INSTALLING NIXOS
 
 Build a bootable installer ISO:

@@ -11,6 +11,12 @@ in
     system = "aarch64-linux";
     module =
       { config, pkgs, ... }:
+      let
+        # The machine that compiles this phone's closures: an x86_64 host that
+        # emulates aarch64 (modules/hosts/desktop.nix), reached over the same
+        # mDNS name and ssh config every other host uses.
+        buildHost = "desktop";
+      in
       {
         # nix-on-droid's own state version, whose enum stops at its last
         # release. It is unrelated to the nixpkgs pin and to
@@ -20,6 +26,25 @@ in
         environment.motd = null;
 
         nix.package = pkgs.nixVersions.nix_2_34;
+
+        # nix-on-droid writes /etc/nix/nix.conf itself, with only the upstream
+        # caches. Without our substituters every overlay and flake-input package
+        # (phix, shell-lsp, the nvim wrapper) has to be fetched from a host that
+        # does have it or compiled here.
+        nix = {
+          inherit (pkgs.stubbe.cache) substituters;
+          trustedPublicKeys = pkgs.stubbe.cache.trusted-public-keys;
+
+          # A cold build here is hours of rustc/go on a phone; the desktop runs
+          # it under emulation instead. `builders-use-substitutes` makes the
+          # desktop fetch inputs from the binary caches rather than receive them
+          # back over ssh from here, and an unreachable builder just falls back
+          # to a local build.
+          extraOptions = ''
+            builders = ssh-ng://${pkgs.stubbe.lanHosts.${buildHost}}@${buildHost}.local aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
+            builders-use-substitutes = true
+          '';
+        };
 
         terminal.font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFontMono-Regular.ttf";
 
