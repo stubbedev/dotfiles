@@ -238,11 +238,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795097104,
-        "narHash": "sha256-jTzcV1mDbd1H2JEa3EkWaFAt2EFkM9RUhXQI7CtkCRU=",
+        "lastModified": 1795265418,
+        "narHash": "sha256-iMPiEDt2VEczaqKtp+XtHMVMrshxzIAv/1ErZekHYps=",
         "owner": "stubbedev",
         "repo": "email.nvim",
-        "rev": "22beeff86fa90bf1c09c216d38bd85914f5b8f04",
+        "rev": "889854143c19e69ecfac5b7edd567ea79b5eccdc",
         "type": "github"
       },
       "original": {
