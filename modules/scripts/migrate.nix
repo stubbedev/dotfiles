@@ -27,7 +27,7 @@ _: {
             stb-migrate restore [--from <host>] <dest>
 
           <dest> is a directory, local (a mounted drive) or remote over ssh
-          ([user@]host:dir, e.g. desktop.local:migrate). Each machine gets its own
+          ([user@]host:dir, e.g. desktop:migrate). Each machine gets its own
           <dest>/<hostname>/ with the mirrored files under home/ and a manifest.
 
           backup   Mirror ~/git, ~/.ssh and ~/.gnupg into <dest>/<hostname>/home,

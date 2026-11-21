@@ -23,9 +23,9 @@ let
       description = "Docker: virtualisation.docker with the local registry:3 container, the client tools and a weekly image prune.";
       profiles = workstation;
     };
-    avahi = {
-      description = "mDNS `*.local` resolution and announcement via services.avahi.";
-      profiles = workstation;
+    peers = {
+      description = "srv LAN peer discovery: announce the host as `<flakeAttr>.home.arpa` and reach the other lanHosts by name over ssh. The srv daemon runs it where features.srv is on; elsewhere (the phone) a login shell starts `srv peer run`.";
+      profiles = everywhere;
     };
     openssh = {
       description = "Authorize the machine's own ssh key for inbound logins. services.openssh itself stays unconditional so the installer ISO keeps its remote-debug path.";

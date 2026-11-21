@@ -6,7 +6,6 @@
 # systemd-resolved drop-in srv would otherwise sudo-write into /etc.
 {
   config,
-  inputs,
   lib,
   ...
 }:
@@ -73,11 +72,13 @@ let
   };
 
   resolvedRouting =
+    peers:
     let
       routingTLDs = [
         "test"
         "localhost"
-      ];
+      ]
+      ++ lib.optional peers config.stubbe.lib.peerZone;
       underRoutingTLD =
         domain: lib.any (tld: domain == tld || lib.hasSuffix ".${tld}" domain) routingTLDs;
       domains = lib.sort lib.lessThan (
@@ -102,6 +103,9 @@ in
 {
   flake.modules.nixos.srv =
     { config, lib, ... }:
+    let
+      routing = resolvedRouting config.stubbe.userFeatures.peers;
+    in
     lib.mkIf config.stubbe.userFeatures.srv {
       # Flake evals are restricted to the flake tree, so a runtime-generated
       # CA under $HOME is invisible here (builtins.pathExists silently returns
@@ -114,8 +118,8 @@ in
       services.resolved.enable = true;
       networking.networkmanager.dns = "systemd-resolved";
 
-      environment.etc."systemd/resolved.conf.d/srv-local.conf".text = resolvedRouting;
-      systemd.services.systemd-resolved.restartTriggers = [ resolvedRouting ];
+      environment.etc."systemd/resolved.conf.d/srv-local.conf".text = routing;
+      systemd.services.systemd-resolved.restartTriggers = [ routing ];
     };
 
   flake.modules.homeManager.srv =
@@ -126,7 +130,7 @@ in
       ...
     }:
     let
-      srvPkg = inputs.srv.packages.${pkgs.stdenv.hostPlatform.system}.srv;
+      srvPkg = pkgs.srv;
       srvExe = lib.getExe' srvPkg "srv";
       rootCA = ../certs/mkcert-rootCA.pem;
       caNickname = "srv CA ${builtins.substring 0 12 (builtins.hashFile "sha256" rootCA)}";

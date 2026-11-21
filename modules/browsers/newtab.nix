@@ -2,8 +2,7 @@
 # page (about:newtab, chrome://newtab) — that is why Tridactyl and SurfingKeys
 # show a "can't run here" banner there. Both browsers point at this page,
 # served by srv over https, so the extensions run on it.
-{ inputs, ... }:
-{
+_: {
   flake.modules.homeManager.newtab =
     {
       config,
@@ -96,7 +95,7 @@
         </body>
         </html>
       '';
-      srvBin = lib.getExe' inputs.srv.packages.${pkgs.stdenv.hostPlatform.system}.srv "srv";
+      srvBin = lib.getExe' pkgs.srv "srv";
     in
     lib.mkIf config.features.browsers {
       stubbe.mutable."${lib.removePrefix "${config.home.homeDirectory}/" root}/index.html" = {

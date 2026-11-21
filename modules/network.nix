@@ -1,30 +1,10 @@
 _: {
   flake.modules.nixos.network =
     {
-      config,
       lib,
       pkgs,
       ...
     }:
-    let
-      avahiRejoin = pkgs.stubbe.bashApp {
-        name = "avahi-rejoin";
-        runtimeInputs = [
-          pkgs.iw
-          config.systemd.package
-        ];
-        text = ''
-          iface=${lib.escapeShellArg config.host.wifiInterface}
-          iw event | while IFS= read -r line; do
-            case "$line" in
-              "$iface (phy #"*"): connected to "* | "$iface (phy #"*"): roamed"*)
-                systemctl restart avahi-daemon.service
-                ;;
-            esac
-          done
-        '';
-      };
-    in
     {
       networking = {
         networkmanager = {
@@ -56,57 +36,6 @@ _: {
           };
       };
 
-      # nssmdns4 is intentionally OFF: it hooks `mdns4_minimal
-      # [NOTFOUND=return]` into nsswitch ahead of `resolve`, which hijacks every
-      # `*.local` lookup to multicast mDNS and returns before systemd-resolved
-      # is consulted. srv routes its local domains (including `*.local`) through
-      # systemd-resolved.
-      services.avahi = lib.mkIf config.stubbe.userFeatures.avahi {
-        enable = true;
-        nssmdns4 = false;
-        openFirewall = true;
-        # Advertise _ssh._tcp (port 22, instance name %h = the host name
-        # below). It is how a machine that cannot run an mDNS resolver - the
-        # phone - finds this one by name: resolving the service needs no NSS
-        # module.
-        extraServiceFiles = lib.optionalAttrs config.services.openssh.enable {
-          ssh = "${pkgs.avahi}/etc/avahi/services/ssh.service";
-        };
-        settings = {
-          server = {
-            allow-interfaces = lib.optional (config.host.wifiInterface != null) config.host.wifiInterface;
-          }
-          // lib.optionalAttrs (config.host.mdnsName != null) { host-name = config.host.mdnsName; };
-          publish = {
-            publish-addresses = true;
-            publish-hinfo = true;
-            publish-workstation = true;
-            publish-domain = true;
-            publish-aaaa-on-ipv4 = false;
-            disable-publishing = false;
-            disable-user-service-publishing = false;
-          };
-        };
-      };
-
-      systemd.services.avahi-rejoin = lib.mkIf config.stubbe.userFeatures.avahi {
-        description = "Restart avahi after wifi (re)association so the AP relearns its mDNS group membership";
-        wantedBy = [ "avahi-daemon.service" ];
-        after = [ "avahi-daemon.service" ];
-        serviceConfig = {
-          ExecStart = lib.getExe avahiRejoin;
-          Restart = "always";
-        };
-      };
-
-      services.resolved.settings.Resolve.MulticastDNS =
-        lib.mkIf config.stubbe.userFeatures.avahi "resolve";
-
-      assertions = lib.optional config.stubbe.userFeatures.avahi {
-        assertion = config.host.wifiInterface != null;
-        message = "features.avahi announces the host on its wifi interface only; set host.wifiInterface.";
-      };
-
       # NM-wait-online blocks boot until any connection is up; on a desktop with
       # offline-friendly services that just adds 20s to every boot. Services
       # that genuinely need network use NetworkManager-online.target instead.
@@ -123,106 +52,16 @@ _: {
     let
       onAndroid = config.host.platform == "android";
 
-      # `ssh laptop` and `ssh laptop.local` for every LAN host, from the one
-      # catalogue. zsh needs no extra completion code: its _ssh_hosts reads
-      # Host and HostName lines straight out of ~/.ssh/config.
-      sshHosts = lib.concatMapAttrs (
+      sshHosts = lib.mapAttrs (
         name: user:
-        let
-          # Android is the one target whose resolver cannot answer a .local
-          # name (see mdnsSsh below), so only it routes through the helper.
-          block = {
-            inherit user;
-          }
-          // lib.optionalAttrs onAndroid {
-            ProxyCommand = "${mdnsSsh}/bin/mdns-ssh %h %p";
-          };
-        in
         {
-          # HostName on the short alias only: `Host laptop.local` would restate
-          # the pattern it already matched.
-          "${name}" = block // {
-            HostName = "${name}.local";
-          };
-          "${name}.local" = block;
+          inherit user;
+          HostName = "${name}.${pkgs.stubbe.peerZone}";
+        }
+        // lib.optionalAttrs onAndroid {
+          ProxyCommand = "${lib.getExe' pkgs.srv "srv"} peer dial %h %p";
         }
       ) pkgs.stubbe.lanHosts;
-
-      # ProxyCommand for the phone, which cannot resolve a .local name itself:
-      # nix-on-droid ships glibc with no mDNS NSS module, no D-Bus for avahi,
-      # and a hardcoded resolv.conf. It resolves the _ssh._tcp record every
-      # other host publishes instead and relays stdio over that connection.
-      mdnsSsh =
-        pkgs.writers.writePython3Bin "mdns-ssh"
-          {
-            libraries = [ pkgs.python3Packages.zeroconf ];
-          }
-          ''
-            import os
-            import select
-            import socket
-            import sys
-
-            from zeroconf import InterfaceChoice, IPVersion, Zeroconf
-
-            SERVICE = "_ssh._tcp.local."
-            SUFFIX = ".local"
-            TIMEOUT_MS = 5000
-            CHUNK = 65536
-
-
-            def resolve(name: str) -> str:
-                label = name[: -len(SUFFIX)] if name.endswith(SUFFIX) else name
-                zc = Zeroconf(
-                    interfaces=InterfaceChoice.Default,
-                    ip_version=IPVersion.V4Only,
-                    unicast=True,
-                )
-                try:
-                    info = zc.get_service_info(
-                        SERVICE, f"{label}.{SERVICE}", timeout=TIMEOUT_MS
-                    )
-                finally:
-                    zc.close()
-                if info is None:
-                    sys.exit(f"mdns-ssh: {label} publishes no {SERVICE} record")
-                addresses = info.parsed_scoped_addresses()
-                if not addresses:
-                    sys.exit(f"mdns-ssh: {label} publishes no address")
-                return addresses[0]
-
-
-            def relay(remote: socket.socket) -> None:
-                stdin_fd = sys.stdin.fileno()
-                stdout_fd = sys.stdout.fileno()
-                watched = [stdin_fd, remote.fileno()]
-                while watched:
-                    readable, _, _ = select.select(watched, [], [])
-                    if stdin_fd in readable:
-                        data = os.read(stdin_fd, CHUNK)
-                        if data:
-                            remote.sendall(data)
-                        else:
-                            watched.remove(stdin_fd)
-                            remote.shutdown(socket.SHUT_WR)
-                    if remote.fileno() in readable:
-                        data = remote.recv(CHUNK)
-                        if not data:
-                            return
-                        os.write(stdout_fd, data)
-
-
-            def main() -> None:
-                if len(sys.argv) != 3:
-                    sys.exit("usage: mdns-ssh <host> <port>")
-                address = resolve(sys.argv[1])
-                port = int(sys.argv[2])
-                with socket.create_connection((address, port)) as remote:
-                    relay(remote)
-
-
-            main()
-          '';
     in
     {
       # HM owns the file from here on: a hand-written ~/.ssh/config would

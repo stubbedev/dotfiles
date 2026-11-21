@@ -28,6 +28,7 @@ in
     ]
     // fromInputs [
       "shell-lsp"
+      "srv"
       "claude-code"
       "xilo"
     ]

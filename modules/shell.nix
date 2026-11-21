@@ -31,7 +31,6 @@
     let
       onAndroid = config.host.platform == "android";
       inherit (config.stubbe) launchers;
-      avahiHostsCache = "${config.xdg.cacheHome}/zsh-avahi-hosts";
 
       gitShorthandDocs = {
         gcm = "treeman git commit — auto ticket prefix; trailing \\ opens editor";
@@ -229,18 +228,6 @@
             zstyle ':fzf-tab:*' fzf-flags --color=fg:1,fg+:2 --bind=tab:accept --height=40% --reverse --info=inline
             zstyle ':fzf-tab:*' switch-group '<' '>'
             zstyle ':fzf-tab:*' fuzzy-search true
-
-            ${lib.optionalString config.features.avahi ''
-              function _avahi_ssh_hosts {
-                local cache=${lib.escapeShellArg avahiHostsCache}
-                if [[ -s $cache ]]; then
-                  reply=( ''${(f)"$(<$cache)"} )
-                else
-                  reply=()
-                fi
-              }
-              zstyle -e ':completion:*:hosts' hosts '_avahi_ssh_hosts'
-            ''}
 
             HYPHEN_INSENSITIVE=false
             DISABLE_AUTO_TITLE=true
@@ -620,40 +607,6 @@
             Restart = "on-failure";
           };
           Install.WantedBy = [ "default.target" ];
-        };
-
-        systemd.user.services.zsh-avahi-hosts = lib.mkIf config.features.avahi {
-          Unit.Description = "Refresh avahi .local host cache for zsh completion";
-          Service = {
-            Type = "oneshot";
-            ExecStart =
-              let
-                cacheFile = avahiHostsCache;
-              in
-              pkgs.stubbe.shellScript "zsh-avahi-hosts-refresh" ''
-                set -u -o pipefail
-                mkdir -p "$(dirname '${cacheFile}')"
-                tmp='${cacheFile}.tmp'
-                if ${pkgs.avahi}/bin/avahi-browse -atrp \
-                     | ${lib.getExe pkgs.gawk} -F';' '$1=="=" && $3=="IPv4" && ($5=="_workstation._tcp" || $5 ~ /ssh/) && $7!="" {print $7}' \
-                     | sort -u > "$tmp"; then
-                  mv "$tmp" '${cacheFile}'
-                else
-                  rm -f "$tmp"
-                fi
-              '';
-            Nice = 19;
-            IOSchedulingClass = "idle";
-          };
-        };
-
-        systemd.user.timers.zsh-avahi-hosts = lib.mkIf config.features.avahi {
-          Unit.Description = "Periodic avahi host cache refresh";
-          Timer = {
-            OnBootSec = "30s";
-            OnUnitActiveSec = "10min";
-          };
-          Install.WantedBy = [ "timers.target" ];
         };
       };
     };

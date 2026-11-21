@@ -11,7 +11,6 @@
       host = {
         installed = true;
         graphicsNvidia = true;
-        wifiInterface = "wlp3s0";
 
         # The phone is the only aarch64 machine, and it cannot compile its own
         # closure in any useful time. Emulating aarch64 here registers it with

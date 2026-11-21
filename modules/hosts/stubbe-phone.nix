@@ -13,8 +13,8 @@ in
       { config, pkgs, ... }:
       let
         # The machine that compiles this phone's closures: an x86_64 host that
-        # emulates aarch64 (modules/hosts/desktop.nix), reached over the same
-        # mDNS name and ssh config every other host uses.
+        # emulates aarch64 (modules/hosts/desktop.nix), reached through the
+        # same ssh alias every other host uses (modules/network.nix).
         buildHost = "desktop";
       in
       {
@@ -43,7 +43,7 @@ in
           extraOptions = ''
             builders = ssh-ng://${
               pkgs.stubbe.lanHosts.${buildHost}
-            }@${buildHost}.local aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
+            }@${buildHost} aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
             builders-use-substitutes = true
           '';
         };
