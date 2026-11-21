@@ -36,12 +36,25 @@ _: {
         force = true;
       };
 
-      systemd.user.services.srv-daemon.Unit.X-Restart-Triggers = lib.mkIf (!onAndroid) [ "${srvConfig}" ];
+      systemd.user.services =
+        if onAndroid then
+          {
+            # The phone runs no srv daemon, only its peer discovery.
+            srv-peer = {
+              Unit = {
+                Description = "srv LAN peer discovery";
+                X-Restart-Triggers = [ "${srvConfig}" ];
+              };
+              Service = {
+                ExecStart = "${lib.getExe' pkgs.srv "srv"} peer run";
+                Restart = "on-failure";
+              };
+              Install.WantedBy = [ "default.target" ];
+            };
+          }
+        else
+          { srv-daemon.Unit.X-Restart-Triggers = [ "${srvConfig}" ]; };
 
       home.packages = lib.mkIf onAndroid [ pkgs.srv ];
-
-      stubbe.androidDaemons = lib.mkIf onAndroid {
-        srv-peer = "${lib.getExe' pkgs.srv "srv"} peer run";
-      };
     };
 }

@@ -11,7 +11,6 @@
       c = pkgs.stubbe.withHash;
 
       onAndroid = config.host.platform == "android";
-      androidRuntimeDir = "/tmp/runtime-${config.home.username}";
 
       # nix-on-droid generates /etc from the store with no certificates in
       # it, so Android points at nixpkgs' bundle. On NixOS the OS store wins
@@ -34,15 +33,7 @@
       ];
     in
     {
-      home.activation.androidRuntimeDir = lib.mkIf onAndroid (
-        lib.hm.dag.entryBefore [ "writeBoundary" ] ''
-          export XDG_RUNTIME_DIR=${lib.escapeShellArg androidRuntimeDir}
-          mkdir -p -m 0700 "$XDG_RUNTIME_DIR"
-        ''
-      );
-
       home.sessionVariables = {
-        XDG_RUNTIME_DIR = lib.mkIf onAndroid androidRuntimeDir;
         NIXPKGS_ALLOW_UNFREE = "1";
         NIXPKGS_ALLOW_INSECURE = "1";
 

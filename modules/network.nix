@@ -92,20 +92,33 @@ _: {
         packages = lib.mkIf onAndroid [ pkgs.openssh ];
       };
 
-      stubbe.androidDaemons = lib.mkIf phoneSshd {
-        sshd = "${lib.getExe' pkgs.openssh "sshd"} -D -e -f ${sshdConfig}";
+      # The phone's sshd, which phix runs from this user unit as it runs every
+      # other one; NixOS hosts get the system openssh above instead.
+      systemd.user.services.sshd = lib.mkIf phoneSshd {
+        Unit.Description = "OpenSSH server for the LAN hosts";
+        Service = {
+          ExecStartPre = lib.getExe (
+            pkgs.stubbe.bashApp {
+              name = "sshd-host-key";
+              runtimeInputs = [
+                pkgs.coreutils
+                pkgs.openssh
+              ];
+              text = ''
+                if [ ! -f ${lib.escapeShellArg sshdHostKey} ]; then
+                  install -d -m 0700 ${lib.escapeShellArg sshdDir}
+                  ssh-keygen -q -t ed25519 -N "" -f ${lib.escapeShellArg sshdHostKey}
+                fi
+              '';
+            }
+          );
+          ExecStart = "${lib.getExe' pkgs.openssh "sshd"} -D -e -f ${sshdConfig}";
+          Restart = "on-failure";
+        };
+        Install.WantedBy = [ "default.target" ];
       };
 
       stubbe.setup = {
-        sshdHostKey = lib.mkIf phoneSshd {
-          script = ''
-            if [ ! -f ${lib.escapeShellArg sshdHostKey} ]; then
-              install -d -m 0700 ${lib.escapeShellArg sshdDir}
-              ${lib.getExe' pkgs.openssh "ssh-keygen"} -q -t ed25519 -N "" -f ${lib.escapeShellArg sshdHostKey}
-            fi
-          '';
-        };
-
         sshSelfAuth = lib.mkIf config.features.openssh {
           script = ''
             pub="$HOME/.ssh/id_ed25519.pub"

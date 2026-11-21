@@ -1,7 +1,9 @@
 # Android: nix-on-droid inside the F-Droid Termux app. Inside the home-manager
 # bridge it is the same module set as every other host; the mobile profile
 # keeps it to the terminal set, since proot has no display server, no D-Bus,
-# no init/systemd, no /etc and no setuid.
+# no init/systemd, no /etc and no setuid. phix stands in for systemd's user
+# manager (modules/scripts/phix.nix sets platform "android"), so the user
+# units every host declares run here too.
 { config, ... }:
 let
   homeModules = config.flake.modules.homeManager;

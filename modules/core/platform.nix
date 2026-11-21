@@ -82,8 +82,9 @@ in
             Host platform. "nixos" means home-manager runs inside a NixOS
             host, whose matching NixOS module owns every system-level file.
             "android" means nix-on-droid inside Termux: a proot'd glibc
-            environment with no init, no D-Bus, no /etc and no /usr, where no
-            systemd unit can run at all.
+            environment with no init, no D-Bus, no /etc and no /usr. phix
+            runs the systemd user units there instead (`phix service`), so
+            user services and timers are declared the same way on both.
           '';
         };
 

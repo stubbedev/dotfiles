@@ -516,14 +516,6 @@
               source ${starshipInit}
               source ${zoxideInit}
               ${lib.optionalString config.programs.direnv-instant.enable "source ${direnvInstantInit}"}
-              ${lib.optionalString (config.host.platform == "android") ''
-                if ! ${lib.getExe pkgs.zsh-patina} status >/dev/null 2>&1; then
-                  ${lib.getExe pkgs.zsh-patina} start
-                  _patina_stop_on_exit() { ${lib.getExe pkgs.zsh-patina} stop >/dev/null }
-                  autoload -Uz add-zsh-hook
-                  add-zsh-hook zshexit _patina_stop_on_exit
-                fi
-              ''}
               _patina_init="${config.xdg.cacheHome}/zsh/patina-init.zsh"
               [[ -f "$_patina_init" ]] && source "$_patina_init"
               unset _patina_init
@@ -599,8 +591,7 @@
         # activate` embeds $XDG_RUNTIME_DIR and starts the daemon. That generated
         # script never starts the daemon itself, so without this unit highlighting
         # silently does nothing after a reboot.
-        # User units, which nothing runs on Android: nix-on-droid has no init.
-        systemd.user.services.zsh-patina = lib.mkIf (!onAndroid) {
+        systemd.user.services.zsh-patina = {
           Unit.Description = "zsh-patina syntax highlighting daemon";
           Service = {
             ExecStart = "${lib.getExe pkgs.zsh-patina} start --no-daemon";
