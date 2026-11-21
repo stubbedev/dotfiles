@@ -6,6 +6,25 @@ _: {
       pkgs,
       ...
     }:
+    let
+      avahiRejoin = pkgs.stubbe.bashApp {
+        name = "avahi-rejoin";
+        runtimeInputs = [
+          pkgs.iw
+          config.systemd.package
+        ];
+        text = ''
+          iface=${lib.escapeShellArg config.host.wifiInterface}
+          iw event | while IFS= read -r line; do
+            case "$line" in
+              "$iface (phy #"*"): connected to "* | "$iface (phy #"*"): roamed"*)
+                systemctl restart avahi-daemon.service
+                ;;
+            esac
+          done
+        '';
+      };
+    in
     {
       networking = {
         networkmanager = {
@@ -67,6 +86,16 @@ _: {
             disable-publishing = false;
             disable-user-service-publishing = false;
           };
+        };
+      };
+
+      systemd.services.avahi-rejoin = lib.mkIf config.stubbe.userFeatures.avahi {
+        description = "Restart avahi after wifi (re)association so the AP relearns its mDNS group membership";
+        wantedBy = [ "avahi-daemon.service" ];
+        after = [ "avahi-daemon.service" ];
+        serviceConfig = {
+          ExecStart = lib.getExe avahiRejoin;
+          Restart = "always";
         };
       };
 
