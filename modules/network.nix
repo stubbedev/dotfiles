@@ -24,16 +24,7 @@ _: {
         enable = true;
         # mkDefault so the live ISO can override to "prohibit-password" —
         # root login over SSH is the only way to remote-debug a stuck install.
-        settings =
-          lib.mapAttrs (_: lib.mkDefault) {
-            PasswordAuthentication = false;
-            KbdInteractiveAuthentication = false;
-            PermitRootLogin = "no";
-          }
-          // {
-            ClientAliveInterval = 60;
-            ClientAliveCountMax = 3;
-          };
+        settings = lib.mapAttrs (_: lib.mkDefault) pkgs.stubbe.sshdSettings;
       };
 
       # NM-wait-online blocks boot until any connection is up; on a desktop with
@@ -53,15 +44,35 @@ _: {
       onAndroid = config.host.platform == "android";
 
       sshHosts = lib.mapAttrs (
-        name: user:
+        name: host:
         {
-          inherit user;
+          inherit (host) user;
           HostName = "${name}.${pkgs.stubbe.peerZone}";
+          Port = host.port;
         }
         // lib.optionalAttrs onAndroid {
           ProxyCommand = "${lib.getExe' pkgs.srv "srv"} peer dial %h %p";
         }
       ) pkgs.stubbe.lanHosts;
+
+      sshdDir = "${config.xdg.stateHome}/sshd";
+      sshdHostKey = "${sshdDir}/ssh_host_ed25519_key";
+      sshdConfig = pkgs.writeText "sshd_config" (
+        lib.generators.toKeyValue
+          {
+            mkKeyValue =
+              key: value: "${key} ${if lib.isBool value then lib.boolToYesNo value else toString value}";
+          }
+          (
+            pkgs.stubbe.sshdSettings
+            // {
+              Port = pkgs.stubbe.lanHosts.${config.host.flakeAttr}.port;
+              HostKey = sshdHostKey;
+              PidFile = "none";
+            }
+          )
+      );
+      phoneSshd = onAndroid && config.features.openssh;
     in
     {
       # HM owns the file from here on: a hand-written ~/.ssh/config would
@@ -81,7 +92,20 @@ _: {
         packages = lib.mkIf onAndroid [ pkgs.openssh ];
       };
 
+      stubbe.androidDaemons = lib.mkIf phoneSshd {
+        sshd = "${lib.getExe' pkgs.openssh "sshd"} -D -e -f ${sshdConfig}";
+      };
+
       stubbe.setup = {
+        sshdHostKey = lib.mkIf phoneSshd {
+          script = ''
+            if [ ! -f ${lib.escapeShellArg sshdHostKey} ]; then
+              install -d -m 0700 ${lib.escapeShellArg sshdDir}
+              ${lib.getExe' pkgs.openssh "ssh-keygen"} -q -t ed25519 -N "" -f ${lib.escapeShellArg sshdHostKey}
+            fi
+          '';
+        };
+
         sshSelfAuth = lib.mkIf config.features.openssh {
           script = ''
             pub="$HOME/.ssh/id_ed25519.pub"

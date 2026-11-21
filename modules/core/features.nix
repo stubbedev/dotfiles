@@ -28,8 +28,8 @@ let
       profiles = everywhere;
     };
     openssh = {
-      description = "Authorize the machine's own ssh key for inbound logins. services.openssh itself stays unconditional so the installer ISO keeps its remote-debug path.";
-      profiles = workstation;
+      description = "Inbound ssh: authorize the machine's own ssh key, and on the phone run an unprivileged sshd on its lanHosts port. services.openssh itself stays unconditional on NixOS so the installer ISO keeps its remote-debug path.";
+      profiles = everywhere;
     };
     lysWm = {
       description = "The lys-wm compositor, its session, and login (the lys-login display manager).";

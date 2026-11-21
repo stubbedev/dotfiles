@@ -25,6 +25,8 @@ in
 
         environment.motd = null;
 
+        android-integration.termux-wake-lock.enable = true;
+
         nix.package = pkgs.nixVersions.nix_2_34;
 
         # nix-on-droid writes /etc/nix/nix.conf itself, with only the upstream
@@ -41,9 +43,7 @@ in
           # back over ssh from here, and an unreachable builder just falls back
           # to a local build.
           extraOptions = ''
-            builders = ssh-ng://${
-              pkgs.stubbe.lanHosts.${buildHost}
-            }@${buildHost} aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
+            builders = ssh-ng://${buildHost} aarch64-linux ${config.user.home}/.ssh/id_ed25519 8 4 big-parallel
             builders-use-substitutes = true
           '';
         };
