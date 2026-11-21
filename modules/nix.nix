@@ -123,27 +123,29 @@ in
       # Hosts this machine builds for: the android configurations whose system
       # it emulates. Derived, so a second phone needs nothing but its system in
       # `host.emulatedSystems`.
-      emulatedAndroidAttrs =
+      emulatedAndroidHosts =
         let
           hosts = flakeConfig.configurations.nixOnDroid;
-          emulated = builtins.filter (name: builtins.elem hosts.${name}.system config.host.emulatedSystems) (
-            builtins.attrNames hosts
-          );
         in
-        map (name: "nixOnDroidConfigurations.${name}.activationPackage") emulated;
+        builtins.filter (name: builtins.elem hosts.${name}.system config.host.emulatedSystems) (
+          builtins.attrNames hosts
+        );
 
       # phix appends the generation it just built to every post-switch hook's
-      # arguments, so the attribute is the first argument and the rest is
-      # ignored.
-      xiloPushClosure = pkgs.stubbe.bashApp {
-        name = "xilo-push-closure";
+      # arguments, so the host is the first argument and the rest is ignored.
+      xiloPushAndroid = pkgs.stubbe.bashApp {
+        name = "xilo-push-android";
         runtimeInputs = [
           pkgs.nix
           pkgs.xilo
         ];
         text = ''
-          attr="$1"
-          storePath=$(nix build "$PHIX_FLAKE#$attr" --no-link --print-out-paths --no-write-lock-file)
+          host="$PHIX_FLAKE#nixOnDroidConfigurations.$1"
+          caches=$(nix eval --raw --no-write-lock-file "$host.config.nix" \
+            --apply 'nix: toString nix.substituters + "\n" + toString nix.trustedPublicKeys')
+          { read -r substituters; read -r keys; } <<< "$caches"
+          storePath=$(nix build "$host.activationPackage" --impure --no-link --print-out-paths --no-write-lock-file \
+            --extra-substituters "$substituters" --extra-trusted-public-keys "$keys")
           xilo push --quiet ${xiloCache.cache} "$storePath"
         '';
       };
@@ -164,13 +166,13 @@ in
           secretEnv.XILO_TOKEN = "xilo-token";
         }
       ]
-      ++ map (attr: {
-        description = "Pushing ${attr} to ${xiloCache.url}";
-        exec = lib.getExe xiloPushClosure;
-        args = [ attr ];
+      ++ map (host: {
+        description = "Pushing the ${host} closure to ${xiloCache.url}";
+        exec = lib.getExe xiloPushAndroid;
+        args = [ host ];
         env.XILO_URL = xiloCache.url;
         secretEnv.XILO_TOKEN = "xilo-token";
-      }) emulatedAndroidAttrs;
+      }) emulatedAndroidHosts;
     in
     {
       home.packages = lib.mkIf config.features.development [
