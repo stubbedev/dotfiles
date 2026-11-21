@@ -136,7 +136,7 @@ local function load_email()
     accounts = accounts,
     sync_cmd = { "mail-sync" },
     searches = {
-      { name = "Unread", query = "tag:unread and tag:inbox" },
+      { name = "Inbox", query = "tag:inbox" },
       { name = "Flagged", query = "tag:flagged" },
       { name = "Invites", query = "mimetype:text/calendar and date:30d.." },
     },
