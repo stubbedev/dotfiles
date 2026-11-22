@@ -61,9 +61,8 @@ let
         Systems this machine builds for machines that cannot build them
         themselves. On a NixOS host modules/nix.nix registers them with
         binfmt_misc, which also adds them to the nix daemon's
-        `extra-platforms`, and it is the list that decides which other hosts'
-        closures this one builds and pushes to the binary cache after a
-        switch.
+        `extra-platforms`, so it can serve as the remote builder of a host
+        whose cached closure is not there yet.
       '';
     };
   };

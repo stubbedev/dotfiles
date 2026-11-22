@@ -120,59 +120,17 @@ in
 
       xiloCache = pkgs.stubbe.cache.xilo;
 
-      # Hosts this machine builds for: the android configurations whose system
-      # it emulates. Derived, so a second phone needs nothing but its system in
-      # `host.emulatedSystems`.
-      emulatedAndroidHosts =
-        let
-          hosts = flakeConfig.configurations.nixOnDroid;
-        in
-        builtins.filter (name: builtins.elem hosts.${name}.system config.host.emulatedSystems) (
-          builtins.attrNames hosts
-        );
-
-      # phix appends the generation it just built to every post-switch hook's
-      # arguments, so the host is the first argument and the rest is ignored.
-      xiloPushAndroid = pkgs.stubbe.bashApp {
-        name = "xilo-push-android";
-        runtimeInputs = [
-          pkgs.nix
-          pkgs.xilo
+      cacheHook = {
+        description = "Pushing the closure to ${xiloCache.url}";
+        exec = lib.getExe' pkgs.xilo "xilo";
+        args = [
+          "push"
+          "--quiet"
+          xiloCache.cache
         ];
-        text = ''
-          host="$PHIX_FLAKE#nixOnDroidConfigurations.$1"
-          caches=$(nix eval --raw --no-write-lock-file "$host.config.nix" \
-            --apply 'nix: toString nix.substituters + "\n" + toString nix.trustedPublicKeys')
-          { read -r substituters; read -r keys; } <<< "$caches"
-          storePath=$(nix build "$host.activationPackage" --impure --no-link --print-out-paths --no-write-lock-file \
-            --extra-substituters "$substituters" --extra-trusted-public-keys "$keys")
-          xilo push --quiet ${xiloCache.cache} "$storePath"
-        '';
-      };
-
-      # The machine's own closure, then every closure it builds for a host that
-      # cannot build its own: `phix switch` and `phix upgrade` run both, so the
-      # phone substitutes its closure instead of compiling it.
-      cacheHooks = [
-        {
-          description = "Pushing the closure to ${xiloCache.url}";
-          exec = lib.getExe' pkgs.xilo "xilo";
-          args = [
-            "push"
-            "--quiet"
-            xiloCache.cache
-          ];
-          env.XILO_URL = xiloCache.url;
-          secretEnv.XILO_TOKEN = "xilo-token";
-        }
-      ]
-      ++ map (host: {
-        description = "Pushing the ${host} closure to ${xiloCache.url}";
-        exec = lib.getExe xiloPushAndroid;
-        args = [ host ];
         env.XILO_URL = xiloCache.url;
         secretEnv.XILO_TOKEN = "xilo-token";
-      }) emulatedAndroidHosts;
+      };
     in
     {
       home.packages = lib.mkIf config.features.development [
@@ -183,7 +141,7 @@ in
 
       stubbe.zshCompletions._xilo = lib.mkIf config.features.development "${lib.getExe' pkgs.xilo "xilo"} completion zsh";
 
-      programs.phix.postSwitch = lib.mkIf config.features.development cacheHooks;
+      programs.phix.postSwitch = lib.mkIf config.features.development [ cacheHook ];
 
       # Generations only: on NixOS the system nix.gc above sweeps the store
       # weekly, and on Android `nix-on-droid trim` owns it.

@@ -193,12 +193,13 @@ this relies on: the desktop must be reachable as `desktop.local` (the phone's
 the phone's `id_ed25519.pub` in its `authorized_keys`, and if it is asleep the
 build falls back to the device, which is slow but correct.
 
-The same fact fills the cache: every host whose system appears in the desktop's
-`host.emulatedSystems` gets a second post-switch hook, which builds that
-host's `activationPackage` and pushes its closure to xilos.dev. `phix switch`
-and `phix upgrade` both run post-switch hooks, so the phone substitutes instead
-of compiling after every desktop switch, and a reinstall or `nix-on-droid trim`
-on the phone finds its whole closure already cached.
+The cache is filled natively, not under qemu: the `android` workflow
+(`.github/workflows/android.yml`) runs on GitHub's arm64 runners after every
+push to master, builds each aarch64 `nixOnDroidConfigurations` entry with
+`nix run .#build-android` (which adds the phone's own substituters, so the
+proot nix-on-droid pins comes from its cachix) and pushes the closure to
+xilos.dev. Once that run is green the phone substitutes its whole closure; the
+desktop builder only catches a switch that starts before it finishes.
 
 ## INSTALLING NIXOS
 
