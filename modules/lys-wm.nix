@@ -80,14 +80,13 @@
       );
 
       mediaBinds = lib.mapAttrsToList (key: command: locked key (exec command)) {
-        XF86AudioPlay = "playerctl play-pause";
-        XF86AudioStop = "playerctl stop";
-        XF86AudioPrev = "playerctl previous";
-        XF86AudioNext = "playerctl next";
-        XF86AudioRaiseVolume = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+";
-        XF86AudioLowerVolume = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
-        XF86AudioMute = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
-        XF86AudioMicMute = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
+        XF86AudioPlay = "lys-shell media play-pause";
+        XF86AudioPrev = "lys-shell media previous";
+        XF86AudioNext = "lys-shell media next";
+        XF86AudioRaiseVolume = "lys-shell audio output-volume +5";
+        XF86AudioLowerVolume = "lys-shell audio output-volume -5";
+        XF86AudioMute = "lys-shell audio output-mute";
+        XF86AudioMicMute = "lys-shell audio input-mute";
         XF86MonBrightnessUp = "lys-shell brightness +10";
         XF86MonBrightnessDown = "lys-shell brightness -10";
       };
@@ -138,10 +137,7 @@
           keyboard = {
             layout = "us,dk,es";
             options = "grp:toggle";
-            repeat_rate = 50;
-            repeat_delay = 300;
           };
-          pointer.accel_profile = "flat";
           touchpad = {
             accel_profile = "flat";
             tap = true;
@@ -167,7 +163,7 @@
         binds = [
           (bind "SUPER + Return" (launch "ghostty"))
           (bind "SUPER + SHIFT + E" (launch "pcmanfm"))
-          (bind "SUPER + space" (exec "lys-shell launcher"))
+          (bind "SUPER + space" "global dev.stubbe.lys.shell:launcher")
           (bind "SUPER + SHIFT + space" (exec "lys-shell launcher -show run"))
           (bind "SUPER + CTRL + space" (exec "lys-shell launcher -show window"))
           (bind "SHIFT + Print" (exec "lys-shell screenshot output"))

@@ -75,6 +75,12 @@ in
 
       app2unit = lib.getExe' pkgs.app2unit "app2unit";
 
+      home = {
+        name = "Copenhagen";
+        latitude = 55.6;
+        longitude = 12.5;
+      };
+
       mailProviders = {
         kontainer = "outlook";
         gmail = "gmail";
@@ -137,7 +143,7 @@ in
                   {
                     monitor = "*";
                     left = [
-                      "lys-wm-workspaces"
+                      "workspaces"
                       "keybind-mode"
                     ];
                     center = [
@@ -199,8 +205,6 @@ in
                   "Spanish (Spain)" = "ES";
                 };
 
-                lys-wm-workspaces.display-mode = "label";
-
                 notifications.label-show = false;
 
                 # label-show is all-or-nothing: showing a connected device name
@@ -210,7 +214,7 @@ in
                 audio.right-click = "lys-shell audio input-mute";
 
                 weather = {
-                  location = "55.6,12.5";
+                  location = home;
                   units = "metric";
                 };
 
@@ -222,12 +226,8 @@ in
                 };
 
                 mail = {
-                  hide-when-zero = true;
                   notify = true;
-                  notify-summary = "{{ sender }}";
-                  notify-body = "{{ subject }}";
                   notify-click = "mail-open thread:{{ thread }}";
-                  left-click = "dropdown:mail";
                   middle-click = "mail-open";
                   accounts = mailAccounts;
                 };
@@ -235,17 +235,11 @@ in
                 nightlight = {
                   temperature = 4500;
                   auto-schedule = true;
-                  latitude = 55.6;
-                  longitude = 12.5;
+                  location = home;
                   label-show = false;
                 };
 
                 power.suspend-command = "systemctl ${config.host.sleepVerb}";
-
-                power-profiles = {
-                  label-show = false;
-                  left-click = ":cycle";
-                };
 
                 keybind-mode = {
                   auto-hide = true;
