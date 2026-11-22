@@ -3,6 +3,8 @@ name: android
 on:
   push:
     branches: [master]
+  schedule:
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:

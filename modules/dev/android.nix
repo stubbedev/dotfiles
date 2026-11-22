@@ -8,16 +8,23 @@
 let
   hosts = config.configurations.nixOnDroid;
 
+  xiloStore = config.stubbe.lib.cache.xilo.store;
+
   build =
     name:
     let
       inherit (self.nixOnDroidConfigurations.${name}.config) nix;
     in
     ''
-      nix build ".#nixOnDroidConfigurations.${name}.activationPackage" \
-        --impure --no-link --print-build-logs \
-        --extra-substituters ${lib.escapeShellArg (toString nix.substituters)} \
-        --extra-trusted-public-keys ${lib.escapeShellArg (toString nix.trustedPublicKeys)}
+      installable=".#nixOnDroidConfigurations.${name}.activationPackage"
+      if nix path-info --store ${lib.escapeShellArg xiloStore} "$(nix eval --raw --impure "$installable.outPath")" > /dev/null 2>&1; then
+        echo "${name}: closure already in ${xiloStore}"
+      else
+        nix build "$installable" \
+          --impure --no-link --print-build-logs \
+          --extra-substituters ${lib.escapeShellArg (toString nix.substituters)} \
+          --extra-trusted-public-keys ${lib.escapeShellArg (toString nix.trustedPublicKeys)}
+      fi
     '';
 
   buildAndroid =

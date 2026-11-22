@@ -3,14 +3,15 @@
 _: {
   stubbe.lib = {
     cache = rec {
-      xilo = {
+      xilo = rec {
         url = "https://xilos.dev";
         cache = "stubbedev/main";
+        store = "${url}/c/${cache}";
       };
       # xilo (xilos.dev) first: self-hosted cache is preferred, then
       # upstream and nix-community.
       substituters = [
-        "${xilo.url}/c/${xilo.cache}"
+        xilo.store
         "https://cache.nixos.org"
         "https://nix-community.cachix.org"
       ];
