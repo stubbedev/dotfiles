@@ -164,7 +164,7 @@ local function load_email()
   blink.add_filetype_source("mail", "email")
 end
 
-for _, command in ipairs({ "Email", "EmailCompose", "EmailSearch" }) do
+for _, command in ipairs({ "Email", "EmailCompose", "EmailSearch", "EmailOpen" }) do
   vim.api.nvim_create_user_command(command, function(opts)
     load_email()
     vim.cmd(command .. " " .. opts.args)
