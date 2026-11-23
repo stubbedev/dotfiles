@@ -432,6 +432,24 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems_2"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "gitignore": {
       "inputs": {
         "nixpkgs": [
@@ -614,11 +632,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795403516,
-        "narHash": "sha256-G9Yg7RTshr0vyL5X+c46D8L7wuION07KMtEz15sLxA8=",
+        "lastModified": 1795432004,
+        "narHash": "sha256-iiE3vfM4CykNfrICZbAAhDqH6MUQTeKpm3tjS48zp5s=",
         "owner": "stubbedev",
         "repo": "lys",
-        "rev": "a3401bb29775b8c371d42924dcb1fdfb097cc111",
+        "rev": "ad3da92a00f8a99f45fa3521d721cbd271f88884",
         "type": "github"
       },
       "original": {
@@ -965,6 +983,28 @@
         "type": "github"
       }
     },
+    "phpantom_lsp": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795444224,
+        "narHash": "sha256-he9UgLtHIs9L/O/gurTqp4gue5Xtc+nPHtX3vEcAMz4=",
+        "owner": "PHPantom-dev",
+        "repo": "phpantom_lsp",
+        "rev": "72ed66588ee7cc7893e270cec78677dcf4e961dc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "PHPantom-dev",
+        "ref": "main",
+        "repo": "phpantom_lsp",
+        "type": "github"
+      }
+    },
     "pre-commit-hooks-nix": {
       "inputs": {
         "flake-compat": [
@@ -1009,6 +1049,7 @@
         "nix-on-droid": "nix-on-droid",
         "nixpkgs": "nixpkgs_3",
         "phix": "phix",
+        "phpantom_lsp": "phpantom_lsp",
         "shell-lsp": "shell-lsp",
         "sops-nix": "sops-nix",
         "srv": "srv",
@@ -1068,11 +1109,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795373941,
-        "narHash": "sha256-rGOlz8j6lkv4qpFbGiKxFkKthSf0o8NRNQC7Wvvxm9Q=",
+        "lastModified": 1795431254,
+        "narHash": "sha256-sV2KVgJRyjHYPncPO26TxH6n06RyoISMstqfCqbkWr8=",
         "owner": "stubbedev",
         "repo": "shell-lsp",
-        "rev": "5a417fc0c43b3769e5d876666e5fa2fe7595f9e3",
+        "rev": "a250e68f6801cdac12b15bfa024e269eaf6fbabf",
         "type": "github"
       },
       "original": {
@@ -1128,6 +1169,21 @@
         "owner": "nix-systems",
         "repo": "default",
         "rev": "d36eeed142f88b5a636f2e3856a53c61654cf29b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_2": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
         "type": "github"
       },
       "original": {
