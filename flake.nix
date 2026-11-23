@@ -32,6 +32,10 @@
       url = "github:stubbedev/shell-lsp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    phpantom_lsp = {
+      url = "github:PHPantom-dev/phpantom_lsp/main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     phix = {
       url = "github:stubbedev/phix";
       inputs = {

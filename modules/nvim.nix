@@ -131,6 +131,7 @@
                   superhtml # html
                   biome # css, json
                   shell-lsp
+                  phpantom_lsp
                   taplo
                   terraform-ls
                   yayamlls

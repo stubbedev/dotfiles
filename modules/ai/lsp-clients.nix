@@ -37,6 +37,11 @@ _: {
           languages.vue = "vue";
         };
 
+        phpantom = {
+          command = lib.getExe' pkgs.phpantom_lsp "phpantom_lsp";
+          languages.php = "php";
+        };
+
         lua_ls = {
           command = lib.getExe' pkgs.lua-language-server "lua-language-server";
           languages.lua = "lua";
