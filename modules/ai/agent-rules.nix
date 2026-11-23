@@ -81,6 +81,7 @@ _: {
         - **No wildcard `rm`.** Never `rm dir/*`, `rm -f *.log` or `cd dir; rm ...`: they stop on a manual approval prompt. Empty a directory with `find /absolute/path -mindepth 1 -delete`; delete single files by their full absolute path.
         - **No `pgrep -f` wait loops.** `until ! pgrep -f <pattern>` matches its own command line and never ends. Wait with `wait`, `tail --pid=N -f /dev/null`, a run-status query, or the tool's background-completion notification.
         - **Reap background work.** Stop every background command, monitor and wait loop you started before you report; nothing of yours outlives the task. Stop sub-agents once their final report is in.
+        - **Worktrees live inside the repo.** Create every git worktree under the repo's own `.worktrees/<branch>` directory (e.g. `.worktrees/feature/KON-123-x`), never as a sibling directory next to the repo.
 
         ## Verification
 
