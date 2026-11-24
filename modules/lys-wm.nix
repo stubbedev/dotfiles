@@ -93,6 +93,11 @@
 
       resizeSubmap = "resize_mode";
 
+      outputDefaults = {
+        mode = "highres";
+        vrr = "on";
+      };
+
       settings = {
         env = {
           XDG_SESSION_DESKTOP = "lys-wm";
@@ -116,7 +121,7 @@
 
         tearing = true;
 
-        outputs = map (rule: { vrr = "on"; } // rule) [
+        outputs = map (rule: outputDefaults // rule) [
           {
             match = "eDP-1";
             scale = 1.5;
@@ -129,10 +134,7 @@
             match = "desc:LG Electronics LG HDR 4K 0x00016261";
             scale = 1.5;
           }
-          {
-            match = "*";
-            mode = "highres";
-          }
+          { match = "*"; }
         ];
 
         input = {
