@@ -632,11 +632,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795497862,
-        "narHash": "sha256-4DcNvD2c9/Q3u2TB9v3UBrmRZxoe29lZWPGdUvDOg2Q=",
+        "lastModified": 1795522868,
+        "narHash": "sha256-3TQtz0YI2ElHepcsN3tgQOx2GsngBtiyK1f6eX7NaGA=",
         "owner": "stubbedev",
         "repo": "lys",
-        "rev": "1f24ea3a4e67f5773180433d181374027384d38d",
+        "rev": "0696babab2965fd9a9c8926ab46ac2dcb4565ea3",
         "type": "github"
       },
       "original": {
@@ -991,11 +991,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795446324,
-        "narHash": "sha256-oQ+pFFtBg6DfL6thwb8oiI9Vm/qkya0pWPi7VyzxL6s=",
+        "lastModified": 1795525299,
+        "narHash": "sha256-C5CVFw8tbDic7ZjkYFKVmqg4rHSaWRyn6zFzqoMO7Z8=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "a337373b3a5e60b8e861c07cd7b737a57efe2d88",
+        "rev": "952c0eb12441f679584a812129ebcf3d66318aea",
         "type": "github"
       },
       "original": {
