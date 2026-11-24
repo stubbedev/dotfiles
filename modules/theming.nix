@@ -5,6 +5,8 @@ let
       nerd-fonts.jetbrains-mono
       jetbrains-mono
       inter
+      ubuntu-sans
+      ubuntu-classic
       font-awesome
       adwaita-fonts
       dejavu_fonts
@@ -38,6 +40,7 @@ in
       };
 
       fonts = {
+        enableDefaultPackages = false;
         packages = fontPackages pkgs;
         fontconfig.enable = true;
       };
@@ -57,6 +60,28 @@ in
     }:
     let
       theme = pkgs.stubbe.theme;
+      sansFont = "Inter";
+      monoFont = "JetBrainsMono Nerd Font";
+      macFontStandIns = {
+        ${sansFont} = [
+          "-apple-system"
+          "BlinkMacSystemFont"
+          ".AppleSystemUIFont"
+          "system-ui"
+          "San Francisco"
+          "SF Pro"
+          "SF Pro Display"
+          "SF Pro Text"
+          "Helvetica Neue"
+        ];
+        ${monoFont} = [
+          "ui-monospace"
+          "SF Mono"
+          "SFMono-Regular"
+          "Menlo"
+          "Monaco"
+        ];
+      };
       qtCtSettings = {
         Appearance = {
           color_scheme_path = "";
@@ -93,6 +118,12 @@ in
       gtk = {
         enable = true;
         gtk2.force = true;
+
+        font = {
+          name = sansFont;
+          size = 11;
+          package = pkgs.inter;
+        };
 
         theme = {
           name = theme.gtk;
@@ -139,7 +170,31 @@ in
 
       fonts.fontconfig = {
         enable = true;
-        defaultFonts.monospace = [ "JetBrainsMono Nerd Font" ];
+        defaultFonts = {
+          sansSerif = [ sansFont ];
+          monospace = [ monoFont ];
+        };
+        configFile.mac-font-stand-ins = {
+          enable = true;
+          text = ''
+            <?xml version="1.0"?>
+            <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+            <fontconfig>
+            ${
+              lib.concatStrings (
+                lib.mapAttrsToList (
+                  standIn:
+                  lib.concatMapStrings (macFamily: ''
+                    <alias binding="strong">
+                      <family>${lib.escapeXML macFamily}</family>
+                      <prefer><family>${lib.escapeXML standIn}</family></prefer>
+                    </alias>
+                  '')
+                ) macFontStandIns
+              )
+            }</fontconfig>
+          '';
+        };
       };
 
       home = {
