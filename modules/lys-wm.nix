@@ -114,7 +114,9 @@
 
         borders.active = "mauve";
 
-        outputs = [
+        tearing = true;
+
+        outputs = map (rule: { vrr = "on"; } // rule) [
           {
             match = "eDP-1";
             scale = 1.5;
@@ -225,6 +227,10 @@
             title = "^Friends List$";
             tile = true;
             size = "400x900";
+          }
+          {
+            app_id = "^steam_app_";
+            tearing = true;
           }
         ];
 
