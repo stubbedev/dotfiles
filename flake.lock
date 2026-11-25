@@ -632,11 +632,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795637227,
-        "narHash": "sha256-YSP1LEhYKMh9TnTkesck1MNG3T29dqvmh3+hWMnkhUg=",
+        "lastModified": 1795641021,
+        "narHash": "sha256-ePL5ZDOaOfyqFvJTBHE2zxLsH1JPYGnauFiNgk8/pl8=",
         "owner": "stubbedev",
         "repo": "lys",
-        "rev": "9f9a7bad29af395a73a473eb4ea084610a9c29a4",
+        "rev": "1e7faad3e82f3b46bc9645f4c35e05111f43feec",
         "type": "github"
       },
       "original": {
