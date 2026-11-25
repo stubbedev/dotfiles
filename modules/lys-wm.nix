@@ -94,7 +94,6 @@
       resizeSubmap = "resize_mode";
 
       outputDefaults = {
-        mode = "highres";
         vrr = "on";
       };
 
@@ -134,7 +133,10 @@
             match = "desc:LG Electronics LG HDR 4K 0x00016261";
             scale = 1.5;
           }
-          { match = "*"; }
+          {
+            match = "*";
+            mode = "highres";
+          }
         ];
 
         input = {
