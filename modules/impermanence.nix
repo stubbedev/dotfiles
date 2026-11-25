@@ -69,6 +69,7 @@
             "/var/lib/systemd"
             "/var/lib/NetworkManager"
             "/var/lib/bluetooth"
+            "/var/lib/upower"
             "/var/lib/lys-power"
             "/var/lib/fwupd"
             {

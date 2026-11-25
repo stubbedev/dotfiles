@@ -53,6 +53,7 @@ in
       imports = [ inputs.lys.nixosModules.lys-power ];
 
       services.intel-lpmd.enable = config.host.battery;
+      services.upower.enable = config.services.intel-lpmd.enable;
 
       systemd.services.intel_lpmd.serviceConfig.ExecCondition = lib.mkIf config.host.battery (
         pkgs.writeShellScript "intel-hybrid-cpu" ''
