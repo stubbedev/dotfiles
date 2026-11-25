@@ -8,11 +8,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1795471286,
-        "narHash": "sha256-eff6PLpfE8Z/keVrrenlcw25HUoELC+Jd3OI1HsQizQ=",
+        "lastModified": 1795572098,
+        "narHash": "sha256-wOpnOftqLD2aIG0bv39tbKwayZfW7iQ2gWsykIOToGg=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "fadaff01f0a5728ec1e2a5928bcdf68163eb2a15",
+        "rev": "19faa670a1e75f6fb055ae401b5d3d792371e077",
         "type": "github"
       },
       "original": {
@@ -632,11 +632,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795522868,
-        "narHash": "sha256-3TQtz0YI2ElHepcsN3tgQOx2GsngBtiyK1f6eX7NaGA=",
+        "lastModified": 1795568435,
+        "narHash": "sha256-smuNVif4rntTDeOh3RQkr0u7Ld1+aIEMT19vL7C6IQg=",
         "owner": "stubbedev",
         "repo": "lys",
-        "rev": "0696babab2965fd9a9c8926ab46ac2dcb4565ea3",
+        "rev": "63a65d96357835e515ee31f6991967d545e9f596",
         "type": "github"
       },
       "original": {
@@ -991,11 +991,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795537717,
-        "narHash": "sha256-YP+tkWJwuacDz3K0cLviWMIuUjmt1FHOdYda39wYa3I=",
+        "lastModified": 1795578741,
+        "narHash": "sha256-HTrlG/eU43nmnsSniVPdX1Kgi+LZVjr9xSB61DpcUeE=",
         "owner": "PHPantom-dev",
         "repo": "phpantom_lsp",
-        "rev": "3d1fbc9e46702d5fa586ca89df2fa1e514b2023f",
+        "rev": "ecf1396e5a1387ff1071ab7d8ed1077d70fc2a4a",
         "type": "github"
       },
       "original": {
