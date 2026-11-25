@@ -74,11 +74,6 @@ in
         };
       };
 
-      services.power-profiles-daemon.enable = true;
-      # The battery module and lys-power read the battery (and wireless
-      # peripherals' charge) from UPower.
-      services.upower.enable = true;
-
       # These apply only while no lys-wm session runs: lys-wm holds the
       # handle-lid-switch inhibitor and applies the same policy itself,
       # including undocking or unplugging with the lid already closed,

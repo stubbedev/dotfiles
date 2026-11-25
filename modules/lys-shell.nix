@@ -287,8 +287,7 @@ in
             Unit = {
               Description = "lys-shell desktop shell (bar, notifications, OSD, wallpaper)";
               Documentation = "https://github.com/stubbedev/lys-shell";
-              After = sessionTarget ++ [ "power-profiles-daemon.service" ];
-              Wants = [ "power-profiles-daemon.service" ];
+              After = sessionTarget;
               PartOf = sessionTarget;
               # The Notifications activation file starts this unit; outside the
               # session that start fails at once instead of crash-looping a
