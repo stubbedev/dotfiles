@@ -23,6 +23,8 @@
       passwordFile = account: config.sops.secrets.${secretName account}.path;
       passwordCommand = account: "cat ${passwordFile account}";
 
+      inInbox = lib.concatMapStringsSep " or " (account: "folder:${account}/INBOX") accountNames;
+
       # Not a notmuch post-new hook: that hook dir lives inside .notmuch/, which
       # notmuch creates itself and home-manager will not symlink into, so the
       # tagging runs here after `notmuch new`. path: globs, not folder: regex:
@@ -64,9 +66,8 @@
           ${lib.concatMapStrings (account: ''
             notmuch tag +${account} -- 'path:${account}/** and not tag:${account}'
           '') accountNames}
-          notmuch tag -inbox -- 'tag:inbox and ${
-            lib.concatStringsSep " and " (map (account: "not folder:${account}/INBOX") accountNames)
-          }'
+          notmuch tag +inbox -- '(${inInbox}) and not tag:inbox'
+          notmuch tag -inbox -- 'tag:inbox and not (${inInbox})'
 
           if [ ''${#failed[@]} -gt 0 ]; then
             echo "mail-sync: failed channels: ''${failed[*]}" >&2
