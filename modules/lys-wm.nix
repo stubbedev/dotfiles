@@ -94,7 +94,7 @@
       resizeSubmap = "resize_mode";
 
       outputDefaults = {
-        vrr = "on";
+        vrr = "off";
       };
 
       settings = {
