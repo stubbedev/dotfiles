@@ -29,7 +29,13 @@ in
           experimental-features = [
             "nix-command"
             "flakes"
+            "auto-allocate-uids"
           ];
+
+          # Builds take UIDs from a private range instead of the 32 static
+          # nixbld users, whose 30000+ UIDs systemd-userdb would count as
+          # regular users. nixpkgs drops nrBuildUsers to 0 when this is set.
+          auto-allocate-uids = true;
 
           # `<nixpkgs>` resolves to the flake's pinned tree.
           nix-path = [ "nixpkgs=${inputs.nixpkgs}" ];
