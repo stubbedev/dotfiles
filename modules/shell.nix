@@ -26,6 +26,7 @@
       config,
       lib,
       pkgs,
+      osConfig ? null,
       ...
     }:
     let
@@ -363,14 +364,52 @@
         )}
       '';
 
+      profiles = [
+        config.home.path
+        config.nix.package
+      ]
+      ++ lib.optional (config.host.platform == "nixos") osConfig.system.path;
+
+      nativeCompletionDirs = [
+        "${zshConfig}/completions"
+        "${zshCompletions}/share/zsh/site-functions"
+      ]
+      ++ map (p: "${p}/share/zsh/site-functions") profiles;
+
+      # bash-only completers for commands no zsh completer claims, each wrapped
+      # in a lazy `#compdef` stub that sources it through bashcompinit on first
+      # Tab. Scripts that need the bash-completion library are left out: it
+      # does not run under bashcompinit.
+      bashCompletionBridge =
+        pkgs.runCommandLocal "stubbe-zsh-bash-bridge" { nativeBuildInputs = [ pkgs.zsh ]; }
+          ''
+            mkdir -p $out
+            export HOME=$TMPDIR
+            zsh -f <<'ZSHEOF'
+            fpath=(${lib.concatStringsSep " " nativeCompletionDirs} $fpath)
+            autoload -Uz compinit
+            compinit -u -D
+            for dir in ${lib.concatMapStringsSep " " (p: "${p}/share/bash-completion/completions") profiles}; do
+              [[ -d $dir ]] || continue
+              for script in $dir/*(N-.); do
+                name=''${''${script:t}%.bash}
+                [[ -x $dir/../../../bin/$name && ! -e $out/_bash_$name ]] || continue
+                (( $+_comps[$name] )) && continue
+                grep -qE '_init_completion|_comp_initialize|_comp_compgen|_comp_get_words|_filedir|_get_comp_words_by_ref|__ltrim_colon' $script && continue
+                print -r -- "#compdef $name
+            (( \$+functions[_bash_complete] )) || { autoload -U bashcompinit && bashcompinit }
+            source ''${(q)script:A}
+            [[ \$_comps[$name] == _bash_$name ]] && return 1
+            eval \"\$_comps[$name]\"" > $out/_bash_$name
+              done
+            done
+            ZSHEOF
+          '';
+
       # Interpolated into both the .zshrc and the zcompdump builder, so runtime
       # and dump-build fpath cannot diverge.
       fpathLine = "fpath=(${
-        lib.concatStringsSep " " [
-          "${zshConfig}/completions"
-          "${zshCompletions}/share/zsh/site-functions"
-          "${config.home.path}/share/zsh/site-functions"
-        ]
+        lib.concatStringsSep " " (nativeCompletionDirs ++ [ "${bashCompletionBridge}" ])
       } $fpath)";
 
       # Output is a directory because zcompile writes the .zwc next to

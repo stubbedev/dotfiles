@@ -16,10 +16,13 @@
           dump=$(grep -o '/nix/store/[^ ]*-stubbe-zcompdump/zcompdump' "$zshrc" | head -1)
           [ -n "$dump" ] || { echo ".zshrc loads no zcompdump" >&2; exit 1; }
 
-          for cmd in phix hcloud xilo; do
+          for cmd in phix hcloud xilo nix systemctl yq; do
             grep -q "'$cmd' '_$cmd'" "$dump" ||
               { echo "compinit did not index _$cmd — missing '#compdef $cmd' first line?" >&2; exit 1; }
           done
+
+          grep -q "'fstrim' '_bash_fstrim'" "$dump" ||
+            { echo "bash completion bridge did not index fstrim" >&2; exit 1; }
 
           touch "$out"
         '';

@@ -59,5 +59,7 @@ _: {
           xsel
           xclip
         ];
+
+      stubbe.zshCompletions._yq = "${lib.getExe' pkgs.python3Packages.argcomplete "register-python-argcomplete"} --shell zsh yq xq tomlq";
     };
 }
