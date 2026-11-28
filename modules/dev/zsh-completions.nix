@@ -21,8 +21,10 @@
               { echo "compinit did not index _$cmd — missing '#compdef $cmd' first line?" >&2; exit 1; }
           done
 
-          grep -q "'fstrim' '_bash_fstrim'" "$dump" ||
-            { echo "bash completion bridge did not index fstrim" >&2; exit 1; }
+          for cmd in fstrim wall homectl; do
+            grep -q "'$cmd' '_bash_$cmd'" "$dump" ||
+              { echo "bash completion bridge did not index $cmd" >&2; exit 1; }
+          done
 
           touch "$out"
         '';

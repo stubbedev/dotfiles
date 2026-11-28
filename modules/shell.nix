@@ -376,32 +376,416 @@
       ]
       ++ map (p: "${p}/share/zsh/site-functions") profiles;
 
-      # bash-only completers for commands no zsh completer claims, each wrapped
-      # in a lazy `#compdef` stub that sources it through bashcompinit on first
-      # Tab. Scripts that need the bash-completion library are left out: it
-      # does not run under bashcompinit.
+      bashCompleteFunction = pkgs.writeText "_bash_complete" /* zsh */ ''
+        #autoload
+        (( $+functions[_bash_compgen_files] )) || _bash_compgen_files() {
+          local pattern=$word home=""
+          if [[ $pattern == "~"* ]]; then
+            home=''${~''${pattern%%/*}}
+            pattern=$home''${pattern#"''${pattern%%/*}"}
+          fi
+          res=(''${(b)pattern}*($1N))
+          [[ -n $home ]] && res=("''${word%%/*}''${^res#"$home"}")
+        }
+
+        (( $+functions[compgen] )) || compgen() {
+          emulate -L zsh
+          setopt extended_glob
+          local name OPTARG OPTIND=1 word filter prefix="" suffix="" action
+          local -a actions wordlists globs command_lines callbacks behaviours generated unfiltered res
+          local -A action_names=(
+            a alias b builtin c command d directory e export f file g group
+            j job k keyword u user v variable
+          )
+
+          while getopts "o:A:G:W:C:F:P:S:X:abcdefgjkuv" name; do
+            case $name in
+              [abcdefgjkuv]) actions+=($action_names[$name]) ;;
+              A) actions+=($OPTARG) ;;
+              W) wordlists+=($OPTARG) ;;
+              G) globs+=($OPTARG) ;;
+              C) command_lines+=($OPTARG) ;;
+              F) callbacks+=($OPTARG) ;;
+              o) behaviours+=($OPTARG) ;;
+              P) prefix=$OPTARG ;;
+              S) suffix=$OPTARG ;;
+              X) filter=$OPTARG ;;
+              *) return 2 ;;
+            esac
+          done
+          word=''${argv[OPTIND]-}
+
+          for action in $actions; do
+            case $action in
+              alias) generated+=(''${(k)aliases}) ;;
+              arrayvar) generated+=(''${(k)parameters[(R)array*]}) ;;
+              binding) generated+=(''${(k)widgets}) ;;
+              builtin) generated+=(''${(k)builtins}) ;;
+              command) generated+=(''${(k)commands} ''${(k)aliases} ''${(k)builtins} ''${(k)functions} ''${(k)reswords}) ;;
+              directory) _bash_compgen_files D-/; generated+=($res) ;;
+              disabled) generated+=(''${(k)dis_builtins}) ;;
+              enabled) generated+=(''${(k)builtins}) ;;
+              export) generated+=(''${(k)parameters[(R)*export*]}) ;;
+              file) _bash_compgen_files D; generated+=($res) ;;
+              function) generated+=(''${(k)functions}) ;;
+              group) res=(); _groups -U -O res; generated+=($res) ;;
+              hostname) res=(); _hosts -U -O res; generated+=($res) ;;
+              job) generated+=(''${savejobtexts%% *}) ;;
+              keyword) generated+=(''${(k)reswords}) ;;
+              signal) generated+=(SIG''${^signals}) ;;
+              user) generated+=(''${(k)userdirs}) ;;
+              variable) generated+=(''${(k)parameters}) ;;
+              *) print -ru2 -- "compgen: unsupported action: $action"; return 2 ;;
+            esac
+          done
+
+          for action in $wordlists; do
+            () {
+              emulate -L sh
+              setopt braceexpand noglob ksharrays
+              eval "res=($action)"
+            }
+            generated+=("''${res[@]}")
+          done
+
+          generated=(''${(M)generated:#''${(b)word}*})
+
+          for action in $globs; do
+            unfiltered+=(''${~action}(N))
+          done
+          for action in $callbacks; do
+            local -a COMPREPLY=()
+            () {
+              emulate -L sh
+              setopt kshglob noshglob braceexpand nokshautoload
+              $action "$COMP_WORDS[1]" "$word" "$COMP_WORDS[COMP_CWORD]"
+            }
+            unfiltered+=("''${COMPREPLY[@]}")
+          done
+          for action in $command_lines; do
+            unfiltered+=(''${(f)"$(eval "$action" '"$COMP_WORDS[1]"' '"$word"' '"$COMP_WORDS[COMP_CWORD]"')"})
+          done
+          generated+=($unfiltered)
+
+          if (( ! $#generated )); then
+            if (( behaviours[(Ie)default] || behaviours[(Ie)bashdefault] )); then
+              _bash_compgen_files D; generated=($res)
+            elif (( behaviours[(Ie)dirnames] )); then
+              _bash_compgen_files D-/; generated=($res)
+            fi
+          fi
+          if (( behaviours[(Ie)plusdirs] )); then
+            _bash_compgen_files D-/; generated+=($res)
+          fi
+
+          if [[ -n $filter ]]; then
+            setopt kshglob
+            local pattern=''${filter//(#b)(\\|)\&/''${''${match[1]:+\\&}:-''${(b)word}}}
+            if [[ $pattern == "!"* ]]; then
+              generated=(''${(M)generated:#''${~pattern#!}})
+            else
+              generated=(''${generated:#''${~pattern}})
+            fi
+          fi
+
+          (( $#generated )) && print -rl -- ''${''${generated/#/$prefix}/%/$suffix}
+          return 0
+        }
+
+        (( $+functions[compopt] )) || compopt() {
+          emulate -L zsh
+          while (( $# )); do
+            case $1 in
+              -o) bash_options[$2]=1; shift 2 ;;
+              +o) unset "bash_options[$2]"; shift 2 ;;
+              *) shift ;;
+            esac
+          done
+          return 0
+        }
+
+        local function_name ret=1
+        local -a actions suffix matches
+        local -A bash_options savejobtexts
+        local -x COMP_POINT COMP_CWORD COMP_LINE="$words"
+        local -a COMP_WORDS COMPREPLY BASH_VERSINFO
+
+        (( COMP_POINT = 1 + ''${#''${(j. .)words[1,CURRENT-1]}} + $#QIPREFIX + $#IPREFIX + $#PREFIX ))
+        (( COMP_CWORD = CURRENT - 1 ))
+        COMP_WORDS=("''${words[@]}")
+        BASH_VERSINFO=(2 05b 0 1 release)
+        savejobtexts=(''${(kv)jobtexts})
+
+        while (( $# )); do
+          case $1 in
+            -F) function_name=$2; shift 2 ;;
+            -o) bash_options[$2]=1; shift 2 ;;
+            -[AGWCXPS]) actions+=("$1" "$2"); shift 2 ;;
+            *) actions+=("$1"); shift ;;
+          esac
+        done
+
+        if [[ -n $function_name ]]; then
+          () {
+            local -a args=("$words[1]" "$words[CURRENT]" "$words[CURRENT-1]")
+            typeset -h words
+            emulate -L sh
+            setopt kshglob noshglob braceexpand nokshautoload
+            $function_name "''${args[@]}"
+          }
+          matches=("''${COMPREPLY[@]}")
+        fi
+        (( $#actions )) && matches+=(''${(f)"$(compgen "''${actions[@]}" -- "$words[CURRENT]")"})
+
+        (( $+bash_options[nospace] )) && suffix=(-S ''')
+
+        if (( $#matches )); then
+          if (( $+bash_options[filenames] )); then
+            compset -P '*/' && matches=(''${matches##*/})
+            compset -S '/*' && matches=(''${matches%%/*})
+            compadd -f "''${suffix[@]}" -a matches && ret=0
+          else
+            compadd "''${suffix[@]}" - "''${(@)''${(Q@)matches}:#*\ }" && ret=0
+            compadd -S ' ' - ''${''${(M)''${(Q)matches}:#*\ }% } && ret=0
+          fi
+        fi
+
+        if (( ret )); then
+          if (( $+bash_options[default] || $+bash_options[bashdefault] )); then
+            _default "''${suffix[@]}" && ret=0
+          elif (( $+bash_options[dirnames] )); then
+            _directories "''${suffix[@]}" && ret=0
+          fi
+        fi
+        (( $+bash_options[plusdirs] )) && _directories "''${suffix[@]}" && ret=0
+
+        return ret
+      '';
+
+      bashCompletionProbe = pkgs.writeText "bash-completion-probe.bash" /* bash */ ''
+        compopt() {
+          return 0
+        }
+
+        # shellcheck source=/dev/null
+        source "$1" >/dev/null 2>&1
+        spec=$(complete -p -- "$2" 2>/dev/null) || exit 0
+        eval "spec=(''${spec#complete })"
+        unset 'spec[-1]'
+
+        func=
+        actions=()
+        while ((''${#spec[@]})); do
+          case ''${spec[0]} in
+          -F)
+            func=''${spec[1]}
+            spec=("''${spec[@]:2}")
+            ;;
+          -o)
+            spec=("''${spec[@]:2}")
+            ;;
+          -[AGWCXPS])
+            actions+=("''${spec[@]:0:2}")
+            spec=("''${spec[@]:2}")
+            ;;
+          -[DEI])
+            spec=("''${spec[@]:1}")
+            ;;
+          *)
+            actions+=("''${spec[0]}")
+            spec=("''${spec[@]:1}")
+            ;;
+          esac
+        done
+
+        while read -r name; do
+          printf 'names\t%s\n' "$name"
+        done < <(compgen -b -k -a -A function)
+
+        while IFS=$'\t' read -r i pre cur; do
+          read -ra COMP_WORDS <<<"$pre"
+          COMP_WORDS+=("$cur")
+          COMP_CWORD=$((''${#COMP_WORDS[@]} - 1))
+          COMP_LINE="''${COMP_WORDS[*]}"
+          COMP_POINT=''${#COMP_LINE}
+          COMPREPLY=()
+          [[ -n $func ]] && "$func" "$2" "$cur" "''${COMP_WORDS[COMP_CWORD - 1]}" </dev/null >/dev/null
+          results=("''${COMPREPLY[@]}")
+          ((''${#actions[@]})) && mapfile -t -O "''${#results[@]}" results < <(compgen "''${actions[@]}" -- "$cur")
+          for r in "''${results[@]}"; do
+            printf '%s\t%s\n' "$i" "$r"
+          done
+        done
+      '';
+
+      zshCompletionProbe = pkgs.writeText "zsh-completion-probe.zsh" /* zsh */ ''
+        fpath=($1 $fpath)
+        autoload -Uz _bash_complete _bash_$2
+
+        compadd() {
+          local -a found
+          while (( $# )); do
+            case $1 in
+              -a) found+=(''${(P)2}); shift 2 ;;
+              -[SPJXo]) shift 2 ;;
+              -) shift; found+=("$@"); break ;;
+              -*) shift ;;
+              *) found+=("$1"); shift ;;
+            esac
+          done
+          (( $#found )) && print -rl -- ''${found/#/$i$'\t'}
+          return 0
+        }
+        compset() { return 1 }
+        _default() { return 1 }
+        _directories() { return 1 }
+
+        while IFS=$'\t' read -r i pre cur; do
+          words=(''${(s: :)pre} "$cur")
+          CURRENT=$#words
+          PREFIX=$cur IPREFIX="" QIPREFIX=""
+          _bash_$2 </dev/null
+        done
+
+        tab=$'\t'
+        print -rl -- names$tab''${^''${(k)builtins}} names$tab''${^''${(k)reswords}} names$tab''${^''${(k)functions}} names$tab''${^''${(k)aliases}}
+        exit 0
+      '';
+
       bashCompletionBridge =
         pkgs.runCommandLocal "stubbe-zsh-bash-bridge" { nativeBuildInputs = [ pkgs.zsh ]; }
           ''
-            mkdir -p $out
             export HOME=$TMPDIR
             zsh -f <<'ZSHEOF'
+            setopt err_exit pipe_fail extended_glob
+            export LC_ALL=C
+            path=(${lib.concatMapStringsSep " " (p: "${p}/bin") profiles} $path)
             fpath=(${lib.concatStringsSep " " nativeCompletionDirs} $fpath)
-            autoload -Uz compinit
+            autoload -Uz compinit bashcompinit
             compinit -u -D
+            bashcompinit
+            mkdir -p $out
+
+            cp ${bashCompleteFunction} $out/_bash_complete
+
+            translate() {
+              (
+                local name=$1 script=$2 p f line
+                local -a before_parameters before_names after redefined
+                local -A before_functions
+                before_functions=("''${(@kv)functions}")
+                before_names=(''${(k)before_functions})
+                before_parameters=(''${(k)parameters})
+                source $script >/dev/null 2>$TMPDIR/source-errors
+                [[ ! -s $TMPDIR/source-errors ]] || { print -ru2 -- "sourcing fails: $(head -n1 $TMPDIR/source-errors)"; exit 1 }
+                [[ $_comps[$name] == "_bash_complete "* ]] || { print -ru2 -- "registers no completion under bashcompinit"; exit 1 }
+                for f in $before_names; do
+                  [[ $functions[$f] == $before_functions[$f] ]] || redefined+=($f)
+                done
+                (( ! $#redefined )) || { print -ru2 -- "redefines existing zsh functions: $redefined"; exit 1 }
+                print -r -- "#compdef $name"
+                after=(''${(k)parameters})
+                for p in ''${(o)after:|before_parameters}; do
+                  [[ $parameters[$p] == *special* ]] && continue
+                  line=$(typeset -p -- $p)
+                  print -r -- "typeset -g ''${line#(typeset|export) }"
+                done
+                after=(''${(k)functions})
+                for f in ''${(o)after:|before_names}; do
+                  functions -- $f
+                done
+                print -r -- $_comps[$name]
+              )
+            }
+
+            typeset -a probe_pre probe_cur
+
+            write_probes() {
+              local i
+              for i in {1..$#probe_cur}; do
+                print -r -- "$i"$'\t'"$probe_pre[i]"$'\t'"$probe_cur[i]"
+              done > $TMPDIR/probes
+            }
+
+            typeset -A shell_names
+
+            collect_shell_names() {
+              local line
+              shell_names=()
+              for line in ''${(M)''${(f)"$(<$TMPDIR/expected)"}:#names$'\t'*} ''${(M)''${(f)"$(<$TMPDIR/actual)"}:#names$'\t'*}; do
+                shell_names[''${line#names$'\t'}]=1
+              done
+            }
+
+            normalize() {
+              local line idx val
+              local -a kept
+              while IFS= read -r line; do
+                idx=''${line%%$'\t'*}
+                val=''${''${line#*$'\t'}%%[[:space:]]##}
+                if [[ $idx == names ]]; then
+                  continue
+                elif [[ $idx != <1-> || $line != *$'\t'* ]]; then
+                  kept+=("stray"$'\t'"$line")
+                elif (( ! $+shell_names[$val] )) && [[ $val == ''${(b)probe_cur[idx]}* ]]; then
+                  kept+=("$idx"$'\t'"$val")
+                fi
+              done < $1
+              print -rl -- ''${(ou)kept}
+            }
+
+            run_bash() {
+              timeout 20 ${lib.getExe pkgs.bashInteractive} --norc --noprofile ${bashCompletionProbe} $1 $2 < $TMPDIR/probes > $TMPDIR/expected 2>$TMPDIR/bash-errors
+            }
+
+            run_zsh() {
+              timeout 20 zsh -f ${zshCompletionProbe} $out $1 < $TMPDIR/probes > $TMPDIR/actual 2>$TMPDIR/zsh-errors
+            }
+
+            verify() {
+              local name=$1 script=$2 word expected actual
+              probe_pre=($name $name $name)
+              probe_cur=("" - --)
+              write_probes
+              run_bash $script $name || { REPLY="bash reference failed"; return 1 }
+              for word in ''${''${''${(f)"$(normalize $TMPDIR/expected)"}#*$'\t'}[1,2]}; do
+                [[ $word == [^[:space:]]## ]] || continue
+                probe_pre+=("$name $word")
+                probe_cur+=("")
+              done
+              write_probes
+              run_bash $script $name || { REPLY="bash reference failed"; return 1 }
+              run_zsh $name || { REPLY="zsh translation failed"; return 1 }
+              local -a bash_errors=(''${(ou)''${(f)"$(<$TMPDIR/bash-errors)"}}) zsh_errors=(''${(ou)''${(f)"$(<$TMPDIR/zsh-errors)"}})
+              local -a zsh_only=(''${zsh_errors:|bash_errors}) bash_only=(''${bash_errors:|zsh_errors})
+              (( ! $#zsh_only && ! $#bash_only )) || { REPLY="stderr differs from bash: ''${zsh_only[1]:-bash alone printed: $bash_only[1]}"; return 1 }
+              collect_shell_names
+              expected=$(normalize $TMPDIR/expected)
+              actual=$(normalize $TMPDIR/actual)
+              [[ -n $expected ]] || { REPLY="bash completes nothing to verify against"; return 1 }
+              [[ $expected == $actual ]] || { REPLY="zsh results differ from bash"; return 1 }
+            }
+
+            bridge() {
+              local name=$1 script=$2 stub=$out/_bash_$1
+              translate $name $script > $stub 2>$TMPDIR/translate-errors || { rm -f $stub; REPLY=$(<$TMPDIR/translate-errors); return 1 }
+              verify $name $script || { rm -f $stub; return 1 }
+            }
+
+            typeset -A seen
             for dir in ${lib.concatMapStringsSep " " (p: "${p}/share/bash-completion/completions") profiles}; do
               [[ -d $dir ]] || continue
               for script in $dir/*(N-.); do
                 name=''${''${script:t}%.bash}
-                [[ -x $dir/../../../bin/$name && ! -e $out/_bash_$name ]] || continue
-                (( $+_comps[$name] )) && continue
-                grep -qE '_init_completion|_comp_initialize|_comp_compgen|_comp_get_words|_filedir|_get_comp_words_by_ref|__ltrim_colon' $script && continue
-                print -r -- "#compdef $name
-            (( \$+functions[_bash_complete] )) || { autoload -U bashcompinit && bashcompinit }
-            source ''${(q)script:A}
-            [[ \$_comps[$name] == _bash_$name ]] && return 1
-            eval \"\$_comps[$name]\"" > $out/_bash_$name
+                (( $+seen[$name] || $+_comps[$name] )) && continue
+                [[ -x $dir/../../../bin/$name ]] || continue
+                seen[$name]=1
+                bridge $name ''${script:A} || print -r -- "bash-bridge: skipped $name: $REPLY"
               done
+            done
+
+            for script in $out/_*(N); do
+              zcompile $script
             done
             ZSHEOF
           '';
