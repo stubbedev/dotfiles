@@ -82,6 +82,16 @@ in
       # the whole package for it. Upstream declined to skip the check for
       # the square sibling (nixpkgs#382288), so prune the dangling links
       # here. Deletable once the theme or nixpkgs adapts.
+      tmux-socket-activation-stdin = _final: prev: {
+        tmux = prev.tmux.overrideAttrs (old: {
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace client.c --replace-fail \
+              'server_start(client_proc, flags, base, 0, NULL)' \
+              'server_start(client_proc, flags, base, -1, NULL)'
+          '';
+        });
+      };
+
       tela-icon-fix = _final: prev: {
         tela-circle-icon-theme = prev.tela-circle-icon-theme.overrideAttrs (old: {
           preFixup = (old.preFixup or "") + ''
