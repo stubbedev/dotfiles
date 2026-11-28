@@ -25,6 +25,8 @@ in
       "lys-polkit"
       "lys-settings"
       "lys-power"
+      "lys-files"
+      "lys-viewer"
     ]
     // fromInputs [
       "shell-lsp"
@@ -85,15 +87,6 @@ in
           preFixup = (old.preFixup or "") + ''
             find $out/share/icons -xtype l -delete
           '';
-        });
-      };
-
-      # pcmanfm's wrapper injects only dconf into GIO_EXTRA_MODULES, so without
-      # gvfs listed here every dav:// / smb:// / mtp:// URI fails with
-      # "Operation not supported".
-      pcmanfm-gvfs = _final: prev: {
-        pcmanfm = prev.pcmanfm.overrideAttrs (old: {
-          buildInputs = (old.buildInputs or [ ]) ++ [ prev.gvfs ];
         });
       };
 

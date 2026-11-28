@@ -168,7 +168,7 @@
 
         binds = [
           (bind "SUPER + Return" (launch "ghostty"))
-          (bind "SUPER + SHIFT + E" (launch "pcmanfm"))
+          (bind "SUPER + SHIFT + E" (launch "lys-files"))
           (bind "SUPER + space" "global dev.stubbe.lys.shell:launcher")
           (bind "SUPER + SHIFT + space" (exec "lys-shell launcher -show run"))
           (bind "SUPER + CTRL + space" (exec "lys-shell launcher -show window"))
